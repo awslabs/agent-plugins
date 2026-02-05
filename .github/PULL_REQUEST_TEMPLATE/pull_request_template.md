@@ -1,15 +1,12 @@
 <!-- Summarize the pull request -->
 
-
 #### Related
 
 <!-- Issue #, Vulnerability, References if available:* -->
 
-
 #### Changes
 
 <!-- Description of changes:* -->
-
 
 #### Acknowledgment
 
