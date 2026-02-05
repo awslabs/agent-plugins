@@ -56,7 +56,7 @@ repos:
     rev: v1.149.0
     hooks:
     -   id: semgrep
-        args: [ '--oss-only', '--verbose', '--metrics=off', '--baseline-commit', 'HEAD', '--config=r/all', '--sarif-output', '.tmp/semgrep.sarif.json', '--error' ]
+        args: [ '--oss-only', '--verbose', '--metrics=off', '--baseline-commit', 'main', '--config=r/all', '--sarif-output', '.tmp/semgrep.sarif.json', '--error' ]
 -   repo: https://github.com/bridgecrewio/checkov
     rev: 3.2.499
     hooks:
