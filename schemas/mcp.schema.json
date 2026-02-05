@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://awslabs.github.io/agent-plugins/schemas/mcp.schema.json",
+  "title": "MCP Configuration",
+  "description": "Schema for .mcp.json MCP server definitions",
+  "type": "object",
+  "required": ["mcpServers"],
+  "properties": {
+    "mcpServers": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["stdio", "http"],
+            "default": "stdio"
+          },
+          "command": {
+            "type": "string",
+            "description": "Command to execute (stdio type)"
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Command arguments (stdio type)"
+          },
+          "url": {
+            "type": "string",
+            "description": "HTTP endpoint (http type)"
+          },
+          "env": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Environment variables"
+          },
+          "timeout": {
+            "type": "integer",
+            "minimum": 1000,
+            "description": "Timeout in milliseconds"
+          },
+          "disabled": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": { "type": { "const": "stdio" } },
+              "required": ["type"]
+            },
+            "then": { "required": ["command"] }
+          },
+          {
+            "if": {
+              "properties": { "type": { "const": "http" } },
+              "required": ["type"]
+            },
+            "then": { "required": ["url"] }
+          }
+        ]
+      }
+    }
+  }
+}

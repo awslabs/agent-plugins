@@ -1,0 +1,85 @@
+# markdownlint-cli2 configuration for AWS Agent Plugins
+# Handles SKILL.md files with YAML frontmatter
+
+# YAML frontmatter pattern - matches --- delimited blocks at file start
+frontMatter: "^---\\n[\\s\\S]*?\\n---\\n"
+
+# Respect .gitignore
+gitignore: true
+
+# Custom rules for SKILL.md validation
+customRules:
+  - ./tools/markdownlint-skill-length.cjs
+  - ./tools/markdownlint-frontmatter.cjs
+
+# Files to lint
+globs:
+  - "**/*.md"
+
+# Files to ignore
+ignores:
+  - "**/node_modules/**"
+  - ".claude/docs/**"
+
+# Rule configuration
+config:
+  # Enable all rules by default
+  default: true
+
+  # MD001: Heading levels should increment by one
+  MD001: true
+
+  # MD003: Heading style - use ATX (#)
+  MD003:
+    style: "atx"
+
+  # MD009: Trailing spaces - allow 2 for line breaks
+  MD009:
+    br_spaces: 2
+    list_item_empty_lines: true
+
+  # MD010: Hard tabs - allow in code blocks
+  MD010:
+    code_blocks: false
+
+  # MD013: Line length - disabled (handled by dprint formatter)
+  MD013: false
+
+  # MD024: Allow duplicate headings under different parents
+  MD024:
+    siblings_only: true
+
+  # MD025: Single H1 heading
+  MD025:
+    level: 1
+
+  # MD026: Trailing punctuation in headings - allow for skill descriptions
+  MD026: false
+
+  # MD033: Allow specific HTML elements
+  MD033:
+    allowed_elements:
+      - "br"
+      - "details"
+      - "summary"
+      - "kbd"
+      - "img"
+      - "sub"
+      - "sup"
+
+  # MD034: Bare URLs - disabled (email addresses are common)
+  MD034: false
+
+  # MD040: Code blocks should have language - warn only via custom rules
+  MD040: false
+
+  # MD041: First line should be H1 - disabled for frontmatter files
+  MD041: false
+
+  # MD046: Code block style - use fenced
+  MD046:
+    style: "fenced"
+
+  # MD048: Code fence style - use backticks
+  MD048:
+    style: "backtick"

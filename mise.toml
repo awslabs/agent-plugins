@@ -1,0 +1,41 @@
+# mise.toml - Tool versions and tasks for AWS Agent Plugins
+# See: https://mise.jdx.dev
+
+min_version = "2024.11.1"
+
+[tools]
+node = "24"
+"npm:markdownlint-cli2" = "0.17"
+"npm:ajv-cli" = "5"
+
+[tasks.fmt]
+description = "Format all files"
+run = "npx dprint fmt"
+
+[tasks."fmt:check"]
+description = "Check formatting (CI)"
+run = "npx dprint check"
+
+[tasks.lint]
+description = "Run all linters"
+depends = ["lint:md", "lint:manifests", "lint:cross-refs"]
+
+[tasks."lint:md"]
+description = "Lint Markdown files (includes SKILL.md validation)"
+run = "markdownlint-cli2 '**/*.md' '#node_modules'"
+
+[tasks."lint:manifests"]
+description = "Validate JSON manifests"
+run = [
+  "ajv validate -s schemas/marketplace.schema.json -d '.claude-plugin/marketplace.json' --all-errors --errors=text",
+  "ajv validate -s schemas/plugin.schema.json -d 'plugins/**/.claude-plugin/plugin.json' --all-errors --errors=text",
+  "ajv validate -s schemas/mcp.schema.json -d 'plugins/**/.mcp.json' --all-errors --errors=text",
+]
+
+[tasks."lint:cross-refs"]
+description = "Validate cross-references between manifests"
+run = "node tools/validate-cross-refs.cjs"
+
+[tasks.ci]
+description = "Run all CI checks"
+depends = ["fmt:check", "lint"]

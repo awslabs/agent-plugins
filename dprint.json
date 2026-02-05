@@ -1,0 +1,25 @@
+{
+  "$schema": "https://dprint.dev/schemas/v0.json",
+  "lineWidth": 100,
+  "indentWidth": 2,
+  "useTabs": false,
+  "newLineKind": "lf",
+  "markdown": {
+    "lineWidth": 100,
+    "textWrap": "maintain"
+  },
+  "json": {
+    "indentWidth": 2,
+    "lineWidth": 120
+  },
+  "excludes": [
+    "**/node_modules/**",
+    "**/.git/**",
+    "**/dist/**",
+    "**/.claude/docs/**"
+  ],
+  "plugins": [
+    "https://plugins.dprint.dev/markdown-0.17.8.wasm",
+    "https://plugins.dprint.dev/json-0.19.4.wasm"
+  ]
+}
