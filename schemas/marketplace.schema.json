@@ -24,15 +24,11 @@
     },
     "metadata": {
       "type": "object",
-      "required": ["pluginRoot"],
       "properties": {
         "description": {
           "type": "string"
         },
         "version": {
-          "type": "string"
-        },
-        "pluginRoot": {
           "type": "string"
         }
       }
