@@ -1,70 +1,95 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://awslabs.github.io/agent-plugins/schemas/mcp.schema.json",
-  "title": "MCP Configuration",
+  "$schema": "http://json-schema.org/draft-07/schema#",
   "description": "Schema for .mcp.json MCP server definitions",
-  "type": "object",
-  "required": ["mcpServers"],
   "properties": {
     "mcpServers": {
-      "type": "object",
       "additionalProperties": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": ["stdio", "http"],
-            "default": "stdio"
-          },
-          "command": {
-            "type": "string",
-            "description": "Command to execute (stdio type)"
-          },
-          "args": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Command arguments (stdio type)"
-          },
-          "url": {
-            "type": "string",
-            "description": "HTTP endpoint (http type)"
-          },
-          "env": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            },
-            "description": "Environment variables"
-          },
-          "timeout": {
-            "type": "integer",
-            "minimum": 1000,
-            "description": "Timeout in milliseconds"
-          },
-          "disabled": {
-            "type": "boolean",
-            "default": false
-          }
-        },
         "allOf": [
           {
             "if": {
-              "properties": { "type": { "const": "stdio" } },
-              "required": ["type"]
+              "properties": {
+                "type": {
+                  "const": "stdio"
+                }
+              },
+              "required": [
+                "type"
+              ]
             },
-            "then": { "required": ["command"] }
+            "then": {
+              "required": [
+                "command"
+              ]
+            }
           },
           {
             "if": {
-              "properties": { "type": { "const": "http" } },
-              "required": ["type"]
+              "properties": {
+                "type": {
+                  "const": "http"
+                }
+              },
+              "required": [
+                "type"
+              ]
             },
-            "then": { "required": ["url"] }
+            "then": {
+              "required": [
+                "url"
+              ]
+            }
           }
-        ]
-      }
+        ],
+        "properties": {
+          "args": {
+            "description": "Command arguments (stdio type)",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "command": {
+            "description": "Command to execute (stdio type)",
+            "type": "string"
+          },
+          "disabled": {
+            "default": false,
+            "type": "boolean"
+          },
+          "env": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Environment variables",
+            "type": "object"
+          },
+          "timeout": {
+            "description": "Timeout in milliseconds",
+            "minimum": 1000,
+            "type": "integer"
+          },
+          "type": {
+            "default": "stdio",
+            "enum": [
+              "stdio",
+              "http"
+            ],
+            "type": "string"
+          },
+          "url": {
+            "description": "HTTP endpoint (http type)",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "type": "object"
     }
-  }
+  },
+  "required": [
+    "mcpServers"
+  ],
+  "title": "MCP Configuration",
+  "type": "object"
 }

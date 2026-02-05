@@ -1,12 +1,19 @@
 {
-  "name": "deploy-on-aws",
-  "description": "Deploy any application to AWS. Get architecture recommendations, cost estimates, and one-command deployment.",
-  "version": "1.0.0",
   "author": {
     "name": "Amazon Web Services"
   },
+  "description": "Deploy any application to AWS. Get architecture recommendations, cost estimates, and one-command deployment.",
   "homepage": "https://github.com/awslabs/agent-plugins",
-  "repository": "https://github.com/awslabs/agent-plugins",
+  "keywords": [
+    "aws",
+    "deploy",
+    "infrastructure",
+    "cdk",
+    "cloudformation",
+    "pricing"
+  ],
   "license": "Apache-2.0",
-  "keywords": ["aws", "deploy", "infrastructure", "cdk", "cloudformation", "pricing"]
+  "name": "deploy-on-aws",
+  "repository": "https://github.com/awslabs/agent-plugins",
+  "version": "1.0.0"
 }

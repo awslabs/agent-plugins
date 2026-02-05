@@ -1,22 +1,36 @@
 {
-  "name": "awslabs-agent-plugins",
-  "owner": {
-    "name": "Amazon Web Services",
-    "email": "aws-agent-plugins@amazon.com"
-  },
   "metadata": {
     "description": "Official AWS plugins for Claude Code, Cursor, and AI coding assistants.",
     "version": "1.0.0"
   },
+  "name": "awslabs-agent-plugins",
+  "owner": {
+    "email": "aws-agent-plugins@amazon.com",
+    "name": "Amazon Web Services"
+  },
   "plugins": [
     {
+      "category": "deployment",
+      "description": "Deploy any application to AWS. Get architecture recommendations, cost estimates, and one-command deployment.",
+      "keywords": [
+        "aws",
+        "aws agent skills",
+        "amazon",
+        "deploy",
+        "cdk",
+        "cloudformation",
+        "infrastructure",
+        "pricing"
+      ],
       "name": "deploy-on-aws",
       "source": "./plugins/deploy-on-aws",
-      "description": "Deploy any application to AWS. Get architecture recommendations, cost estimates, and one-command deployment.",
-      "version": "1.0.0",
-      "category": "deployment",
-      "tags": ["aws", "deploy", "infrastructure", "cdk"],
-      "keywords": ["aws", "aws agent skills", "amazon", "deploy", "cdk", "cloudformation", "infrastructure", "pricing"]
+      "tags": [
+        "aws",
+        "deploy",
+        "infrastructure",
+        "cdk"
+      ],
+      "version": "1.0.0"
     }
   ]
 }

@@ -1,29 +1,9 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://awslabs.github.io/agent-plugins/schemas/marketplace.schema.json",
-  "title": "Marketplace Registry",
+  "$schema": "http://json-schema.org/draft-07/schema#",
   "description": "Schema for marketplace.json registry file",
-  "type": "object",
-  "required": ["name", "owner", "metadata", "plugins"],
   "properties": {
-    "name": {
-      "type": "string",
-      "pattern": "^[a-z][a-z0-9-]*$"
-    },
-    "owner": {
-      "type": "object",
-      "required": ["name"],
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "email": {
-          "type": "string"
-        }
-      }
-    },
     "metadata": {
-      "type": "object",
       "properties": {
         "description": {
           "type": "string"
@@ -31,17 +11,45 @@
         "version": {
           "type": "string"
         }
-      }
+      },
+      "type": "object"
+    },
+    "name": {
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "type": "string"
+    },
+    "owner": {
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
     },
     "plugins": {
-      "type": "array",
       "items": {
-        "type": "object",
-        "required": ["name", "source"],
         "properties": {
+          "category": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "name": {
-            "type": "string",
-            "pattern": "^[a-z][a-z0-9-]*$"
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "type": "string"
           },
           "source": {
             "oneOf": [
@@ -49,7 +57,6 @@
                 "type": "string"
               },
               {
-                "type": "object",
                 "properties": {
                   "github": {
                     "type": "string"
@@ -57,33 +64,36 @@
                   "url": {
                     "type": "string"
                   }
-                }
+                },
+                "type": "object"
               }
             ]
           },
-          "description": {
-            "type": "string"
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           },
           "version": {
             "type": "string"
-          },
-          "category": {
-            "type": "string"
-          },
-          "tags": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "keywords": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
           }
-        }
-      }
+        },
+        "required": [
+          "name",
+          "source"
+        ],
+        "type": "object"
+      },
+      "type": "array"
     }
-  }
+  },
+  "required": [
+    "name",
+    "owner",
+    "metadata",
+    "plugins"
+  ],
+  "title": "Marketplace Registry",
+  "type": "object"
 }

@@ -1,53 +1,58 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://awslabs.github.io/agent-plugins/schemas/skill-frontmatter.schema.json",
-  "title": "SKILL.md Frontmatter",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": true,
   "description": "Schema for YAML frontmatter in SKILL.md files",
-  "type": "object",
-  "required": ["name", "description"],
   "properties": {
-    "name": {
-      "type": "string",
-      "pattern": "^[a-z][a-z0-9-]*$",
-      "maxLength": 64,
-      "description": "Skill name (kebab-case)"
-    },
-    "description": {
-      "type": "string",
-      "minLength": 20,
-      "description": "When to use this skill (for auto-triggering)"
-    },
-    "argument-hint": {
-      "type": "string",
-      "description": "Hint for expected arguments"
-    },
-    "disable-model-invocation": {
-      "type": "boolean",
-      "default": false,
-      "description": "Prevent Claude from auto-loading"
-    },
-    "user-invocable": {
-      "type": "boolean",
-      "default": true,
-      "description": "Show in slash command menu"
+    "agent": {
+      "description": "Subagent type (when context: fork)",
+      "type": "string"
     },
     "allowed-tools": {
-      "type": "string",
-      "description": "Comma-separated list of allowed tools"
+      "description": "Comma-separated list of allowed tools",
+      "type": "string"
     },
-    "model": {
-      "type": "string",
-      "description": "Model to use when skill is active"
+    "argument-hint": {
+      "description": "Hint for expected arguments",
+      "type": "string"
     },
     "context": {
-      "type": "string",
-      "enum": ["fork"],
-      "description": "Run in forked subagent context"
+      "description": "Run in forked subagent context",
+      "enum": [
+        "fork"
+      ],
+      "type": "string"
     },
-    "agent": {
-      "type": "string",
-      "description": "Subagent type (when context: fork)"
+    "description": {
+      "description": "When to use this skill (for auto-triggering)",
+      "minLength": 20,
+      "type": "string"
+    },
+    "disable-model-invocation": {
+      "default": false,
+      "description": "Prevent Claude from auto-loading",
+      "type": "boolean"
+    },
+    "model": {
+      "description": "Model to use when skill is active",
+      "type": "string"
+    },
+    "name": {
+      "description": "Skill name (kebab-case)",
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "type": "string"
+    },
+    "user-invocable": {
+      "default": true,
+      "description": "Show in slash command menu",
+      "type": "boolean"
     }
   },
-  "additionalProperties": true
+  "required": [
+    "name",
+    "description"
+  ],
+  "title": "SKILL.md Frontmatter",
+  "type": "object"
 }
