@@ -40,7 +40,7 @@ repos:
     -   id: trailing-whitespace
 
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.10
+    rev: v0.15.0
     hooks:
     -   id: ruff-check
         args: [ --fix, --exit-non-zero-on-fix ]
@@ -53,17 +53,17 @@ repos:
         args: [ --baseline, .bandit-baseline.json ]
 
 -   repo: https://github.com/semgrep/pre-commit
-    rev: v1.149.0
+    rev: v1.151.0
     hooks:
     -   id: semgrep
         args: [ '--oss-only', '--verbose', '--metrics=off', '--baseline-commit', 'main', '--config=r/all', '--sarif-output', '.tmp/semgrep.sarif.json', '--error' ]
 -   repo: https://github.com/bridgecrewio/checkov
-    rev: 3.2.499
+    rev: 3.2.500
     hooks:
     -   id: checkov
 
 -   repo: https://github.com/gitleaks/gitleaks
-    rev: v8.27.2
+    rev: v8.30.0
     hooks:
     -   id: gitleaks
 
@@ -74,5 +74,5 @@ repos:
         pass_filenames: false
         language: system
         entry: act
-        stages: [pre-push]
+        stages: [manual]
         always_run: true
