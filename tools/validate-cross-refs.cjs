@@ -76,9 +76,9 @@ function validatePlugin(plugin) {
   info(`Validating plugin: ${pluginName}`);
 
   // Determine plugin directory path
-  const source = plugin.source || `./${pluginName}`;
-  const normalizedSource = source.replace(/^\.\//, "").replace(/\/$/, "");
-  const pluginDir = path.join(PLUGINS_ROOT, normalizedSource);
+  // source is relative to repo root (e.g., "./plugins/deploy-on-aws")
+  const source = plugin.source || `${PLUGINS_ROOT}/${pluginName}`;
+  const pluginDir = source.replace(/^\.\//, "").replace(/\/$/, "");
 
   // Check 1: Plugin directory exists
   if (!fs.existsSync(pluginDir)) {
