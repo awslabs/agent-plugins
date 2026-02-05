@@ -47,5 +47,8 @@ jobs:
       - name: Lint Markdown (includes SKILL.md validation)
         run: mise run lint:md
 
+      - name: Validate Cross Reference manifests
+        run: mise run lint:cross-refs
+
       - name: Validate JSON manifests
         run: mise run lint:manifests
