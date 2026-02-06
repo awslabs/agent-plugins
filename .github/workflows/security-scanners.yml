@@ -77,9 +77,9 @@ jobs:
       - name: Run bandit
         id: bandit
         run: |
-          pip install bandit
+          pip install bandit[baseline,sarif]
           set +e
-          bandit -r . -f sarif -o results.sarif
+          bandit -r . -b .bandit-baseline.json -f sarif -o bandit-report_sarif.json
           BANDIT_EXIT=$?
           set -e
           echo "exit_code=$BANDIT_EXIT" >> "$GITHUB_OUTPUT"
@@ -88,12 +88,12 @@ jobs:
         if: always()
         with:
           name: bandit.sarif
-          path: results.sarif
+          path: bandit-report_sarif.json
           if-no-files-found: error
       - uses: github/codeql-action/upload-sarif@57eebf61a2246ab60a0c2f5a85766db783ad3553 # v3.28.15
         continue-on-error: true
         with:
-          sarif_file: results.sarif
+          sarif_file: bandit-report_sarif.json
       - if: steps.bandit.outputs.exit_code != '0'
         run: |
           echo "::error::bandit found security issues"
@@ -113,7 +113,7 @@ jobs:
         id: grype
         run: |
           set +e
-          grype --output sarif . | tee grype.sarif.json
+          grype --output sarif . | tee grype-report_sarif.json
           GRYPE_EXIT=${PIPESTATUS[0]}
           set -e
           echo "exit_code=$GRYPE_EXIT" >> "$GITHUB_OUTPUT"
@@ -121,12 +121,12 @@ jobs:
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: grype.sarif
-          path: grype.sarif.json
+          path: grype-report_sarif.json
           if-no-files-found: error
       - uses: github/codeql-action/upload-sarif@57eebf61a2246ab60a0c2f5a85766db783ad3553 # v3.28.15
         continue-on-error: true
         with:
-          sarif_file: grype.sarif.json
+          sarif_file: grype-report_sarif.json
       - if: steps.grype.outputs.exit_code != '0'
         run: |
           echo "::error::grype found vulnerabilities"
@@ -147,7 +147,7 @@ jobs:
         run: |
           pip install checkov
           set +e
-          checkov -d . --output cli sarif --output-file-path console results.sarif
+          checkov -d . --output sarif --output-file-path checkov-report_sarif.json
           CHECKOV_EXIT=$?
           set -e
           echo "exit_code=$CHECKOV_EXIT" >> "$GITHUB_OUTPUT"
@@ -156,13 +156,13 @@ jobs:
         if: always()
         with:
           name: checkov.sarif
-          path: results.sarif
+          path: checkov-report_sarif.json
           if-no-files-found: error
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@57eebf61a2246ab60a0c2f5a85766db783ad3553 # v3.28.15
         continue-on-error: true
         with:
-          sarif_file: results.sarif
+          sarif_file: checkov-report_sarif.json
       - if: steps.checkov.outputs.exit_code != '0'
         run: |
           echo "::error::checkov found IaC issues"
@@ -223,7 +223,7 @@ jobs:
               --exclude-rule="elixir.lang.best-practice.enum-map-into.enum_map_into" \
               --exclude-rule="elixir.lang.best-practice.enum-map-join.enum_map_join" \
               --exclude-rule="elixir.lang.correctness.atom-exhaustion.atom_exhaustion" \
-              --sarif-output semgrep.sarif.json $BASELINE_ARGS
+              --sarif-output semgrep-report_sarif.json $BASELINE_ARGS
             SEMGREP_EXIT=$?
             set -e
 
@@ -243,7 +243,7 @@ jobs:
             -e 's/"security-severity":"Medium"/"security-severity":"5.0"/gI' \
             -e 's/"security-severity":"High"/"security-severity":"7.0"/gI' \
             -e 's/"security-severity":"Critical"/"security-severity":"9.0"/gI' \
-            semgrep.sarif.json
+            semgrep-report_sarif.json
 
           # Fix 2: Truncate rule IDs exceeding 255 characters
           # GitHub rejects SARIF with identifiers > 255 chars
@@ -270,16 +270,16 @@ jobs:
                 .ruleId = $id_map[.ruleId]
               else . end
             ]
-          ' semgrep.sarif.json > semgrep.sarif.tmp.json && mv semgrep.sarif.tmp.json semgrep.sarif.json
+          ' semgrep-report_sarif.json > semgrep.sarif.tmp.json && mv semgrep.sarif.tmp.json semgrep-report_sarif.json
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: semgrep.sarif
-          path: semgrep.sarif.json
+          path: semgrep-report_sarif.json
           if-no-files-found: error
       - uses: github/codeql-action/upload-sarif@57eebf61a2246ab60a0c2f5a85766db783ad3553 # v3.28.15
         continue-on-error: true
         with:
-          sarif_file: semgrep.sarif.json
+          sarif_file: semgrep-report_sarif.json
       - if: steps.semgrep.outputs.exit_code != '0'
         run: |
           echo "::error::semgrep found new security issues"
