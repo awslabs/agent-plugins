@@ -67,6 +67,11 @@ function validateMarketplace() {
 }
 
 function validatePlugin(plugin) {
+  if (!plugin || typeof plugin !== "object" || Array.isArray(plugin)) {
+    error(`Invalid plugin entry in marketplace.json: expected an object but got ${JSON.stringify(plugin)}`);
+    return;
+  }
+
   const pluginName = plugin.name;
   if (!pluginName) {
     error(`Plugin entry missing "name" field`);
