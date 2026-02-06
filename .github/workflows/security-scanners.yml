@@ -119,7 +119,7 @@ jobs:
         with:
           fetch-depth: 0 # Required for baseline comparison
       - run: |
-          echo "semgrep==1.149.0" > requirements.txt
+          echo "semgrep==1.151.0" > requirements.txt
       - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
           python-version: '3.13'
@@ -148,6 +148,18 @@ jobs:
 
             # Exit 0 for now to allow artifact upload
             exit 0
+      - name: Fix SARIF security-severity values
+        run: |
+          # GitHub CodeQL expects numeric security-severity values (CVSS 0.0-10.0)
+          # Semgrep outputs text values (Info, Low, Medium, High, Critical)
+          # Convert text to numeric: Info=0.0, Low=2.0, Medium=5.0, High=7.0, Critical=9.0
+          sed -i \
+            -e 's/"security-severity":"Info"/"security-severity":"0.0"/g' \
+            -e 's/"security-severity":"Low"/"security-severity":"2.0"/g' \
+            -e 's/"security-severity":"Medium"/"security-severity":"5.0"/g' \
+            -e 's/"security-severity":"High"/"security-severity":"7.0"/g' \
+            -e 's/"security-severity":"Critical"/"security-severity":"9.0"/g' \
+            semgrep.sarif.json
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: semgrep.sarif
