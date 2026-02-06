@@ -11,6 +11,7 @@ This repository uses [gitleaks](https://github.com/gitleaks/gitleaks) to detect 
 If gitleaks reports a false positive (e.g., example API keys in documentation, test fixtures), you can add it to the baseline file to suppress future warnings.
 
 1. Run gitleaks locally to generate the baseline:
+
    ```bash
    gitleaks git --config=.gitleaks.toml --report-format=json . > .gitleaks-baseline.json
    ```
