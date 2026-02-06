@@ -195,7 +195,7 @@ jobs:
     - name: Get SonarQube token
       run: |
         # Login and get token (default credentials: admin/admin)
-        SONAR_TOKEN=$(curl -s -u admin:admin -X POST "http://localhost:9000/api/user_tokens/generate?name=github-actions" \ # gitleaks:allow
+        SONAR_TOKEN=$(curl -s -u admin:admin -X POST "http://localhost:9000/api/user_tokens/generate?name=github-actions" \
           | jq -r '.token')
         echo "SONAR_TOKEN=$SONAR_TOKEN" >> $GITHUB_ENV
     - name: SonarQube Info
