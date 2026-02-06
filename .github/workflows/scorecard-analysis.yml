@@ -1,4 +1,4 @@
-name: Scorecard analysis workflow
+name: Scorecard Analysis
 on:
   push:
     branches:
