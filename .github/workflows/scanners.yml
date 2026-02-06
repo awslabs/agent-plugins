@@ -68,6 +68,45 @@ jobs:
           name: bandit.sarif
           path: results.sarif
           if-no-files-found: error
+  grype:
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+      - run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/43e7e3246ed01b1ec0ff54f9b054201ccbe78e3a/install.sh | sh -s -- -b /usr/local/bin v0.104.3
+          grype --version
+      - run: |
+          grype --output sarif . | tee grype.sarif.json
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: grype.sarif
+          path: grype.sarif.json
+          if-no-files-found: error
+      - uses: github/codeql-action/upload-sarif@57eebf61a2246ab60a0c2f5a85766db783ad3553 # v3.28.15
+        continue-on-error: true
+        with:
+          sarif_file: grype.sarif.json
+  checkov:
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+      - uses: bridgecrewio/checkov-action@5051a5cfc7e4c71d95199f81ffafbb490c7e6213 # v12.3079.0
+        with:
+          output_format: cli,sarif
+          output_file_path: console,results.sarif
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@b2ff80ddacba59b60f4e0cf3b699baaea3230cd9 # v4.31.9
+        if: success() || failure()
+        with:
+          sarif_file: results.sarif
   semgrep:
     permissions:
       actions: read
