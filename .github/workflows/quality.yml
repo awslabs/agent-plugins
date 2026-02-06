@@ -49,3 +49,6 @@ jobs:
 
       - name: Validate JSON manifests
         run: mise run lint:manifests
+
+      - name: Validate cross-references
+        run: mise run lint:cross-refs

@@ -76,9 +76,14 @@ function validatePlugin(plugin) {
   info(`Validating plugin: ${pluginName}`);
 
   // Determine plugin directory path
+  // Source can be relative to repo root (./plugins/foo) or to plugins dir (./foo)
   const source = plugin.source || `./${pluginName}`;
   const normalizedSource = source.replace(/^\.\//, "").replace(/\/$/, "");
-  const pluginDir = path.join(PLUGINS_ROOT, normalizedSource);
+
+  // If source already includes plugins/ prefix, use as-is; otherwise prepend PLUGINS_ROOT
+  const pluginDir = normalizedSource.startsWith(`${PLUGINS_ROOT}/`)
+    ? normalizedSource
+    : path.join(PLUGINS_ROOT, normalizedSource);
 
   // Check 1: Plugin directory exists
   if (!fs.existsSync(pluginDir)) {
