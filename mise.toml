@@ -1,4 +1,4 @@
-# mise.toml - Tool versions and tasks for AWS Agent Plugins
+# mise.toml - Tool versions and tasks for Agent Plugins for AWS
 # See: https://mise.jdx.dev
 
 min_version = "2024.11.1"

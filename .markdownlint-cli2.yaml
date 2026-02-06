@@ -1,4 +1,4 @@
-# markdownlint-cli2 configuration for AWS Agent Plugins
+# markdownlint-cli2 configuration for Agent Plugins for AWS
 # Handles SKILL.md files with YAML frontmatter
 
 # YAML frontmatter pattern - matches --- delimited blocks at file start

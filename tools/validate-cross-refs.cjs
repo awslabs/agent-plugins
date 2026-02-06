@@ -1,5 +1,5 @@
 /**
- * Cross-reference validation for AWS Agent Plugins
+ * Cross-reference validation for Agent Plugins for AWS
  *
  * Validates relationships between manifest files:
  * - marketplace.json plugins[] -> plugin directories exist
