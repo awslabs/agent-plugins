@@ -1,3 +1,4 @@
+name: Security Scanners
 on:
   schedule:
     # Daily at 15:12 UTC (random time to avoid GitHub Actions load spikes)
