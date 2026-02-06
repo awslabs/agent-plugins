@@ -173,6 +173,7 @@ jobs:
             # Exit 0 for now to allow artifact upload
             exit 0
       - name: Fix SARIF for GitHub compatibility
+        continue-on-error: true
         run: |
           # Fix 1: Convert text security-severity to numeric (CVSS 0.0-10.0)
           # Semgrep outputs: Info, Low, Medium, High, Critical
@@ -191,7 +192,7 @@ jobs:
             # Build a mapping of old IDs to new (truncated) IDs
             (.runs[0].tool.driver.rules // []) as $rules |
             ([$rules[] | select((.id | length) > 255) |
-              {key: .id, value: (.id[0:247] + "-" + (.id | @base32d | .[0:7]))}
+              {key: .id, value: (.id[0:247] + "-" + (.id | @base64 | gsub("[+/]"; "_") | .[0:7]))}
             ] | from_entries) as $id_map |
 
             # Update rule definitions
