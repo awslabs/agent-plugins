@@ -1,0 +1,5 @@
+# Gitleaks ignore file
+# https://github.com/gitleaks/gitleaks#gitleaksignore
+
+# SonarQube default credentials for local CI container (not real secrets)
+.github/workflows/scanners.yml:curl-auth-user:190

@@ -1,0 +1,57 @@
+name: pre-commit
+
+on:
+  pull_request:
+  push:
+permissions: {}
+jobs:
+  detect-precommit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      precommits: ${{ steps.find-precommit.outputs.precommits }}
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - name: Find precommit configurations
+        id: find-precommit
+        working-directory: .
+        run: |
+          PRECOMMITS=$(find . -name ".pre-commit-config.yaml" -exec dirname {} \; | sed 's/^\.\///' | jq -R -s -c 'split("\n")[:-1]')
+          echo "precommits=$PRECOMMITS" >> $GITHUB_OUTPUT
+
+  pre-commit:
+    needs: [detect-precommit]
+    if: ${{ needs.detect-precommit.outputs.precommits != '[]' && needs.detect-precommit.outputs.precommits != '' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        precommit: ${{ fromJson(needs.detect-precommit.outputs.precommits) }}
+    name: Precommit ${{ matrix.precommit }}
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ matrix.precommit }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 #v6.0.1
+    - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 #v6.1.0
+      with:
+        python-version-file: ${{ matrix.precommit }}/.python-version
+    - run: |
+        echo "github.workspace=${{ github.workspace }}"
+        echo "env.GITHUB_WORKSPACE=${{ env.GITHUB_WORKSPACE }}"
+        echo "vars.GITHUB_WORKSPACE=${{ vars.GITHUB_WORKSPACE }}"
+        python -m pip install --require-hashes --requirement ${{ github.workspace }}/.github/workflows/pre-commit-requirements.txt
+        python -m pip freeze --local
+    - uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb #v5.0.1
+      with:
+        path: ~/.cache/pre-commit
+        key: pre-commit-3|${{ runner.os }}|${{ hashFiles(matrix.precommit) }}
+    - name: Set SKIP variable for main branch
+      if: github.ref == 'refs/heads/main'
+      run: echo "SKIP=no-commit-to-branch" >> $GITHUB_ENV
+    - run: SKIP="$SKIP" pre-commit run --show-diff-on-failure --color=always --all-files
+      working-directory: ${{ matrix.precommit }}

@@ -2,6 +2,14 @@
 
 Thank you for your interest in contributing to AWS Agent Plugins.
 
+## Role Guides
+
+Depending on your role, please review the appropriate guide for repository-specific instructions:
+
+- [Development Guide](.github/guides/DEVELOPMENT_GUIDE.md) - For contributors and developers
+- [Administrative Guide](.github/guides/ADMINISTRATIVE_GUIDE.md) - For repository administrators
+- [Maintainer Guide](.github/guides/MAINTAINER_GUIDE.md) - For project maintainers
+
 ## Reporting Bugs/Feature Requests
 
 We welcome you to use the GitHub issue tracker to report bugs or suggest features.

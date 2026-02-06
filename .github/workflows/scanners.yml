@@ -1,0 +1,258 @@
+on:
+  schedule:
+    # Daily at 15:12 UTC (random time to avoid GitHub Actions load spikes)
+    - cron: '12 15 * * *'
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  actions: none
+  attestations: none
+  checks: none
+  contents: none
+  deployments: none
+  discussions: none
+  id-token: none
+  issues: none
+  models: none
+  packages: none
+  pages: none
+  pull-requests: none
+  repository-projects: none
+  security-events: none
+  statuses: none
+jobs:
+  gitleaks:
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    runs-on: ubuntu-latest
+    env:
+      GITLEAKS_VERSION: "8.30.0"
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0
+      - name: Install gitleaks
+        run: |
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar -xz;
+          sudo mv gitleaks /usr/local/bin/;
+          gitleaks --version;
+      - name: Run gitleaks (full history)
+        run: |
+          gitleaks git --config=.gitleaks.toml --baseline-path=.gitleaks-baseline.json --report-path=gitleaks-report_sarif.json --report-format=sarif . || true
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        if: always()
+        with:
+          name: gitleaks.sarif
+          path: gitleaks-report_sarif.json
+          if-no-files-found: ignore
+      - uses: github/codeql-action/upload-sarif@57eebf61a2246ab60a0c2f5a85766db783ad3553 # v3.28.15
+        continue-on-error: true
+        with:
+          sarif_file: gitleaks-report_sarif.json
+  bandit:
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: PyCQA/bandit-action@67a458d90fa11fb1463e91e7f4c8f068b5863c7f # v1.0.1
+        continue-on-error: true
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        if: always()
+        with:
+          name: bandit.sarif
+          path: results.sarif
+          if-no-files-found: error
+  semgrep:
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0 # Required for baseline comparison
+      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+      - run: pip install "semgrep==1.149.0" #TODO: use hash installation
+      - name: Run semgrep
+        id: semgrep
+        env:
+          # For PRs: base SHA; for push to default branch: empty
+          BASELINE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: |
+            BASELINE_ARGS=""
+            if [ -n "$BASELINE_SHA" ]; then
+              BASELINE_ARGS="--baseline-commit $BASELINE_SHA"
+            fi
+
+            # Run semgrep, capture exit code
+            set +e
+            semgrep scan --oss-only --verbose --metrics=off --config=r/all --sarif-output semgrep.sarif.json $BASELINE_ARGS
+            SEMGREP_EXIT=$?
+            set -e
+
+            echo "exit_code=$SEMGREP_EXIT" >> "$GITHUB_OUTPUT"
+
+            # Exit 0 for now to allow artifact upload
+            exit 0
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: semgrep.sarif
+          path: semgrep.sarif.json
+          if-no-files-found: error
+      - uses: github/codeql-action/upload-sarif@57eebf61a2246ab60a0c2f5a85766db783ad3553 # v3.28.15
+        continue-on-error: true
+        with:
+          sarif_file: semgrep.sarif.json
+      - if: steps.semgrep.outputs.exit_code != '0'
+        run: |
+          echo "::error::semgrep found new security issues"
+          exit ${{ steps.semgrep.outputs.exit_code }}
+  clamav:
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    runs-on: ubuntu-latest
+    services:
+      clamav:
+        image: clamav/clamav@sha256:a56287b4ffa299bde2ef09234cb8b6134d591d0be05b63f5065932dc93cb2435
+        ports:
+          - 3310:3310
+        options: >-
+          --health-cmd "/usr/local/bin/clamdcheck.sh"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - name: Wait for ClamAV service
+        run: timeout 300 bash -c 'until echo > /dev/tcp/localhost/3310; do sleep 5; done' 2>/dev/null
+      - run: |
+          sudo apt-get update || true
+          sudo rm -f /var/lib/man-db/auto-update
+          sudo apt-get install -y --no-install-recommends clamdscan
+          sudo mkdir -p /etc/clamav
+          cat << EOF | sudo tee /etc/clamav/clamd.conf
+          TCPSocket 3310
+          TCPAddr 127.0.0.1
+          EOF
+          clamdscan --version
+      - run: |
+          clamdscan --verbose --log=clamdscan.txt --stream --fdpass --multiscan .
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        if: always()
+        with:
+          name: clamdscan.txt
+          path: clamdscan.txt
+          if-no-files-found: error
+  sonarqube:
+    runs-on: ubuntu-latest
+    services:
+      sonarqube:
+        image: sonarqube:community@sha256:48dd0e946ad6481dde43bb31d1a7af09c22f59be6399b195dcce7b87d82c5f40
+        ports:
+          - 9000:9000
+        env:
+          SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: true
+          SONAR_WEB_SYSTEMPASSCODE: passcode # is it possible to make this dynamic?
+        options: >-
+          --health-cmd "status=$(wget -qO- http://localhost:9000/api/system/status | grep -oP '(?<=status\":\").*' | sed -e 's|\"}||' | tr -d '\n'); echo -n \"$status\"; test \"$status\" = \"UP\""
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 30
+    steps:
+    # - if: always()
+    #   run: |
+    #     docker inspect $(docker ps -qf "ancestor=sonarqube:community@sha256:48dd0e946ad6481dde43bb31d1a7af09c22f59be6399b195dcce7b87d82c5f40") | jq '.[] | {"test": .Config.Healthcheck.Test, "state": .State.Health}'
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        fetch-depth: 0
+    - name: Wait for SonarQube to be ready
+      run: |
+        until curl --silent http://localhost:9000/api/system/status | jq -r '.status' | grep -q 'UP'; do
+          echo "Waiting for SonarQube..."
+          sleep 5
+        done
+        echo "SonarQube is ready!"
+    - name: Get SonarQube token
+      run: |
+        # Login and get token (default credentials: admin/admin)
+        SONAR_TOKEN=$(curl -s -u admin:admin -X POST "http://localhost:9000/api/user_tokens/generate?name=github-actions" \ # gitleaks:allow
+          | jq -r '.token')
+        echo "SONAR_TOKEN=$SONAR_TOKEN" >> $GITHUB_ENV
+    - name: SonarQube Info
+      run: |
+        curl --silent --request GET \
+          --url 'http://localhost:9000/api/server/version' \
+          --header 'X-Sonar-Passcode: passcode'
+        curl --silent --request GET \
+          --url 'http://localhost:9000/api/system/health' \
+          --header 'X-Sonar-Passcode: passcode' | jq
+        curl --silent --request GET \
+          --url 'http://localhost:9000/api/system/info' \
+          --header 'Authorization: Bearer ${{ env.SONAR_TOKEN }}' | jq
+
+    # TODO: Shouldn't the project be matching the repo and name?
+    - name: Create SonarQube project
+      run: |
+        # Create project
+        curl --silent --request POST \
+          --url "http://localhost:9000/api/projects/create?project=my-project&name=MyProject" \
+          --header 'Authorization: Bearer ${{ env.SONAR_TOKEN }}'
+
+    - uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602 # v6.0.0
+      id: sonarqube-scan-action
+      env:
+        SONAR_HOST_URL: http://localhost:9000
+        SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
+      with:
+        args: >
+          "-Dsonar.projectName=MyProject"
+          -Dsonar.projectKey=my-project
+          -Dsonar.sources=.
+          -Dsonar.verbose=true
+
+    # If you wish to fail your job when the Quality Gate is red, uncomment the
+    # following lines. This would typically be used to fail a deployment.
+    - uses: SonarSource/sonarqube-quality-gate-action@cf038b0e0cdecfa9e56c198bbb7d21d751d62c3b # v1.2.0
+      id: sonarqube-quality-gate-check
+      timeout-minutes: 5 # why 4 minutes?
+      env:
+        SONAR_HOST_URL: http://localhost:9000
+        SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
+
+    # Use the output from the Quality Gate in another step.
+    # The possible outputs of the `quality-gate-status` variable are `PASSED`, `WARN`, or `FAILED`.
+    - name: "Example show SonarQube Quality Gate Status value"
+      if: always()
+      run: |
+        echo "The Quality Gate status is ${{ steps.sonarqube-quality-gate-check.outputs.quality-gate-status }}"
+        find . -name "report-task.txt" -print0 | xargs -0 -I{} cat {}
+
+    - name: Get Issues
+      run: |
+        curl --silent --request GET \
+          --url 'http://localhost:9000/api/issues/search?componentKeys=my-project&ps=500&p=1' \
+          --header 'Authorization: Bearer ${{ env.SONAR_TOKEN }}' | tee sonar-issues.json | jq || exit 1
+
+    - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      if: always()
+      with:
+          name: sonar-issues.json
+          path: sonar-issues.json
+          if-no-files-found: error
+
+        # TODO: write a loop and write the JSON artifact out
+        # TODO: convert the artifact to a SARIF format
+        # http://localhost:9000/api/issues/search?componentKeys=AWS-Labs-MCP-Servers
+        # https://next.sonarqube.com/sonarqube/web_api/api/project_analyses/search

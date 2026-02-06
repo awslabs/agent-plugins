@@ -1,0 +1,187 @@
+name: CI
+
+on:
+  push:
+    branches: ["*"]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  # ===========================================================================
+  # BUILD: Linting, formatting, security scanning via pre-commit
+  # ===========================================================================
+  build:
+    name: Build & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache pre-commit
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+          restore-keys: |
+            pre-commit-${{ runner.os }}-
+
+      - name: Install pre-commit
+        run: pip install pre-commit
+
+      - name: Run pre-commit (linting + security)
+        run: |
+          # Skip hooks not applicable in CI:
+          # - no-commit-to-branch: CI can commit to any branch
+          # - gitleaks: uses Go proxy which has network issues in act;
+          #             gitleaks-action in security job does full history scan instead
+          SKIP=no-commit-to-branch,gitleaks pre-commit run --all-files
+
+  # ===========================================================================
+  # TEST: Unit, Integration, E2E tests
+  # ===========================================================================
+  test-unit:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # TODO: Install dependencies
+      # - name: Install dependencies
+      #   run: |
+      #     pip install -e ".[test]"
+      #     # or: npm ci
+      #     # or: uv sync --frozen
+
+      - name: Run unit tests
+        run: |
+          echo "TODO: Add unit tests"
+          # pytest tests/unit/ --cov --cov-report=xml
+          # npm run test:unit
+          # uv run pytest tests/unit/
+
+  test-integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # TODO: Install dependencies and set up services
+      # services:
+      #   postgres:
+      #     image: postgres:16
+      #     env:
+      #       POSTGRES_PASSWORD: postgres
+      #     ports:
+      #       - 5432:5432
+
+      - name: Run integration tests
+        run: |
+          echo "TODO: Add integration tests"
+          # pytest tests/integration/
+          # npm run test:integration
+
+  test-e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # TODO: Install dependencies and browser drivers
+      # - name: Install Playwright
+      #   run: npx playwright install --with-deps
+
+      - name: Run E2E tests
+        run: |
+          echo "TODO: Add E2E tests"
+          # npx playwright test
+          # pytest tests/e2e/
+
+  # ===========================================================================
+  # SECURITY: Additional security scanning (beyond pre-commit)
+  # ===========================================================================
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run gitleaks (full history)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+          GITLEAKS_ENABLE_COMMENTS: false
+        with:
+          extra_args: --baseline-path=.gitleaks-baseline.json
+        continue-on-error: true
+
+      # TODO: Add CodeQL for supported languages
+      # - name: Initialize CodeQL
+      #   uses: github/codeql-action/init@v3
+      #   with:
+      #     languages: python, javascript
+      #
+      # - name: Perform CodeQL Analysis
+      #   uses: github/codeql-action/analyze@v3
+
+  # ===========================================================================
+  # DEPLOY: Deployment placeholder
+  # ===========================================================================
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: [test-unit, test-integration, test-e2e, security]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy placeholder
+        run: |
+          echo "TODO: Add deployment steps"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          # Examples:
+          # - Deploy to Vercel: npx vercel --prod
+          # - Deploy to AWS: aws s3 sync ./dist s3://bucket
+          # - Deploy to Kubernetes: kubectl apply -f k8s/
+          # - Deploy to Docker: docker push image:tag

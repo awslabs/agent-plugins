@@ -1,0 +1,29 @@
+# Gitleaks Configuration
+# https://github.com/gitleaks/gitleaks
+
+title = "gitleaks config"
+
+# Extend the default gitleaks configuration
+[extend]
+useDefault = true
+
+# Global allowlist patterns
+[allowlist]
+description = "Global allowlist"
+paths = [
+    '''\.gitleaksignore$''',
+    '''\.gitleaks-baseline\.json$''',
+]
+
+# Example: Add custom rules or override defaults
+# [[rules]]
+# id = "custom-api-key"
+# description = "Custom API Key Pattern"
+# regex = '''(?i)custom[_-]?api[_-]?key\s*[=:]\s*['"]?([a-zA-Z0-9]{32,})['"]?'''
+# keywords = ["custom", "api", "key"]
+
+# Example: Rule-specific allowlist
+# [[rules.allowlists]]
+# description = "Allow example keys in tests"
+# paths = ['''test/.*''', '''.*_test\.go$''']
+# regexTarget = "match"
