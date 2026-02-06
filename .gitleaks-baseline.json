@@ -1,1 +1,42 @@
-[]
+[
+  {
+    "Description": "curl-auth-user has detected secret for file .github/workflows/scanners.yml at commit 6c8ef528c7b02b86c596392817e6ea2093382943.",
+    "StartLine": 198,
+    "EndLine": 198,
+    "StartColumn": 23,
+    "EndColumn": 45,
+    "Match": "admin:admin",
+    "Secret": "admin:admin",
+    "File": ".github/workflows/scanners.yml",
+    "SymlinkFile": "",
+    "Commit": "6c8ef528c7b02b86c596392817e6ea2093382943",
+    "Entropy": 0,
+    "Author": "Scott Schreckengaust",
+    "Email": "scottschreckengaust@users.noreply.github.com",
+    "Date": "2026-02-06T01:38:56Z",
+    "Message": "fix: gitleaks ignore",
+    "Tags": [],
+    "RuleID": "curl-auth-user",
+    "Fingerprint": "6c8ef528c7b02b86c596392817e6ea2093382943:.github/workflows/scanners.yml:curl-auth-user:198"
+  },
+  {
+    "Description": "curl-auth-user has detected secret for file .github/workflows/security-scanners.yml at commit 551c360d54343758dd49fa2c9b840c7349236620.",
+    "StartLine": 238,
+    "EndLine": 238,
+    "StartColumn": 24,
+    "EndColumn": 46,
+    "Match": "admin:admin",
+    "Secret": "admin:admin",
+    "File": ".github/workflows/security-scanners.yml",
+    "SymlinkFile": "",
+    "Commit": "551c360d54343758dd49fa2c9b840c7349236620",
+    "Entropy": 0,
+    "Author": "Scott Schreckengaust",
+    "Email": "scottschreckengaust@users.noreply.github.com",
+    "Date": "2026-02-06T17:37:27Z",
+    "Message": "chore: GitHub setup (#4)",
+    "Tags": [],
+    "RuleID": "curl-auth-user",
+    "Fingerprint": "551c360d54343758dd49fa2c9b840c7349236620:.github/workflows/security-scanners.yml:curl-auth-user:238"
+  }
+]
