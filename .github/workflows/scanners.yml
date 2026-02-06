@@ -160,6 +160,10 @@ jobs:
           path: clamdscan.txt
           if-no-files-found: error
   sonarqube:
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
     runs-on: ubuntu-latest
     services:
       sonarqube:
