@@ -10,12 +10,15 @@
 .claude-plugin/           @awslabs/agent-plugins-admins
 .github/                  @awslabs/agent-plugins-admins
 .gitignore                @awslabs/agent-plugins-admins
+.gitleaks-baseline.json   @awslabs/agent-plugins-admins
+.gitleaks.toml            @awslabs/agent-plugins-admins
+.gitleaksignore           @awslabs/agent-plugins-admins
 .markdownlint-cli2.yaml   @awslabs/agent-plugins-admins
-.pre-commit-config.yaml   @awslabs/agent-plugins-admins
 AGENTS.md                 @awslabs/agent-plugins-admins
 CLAUDE.md                 @awslabs/agent-plugins-admins
 CODE_OF_CONDUCT.md        @awslabs/agent-plugins-admins
 CONTRIBUTING.md           @awslabs/agent-plugins-admins
+DEVELOPMENT_GUIDE.md      @awslabs/agent-plugins-admins
 dprint.json               @awslabs/agent-plugins-admins
 LICENSE                   @awslabs/agent-plugins-admins
 mise.toml                 @awslabs/agent-plugins-admins
