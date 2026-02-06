@@ -154,11 +154,11 @@ jobs:
           # Semgrep outputs text values (Info, Low, Medium, High, Critical)
           # Convert text to numeric: Info=0.0, Low=2.0, Medium=5.0, High=7.0, Critical=9.0
           sed -i \
-            -e 's/"security-severity":"Info"/"security-severity":"0.0"/g' \
-            -e 's/"security-severity":"Low"/"security-severity":"2.0"/g' \
-            -e 's/"security-severity":"Medium"/"security-severity":"5.0"/g' \
-            -e 's/"security-severity":"High"/"security-severity":"7.0"/g' \
-            -e 's/"security-severity":"Critical"/"security-severity":"9.0"/g' \
+            -e 's/"security-severity":"Info"/"security-severity":"0.0"/gI' \
+            -e 's/"security-severity":"Low"/"security-severity":"2.0"/gI' \
+            -e 's/"security-severity":"Medium"/"security-severity":"5.0"/gI' \
+            -e 's/"security-severity":"High"/"security-severity":"7.0"/gI' \
+            -e 's/"security-severity":"Critical"/"security-severity":"9.0"/gI' \
             semgrep.sarif.json
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
