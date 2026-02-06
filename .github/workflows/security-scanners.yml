@@ -77,9 +77,9 @@ jobs:
       - name: Run bandit
         id: bandit
         run: |
-          pip install bandit[baseline,sarif]
+          pip install bandit[sarif]
           set +e
-          bandit -r . -b .bandit-baseline.json -f sarif -o bandit-report_sarif.json
+          bandit -r . -f sarif -o bandit-report_sarif.json
           BANDIT_EXIT=$?
           set -e
           echo "exit_code=$BANDIT_EXIT" >> "$GITHUB_OUTPUT"
