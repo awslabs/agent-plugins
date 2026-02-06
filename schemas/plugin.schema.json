@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://awslabs.github.io/agent-plugins/schemas/plugin.schema.json",
   "title": "Plugin Manifest",
-  "description": "Schema for plugin.json files in AWS Agent Plugins",
+  "description": "Schema for plugin.json files in Agent Plugins for AWS",
   "type": "object",
   "required": ["name"],
   "properties": {

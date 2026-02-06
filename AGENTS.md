@@ -1,4 +1,4 @@
-# AWS Agent Plugins
+# Agent Plugins for AWS
 
 ## TL;DR Pitch
 

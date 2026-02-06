@@ -1,6 +1,6 @@
 # Contributing Guidelines
 
-Thank you for your interest in contributing to AWS Agent Plugins.
+Thank you for your interest in contributing to Agent Plugins for AWS.
 
 ## Reporting Bugs/Feature Requests
 
