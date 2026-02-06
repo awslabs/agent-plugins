@@ -1,4 +1,4 @@
-name: Pull Request Lint
+name: Pull Request Validation
 
 on:
   pull_request_target:
