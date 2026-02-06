@@ -12,5 +12,11 @@
 #
 # generic.secrets.security.detected-sonarqube-docs-api-key.detected-sonarqube-docs-api-key
 #   Reason: False positive - dynamically generated tokens in CI, not hardcoded secrets
+#
+# apex.*
+#   Reason: Apex is a Semgrep Pro language (requires paid license) - not applicable with --oss-only
+#
+# elixir.*
+#   Reason: Elixir is a Semgrep Pro language (requires paid license) - not applicable with --oss-only
 
 rules: []
