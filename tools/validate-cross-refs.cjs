@@ -16,16 +16,16 @@ const path = require("path");
 const MARKETPLACE_PATH = ".claude-plugin/marketplace.json";
 const PLUGINS_ROOT = "plugins";
 
-let errors = [];
-let warnings = [];
+let validationErrors = [];
+let validationWarnings = [];
 
 function error(message) {
-  errors.push(message);
+  validationErrors.push(message);
   console.error(`ERROR: ${message}`);
 }
 
 function warn(message) {
-  warnings.push(message);
+  validationWarnings.push(message);
   console.warn(`WARNING: ${message}`);
 }
 
@@ -139,10 +139,10 @@ validateMarketplace();
 
 // Summary
 console.log("\n=== Summary ===");
-console.log(`Errors: ${errors.length}`);
-console.log(`Warnings: ${warnings.length}`);
+console.log(`Errors: ${validationErrors.length}`);
+console.log(`Warnings: ${validationWarnings.length}`);
 
 // Exit with error code if any errors
-if (errors.length > 0) {
+if (validationErrors.length > 0) {
   process.exit(1);
 }
