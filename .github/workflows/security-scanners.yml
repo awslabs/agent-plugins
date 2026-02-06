@@ -278,7 +278,7 @@ jobs:
           SONAR_WEB_SYSTEMPASSCODE: passcode # is it possible to make this dynamic?
         # nosemgrep: trailofbits.generic.wget-unencrypted-url.wget-unencrypted-url (localhost doesn't need HTTPS)
         options: >-
-          --health-cmd "status=$(wget -qO- http://localhost:9000/api/system/status | grep -oP '(?<=status\":\").*' | sed -e 's|\"}||' | tr -d '\n'); echo -n \"$status\"; test \"$status\" = \"UP\""
+          --health-cmd "status=$(wget -qO- http://localhost:9000/api/system/status | grep -oP '(?<=status\":\").*' | sed -e 's|\"}||' | tr -d '\n'); echo -n \"$status\"; test \"$status\" = \"UP\"  # nosemgrep: trailofbits.generic.wget-unencrypted-url.wget-unencrypted-url"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 30
