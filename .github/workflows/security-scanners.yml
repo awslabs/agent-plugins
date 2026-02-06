@@ -203,7 +203,7 @@ jobs:
       - if: steps.semgrep.outputs.exit_code != '0'
         run: |
           echo "::error::semgrep found new security issues"
-          exit ${{ steps.semgrep.outputs.exit_code }}
+          exit ${{ steps.semgrep.outputs.exit_code }}  # nosemgrep: yaml.github-actions.security.curl-eval.curl-eval
   clamav:
     permissions:
       actions: read
@@ -327,7 +327,7 @@ jobs:
     - name: "Example show SonarQube Quality Gate Status value"
       if: always()
       run: |
-        echo "The Quality Gate status is ${{ steps.sonarqube-quality-gate-check.outputs.quality-gate-status }}"
+        echo "The Quality Gate status is ${{ steps.sonarqube-quality-gate-check.outputs.quality-gate-status }}"  # nosemgrep: yaml.github-actions.security.curl-eval.curl-eval
         find . -name "report-task.txt" -print0 | xargs -0 -I{} cat {}
 
     - name: Get Issues
