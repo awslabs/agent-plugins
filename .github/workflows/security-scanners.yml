@@ -139,8 +139,12 @@ jobs:
             fi
 
             # Run semgrep, capture exit code
+            # Rule exclusions documented in .semgrep.yaml
             set +e
-            semgrep scan --oss-only --verbose --metrics=off --config=r/all --sarif-output semgrep.sarif.json $BASELINE_ARGS
+            semgrep scan --oss-only --verbose --metrics=off --config=r/all \
+              --exclude-rule="ai.generic.detect-generic-ai-anthprop.detect-generic-ai-anthprop" \
+              --exclude-rule="generic.secrets.security.detected-sonarqube-docs-api-key.detected-sonarqube-docs-api-key" \
+              --sarif-output semgrep.sarif.json $BASELINE_ARGS
             SEMGREP_EXIT=$?
             set -e
 
@@ -148,11 +152,11 @@ jobs:
 
             # Exit 0 for now to allow artifact upload
             exit 0
-      - name: Fix SARIF security-severity values
+      - name: Fix SARIF for GitHub compatibility
         run: |
-          # GitHub CodeQL expects numeric security-severity values (CVSS 0.0-10.0)
-          # Semgrep outputs text values (Info, Low, Medium, High, Critical)
-          # Convert text to numeric: Info=0.0, Low=2.0, Medium=5.0, High=7.0, Critical=9.0
+          # Fix 1: Convert text security-severity to numeric (CVSS 0.0-10.0)
+          # Semgrep outputs: Info, Low, Medium, High, Critical
+          # GitHub expects: numeric values
           sed -i \
             -e 's/"security-severity":"Info"/"security-severity":"0.0"/gI' \
             -e 's/"security-severity":"Low"/"security-severity":"2.0"/gI' \
@@ -160,6 +164,33 @@ jobs:
             -e 's/"security-severity":"High"/"security-severity":"7.0"/gI' \
             -e 's/"security-severity":"Critical"/"security-severity":"9.0"/gI' \
             semgrep.sarif.json
+
+          # Fix 2: Truncate rule IDs exceeding 255 characters
+          # GitHub rejects SARIF with identifiers > 255 chars
+          jq '
+            # Build a mapping of old IDs to new (truncated) IDs
+            (.runs[0].tool.driver.rules // []) as $rules |
+            ([$rules[] | select((.id | length) > 255) |
+              {key: .id, value: (.id[0:247] + "-" + (.id | @base32d | .[0:7]))}
+            ] | from_entries) as $id_map |
+
+            # Update rule definitions
+            .runs[0].tool.driver.rules = [
+              $rules[] |
+              if (.id | length) > 255 then
+                .id = $id_map[.id] |
+                .name = $id_map[.name] // .name
+              else . end
+            ] |
+
+            # Update result references
+            .runs[0].results = [
+              (.runs[0].results // [])[] |
+              if (.ruleId | length) > 255 then
+                .ruleId = $id_map[.ruleId]
+              else . end
+            ]
+          ' semgrep.sarif.json > semgrep.sarif.tmp.json && mv semgrep.sarif.tmp.json semgrep.sarif.json
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: semgrep.sarif

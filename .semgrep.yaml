@@ -1,0 +1,16 @@
+# .semgrep.yaml - Semgrep configuration for this repository
+# https://semgrep.dev/docs/writing-rules/rule-syntax
+
+# Rules to exclude (false positives or not applicable)
+# Note: These are applied via --exclude-rule flags in CI
+# This file documents the exclusions for reference
+
+# Excluded rules:
+#
+# ai.generic.detect-generic-ai-anthprop.detect-generic-ai-anthprop
+#   Reason: This contains a Claude Code plugin repository - Anthropic references are expected
+#
+# generic.secrets.security.detected-sonarqube-docs-api-key.detected-sonarqube-docs-api-key
+#   Reason: False positive - dynamically generated tokens in CI, not hardcoded secrets
+
+rules: []
