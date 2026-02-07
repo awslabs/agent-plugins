@@ -7,6 +7,7 @@ min_version = "2026.2.4"
 node = "24"
 "npm:markdownlint-cli2" = "0.17"
 "npm:ajv-cli" = "5"
+"pipx:pre-commit" = "4"
 
 [tasks.fmt]
 description = "Format all files"
@@ -39,3 +40,9 @@ run = "node tools/validate-cross-refs.cjs"
 [tasks.ci]
 description = "Run all CI checks"
 depends = ["fmt:check", "lint"]
+
+[tasks.pre-commit]
+description = "Run pre-commit"
+run = [
+  "pre-commit run --all-files"
+]
