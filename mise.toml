@@ -11,6 +11,7 @@ node = "24"
 "pipx:bandit[sarif]" = "1"
 "pipx:checkov" = "3"
 "pipx:semgrep" = "1"
+"grype" = "latest"
 
 [tasks.fmt]
 description = "Format all files"
@@ -52,7 +53,7 @@ run = [
 
 [tasks.security]
 description = "Run some security"
-depends = ["security:bandit", "security:semgrep", "security:gitleaks", "security:checkov"]
+depends = ["security:bandit", "security:semgrep", "security:gitleaks", "security:checkov", "security:grype"]
 
 
 [tasks."security:bandit"]
@@ -74,4 +75,9 @@ run = [
 description = "Run GitLeaks"
 run = [
   "gitleaks git --config=.gitleaks.toml --baseline-path=.gitleaks-baseline.json"
+]
+[tasks."security:grype"]
+description = "Run Grype"
+run = [
+  "grype ."
 ]
