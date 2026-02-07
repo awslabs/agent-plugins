@@ -54,7 +54,7 @@ jobs:
         with:
           name: gitleaks.sarif
           path: gitleaks-report_sarif.json
-          if-no-files-found: ignore
+          if-no-files-found: error
       - uses: github/codeql-action/upload-sarif@57eebf61a2246ab60a0c2f5a85766db783ad3553 # v3.28.15
         continue-on-error: true
         with:
@@ -71,13 +71,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - run: |
+          echo "bandit[sarif]==1.9.3" > requirements.txt
       - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
           python-version: '3.x'
+          cache: 'pip'
       - name: Run bandit
         id: bandit
         run: |
-          pip install bandit[sarif]
+          pip install -r requirements.txt
+          rm requirements.txt
           set +e
           bandit -r . -f sarif -o bandit-report_sarif.json
           BANDIT_EXIT=$?
@@ -119,6 +123,7 @@ jobs:
           echo "exit_code=$GRYPE_EXIT" >> "$GITHUB_OUTPUT"
           exit 0
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        if: always()
         with:
           name: grype.sarif
           path: grype-report_sarif.json
@@ -139,16 +144,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+      - run: |
+          echo "checkov==3.2.500" > requirements.txt
       - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
           python-version: '3.x'
+          cache: 'pip'
       - name: Run checkov
         id: checkov
         run: |
-          pip install checkov
+          pip install -r requirements.txt
+          rm requirements.txt
           set +e
-          checkov -d . --output sarif --output-file-path checkov-report_sarif.json
+          checkov -d . --output sarif --output-file-path .
           CHECKOV_EXIT=$?
+          mv results_sarif.sarif checkov-report_sarif.json || true
           set -e
           echo "exit_code=$CHECKOV_EXIT" >> "$GITHUB_OUTPUT"
           exit 0
@@ -181,7 +191,7 @@ jobs:
           echo "semgrep==1.151.0" > requirements.txt
       - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
-          python-version: '3.13'
+          python-version: '3.x'
           cache: 'pip'
       - run: |
           pip install -r requirements.txt
