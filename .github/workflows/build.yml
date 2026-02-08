@@ -3,6 +3,9 @@ name: Build
 on:
   pull_request: {}
   workflow_dispatch: {}
+  push:
+    branches:
+      - doc-update-1
 permissions:
   actions: none
   attestations: none
