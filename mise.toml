@@ -11,8 +11,8 @@ node = "24"
 "pipx:bandit[sarif]" = "1"
 "pipx:checkov" = "3"
 "pipx:semgrep" = "1.151.0"
-"grype" = "latest"
-"gitleaks" = "latest"
+"grype" = "0.107.1"
+"gitleaks" = "8.30.0"
 
 # ==================
 # ROOT LEVEL TASKS
