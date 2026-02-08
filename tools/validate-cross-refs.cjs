@@ -16,8 +16,24 @@ const path = require("path");
 const MARKETPLACE_PATH = ".claude-plugin/marketplace.json";
 const PLUGINS_ROOT = "plugins";
 
+const BASE_DIR = path.resolve(process.cwd(), PLUGINS_ROOT);
+
 let errors = [];
 let warnings = [];
+
+/**
+ * Resolve and validate path stays under BASE_DIR (path traversal protection).
+ * Returns normalized absolute path, or null if invalid.
+ */
+function resolvePathUnderBase(relativePath) {
+  if (!relativePath || typeof relativePath !== "string") return null;
+  const normalized = path.normalize(relativePath.replace(/^\.\//, "").replace(/\/$/, ""));
+  if (normalized.startsWith("..") || path.isAbsolute(normalized)) return null;
+  const fullPath = path.resolve(process.cwd(), normalized);
+  const baseResolved = path.resolve(BASE_DIR);
+  if (!fullPath.startsWith(baseResolved)) return null;
+  return fullPath;
+}
 
 function error(message) {
   errors.push(message);
@@ -75,19 +91,21 @@ function validatePlugin(plugin) {
 
   info(`Validating plugin: ${pluginName}`);
 
-  // Determine plugin directory path
-  // source is relative to repo root (e.g., "./plugins/deploy-on-aws")
   const source = plugin.source || `${PLUGINS_ROOT}/${pluginName}`;
-  const pluginDir = source.replace(/^\.\//, "").replace(/\/$/, "");
+  const pluginDir = resolvePathUnderBase(source);
+  if (pluginDir === null) {
+    error(`Invalid or disallowed plugin path (path traversal): ${source}`);
+    return;
+  }
 
   // Check 1: Plugin directory exists
-  if (!fs.existsSync(pluginDir)) {
+  if (!fs.existsSync(pluginDir)) { // nosemgrep: gitlab.eslint.detect-non-literal-fs-filename, javascript.lang.security.audit.detect-non-literal-fs-filename.detect-non-literal-fs-filename
     error(`Plugin directory not found: ${pluginDir} (referenced by "${pluginName}" in marketplace.json)`);
     return;
   }
 
   // Check 2: Directory is not a symlink (security)
-  const stats = fs.lstatSync(pluginDir);
+  const stats = fs.lstatSync(pluginDir); // nosemgrep: gitlab.eslint.detect-non-literal-fs-filename, javascript.lang.security.audit.detect-non-literal-fs-filename.detect-non-literal-fs-filename
   if (stats.isSymbolicLink()) {
     error(`Plugin directory cannot be a symlink: ${pluginDir} (security risk)`);
     return;
@@ -100,8 +118,9 @@ function validatePlugin(plugin) {
   }
 
   // Check 4: plugin.json exists
+  // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
   const pluginJsonPath = path.join(pluginDir, ".claude-plugin", "plugin.json");
-  if (!fs.existsSync(pluginJsonPath)) {
+  if (!fs.existsSync(pluginJsonPath)) { // nosemgrep: gitlab.eslint.detect-non-literal-fs-filename, javascript.lang.security.audit.detect-non-literal-fs-filename.detect-non-literal-fs-filename
     error(`plugin.json not found: ${pluginJsonPath}`);
     return;
   }
@@ -109,7 +128,7 @@ function validatePlugin(plugin) {
   // Check 5: plugin.json name matches marketplace.json name
   let pluginJson;
   try {
-    pluginJson = JSON.parse(fs.readFileSync(pluginJsonPath, "utf8"));
+    pluginJson = JSON.parse(fs.readFileSync(pluginJsonPath, "utf8")); // nosemgrep: gitlab.eslint.detect-non-literal-fs-filename, javascript.lang.security.audit.detect-non-literal-fs-filename.detect-non-literal-fs-filename
   } catch (e) {
     error(`Failed to parse ${pluginJsonPath}: ${e.message}`);
     return;
@@ -120,10 +139,11 @@ function validatePlugin(plugin) {
   }
 
   // Check 6: skills/ directory exists (warning only)
+  // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
   const skillsDir = path.join(pluginDir, "skills");
-  if (!fs.existsSync(skillsDir)) {
+  if (!fs.existsSync(skillsDir)) { // nosemgrep: gitlab.eslint.detect-non-literal-fs-filename, javascript.lang.security.audit.detect-non-literal-fs-filename.detect-non-literal-fs-filename
     warn(`Plugin "${pluginName}" has no skills/ directory`);
-  } else if (!fs.statSync(skillsDir).isDirectory()) {
+  } else if (!fs.statSync(skillsDir).isDirectory()) { // nosemgrep: gitlab.eslint.detect-non-literal-fs-filename, javascript.lang.security.audit.detect-non-literal-fs-filename.detect-non-literal-fs-filename
     warn(`Plugin "${pluginName}": skills is not a directory`);
   }
 }

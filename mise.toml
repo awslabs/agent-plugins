@@ -10,7 +10,7 @@ node = "24"
 "pipx:pre-commit" = "4"
 "pipx:bandit[sarif]" = "1"
 "pipx:checkov" = "3"
-"pipx:semgrep" = "1"
+"pipx:semgrep" = "1.151.0"
 "grype" = "latest"
 "gitleaks" = "latest"
 
@@ -38,7 +38,7 @@ run = "npx dprint check"
 
 [tasks."lint:md"]
 description = "Lint Markdown files (includes SKILL.md validation)"
-run = "markdownlint-cli2 '**/*.md' '#node_modules'"
+run = "markdownlint-cli2 '**/*.md' '#node_modules' '#.git'"
 
 [tasks."lint:md:fix"]
 description = "Lint Markdown files (includes SKILL.md validation)"

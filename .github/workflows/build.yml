@@ -23,7 +23,7 @@ permissions:
   security-events: none
   statuses: none
 jobs:
-  quality:
+  build:
     permissions:
       actions: read
       contents: read
