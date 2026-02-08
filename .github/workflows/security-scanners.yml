@@ -32,7 +32,7 @@ jobs:
     env:
       GITLEAKS_VERSION: "8.30.0"
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
       - name: Install gitleaks
@@ -41,18 +41,28 @@ jobs:
           sudo mv gitleaks /usr/local/bin/;
           gitleaks --version;
       - name: Run gitleaks (full history)
+        id: gitleaks
         run: |
-          gitleaks git --config=.gitleaks.toml --baseline-path=.gitleaks-baseline.json --report-path=gitleaks-report_sarif.json --report-format=sarif . || true
+          set +e
+          gitleaks git --config=.gitleaks.toml --baseline-path=.gitleaks-baseline.json --report-path=gitleaks-report_sarif.json --report-format=sarif .
+          GITLEAKS_EXIT=$?
+          set -e
+          echo "exit_code=$GITLEAKS_EXIT" >> "$GITHUB_OUTPUT"
+          exit 0
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: always()
         with:
           name: gitleaks.sarif
           path: gitleaks-report_sarif.json
-          if-no-files-found: ignore
-      - uses: github/codeql-action/upload-sarif@57eebf61a2246ab60a0c2f5a85766db783ad3553 # v3.28.15
+          if-no-files-found: error
+      - uses: github/codeql-action/upload-sarif@74c8748a6f2dada2c01b25ae170d7858ac90f4af # v4.32.2
         continue-on-error: true
         with:
           sarif_file: gitleaks-report_sarif.json
+      - if: steps.gitleaks.outputs.exit_code != '0'
+        run: |
+          echo "::error::gitleaks found secrets"
+          exit ${{ steps.gitleaks.outputs.exit_code }}  # nosemgrep: yaml.github-actions.security.curl-eval.curl-eval
   bandit:
     permissions:
       actions: read
@@ -60,15 +70,38 @@ jobs:
       security-events: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - uses: PyCQA/bandit-action@cd2700ff8e8a10b277288e068d0c207c614c46ee # main
-        continue-on-error: true
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - run: |
+          echo "bandit[sarif]==1.9.3" > requirements.txt
+      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version: '3.x'
+          cache: 'pip'
+      - name: Run bandit
+        id: bandit
+        run: |
+          pip install -r requirements.txt
+          rm requirements.txt
+          set +e
+          bandit -r . -f sarif -o bandit-report_sarif.json
+          BANDIT_EXIT=$?
+          set -e
+          echo "exit_code=$BANDIT_EXIT" >> "$GITHUB_OUTPUT"
+          exit 0
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: always()
         with:
           name: bandit.sarif
-          path: results.sarif
+          path: bandit-report_sarif.json
           if-no-files-found: error
+      - uses: github/codeql-action/upload-sarif@74c8748a6f2dada2c01b25ae170d7858ac90f4af # v4.32.2
+        continue-on-error: true
+        with:
+          sarif_file: bandit-report_sarif.json
+      - if: steps.bandit.outputs.exit_code != '0'
+        run: |
+          echo "::error::bandit found security issues"
+          exit ${{ steps.bandit.outputs.exit_code }}  # nosemgrep: yaml.github-actions.security.curl-eval.curl-eval
   grype:
     permissions:
       actions: read
@@ -80,17 +113,29 @@ jobs:
       - run: |
           curl -sSfL https://raw.githubusercontent.com/anchore/grype/43e7e3246ed01b1ec0ff54f9b054201ccbe78e3a/install.sh | sh -s -- -b /usr/local/bin v0.104.3
           grype --version
-      - run: |
-          grype --output sarif . | tee grype.sarif.json
+      - name: Run grype
+        id: grype
+        run: |
+          set +e
+          grype --output sarif . | tee grype-report_sarif.json
+          GRYPE_EXIT=${PIPESTATUS[0]}
+          set -e
+          echo "exit_code=$GRYPE_EXIT" >> "$GITHUB_OUTPUT"
+          exit 0
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        if: always()
         with:
           name: grype.sarif
-          path: grype.sarif.json
+          path: grype-report_sarif.json
           if-no-files-found: error
-      - uses: github/codeql-action/upload-sarif@57eebf61a2246ab60a0c2f5a85766db783ad3553 # v3.28.15
+      - uses: github/codeql-action/upload-sarif@74c8748a6f2dada2c01b25ae170d7858ac90f4af # v4.32.2
         continue-on-error: true
         with:
-          sarif_file: grype.sarif.json
+          sarif_file: grype-report_sarif.json
+      - if: steps.grype.outputs.exit_code != '0'
+        run: |
+          echo "::error::grype found vulnerabilities"
+          exit ${{ steps.grype.outputs.exit_code }}  # nosemgrep: yaml.github-actions.security.curl-eval.curl-eval
   checkov:
     permissions:
       actions: read
@@ -99,15 +144,39 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
-      - uses: bridgecrewio/checkov-action@5051a5cfc7e4c71d95199f81ffafbb490c7e6213 # v12.3079.0
+      - run: |
+          echo "checkov==3.2.500" > requirements.txt
+      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
-          output_format: cli,sarif
-          output_file_path: console,results.sarif
+          python-version: '3.x'
+          cache: 'pip'
+      - name: Run checkov
+        id: checkov
+        run: |
+          pip install -r requirements.txt
+          rm requirements.txt
+          set +e
+          checkov -d . --output sarif --output-file-path .
+          CHECKOV_EXIT=$?
+          mv results_sarif.sarif checkov-report_sarif.json || true
+          set -e
+          echo "exit_code=$CHECKOV_EXIT" >> "$GITHUB_OUTPUT"
+          exit 0
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        if: always()
+        with:
+          name: checkov.sarif
+          path: checkov-report_sarif.json
+          if-no-files-found: error
       - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@b2ff80ddacba59b60f4e0cf3b699baaea3230cd9 # v4.31.9
-        if: success() || failure()
+        uses: github/codeql-action/upload-sarif@74c8748a6f2dada2c01b25ae170d7858ac90f4af # v4.32.2
+        continue-on-error: true
         with:
-          sarif_file: results.sarif
+          sarif_file: checkov-report_sarif.json
+      - if: steps.checkov.outputs.exit_code != '0'
+        run: |
+          echo "::error::checkov found IaC issues"
+          exit ${{ steps.checkov.outputs.exit_code }}  # nosemgrep: yaml.github-actions.security.curl-eval.curl-eval
   semgrep:
     permissions:
       actions: read
@@ -115,14 +184,14 @@ jobs:
       security-events: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0 # Required for baseline comparison
       - run: |
-          echo "semgrep==1.149.0" > requirements.txt
+          echo "semgrep==1.151.0" > requirements.txt
       - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
         with:
-          python-version: '3.13'
+          python-version: '3.x'
           cache: 'pip'
       - run: |
           pip install -r requirements.txt
@@ -139,8 +208,32 @@ jobs:
             fi
 
             # Run semgrep, capture exit code
+            # Rule exclusions documented in .semgrep.yaml
             set +e
-            semgrep scan --oss-only --verbose --metrics=off --config=r/all --sarif-output semgrep.sarif.json $BASELINE_ARGS
+            semgrep scan --oss-only --verbose --metrics=off --config=r/all \
+              --max-log-list-entries=0 \
+              --exclude-rule="ai.generic.detect-generic-ai-anthprop.detect-generic-ai-anthprop" \
+              --exclude-rule="generic.secrets.security.detected-sonarqube-docs-api-key.detected-sonarqube-docs-api-key" \
+              --exclude-rule="apex.lang.best-practice.ncino.accessmodifiers.globalaccessmodifiers.global-access-modifiers" \
+              --exclude-rule="apex.lang.best-practice.ncino.urls.absoluteurls.absolute-urls" \
+              --exclude-rule="apex.lang.security.ncino.dml.apexcsrfconstructor.apex-csrf-constructor" \
+              --exclude-rule="apex.lang.security.ncino.dml.dmlnativestatements.dml-native-statements" \
+              --exclude-rule="apex.lang.security.ncino.encryption.badcrypto.bad-crypto" \
+              --exclude-rule="apex.lang.security.ncino.endpoints.insecurehttprequest.insecure-http-request" \
+              --exclude-rule="apex.lang.security.ncino.endpoints.namedcredentialsconstantmatch.named-credentials-constant-match" \
+              --exclude-rule="apex.lang.security.ncino.endpoints.namedcredentialsstringmatch.named-credentials-string-match" \
+              --exclude-rule="apex.lang.security.ncino.injection.apexsoqlinjectionfromunescapedurlparam.soql-injection-unescaped-url-param" \
+              --exclude-rule="apex.lang.security.ncino.injection.apexsoqlinjectionunescapedparam.soql-injection-unescaped-param" \
+              --exclude-rule="apex.lang.security.ncino.sharing.specifysharinglevel.specify-sharing-level" \
+              --exclude-rule="apex.lang.security.ncino.system.systemdebug.system-debug" \
+              --exclude-rule="elixir.lang.best-practice.deprecated-bnot-operator.deprecated_bnot_operator" \
+              --exclude-rule="elixir.lang.best-practice.deprecated-bxor-operator.deprecated_bxor_operator" \
+              --exclude-rule="elixir.lang.best-practice.deprecated-calendar-iso-day-of-week-3.deprecated_calendar_iso_day_of_week_3" \
+              --exclude-rule="elixir.lang.best-practice.deprecated-use-bitwise.deprecated_use_bitwise" \
+              --exclude-rule="elixir.lang.best-practice.enum-map-into.enum_map_into" \
+              --exclude-rule="elixir.lang.best-practice.enum-map-join.enum_map_join" \
+              --exclude-rule="elixir.lang.correctness.atom-exhaustion.atom_exhaustion" \
+              --sarif-output semgrep-report_sarif.json $BASELINE_ARGS
             SEMGREP_EXIT=$?
             set -e
 
@@ -148,19 +241,59 @@ jobs:
 
             # Exit 0 for now to allow artifact upload
             exit 0
+      - name: Fix SARIF for GitHub compatibility
+        continue-on-error: true
+        run: |
+          # Fix 1: Convert text security-severity to numeric (CVSS 0.0-10.0)
+          # Semgrep outputs: Info, Low, Medium, High, Critical
+          # GitHub expects: numeric values
+          sed -i \
+            -e 's/"security-severity":"Info"/"security-severity":"0.0"/gI' \
+            -e 's/"security-severity":"Low"/"security-severity":"2.0"/gI' \
+            -e 's/"security-severity":"Medium"/"security-severity":"5.0"/gI' \
+            -e 's/"security-severity":"High"/"security-severity":"7.0"/gI' \
+            -e 's/"security-severity":"Critical"/"security-severity":"9.0"/gI' \
+            semgrep-report_sarif.json
+
+          # Fix 2: Truncate rule IDs exceeding 255 characters
+          # GitHub rejects SARIF with identifiers > 255 chars
+          jq '
+            # Build a mapping of old IDs to new (truncated) IDs
+            (.runs[0].tool.driver.rules // []) as $rules |
+            ([$rules[] | select((.id | length) > 255) |
+              {key: .id, value: (.id[0:247] + "-" + (.id | @base64 | gsub("[+/]"; "_") | .[0:7]))}
+            ] | from_entries) as $id_map |
+
+            # Update rule definitions
+            .runs[0].tool.driver.rules = [
+              $rules[] |
+              if (.id | length) > 255 then
+                .id = $id_map[.id] |
+                .name = $id_map[.name] // .name
+              else . end
+            ] |
+
+            # Update result references
+            .runs[0].results = [
+              (.runs[0].results // [])[] |
+              if (.ruleId | length) > 255 then
+                .ruleId = $id_map[.ruleId]
+              else . end
+            ]
+          ' semgrep-report_sarif.json > semgrep.sarif.tmp.json && mv semgrep.sarif.tmp.json semgrep-report_sarif.json
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: semgrep.sarif
-          path: semgrep.sarif.json
+          path: semgrep-report_sarif.json
           if-no-files-found: error
-      - uses: github/codeql-action/upload-sarif@57eebf61a2246ab60a0c2f5a85766db783ad3553 # v3.28.15
+      - uses: github/codeql-action/upload-sarif@74c8748a6f2dada2c01b25ae170d7858ac90f4af # v4.32.2
         continue-on-error: true
         with:
-          sarif_file: semgrep.sarif.json
+          sarif_file: semgrep-report_sarif.json
       - if: steps.semgrep.outputs.exit_code != '0'
         run: |
           echo "::error::semgrep found new security issues"
-          exit ${{ steps.semgrep.outputs.exit_code }}
+          exit ${{ steps.semgrep.outputs.exit_code }}  # nosemgrep: yaml.github-actions.security.curl-eval.curl-eval
   clamav:
     permissions:
       actions: read
@@ -171,14 +304,14 @@ jobs:
       clamav:
         image: clamav/clamav@sha256:a56287b4ffa299bde2ef09234cb8b6134d591d0be05b63f5065932dc93cb2435
         ports:
-          - 3310:3310
+          - 127.0.0.1:3310:3310
         options: >-
           --health-cmd "/usr/local/bin/clamdcheck.sh"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Wait for ClamAV service
         run: timeout 300 bash -c 'until echo > /dev/tcp/localhost/3310; do sleep 5; done' 2>/dev/null
       - run: |
@@ -209,12 +342,13 @@ jobs:
       sonarqube:
         image: sonarqube:community@sha256:48dd0e946ad6481dde43bb31d1a7af09c22f59be6399b195dcce7b87d82c5f40
         ports:
-          - 9000:9000
+          - 127.0.0.1:9000:9000
         env:
           SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: true
           SONAR_WEB_SYSTEMPASSCODE: passcode # is it possible to make this dynamic?
+        # nosemgrep: trailofbits.generic.wget-unencrypted-url.wget-unencrypted-url (localhost doesn't need HTTPS)
         options: >-
-          --health-cmd "status=$(wget -qO- http://localhost:9000/api/system/status | grep -oP '(?<=status\":\").*' | sed -e 's|\"}||' | tr -d '\n'); echo -n \"$status\"; test \"$status\" = \"UP\""
+          --health-cmd "status=$(wget -qO- http://localhost:9000/api/system/status | grep -oP '(?<=status\":\").*' | sed -e 's|\"}||' | tr -d '\n'); echo -n \"$status\"; test \"$status\" = \"UP\"  # nosemgrep: trailofbits.generic.wget-unencrypted-url.wget-unencrypted-url"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 30
@@ -222,7 +356,7 @@ jobs:
     # - if: always()
     #   run: |
     #     docker inspect $(docker ps -qf "ancestor=sonarqube:community@sha256:48dd0e946ad6481dde43bb31d1a7af09c22f59be6399b195dcce7b87d82c5f40") | jq '.[] | {"test": .Config.Healthcheck.Test, "state": .State.Health}'
-    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       with:
         fetch-depth: 0
     - name: Wait for SonarQube to be ready
@@ -284,7 +418,7 @@ jobs:
     - name: "Example show SonarQube Quality Gate Status value"
       if: always()
       run: |
-        echo "The Quality Gate status is ${{ steps.sonarqube-quality-gate-check.outputs.quality-gate-status }}"
+        echo "The Quality Gate status is ${{ steps.sonarqube-quality-gate-check.outputs.quality-gate-status }}"  # nosemgrep: yaml.github-actions.security.curl-eval.curl-eval
         find . -name "report-task.txt" -print0 | xargs -0 -I{} cat {}
 
     - name: Get Issues

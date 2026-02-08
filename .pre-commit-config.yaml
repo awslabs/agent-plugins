@@ -1,0 +1,79 @@
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+    -   id: check-added-large-files
+    -   id: check-ast
+    -   id: check-builtin-literals
+    -   id: check-case-conflict
+    -   id: check-executables-have-shebangs
+    -   id: check-illegal-windows-names
+    -   id: check-json
+    -   id: check-merge-conflict
+    -   id: check-shebang-scripts-are-executable
+    -   id: check-symlinks
+    -   id: check-toml
+    -   id: check-vcs-permalinks
+    -   id: check-xml
+    -   id: check-yaml
+    -   id: debug-statements
+    -   id: destroyed-symlinks
+    -   id: detect-private-key
+    -   id: end-of-file-fixer
+        exclude: |
+            (?x)^(
+                \.kiro/hooks/.*\.kiro\.hook|
+                \.kiro/settings/mcp\.json*
+            )$
+    -   id: fix-byte-order-marker
+    -   id: forbid-submodules
+    -   id: forbid-new-submodules
+    -   id: mixed-line-ending
+    -   id: no-commit-to-branch
+    -   id: pretty-format-json
+        exclude: |
+            (?x)^(
+                .*package-lock\.json|
+                \.kiro/settings/mcp\.json.*
+            )$
+        args: [ --autofix ]
+    -   id: trailing-whitespace
+
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.0
+    hooks:
+    -   id: ruff-check
+        args: [ --fix, --exit-non-zero-on-fix ]
+    -   id: ruff-format
+
+-   repo: https://github.com/PyCQA/bandit
+    rev: 1.9.3
+    hooks:
+    -   id: bandit
+        args: [ --baseline, .bandit-baseline.json ]
+
+-   repo: https://github.com/semgrep/pre-commit
+    rev: v1.151.0
+    hooks:
+    -   id: semgrep
+        args: [ '--oss-only', '--verbose', '--metrics=off', '--baseline-commit', 'main', '--config=r/all', '--sarif-output', '.tmp/semgrep.sarif.json', '--error' ]
+        stages: [pre-push]
+-   repo: https://github.com/bridgecrewio/checkov
+    rev: 3.2.500
+    hooks:
+    -   id: checkov
+
+-   repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+    -   id: gitleaks
+
+-   repo: local
+    hooks:
+    -   id: act
+        name: act (GitHub Actions locally)
+        pass_filenames: false
+        language: system
+        entry: act
+        stages: [manual]
+        always_run: true

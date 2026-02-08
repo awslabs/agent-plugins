@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 permissions:
   actions: none
   attestations: none
@@ -29,17 +30,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup mise
-        uses: jdx/mise-action@v3
+        uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
         with:
           cache: true
-
-      - name: Install dprint
-        run: |
-          curl -fsSL https://dprint.dev/install.sh | sh
-          echo "$HOME/.dprint/bin" >> $GITHUB_PATH
 
       - name: Check formatting
         run: mise run fmt:check

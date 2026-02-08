@@ -1,0 +1,39 @@
+# .semgrep.yaml - Semgrep configuration for this repository
+# https://semgrep.dev/docs/writing-rules/rule-syntax
+
+# Rules to exclude (false positives or not applicable)
+# Note: These are applied via --exclude-rule flags in CI
+# This file documents the exclusions for reference
+
+# Excluded rules:
+#
+# ai.generic.detect-generic-ai-anthprop.detect-generic-ai-anthprop
+#   Reason: This contains a Claude Code plugin repository - Anthropic references are expected
+#
+# generic.secrets.security.detected-sonarqube-docs-api-key.detected-sonarqube-docs-api-key
+#   Reason: False positive - dynamically generated tokens in CI, not hardcoded secrets
+#
+# Apex rules (Semgrep Pro language - requires paid license, not available with --oss-only):
+# - apex.lang.best-practice.ncino.accessmodifiers.globalaccessmodifiers.global-access-modifiers
+# - apex.lang.best-practice.ncino.urls.absoluteurls.absolute-urls
+# - apex.lang.security.ncino.dml.apexcsrfconstructor.apex-csrf-constructor
+# - apex.lang.security.ncino.dml.dmlnativestatements.dml-native-statements
+# - apex.lang.security.ncino.encryption.badcrypto.bad-crypto
+# - apex.lang.security.ncino.endpoints.insecurehttprequest.insecure-http-request
+# - apex.lang.security.ncino.endpoints.namedcredentialsconstantmatch.named-credentials-constant-match
+# - apex.lang.security.ncino.endpoints.namedcredentialsstringmatch.named-credentials-string-match
+# - apex.lang.security.ncino.injection.apexsoqlinjectionfromunescapedurlparam.soql-injection-unescaped-url-param
+# - apex.lang.security.ncino.injection.apexsoqlinjectionunescapedparam.soql-injection-unescaped-param
+# - apex.lang.security.ncino.sharing.specifysharinglevel.specify-sharing-level
+# - apex.lang.security.ncino.system.systemdebug.system-debug
+#
+# Elixir rules (Semgrep Pro language - requires paid license, not available with --oss-only):
+# - elixir.lang.best-practice.deprecated-bnot-operator.deprecated_bnot_operator
+# - elixir.lang.best-practice.deprecated-bxor-operator.deprecated_bxor_operator
+# - elixir.lang.best-practice.deprecated-calendar-iso-day-of-week-3.deprecated_calendar_iso_day_of_week_3
+# - elixir.lang.best-practice.deprecated-use-bitwise.deprecated_use_bitwise
+# - elixir.lang.best-practice.enum-map-into.enum_map_into
+# - elixir.lang.best-practice.enum-map-join.enum_map_join
+# - elixir.lang.correctness.atom-exhaustion.atom_exhaustion
+
+rules: []

@@ -7,6 +7,12 @@ min_version = "2026.2.4"
 node = "24"
 "npm:markdownlint-cli2" = "0.17"
 "npm:ajv-cli" = "5"
+"pipx:pre-commit" = "4"
+"pipx:bandit[sarif]" = "1"
+"pipx:checkov" = "3"
+"pipx:semgrep" = "1"
+"grype" = "latest"
+"gitleaks" = "latest"
 
 [tasks.fmt]
 description = "Format all files"
@@ -39,3 +45,40 @@ run = "node tools/validate-cross-refs.cjs"
 [tasks.ci]
 description = "Run all CI checks"
 depends = ["fmt:check", "lint"]
+
+[tasks.pre-commit]
+description = "Run pre-commit"
+run = [
+  "pre-commit run --all-files"
+]
+
+[tasks.security]
+description = "Run some security"
+depends = ["security:bandit", "security:semgrep", "security:gitleaks", "security:checkov", "security:grype"]
+
+
+[tasks."security:bandit"]
+description = "Run Bandit"
+run = [
+  "bandit -r ."
+]
+[tasks."security:semgrep"]
+description = "Run SemGrepOSS"
+run = [
+  "semgrep scan --quiet --oss-only --metrics=off --config=r/all --max-log-list-entries=0 --exclude-rule='ai.generic.detect-generic-ai-anthprop.detect-generic-ai-anthprop' --exclude-rule='generic.secrets.security.detected-sonarqube-docs-api-key.detected-sonarqube-docs-api-key' --exclude-rule='apex.lang.best-practice.ncino.accessmodifiers.globalaccessmodifiers.global-access-modifiers' --exclude-rule='apex.lang.best-practice.ncino.urls.absoluteurls.absolute-urls' --exclude-rule='apex.lang.security.ncino.dml.apexcsrfconstructor.apex-csrf-constructor' --exclude-rule='apex.lang.security.ncino.dml.dmlnativestatements.dml-native-statements' --exclude-rule='apex.lang.security.ncino.encryption.badcrypto.bad-crypto' --exclude-rule='apex.lang.security.ncino.endpoints.insecurehttprequest.insecure-http-request' --exclude-rule='apex.lang.security.ncino.endpoints.namedcredentialsconstantmatch.named-credentials-constant-match' --exclude-rule='apex.lang.security.ncino.endpoints.namedcredentialsstringmatch.named-credentials-string-match' --exclude-rule='apex.lang.security.ncino.injection.apexsoqlinjectionfromunescapedurlparam.soql-injection-unescaped-url-param' --exclude-rule='apex.lang.security.ncino.injection.apexsoqlinjectionunescapedparam.soql-injection-unescaped-param' --exclude-rule='apex.lang.security.ncino.sharing.specifysharinglevel.specify-sharing-level' --exclude-rule='apex.lang.security.ncino.system.systemdebug.system-debug' --exclude-rule='elixir.lang.best-practice.deprecated-bnot-operator.deprecated_bnot_operator' --exclude-rule='elixir.lang.best-practice.deprecated-bxor-operator.deprecated_bxor_operator' --exclude-rule='elixir.lang.best-practice.deprecated-calendar-iso-day-of-week-3.deprecated_calendar_iso_day_of_week_3' --exclude-rule='elixir.lang.best-practice.deprecated-use-bitwise.deprecated_use_bitwise' --exclude-rule='elixir.lang.best-practice.enum-map-into.enum_map_into'              --exclude-rule='elixir.lang.best-practice.enum-map-join.enum_map_join' --exclude-rule='elixir.lang.correctness.atom-exhaustion.atom_exhaustion'"
+]
+[tasks."security:checkov"]
+description = "Run Checkov"
+run = [
+  "checkov --quiet --directory . "
+]
+[tasks."security:gitleaks"]
+description = "Run GitLeaks"
+run = [
+  "gitleaks git --config=.gitleaks.toml --baseline-path=.gitleaks-baseline.json"
+]
+[tasks."security:grype"]
+description = "Run Grype"
+run = [
+  "grype ."
+]
