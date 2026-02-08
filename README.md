@@ -56,6 +56,16 @@ Analyze any codebase and deploy it to optimal AWS services with minimal decision
 - Claude Code >=2.1.29 or Cursor with plugin support
 - AWS CLI configured with appropriate credentials
 
+## Developer guide
+
+If you want to add a new plugin to the library, check out our [development guide](./DEVELOPMENT_GUIDE.md).
+
+## Contributing
+
+Big shout out to our awesome contributors! Thank you for making this project better!
+
+Contributions of all kinds are welcome! Check out our [contributor guide](./CONTRIBUTING.md) for more information.
+
 ## License
 
-Apache-2.0
+This project is licensed under the Apache-2.0 License.
