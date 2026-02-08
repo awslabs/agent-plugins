@@ -1,4 +1,4 @@
-name: Quality Gates
+name: Build
 
 on:
   push:
@@ -37,14 +37,5 @@ jobs:
         with:
           cache: true
 
-      - name: Check formatting
-        run: mise run fmt:check
-
-      - name: Lint Markdown (includes SKILL.md validation)
-        run: mise run lint:md
-
-      - name: Validate Cross Reference manifests
-        run: mise run lint:cross-refs
-
-      - name: Validate JSON manifests
-        run: mise run lint:manifests
+      - name: Build
+        run: mise run build
