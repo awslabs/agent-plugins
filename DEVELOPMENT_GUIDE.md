@@ -16,7 +16,6 @@ This project uses Mise (https://mise.jdx.dev/). At the moment, there is no dedic
 | `cd agent-plugins`                                                           | This is the home directory of the repo and where you will open your text editor, run builds, etc.                                                                                                                  |
 | `code .`                                                                     | Opens the project in VSCode. You can use the editor of your choice, just adapt this step to your specific use case.                                                                                                |
 | `mise install`                                                               | This command will install the tools required for the project and environmental variables                                                                                                                           |
-| `mise run install`                                                           | This command will generate project files (dependencies, etc.) from the configuration file and install them.                                                                                                        |
 
 ## Working on Your Contribution
 
