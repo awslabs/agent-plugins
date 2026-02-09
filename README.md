@@ -56,6 +56,10 @@ Analyze any codebase and deploy it to optimal AWS services with minimal decision
 - Claude Code >=2.1.29 or Cursor with plugin support
 - AWS CLI configured with appropriate credentials
 
+## Troubleshooting
+
+Having issues with plugin installation or usage? See our [troubleshooting guide](./TROUBLESHOOTING.md) for common solutions.
+
 ## Developer guide
 
 If you want to add a new plugin to the library, check out our [development guide](./DEVELOPMENT_GUIDE.md).
