@@ -36,6 +36,12 @@ If you're experiencing issues with the Claude Code TUI such as plugins not loadi
    rm -rf ~/.claude/plugins/cache
    ```
 
+1. **Reset plugin state files**
+   Remove the information related to this marketplace/installed plugins from this marketplace in the state files:
+
+   - **`~/.claude/plugins/installed_plugins.json`** — which plugins are installed (version, install path, scope)
+   - **`~/.claude/plugins/known_marketplaces.json`** — which marketplaces are known (sources, URLs)
+
 1. **Restart**
    - Open a new terminal window
    - Run `claude` to start a fresh session
@@ -165,6 +171,7 @@ If issues persist:
    - Claude Code version: `claude --version`
    - Plugin version: `/plugin list`
    - Error messages from logs: `~/.cache/claude-code/logs/`
+   - Verify the scope of installation
 
 4. **Create a New Issue:**
    - Visit https://github.com/awslabs/agent-plugins/issues/new
