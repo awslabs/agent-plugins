@@ -24,9 +24,13 @@ Skills are **NOT** slash commands. The agent determines when to use a skill base
 ## Directory Structure
 
 ```
-awslabs-agent-plugins/
+agent-plugins/
 ├── .claude-plugin/
 │   └── marketplace.json          # Marketplace registry
+├── .github/
+│   ├── workflows/                # CI (build, lint, security, etc.)
+│   ├── ISSUE_TEMPLATE/
+│   └── ...
 ├── plugins/
 │   └── deploy-on-aws/
 │       ├── .claude-plugin/
@@ -34,10 +38,23 @@ awslabs-agent-plugins/
 │       ├── .mcp.json             # MCP server definitions
 │       └── skills/
 │           └── deploy/
-│               ├── SKILL.md      # Main skill (auto-triggers)
+│               ├── SKILL.md     # Main skill (auto-triggers)
 │               └── references/
 │                   ├── defaults.md
-│                   └── cost-estimation.md
+│                   ├── cost-estimation.md
+│                   └── security.md
+├── schemas/                      # JSON schemas for manifests
+│   ├── marketplace.schema.json
+│   ├── plugin.schema.json
+│   ├── mcp.schema.json
+│   └── skill-frontmatter.schema.json
+├── tools/                        # Lint/validation scripts
+│   ├── validate-cross-refs.cjs
+│   └── ...
+├── mise.toml                     # Tool versions and tasks
+├── dprint.json
+├── .markdownlint-cli2.yaml
+├── .pre-commit-config.yaml
 └── README.md
 ```
 
@@ -75,7 +92,30 @@ See `.claude/docs/` for Claude Code plugin system reference:
 - `plugin_reference.md` - Complete technical reference
 - `skills_docs.md` - Skill authoring guide
 
-## Commands
+## Development commands (mise)
+
+The project uses [mise](https://mise.jdx.dev) for tool versions and tasks. Ensure mise is installed, then from the repo root:
+
+```bash
+# Install tools (Node, markdownlint, pre-commit, security scanners, etc.)
+mise install
+
+# Run common tasks
+mise run pre-commit    # Pre-commit hooks on all files
+mise run fmt           # Format with dprint
+mise run fmt:check     # Check formatting (CI)
+mise run lint:md       # Lint Markdown (incl. SKILL.md)
+mise run lint:md:fix   # Lint Markdown with auto-fix
+mise run lint:manifests   # Validate JSON manifests (marketplace, plugin, MCP)
+mise run lint:cross-refs  # Validate cross-references between manifests
+mise run lint          # All linters
+mise run security      # All security scans (Bandit, SemGrep, Gitleaks, Checkov, Grype)
+mise run build         # Full build: lint + fmt:check + security
+```
+
+See `mise.toml` for the full task list and tool versions.
+
+## Plugin commands (Claude)
 
 ```bash
 # Add marketplace
