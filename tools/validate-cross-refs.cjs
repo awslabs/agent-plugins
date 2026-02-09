@@ -17,9 +17,8 @@ const MARKETPLACE_PATH = ".claude-plugin/marketplace.json";
 const PLUGINS_ROOT = "plugins";
 
 const BASE_DIR = path.resolve(process.cwd(), PLUGINS_ROOT);
-
-let errors = [];
-let warnings = [];
+let validationErrors = [];
+let validationWarnings = [];
 
 /**
  * Resolve and validate path stays under BASE_DIR (path traversal protection).
@@ -36,12 +35,12 @@ function resolvePathUnderBase(relativePath) {
 }
 
 function error(message) {
-  errors.push(message);
+  validationErrors.push(message);
   console.error(`ERROR: ${message}`);
 }
 
 function warn(message) {
-  warnings.push(message);
+  validationWarnings.push(message);
   console.warn(`WARNING: ${message}`);
 }
 
@@ -83,6 +82,11 @@ function validateMarketplace() {
 }
 
 function validatePlugin(plugin) {
+  if (!plugin || typeof plugin !== "object" || Array.isArray(plugin)) {
+    error(`Invalid plugin entry in marketplace.json: expected an object but got ${JSON.stringify(plugin)}`);
+    return;
+  }
+
   const pluginName = plugin.name;
   if (!pluginName) {
     error(`Plugin entry missing "name" field`);
@@ -154,10 +158,10 @@ validateMarketplace();
 
 // Summary
 console.log("\n=== Summary ===");
-console.log(`Errors: ${errors.length}`);
-console.log(`Warnings: ${warnings.length}`);
+console.log(`Errors: ${validationErrors.length}`);
+console.log(`Warnings: ${validationWarnings.length}`);
 
 // Exit with error code if any errors
-if (errors.length > 0) {
+if (validationErrors.length > 0) {
   process.exit(1);
 }
