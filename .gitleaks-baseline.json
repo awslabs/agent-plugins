@@ -1,1 +1,44 @@
-[]
+[
+  {
+    "Author": "Scott Schreckengaust",
+    "Commit": "551c360d54343758dd49fa2c9b840c7349236620",
+    "Date": "2026-02-06T17:37:27Z",
+    "Description": "Discovered a potential basic authorization token provided in a curl command, which could compromise the curl accessed resource.",
+    "Email": "scottschreckengaust@users.noreply.github.com",
+    "EndColumn": 46,
+    "EndLine": 238,
+    "Entropy": 2.5503407,
+    "File": ".github/workflows/security-scanners.yml",
+    "Fingerprint": "551c360d54343758dd49fa2c9b840c7349236620:.github/workflows/security-scanners.yml:curl-auth-user:238",
+    "Link": "https://github.com/awslabs/agent-plugins/blob/551c360d54343758dd49fa2c9b840c7349236620/.github/workflows/security-scanners.yml#L238",
+    "Match": "curl -s -u admin:admin ",
+    "Message": "chore: GitHub setup (#4)\n\n* feat: add pre-commit, pull request template, and fixes\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* feat: add bandit baseline\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* fix: markdown lint\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* fix: change the baseline commit for semgrep\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* chore: update pre-commit hooks\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* fix: validator cross refs for plugins\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* feat: add validate cross references to ci\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* feat: add advanced CodeQL\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* docs: add CODEOWNERS file\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* feat: ignore more feature\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* fix: stuff\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* fix: remove push\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* fix: unmatrix pre-commit\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* fix: gitleaks ignore\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* fix: semgrep only on pre-push\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* Add Dependency Review workflow for pull requests\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* feat: add grype and checkov\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* fix: update filelock\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* fix: update virtualenv\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* feat: add codeql and dependency review\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* fix: addressing comments\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* fix: remove hardcoded repo\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* fix: updated mise version\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* feat: rename scanners workflow\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* feat: add pull request linting workflow\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* fix: CODEOWNERS updates\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* fix: concurrency and switching notice to debug\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* fix: title Scorecard\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* fix: naming and remove allowed license\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n* fix: bandit to main commit hash\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>\n\n---------\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>",
+    "RuleID": "curl-auth-user",
+    "Secret": "admin:admin",
+    "StartColumn": 24,
+    "StartLine": 238,
+    "SymlinkFile": "",
+    "Tags": []
+  },
+  {
+    "Author": "Scott Schreckengaust",
+    "Commit": "6c8ef528c7b02b86c596392817e6ea2093382943",
+    "Date": "2026-02-06T01:38:56Z",
+    "Description": "Discovered a potential basic authorization token provided in a curl command, which could compromise the curl accessed resource.",
+    "Email": "scottschreckengaust@users.noreply.github.com",
+    "EndColumn": 45,
+    "EndLine": 198,
+    "Entropy": 2.5503407,
+    "File": ".github/workflows/scanners.yml",
+    "Fingerprint": "6c8ef528c7b02b86c596392817e6ea2093382943:.github/workflows/scanners.yml:curl-auth-user:198",
+    "Link": "https://github.com/awslabs/agent-plugins/blob/6c8ef528c7b02b86c596392817e6ea2093382943/.github/workflows/scanners.yml#L198",
+    "Match": "curl -s -u admin:admin ",
+    "Message": "fix: gitleaks ignore\n\nSigned-off-by: Scott Schreckengaust <scottschreckengaust@users.noreply.github.com>",
+    "RuleID": "curl-auth-user",
+    "Secret": "admin:admin",
+    "StartColumn": 23,
+    "StartLine": 198,
+    "SymlinkFile": "",
+    "Tags": []
+  }
+]

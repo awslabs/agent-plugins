@@ -6,7 +6,7 @@ Thank you for your interest in contributing to Agent Plugins for AWS.
 
 Depending on your role, please review the appropriate guide for repository-specific instructions:
 
-- [Development Guide](DEVELOPMENT_GUIDE.md) - For contributors and developers
+- [Development Guide](./DEVELOPMENT_GUIDE.md) - For contributors and developers
 
 ## Reporting Bugs/Feature Requests
 
