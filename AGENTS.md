@@ -127,3 +127,10 @@ See `mise.toml` for the full task list and tool versions.
 # Test locally
 claude --plugin-dir ./plugins/deploy-on-aws
 ```
+
+## Boundaries
+
+- ALWAYS Use mise commands to interact with the codebase. If a command is not available, add it.
+- NEVER add new dependencies without asking first.
+- ALWAYS run a full build when done with a task, this is to ensure all required files are generated before commit.
+- ALWAYS Ask first before modifying existing files in a major way.
