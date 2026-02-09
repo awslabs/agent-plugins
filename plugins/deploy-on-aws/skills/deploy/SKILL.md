@@ -1,6 +1,6 @@
 ---
 name: deploy
-description: "Deploy applications to AWS. Triggers on: deploy to AWS, host on AWS, run this on AWS, AWS architecture, estimate AWS cost, generate infrastructure. Analyzes any codebase and deploys to optimal AWS services."
+description: "Deploy applications to AWS. Triggers on phrases like: deploy to AWS, host on AWS, run this on AWS, AWS architecture, estimate AWS cost, generate infrastructure. Analyzes any codebase and deploys to optimal AWS services."
 ---
 
 # Deploy on AWS
@@ -24,7 +24,7 @@ straightforward services. Don't ask questions with obvious answers.
 
 See [defaults.md](references/defaults.md) for the complete service selection matrix.
 
-Core principle: Default to **dev-sized** (cost-conscious) unless user says "production-ready".
+Core principle: Default to **dev-sized** (cost-conscious: small instance sizes, minimal redundancy, and non-HA/single-AZ defaults) unless user says "production-ready".
 
 ## MCP Servers
 
