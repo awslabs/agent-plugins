@@ -4,6 +4,10 @@ on:
     # Daily at 15:12 UTC (random time to avoid GitHub Actions load spikes)
     - cron: '12 15 * * *'
   workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 permissions:
   actions: none
   attestations: none
