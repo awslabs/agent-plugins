@@ -3,8 +3,6 @@ on:
   schedule:
     # Daily at 15:12 UTC (random time to avoid GitHub Actions load spikes)
     - cron: '12 15 * * *'
-  push:
-  pull_request:
   workflow_dispatch:
 permissions:
   actions: none
