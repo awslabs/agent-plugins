@@ -2,9 +2,7 @@
 
 ## TL;DR Pitch
 
-AI coding assistants (Claude Code, Cursor, Windsurf) are becoming the primary interface developers use. These tools support **plugins** - bundles of skills, MCP servers, and agent configurations that extend capabilities. Cursor is launching a curated plugin marketplace. AWS should launch our own plugin marketplace to meet developers where they work. This repo is the MVP: `awslabs/agent-plugins` marketplace with a single plugin (`deploy-on-aws`) that lets any developer say "deploy this to AWS" and get architecture recommendations, cost estimates, and working IaC.
-
-**Elevator pitch for leadership:** Plugin marketplaces are the new app stores for AI-assisted development. Cursor is launching theirs. AWS needs presence in this ecosystem - not just as a cloud provider, but as a first-class citizen in developer tooling. This repo delivers that with a single high-value plugin: "deploy to AWS" in natural language.
+This repository supports **plugins** - bundles of skills, MCP servers, and agent configurations that extend capabilities. This repo is the MVP: `awslabs/agent-plugins` marketplace with a single plugin (`deploy-on-aws`) that lets any developer say "deploy this to AWS" and get architecture recommendations, cost estimates, and working IaC.
 
 ## Core Concepts
 
