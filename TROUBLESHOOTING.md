@@ -7,6 +7,7 @@ This guide provides troubleshooting steps for common issues when using plugins w
 ### Official Documentation
 
 For general plugin troubleshooting, see the official documentation:
+
 - [Claude Code plugin marketplace troubleshooting guide](https://code.claude.com/docs/en/plugin-marketplaces#troubleshooting)
 - [Claude Code plugins discovery troubleshooting guide](https://code.claude.com/docs/en/discover-plugins#troubleshooting)
 
@@ -25,20 +26,21 @@ If you're experiencing issues with the Claude Code TUI such as plugins not loadi
 1. **Exit the current Claude Code session**
    - Press `Ctrl+C` or type `/exit` to close the active session
 
-2. **Close the terminal window**
+1. **Close the terminal window**
    - Completely close your terminal application (not just the tab)
 
-3. **Clear the Claude Code cache**
+1. **Clear the Claude Code cache**
+
    ```bash
    # On macOS/Linux
    rm -rf ~/.claude/plugins/cache
    ```
 
-4. **Restart**
+1. **Restart**
    - Open a new terminal window
    - Run `claude` to start a fresh session
 
-5. **Install**
+1. **Install**
    - Within claude, run `/plugin marketplace add awslabs/agent-plugins`
 
 #### Verification Steps
@@ -75,6 +77,7 @@ claude
 #### Plugin Not Found in Marketplace
 
 1. Verify the marketplace was added correctly:
+
    ```bash
    /plugin marketplace list
    ```
@@ -84,6 +87,7 @@ claude
    - Verify `.claude-plugin/marketplace.json` exists
 
 3. Reinstall the marketplace and plugin:
+
    ```bash
    /plugin marketplace remove awslabs-agent-plugins
    /plugin marketplace add awslabs/agent-plugins
@@ -97,12 +101,14 @@ claude
 If MCP servers (like `awspricing`, `awsknowledge`, `awsiac`) fail to connect:
 
 1. Check MCP server logs:
+
    ```bash
    # Logs are typically in
    ~/.cache/claude-code/logs/
    ```
 
 2. Restart the servers
+
    ```
    # Run this within claude code
    /plugin
@@ -115,9 +121,11 @@ If MCP servers (like `awspricing`, `awsknowledge`, `awsiac`) fail to connect:
 If a skill isn't being invoked when expected:
 
 1. **Verify the skill is loaded:**
+
    ```bash
    /skills
    ```
+
    Look for `deploy-on-aws:deploy` in the list
 
 2. **Check your phrasing:**
@@ -126,14 +134,17 @@ If a skill isn't being invoked when expected:
    - Avoid ambiguous requests like "help me with AWS"
 
 3. **Manually invoke the skill:**
+
    ```bash
    /deploy
    ```
 
 4. **Check plugin installation:**
+
    ```bash
    /plugin list
    ```
+
    Ensure `deploy-on-aws` shows as installed
 
 ### Getting Help
@@ -145,6 +156,7 @@ If issues persist:
    - Look for similar problems and solutions
 
 2. **Enable Debug Mode:**
+
    ```bash
    claude --verbose
    ```
