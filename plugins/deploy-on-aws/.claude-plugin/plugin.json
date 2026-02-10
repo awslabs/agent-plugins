@@ -2,7 +2,7 @@
   "author": {
     "name": "Amazon Web Services"
   },
-  "description": "Deploy any application to AWS. Get architecture recommendations, cost estimates, and one-command deployment.",
+  "description": "Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment.",
   "homepage": "https://github.com/awslabs/agent-plugins",
   "keywords": [
     "aws",
