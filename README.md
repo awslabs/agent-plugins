@@ -7,8 +7,8 @@ Agent Plugins for AWS equip AI coding agents with the skills to help you archite
 
 ## Plugins
 
-| Plugin            | Description                                                                                                 | Status    |
-| ----------------- | ----------------------------------------------------------------------------------------------------------- | --------- |
+| Plugin            | Description                                                                                      | Status    |
+| ----------------- | ------------------------------------------------------------------------------------------------ | --------- |
 | **deploy-on-aws** | Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment | Available |
 
 ## Installation (Claude Code)
@@ -49,7 +49,7 @@ Equips agents with the skills to accelerate AWS deployment - recommending AWS ar
 | ---------------- | ------------------------------------------------------------ |
 | **awsknowledge** | AWS documentation, architecture guidance, and best practices |
 | **awspricing**   | Real-time AWS service pricing for cost estimates             |
-| **aws-iac-mcp**  | IaC best practices for CDK/CloudFormation          |
+| **aws-iac-mcp**  | IaC best practices for CDK/CloudFormation                    |
 
 ## Requirements
 
