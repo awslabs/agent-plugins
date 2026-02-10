@@ -33,7 +33,7 @@ Equips agents with the skills to accelerate AWS deployment - recommending AWS ar
 
 1. **Analyze** - Scan codebase for framework, database, dependencies
 2. **Recommend** - Select AWS services with concise rationale
-3. **Estimate** - Show cost estimtes before proceeding
+3. **Estimate** - Show cost estimates before proceeding
 4. **Generate** - Write IaC code (CDK/CloudFormation)
 5. **Deploy** - Execute with user confirmation
 
