@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "description": "Official AWS plugins for Claude Code, Cursor, and AI coding assistants.",
+    "description": "Agent Plugins for AWS equip AI coding agents with the skills to help you architect, deploy, and operate on AWS.",
     "version": "1.0.0"
   },
   "name": "awslabs-agent-plugins",
@@ -11,7 +11,7 @@
   "plugins": [
     {
       "category": "deployment",
-      "description": "Deploy any application to AWS. Get architecture recommendations, cost estimates, and one-command deployment.",
+      "description": "Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment.",
       "keywords": [
         "aws",
         "aws agent skills",
