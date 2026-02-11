@@ -123,7 +123,7 @@ Contributors must first add the marketplace before these take effect.
 /plugin marketplace add awslabs/agent-plugins
 
 # Install plugin
-/plugin install deploy-on-aws@awslabs-agent-plugins
+/plugin install deploy-on-aws@agent-plugins-for-aws
 
 # Test locally
 claude --plugin-dir ./plugins/deploy-on-aws
