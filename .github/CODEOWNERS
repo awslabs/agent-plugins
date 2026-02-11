@@ -28,6 +28,10 @@ README.md                 @awslabs/agent-plugins-admins
 schemas/                  @awslabs/agent-plugins-admins
 tools/                    @awslabs/agent-plugins-admins
 
+## Plugins (alphabetically listed)
+
+plugins/deploy-on-aws     @awslabs/agent-plugins-admins @awslabs/agent-plugins-maintainers  @awslabs/agent-plugins-deploy-on-aws
+
 ## File must end with CODEOWNERS file
 
 .github/CODEOWNERS         @awslabs/agent-plugins-admins
