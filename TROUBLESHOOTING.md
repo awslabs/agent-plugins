@@ -76,7 +76,7 @@ claude
 
 ```bash
 # Remove and re-add the marketplace
-/plugin marketplace remove awslabs-agent-plugins
+/plugin marketplace remove agent-plugins-for-aws
 /plugin marketplace add awslabs/agent-plugins
 ```
 
@@ -95,9 +95,9 @@ claude
 3. Reinstall the marketplace and plugin:
 
    ```bash
-   /plugin marketplace remove awslabs-agent-plugins
+   /plugin marketplace remove agent-plugins-for-aws
    /plugin marketplace add awslabs/agent-plugins
-   /plugin install deploy-on-aws@awslabs-agent-plugins
+   /plugin install deploy-on-aws@agent-plugins-for-aws
    ```
 
 4. Try the reset procedure
