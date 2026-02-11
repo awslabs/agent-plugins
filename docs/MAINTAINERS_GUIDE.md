@@ -4,15 +4,36 @@ This guide covers workflows, responsibilities, and tooling for repository review
 
 ## Roles
 
-This repository uses three GitHub teams, defined in [CODEOWNERS](../.github/CODEOWNERS):
+### Core Teams
 
-| Team                                   | Scope                          | Responsibilities                                             |
-| -------------------------------------- | ------------------------------ | ------------------------------------------------------------ |
-| `@awslabs/agent-plugins-admins`        | Everything                     | Repo settings, CI/CD, schemas, tooling, CODEOWNERS, releases |
-| `@awslabs/agent-plugins-maintainers`   | Everything (default reviewers) | PR review, triage, community engagement                      |
-| `@awslabs/agent-plugins-deploy-on-aws` | `plugins/deploy-on-aws/`       | Plugin-specific review, skill authoring, MCP server config   |
+| Team                                 | Scope                          | Responsibilities                                             |
+| ------------------------------------ | ------------------------------ | ------------------------------------------------------------ |
+| `@awslabs/agent-plugins-admins`      | Everything                     | Repo settings, CI/CD, schemas, tooling, CODEOWNERS, releases |
+| `@awslabs/agent-plugins-maintainers` | Everything (default reviewers) | PR review, triage, community engagement                      |
 
-Admins own all configuration and infrastructure files explicitly. Maintainers and plugin teams are co-owners on the default `*` pattern and their respective plugin directories.
+Admins own all configuration and infrastructure files explicitly. Both teams are defined in [CODEOWNERS](../.github/CODEOWNERS) on the default `*` pattern.
+
+### Plugin Teams
+
+Each plugin has its own GitHub team that owns its plugin directory. Plugin teams are created with `@awslabs/agent-plugins-writers` as the parent team. Once the parent team accepts the request, the plugin team gains write access to the repository.
+
+**Onboarding a new plugin team:**
+
+1. Create a GitHub team named `agent-plugins-<plugin-name>` (e.g., `agent-plugins-deploy-on-aws`)
+2. Set the parent team to `@awslabs/agent-plugins-writers`
+3. The contributor adds a CODEOWNERS entry for the plugin directory:
+
+   ```text
+   plugins/<plugin-name>     @awslabs/agent-plugins-admins @awslabs/agent-plugins-maintainers  @awslabs/agent-plugins-<plugin-name>
+   ```
+
+4. An admin accepts the parent team request
+
+**Current plugin teams:**
+
+| Team                                   | Plugin directory         |
+| -------------------------------------- | ------------------------ |
+| `@awslabs/agent-plugins-deploy-on-aws` | `plugins/deploy-on-aws/` |
 
 ## PR Review Workflow
 
@@ -35,7 +56,13 @@ When reviewing a PR, verify:
 2. **PR title** - Follows [conventional commits](https://www.conventionalcommits.org/) format (`fix:`, `feat:`, `chore:`, etc.). Enforced by CI.
 3. **Contributor statement** - PR body includes the license contribution acknowledgment. Enforced by CI (exempts `awslabs-mcp` and `dependabot[bot]`).
 4. **Design quality** - For plugin changes, use the review checklist in [Design Guidelines](./DESIGN_GUIDELINES.md#review-checklist)
-5. **Security** - No secrets, credentials, or sensitive data in the diff. Security scanners (Bandit, SemGrep, Gitleaks, Checkov, Grype) run in CI.
+5. **Versioning** - Plugin version changes follow [semantic versioning](https://semver.org/). Breaking changes require a major bump, new features a minor bump, bug fixes a patch bump.
+6. **New plugins** - PRs that add a new directory under `plugins/` must also include:
+   - A CODEOWNERS entry for the plugin directory (see [Plugin Teams](#plugin-teams))
+   - An entry in the marketplace manifest (`.claude-plugin/marketplace.json`)
+   - An entry in the plugin listing table in `README.md`
+   - The `new-plugin` label on the PR
+7. **Security** - No secrets, credentials, or sensitive data in the diff. Security scanners (Bandit, SemGrep, Gitleaks, Checkov, Grype) run in CI.
 
 ### Merge Rules
 
@@ -51,6 +78,7 @@ When reviewing a PR, verify:
 | Label          | Purpose                                |
 | -------------- | -------------------------------------- |
 | `do-not-merge` | Blocks PR from merging (CI-enforced)   |
+| `new-plugin`   | PR adds a new plugin to the repository |
 | `backlog`      | Exempts PR/issue from stale automation |
 | `stale`        | Auto-applied to inactive PRs/issues    |
 | `enhancement`  | Feature request                        |
