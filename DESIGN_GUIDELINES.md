@@ -6,7 +6,7 @@ This document outlines best practices for authoring plugins, skills, and MCP int
 
 1. **Keep plugins focused** — Do one thing well rather than bundling unrelated features
 2. **Document thoroughly** — Include a clear README with usage examples
-3. **Use semantic versioning** — Follow semver for version numbers (Major.Minor.Patch)
+3. **Use semantic versioning** — Follow [Semantic Versioning](https://semver.org/) for version numbers (Major.Minor.Patch)
 4. **Add proper frontmatter** — All skills need YAML metadata (description, tags, examples)
 5. **Test locally first** — Verify your plugin works before submitting (`mise run build`) and load it in an AI assistant that supports the standard
 6. **Use descriptive keywords** — Help users discover your plugin with specific tags (3-7)
@@ -488,9 +488,9 @@ DO NOT cache across estimates.
 
 Follow semver for plugin versions:
 
-- **Major (2.0.0)** - Breaking changes to skill interface or required MCP servers
-- **Minor (1.1.0)** - New skills or optional features
-- **Patch (1.0.1)** - Bug fixes, clarifications, improved instructions
+MAJOR (2.0.0) - version when you make incompatible (breaking) changes
+MINOR (1.1.0) - version when you add functionality in a backward compatible manner
+PATCH (1.0.1) - version when you make backward compatible bug fixes
 
 ### Deprecation Strategy
 
