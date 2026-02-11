@@ -6,7 +6,7 @@ applyTo: ".github/CODEOWNERS"
 
 Please verify this checklist to keep the `.github/CODEOWNERS` file following all five of these rules:
 
-1. [ ] ONLY teams are used (no users) 
+1. [ ] ONLY teams are used (no users)
 2. [ ] Teams MUST be vertically aligned across all lines with spaces (no tabs)
 3. [ ] Each section, "## section", MUST be alphabetically sorted (keep file patterns in order)
 4. [ ] Admins or maintainers must be first (if both separated by one space) - others follow with two spaces
