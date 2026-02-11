@@ -29,6 +29,11 @@ agent-plugins/
 │   ├── workflows/                # CI (build, lint, security, etc.)
 │   ├── ISSUE_TEMPLATE/
 │   └── ...
+├── docs/                         # Role-specific guides
+│   ├── DESIGN_GUIDELINES.md      # Plugin design best practices
+│   ├── DEVELOPMENT_GUIDE.md      # Contributor setup and workflow
+│   ├── MAINTAINERS_GUIDE.md      # Reviewer/maintainer processes
+│   └── TROUBLESHOOTING.md        # Plugin troubleshooting
 ├── plugins/
 │   └── deploy-on-aws/
 │       ├── .claude-plugin/

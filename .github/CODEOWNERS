@@ -18,7 +18,7 @@ AGENTS.md                 @awslabs/agent-plugins-admins
 CLAUDE.md                 @awslabs/agent-plugins-admins
 CODE_OF_CONDUCT.md        @awslabs/agent-plugins-admins
 CONTRIBUTING.md           @awslabs/agent-plugins-admins
-DEVELOPMENT_GUIDE.md      @awslabs/agent-plugins-admins
+docs/                     @awslabs/agent-plugins-admins
 dprint.json               @awslabs/agent-plugins-admins
 LICENSE                   @awslabs/agent-plugins-admins
 mise.toml                 @awslabs/agent-plugins-admins

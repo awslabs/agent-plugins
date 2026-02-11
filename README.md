@@ -58,11 +58,11 @@ Equips agents with the skills to accelerate AWS deployment - recommending AWS ar
 
 ## Troubleshooting
 
-Having issues with plugin installation or usage? See our [troubleshooting guide](./TROUBLESHOOTING.md) for common solutions.
+Having issues with plugin installation or usage? See our [troubleshooting guide](./docs/TROUBLESHOOTING.md) for common solutions.
 
 ## Developer guide
 
-If you want to add a new plugin to the library, check out our [design guidelines](./DESIGN_GUIDELINES.md) and [development guide](./DEVELOPMENT_GUIDE.md).
+If you want to add a new plugin to the library, check out our [design guidelines](./docs/DESIGN_GUIDELINES.md) and [development guide](./docs/DEVELOPMENT_GUIDE.md).
 
 ## Contributing
 
