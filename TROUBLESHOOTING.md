@@ -63,7 +63,7 @@ claude
 /plugin list
 # Then navigate to the "Installed" tab using your right arrow
 
-# Check available skills 
+# Check available skills
 /skills
 
 # Check available mcp servers
