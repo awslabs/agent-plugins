@@ -17,6 +17,20 @@ This project uses Mise (https://mise.jdx.dev/). At the moment, there is no dedic
 | `code .`                                                                     | Opens the project in VSCode. You can use the editor of your choice, just adapt this step to your specific use case.                                                                                                |
 | `mise install`                                                               | This command will install the tools required for the project and environmental variables                                                                                                                           |
 
+## Claude Code Setup
+
+This project uses Claude Code plugins for development workflows. The project-level `.claude/settings.json` pre-configures enabled plugins via `enabledPlugins`, but you must first register the marketplace(s) it references.
+
+### One-time marketplace setup
+
+Run this once inside a Claude Code session:
+
+```bash
+/plugin marketplace add awslabs/agent-plugins
+```
+
+After adding the marketplace, the plugins listed in `.claude/settings.json` will activate automatically for this project.
+
 ## Working on Your Contribution
 
 | Action                                            | Explanation                                                                                                                                                                                                                                                                                     |
