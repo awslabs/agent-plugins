@@ -3,7 +3,7 @@
     "description": "Agent Plugins for AWS equip AI coding agents with the skills to help you architect, deploy, and operate on AWS.",
     "version": "1.0.0"
   },
-  "name": "awslabs-agent-plugins",
+  "name": "agent-plugins-for-aws",
   "owner": {
     "email": "aws-agent-plugins@amazon.com",
     "name": "Amazon Web Services"
