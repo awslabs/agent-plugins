@@ -60,15 +60,19 @@ Equips agents with the skills to accelerate AWS deployment - recommending AWS ar
 
 Having issues with plugin installation or usage? See our [troubleshooting guide](./docs/TROUBLESHOOTING.md) for common solutions.
 
-## Developer guide
-
-If you want to add a new plugin to the library, check out our [design guidelines](./docs/DESIGN_GUIDELINES.md) and [development guide](./docs/DEVELOPMENT_GUIDE.md).
-
 ## Contributing
 
 Big shout out to our awesome contributors! Thank you for making this project better!
 
 Contributions of all kinds are welcome! Check out our [contributor guide](./CONTRIBUTING.md) for more information.
+
+## Developer guide
+
+If you want to add a new plugin to the library, check out our [design guidelines](./docs/DESIGN_GUIDELINES.md) and [development guide](./docs/DEVELOPMENT_GUIDE.md).
+
+## Maintainers
+
+Repository reviewers, maintainers, and admins can find PR review workflows, merge rules, and CI/CD documentation in the [maintainers guide](./docs/MAINTAINERS_GUIDE.md).
 
 ## License
 
