@@ -22,7 +22,7 @@ Agent Plugins for AWS equip AI coding agents with the skills to help you archite
 ### Install a plugin
 
 ```bash
-/plugin install deploy-on-aws@awslabs-agent-plugins
+/plugin install deploy-on-aws@agent-plugins-for-aws
 ```
 
 ## deploy-on-aws
