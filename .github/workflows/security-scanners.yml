@@ -51,13 +51,13 @@ jobs:
           set -e
           echo "exit_code=$GITLEAKS_EXIT" >> "$GITHUB_OUTPUT"
           exit 0
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: gitleaks.sarif
           path: gitleaks-report_sarif.json
           if-no-files-found: error
-      - uses: github/codeql-action/upload-sarif@74c8748a6f2dada2c01b25ae170d7858ac90f4af # v4.32.2
+      - uses: github/codeql-action/upload-sarif@8ad4b6ec58178e8dbb44a62677274b3a5916baa9 # v4.32.2
         continue-on-error: true
         with:
           sarif_file: gitleaks-report_sarif.json
@@ -75,7 +75,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - run: |
           echo "bandit[sarif]==1.9.3" > requirements.txt
-      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: '3.x'
           cache: 'pip'
@@ -90,13 +90,13 @@ jobs:
           set -e
           echo "exit_code=$BANDIT_EXIT" >> "$GITHUB_OUTPUT"
           exit 0
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: bandit.sarif
           path: bandit-report_sarif.json
           if-no-files-found: error
-      - uses: github/codeql-action/upload-sarif@74c8748a6f2dada2c01b25ae170d7858ac90f4af # v4.32.2
+      - uses: github/codeql-action/upload-sarif@8ad4b6ec58178e8dbb44a62677274b3a5916baa9 # v4.32.2
         continue-on-error: true
         with:
           sarif_file: bandit-report_sarif.json
@@ -124,13 +124,13 @@ jobs:
           set -e
           echo "exit_code=$GRYPE_EXIT" >> "$GITHUB_OUTPUT"
           exit 0
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: grype.sarif
           path: grype-report_sarif.json
           if-no-files-found: error
-      - uses: github/codeql-action/upload-sarif@74c8748a6f2dada2c01b25ae170d7858ac90f4af # v4.32.2
+      - uses: github/codeql-action/upload-sarif@8ad4b6ec58178e8dbb44a62677274b3a5916baa9 # v4.32.2
         continue-on-error: true
         with:
           sarif_file: grype-report_sarif.json
@@ -148,7 +148,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
       - run: |
           echo "checkov==3.2.500" > requirements.txt
-      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: '3.x'
           cache: 'pip'
@@ -164,14 +164,14 @@ jobs:
           set -e
           echo "exit_code=$CHECKOV_EXIT" >> "$GITHUB_OUTPUT"
           exit 0
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: checkov.sarif
           path: checkov-report_sarif.json
           if-no-files-found: error
       - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@74c8748a6f2dada2c01b25ae170d7858ac90f4af # v4.32.2
+        uses: github/codeql-action/upload-sarif@8ad4b6ec58178e8dbb44a62677274b3a5916baa9 # v4.32.2
         continue-on-error: true
         with:
           sarif_file: checkov-report_sarif.json
@@ -191,7 +191,7 @@ jobs:
           fetch-depth: 0 # Required for baseline comparison
       - run: |
           echo "semgrep==1.151.0" > requirements.txt
-      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: '3.x'
           cache: 'pip'
@@ -283,12 +283,12 @@ jobs:
               else . end
             ]
           ' semgrep-report_sarif.json > semgrep.sarif.tmp.json && mv semgrep.sarif.tmp.json semgrep-report_sarif.json
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: semgrep.sarif
           path: semgrep-report_sarif.json
           if-no-files-found: error
-      - uses: github/codeql-action/upload-sarif@74c8748a6f2dada2c01b25ae170d7858ac90f4af # v4.32.2
+      - uses: github/codeql-action/upload-sarif@8ad4b6ec58178e8dbb44a62677274b3a5916baa9 # v4.32.2
         continue-on-error: true
         with:
           sarif_file: semgrep-report_sarif.json
@@ -328,7 +328,7 @@ jobs:
           clamdscan --version
       - run: |
           clamdscan --verbose --log=clamdscan.txt --stream --fdpass --multiscan .
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: clamdscan.txt
@@ -429,7 +429,7 @@ jobs:
           --url 'http://localhost:9000/api/issues/search?componentKeys=my-project&ps=500&p=1' \
           --header 'Authorization: Bearer ${{ env.SONAR_TOKEN }}' | tee sonar-issues.json | jq || exit 1
 
-    - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+    - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       if: always()
       with:
           name: sonar-issues.json
