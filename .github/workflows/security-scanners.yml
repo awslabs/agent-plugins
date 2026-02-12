@@ -51,7 +51,7 @@ jobs:
           set -e
           echo "exit_code=$GITLEAKS_EXIT" >> "$GITHUB_OUTPUT"
           exit 0
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: gitleaks.sarif
@@ -90,7 +90,7 @@ jobs:
           set -e
           echo "exit_code=$BANDIT_EXIT" >> "$GITHUB_OUTPUT"
           exit 0
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: bandit.sarif
@@ -124,7 +124,7 @@ jobs:
           set -e
           echo "exit_code=$GRYPE_EXIT" >> "$GITHUB_OUTPUT"
           exit 0
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: grype.sarif
@@ -164,7 +164,7 @@ jobs:
           set -e
           echo "exit_code=$CHECKOV_EXIT" >> "$GITHUB_OUTPUT"
           exit 0
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: checkov.sarif
@@ -283,7 +283,7 @@ jobs:
               else . end
             ]
           ' semgrep-report_sarif.json > semgrep.sarif.tmp.json && mv semgrep.sarif.tmp.json semgrep-report_sarif.json
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: semgrep.sarif
           path: semgrep-report_sarif.json
@@ -328,7 +328,7 @@ jobs:
           clamdscan --version
       - run: |
           clamdscan --verbose --log=clamdscan.txt --stream --fdpass --multiscan .
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: always()
         with:
           name: clamdscan.txt
@@ -429,7 +429,7 @@ jobs:
           --url 'http://localhost:9000/api/issues/search?componentKeys=my-project&ps=500&p=1' \
           --header 'Authorization: Bearer ${{ env.SONAR_TOKEN }}' | tee sonar-issues.json | jq || exit 1
 
-    - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+    - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       if: always()
       with:
           name: sonar-issues.json
