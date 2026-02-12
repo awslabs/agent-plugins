@@ -115,6 +115,9 @@ See `mise.toml` for the full task list and tool versions.
 
 ## Plugin commands (Claude)
 
+Project-level plugin settings are in `.claude/settings.json` (`enabledPlugins`).
+Contributors must first add the marketplace before these take effect.
+
 ```bash
 # Add marketplace
 /plugin marketplace add awslabs/agent-plugins
