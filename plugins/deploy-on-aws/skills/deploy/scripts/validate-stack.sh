@@ -36,28 +36,27 @@ fi
 success "AWS CDK CLI found ($(cdk --version 2>/dev/null | head -1))"
 
 # Detect language
+CDK_LANG="unknown"
 if [ -f "${PROJECT_ROOT}/package.json" ]; then
-    LANG="typescript"
+    CDK_LANG="typescript"
     info "Detected TypeScript/JavaScript CDK project"
 elif [ -f "${PROJECT_ROOT}/requirements.txt" ] || [ -f "${PROJECT_ROOT}/setup.py" ]; then
-    LANG="python"
+    CDK_LANG="python"
     info "Detected Python CDK project"
 elif [ -f "${PROJECT_ROOT}/pom.xml" ]; then
-    LANG="java"
+    CDK_LANG="java"
     info "Detected Java CDK project"
 elif [ -f "${PROJECT_ROOT}/go.mod" ]; then
-    LANG="go"
+    CDK_LANG="go"
     info "Detected Go CDK project"
 else
-    LANG="unknown"
     warning "Could not detect CDK project language"
 fi
 
-# Run synthesis
+# Run synthesis (uses app command from cdk.json)
 echo ""
 info "Running CDK synthesis..."
-if cdk synth --quiet --app "npx ts-node ${PROJECT_ROOT}/bin/*.ts" > /dev/null 2>&1 \
-   || cdk synth --quiet > /dev/null 2>&1; then
+if cdk synth --quiet > /dev/null 2>&1; then
     success "CDK synthesis successful"
 else
     error "CDK synthesis failed — run 'cdk synth' for details"
@@ -67,7 +66,7 @@ fi
 # Check cdk-nag integration
 echo ""
 info "Checking cdk-nag integration..."
-case "$LANG" in
+case "$CDK_LANG" in
     typescript)
         if grep -q "cdk-nag" "${PROJECT_ROOT}/package.json" 2>/dev/null; then
             success "cdk-nag found in package.json"
