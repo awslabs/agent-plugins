@@ -1,6 +1,17 @@
 ---
 name: deploy
 description: "Deploy applications to AWS. Triggers on phrases like: deploy to AWS, host on AWS, run this on AWS, AWS architecture, estimate AWS cost, generate infrastructure. Analyzes any codebase and deploys to optimal AWS services."
+tags:
+  - aws
+  - deployment
+  - cdk
+  - monitoring
+  - infrastructure
+examples:
+  - "Deploy this Flask app to AWS"
+  - "Host my React site on AWS"
+  - "Estimate AWS costs for this project"
+  - "Generate CDK code for this application"
 ---
 
 # Deploy on AWS
@@ -19,7 +30,8 @@ straightforward services. Don't ask questions with obvious answers.
 3. **Estimate** - Show monthly cost before proceeding
 4. **Generate** - Write IaC code following [CDK best practices](references/cdk-best-practices.md)
    with [security defaults](references/security.md) applied
-5. **Validate** - Run [validation script](scripts/validate-stack.sh) and security scans
+5. **Validate** - Run synthesis, security scans, and
+   [validation script](scripts/validate-stack.sh)
 6. **Deploy** - Execute with user confirmation
 7. **Monitor** - Set up [monitoring](references/monitoring.md) for deployed resources
 
@@ -82,7 +94,35 @@ Before deploying, run these checks in order:
 4. Security scan — `checkov` or `cfn-nag` on generated templates
 5. Secret detection — scan for hardcoded credentials
 
-Use [validate-stack.sh](scripts/validate-stack.sh) to automate checks 3-4.
+Use [validate-stack.sh](scripts/validate-stack.sh) to automate synthesis validation
+and template analysis (steps 3). Run `checkov` or `cfn-nag` separately for step 4.
+
+## Error Handling
+
+### MCP Server Unavailable
+
+If awscdk or awsiac MCP servers are unresponsive:
+
+- Inform user: "[server] MCP not responding"
+- Continue using inline CDK best practices from this skill
+- DO NOT skip cost estimation if awspricing fails — ask user to proceed without estimate
+
+### Validation Failures
+
+If `cdk synth` or validation script fails:
+
+- Show the error output to the user
+- Identify and fix the issue in generated code
+- Re-run validation before proceeding to deploy
+- DO NOT deploy with failing validation
+
+### Deployment Failures
+
+If `cdk deploy` fails:
+
+- Show the CloudFormation error event
+- Suggest fix based on error type
+- Stack will auto-rollback — no manual cleanup needed
 
 ## Post-Deployment Monitoring
 
