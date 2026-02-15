@@ -1,5 +1,11 @@
 {
   "mcpServers": {
+    "awscdk": {
+      "args": [
+        "awslabs.aws-cdk-mcp-server@latest"
+      ],
+      "command": "uvx"
+    },
     "awsiac": {
       "args": [
         "awslabs.aws-iac-mcp-server@latest"
