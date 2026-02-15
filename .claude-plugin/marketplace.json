@@ -11,7 +11,7 @@
   "plugins": [
     {
       "category": "deployment",
-      "description": "Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment.",
+      "description": "Deploy applications to AWS with architecture recommendations, cost estimates, CDK best practices, monitoring setup, and IaC deployment.",
       "keywords": [
         "aws",
         "aws agent skills",
@@ -20,11 +20,19 @@
         "cdk",
         "cloudformation",
         "infrastructure",
-        "pricing"
+        "pricing",
+        "monitoring",
+        "cloudwatch"
       ],
       "name": "deploy-on-aws",
       "source": "./plugins/deploy-on-aws",
-      "tags": ["aws", "deploy", "infrastructure", "cdk"],
+      "tags": [
+        "aws",
+        "deploy",
+        "infrastructure",
+        "cdk",
+        "monitoring"
+      ],
       "version": "1.1.0"
     },
     {
