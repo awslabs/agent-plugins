@@ -9,6 +9,8 @@ Depending on your role, please review the appropriate guide for repository-speci
 - [Development Guide](./docs/DEVELOPMENT_GUIDE.md) - For contributors and developers
 - [Maintainers Guide](./docs/MAINTAINERS_GUIDE.md) - For reviewers, maintainers, and admins
 
+**Using Claude Code?** See the [Claude Code Setup](./docs/DEVELOPMENT_GUIDE.md#claude-code-setup) section in the Development Guide for project-specific configuration.
+
 ## Reporting Bugs/Feature Requests
 
 We welcome you to use the GitHub issue tracker to report bugs or suggest features.

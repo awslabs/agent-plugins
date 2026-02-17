@@ -31,6 +31,10 @@ Run this once inside a Claude Code session:
 
 After adding the marketplace, the plugins listed in `.claude/settings.json` will activate automatically for this project.
 
+### PR contributor statement
+
+The project-level `attribution.pr` setting automatically appends the required contributor statement to pull request descriptions created by Claude Code, so the `contributorStatement` CI check passes without manual copy-paste.
+
 ## Working on Your Contribution
 
 | Action                                            | Explanation                                                                                                                                                                                                                                                                                     |
