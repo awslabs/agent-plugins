@@ -25,6 +25,8 @@ jobs:
       actions: read
       contents: read
     runs-on: ubuntu-latest
+    outputs:
+      self_mutation_happened: ${{ steps.self_mutation.outputs.self_mutation_happened }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -38,3 +40,26 @@ jobs:
 
       - name: Build
         run: mise run build
+
+      - name: Find mutations
+        id: self_mutation
+        run: |-
+          git add .
+          git diff --staged --patch --exit-code > repo.patch || echo "self_mutation_happened=true" >> $GITHUB_OUTPUT
+        shell: bash
+        working-directory: ./
+
+      - name: Upload patch
+        if: steps.self_mutation.outputs.self_mutation_happened
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.4.0
+        with:
+          name: repo.patch
+          path: repo.patch
+          overwrite: true
+
+      - name: Fail build on mutation
+        if: steps.self_mutation.outputs.self_mutation_happened
+        run: |-
+          echo "::error::Files were changed during build (see build log). Please run the build locally and commit the changes."
+          cat repo.patch
+          exit 1
