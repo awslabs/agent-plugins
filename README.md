@@ -11,19 +11,30 @@ Agent Plugins for AWS equip AI coding agents with the skills to help you archite
 | ----------------- | ------------------------------------------------------------------------------------------------ | --------- |
 | **deploy-on-aws** | Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment | Available |
 
-## Installation (Claude Code)
+## Installation
 
-### Add the marketplace
+### Claude Code
+
+#### Add the marketplace
 
 ```bash
 /plugin marketplace add awslabs/agent-plugins
 ```
 
-### Install a plugin
+#### Install a plugin
 
 ```bash
 /plugin install deploy-on-aws@agent-plugins-for-aws
 ```
+
+### Cursor
+
+Use the official [Cursor marketplace](https://cursor.com/marketplace) to install the plugins from this repository. For additional information, please refer to the [documentation](https://cursor.com/docs/plugins).
+
+- Open Cursor Settings
+- Navigate to `Plugins`, and in the search bar type `aws`
+- Select the plugin you want to install, and Click `add to cursor`, then select the scope
+- Now the plugin should appear under `Plugins -> installed`
 
 ## deploy-on-aws
 
@@ -53,7 +64,7 @@ Equips agents with the skills to accelerate AWS deployment - recommending AWS ar
 
 ## Requirements
 
-- Claude Code >=2.1.29
+- Claude Code >=2.1.29 or Cursor released >= Feb 17 2026
 - AWS CLI configured with appropriate credentials
 
 ## Troubleshooting
