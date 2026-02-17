@@ -95,7 +95,7 @@ jobs:
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@4320041ed380b20e97d388d56a7fb4f9b8c20e79 # v6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.UPGRADE_MAIN_TOKEN }}
           commit-message: |-
             chore(deps): upgrade dependencies
 
