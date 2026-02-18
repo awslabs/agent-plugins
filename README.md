@@ -31,8 +31,7 @@ Agent Plugins for AWS equip AI coding agents with the skills to help you archite
 
 1. Open the **Agent Steering & Skills** section in the Kiro panel
 2. Click **+** and select **Global Agent Skills**
-3. Choose **GitHub** and enter: `https://github.com/awslabs/agent-plugins`
-4. Select the `plugins/deploy-on-aws/skills/deploy` folder
+3. Choose **GitHub** and enter: `https://github.com/awslabs/agent-plugins/tree/main/plugins/deploy-on-aws/skills/deploy`
 5. Add the MCP servers from `plugins/deploy-on-aws/.kiro/mcp.json` to your Kiro MCP settings
 
 ### Kiro CLI
