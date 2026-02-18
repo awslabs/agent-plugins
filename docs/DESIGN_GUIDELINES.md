@@ -7,9 +7,9 @@ This document outlines best practices for authoring plugins, skills, and MCP int
 1. **Keep plugins focused** — Do one thing well rather than bundling unrelated features
 2. **Document thoroughly** — Include a clear README with usage examples
 3. **Use semantic versioning** — Follow [Semantic Versioning](https://semver.org/) for version numbers (Major.Minor.Patch)
-4. **Add proper frontmatter** — All skills need YAML metadata (description, tags, examples)
+4. **Add proper frontmatter** — All skills need `name` and `description` per the [Agent Skills spec](https://agentskills.io/specification)
 5. **Test locally first** — Verify your plugin works before submitting (`mise run build`) and load it in an AI assistant that supports the standard
-6. **Use descriptive keywords** — Help users discover your plugin with specific tags (3-7)
+6. **Use descriptive keywords** — Put trigger phrases and 3–7 keywords in the description (and optionally in `metadata`) for discoverability
 
 See detailed sections below for implementation guidance.
 
@@ -115,77 +115,70 @@ Plugins should have a **clear, cohesive purpose**. Bundle related skills and MCP
 
 ## Skill Authoring Best Practices
 
+Skill frontmatter must follow the [Agent Skills specification](https://agentskills.io/specification). Only spec-defined fields are guaranteed to work across implementations.
+
 ### YAML Frontmatter
+
+**Required fields:** `name`, `description`. **Optional:** `license`, `compatibility`, `metadata`, `allowed-tools` (experimental).
 
 ```yaml
 ---
+name: deploy
 description: |
   Deploy web applications to AWS with architecture recommendations,
   cost estimates, and generated Infrastructure as Code.
-
-  Triggers when user requests: "deploy to AWS", "host on AWS",
-  "publish to AWS", or similar deployment intent.
-
-tags:
-  - aws
-  - deployment
-  - infrastructure
-
-examples:
-  - "Deploy this Flask app to AWS"
-  - "Host my React site on AWS"
-  - "Publish this to AWS with a database"
+  Triggers when user says: "deploy to AWS", "host on AWS", "publish to AWS",
+  or similar deployment intent. Use for Flask, React, static sites, and APIs.
+license: Apache-2.0
+metadata:
+  tags: aws, deployment, infrastructure, iac
 ---
 ```
 
-**Key fields:**
+**Key fields (spec-compliant):**
 
-- `description` - How the agent decides to trigger this skill (most important!)
-- `tags` - For discovery and filtering (see Tags & Keywords below)
-- `examples` - Concrete phrases that should trigger the skill
+- `name` - **Required.** Skill identifier; 1–64 chars, lowercase letters, numbers, hyphens only; no leading/trailing or consecutive hyphens; must match the skill directory name (e.g. `deploy` for `skills/deploy/SKILL.md`).
+- `description` - **Required.** How the agent decides to trigger this skill (max 1024 chars). Include what the skill does and when to use it; add trigger phrases and keywords here so agents match user intent.
+- `license` - Optional. License name or reference to a bundled license file.
+- `compatibility` - Optional. Environment requirements (max 500 chars), e.g. required tools or network access.
+- `metadata` - Optional. Arbitrary key-value map (e.g. `tags`, `version`, `author`) for discovery or tooling; key names should be reasonably unique.
+- `allowed-tools` - Optional (experimental). Space-delimited list of pre-approved tools the skill may use.
 
 ### Tags & Keywords for Discoverability
 
-Use **descriptive, specific tags** to help users find your plugin. Good tags improve searchability and filtering.
+The Agent Skills spec does not define a top-level `tags` field. Put **keywords and trigger phrases in the `description`** so agents and tooling can match user intent. Optionally use **`metadata`** (e.g. `metadata.tags`) for marketplace or client-specific discovery if your implementation supports it.
 
 **Best practices:**
 
-- **Be specific** - Use `lambda`, `fargate`, `ec2` rather than just `aws`
-- **Include categories** - Add both domain (`aws`, `gcp`) and function (`deployment`, `monitoring`)
-- **Think like users** - What would someone search for? Include common terms
-- **Avoid redundancy** - Don't repeat words from the plugin name
-- **Use 3-7 tags** - Too few limits discovery, too many dilutes relevance
+- **Be specific in the description** - Mention `lambda`, `fargate`, `ec2`, and use cases so agents and search can match
+- **Include trigger phrases** - e.g. "Triggers when user says: deploy to AWS, host on AWS, …"
+- **Think like users** - What would someone search for? Include those terms in the description
+- **Avoid redundancy** - Don't repeat the skill name unnecessarily
+- **Use 3–7 keywords** - In description or in `metadata.tags` (comma- or space-separated string) if supported
 
-**Good tags:**
+**Good (description + optional metadata):**
 
 ```yaml
-# Plugin: deploy-on-aws
-tags:
-  - aws
-  - deployment
-  - infrastructure
-  - iac
-  - fargate
-  - lambda
+description: "Deploy to AWS with architecture recommendations and IaC. Triggers on: deploy to AWS, host on AWS, run on AWS. Supports Flask, React, static sites, Fargate, Lambda."
+metadata:
+  tags: aws, deployment, infrastructure, iac, fargate, lambda
 ```
 
-**Bad tags:**
+**Bad:**
 
 ```yaml
-# Plugin: deploy-on-aws
-tags:
-  - deploy  # redundant with name
-  - cloud   # too vague
-  - stuff   # meaningless
+description: "Deploy to AWS."   # too vague; no trigger phrases or keywords
+metadata:
+  tags: deploy, cloud, stuff   # redundant or meaningless
 ```
 
 **Keyword selection checklist:**
 
-- [ ] Includes cloud provider/platform (if applicable)
-- [ ] Describes primary function (deploy, test, monitor, etc.)
-- [ ] Lists specific technologies/services used
-- [ ] Uses terms from related documentation/communities
-- [ ] Tested by searching marketplace with those terms
+- [ ] Description includes cloud provider/platform (if applicable)
+- [ ] Description states primary function (deploy, test, monitor, etc.)
+- [ ] Description or metadata lists specific technologies/services used
+- [ ] Trigger phrases and terms align with how users search or ask
+- [ ] Tested by searching marketplace or invoking with those phrases
 
 ### Instruction Structure
 
@@ -532,7 +525,7 @@ Keep under 300 lines.
 
 Required sections:
 
-- **YAML Frontmatter** - description, tags, examples
+- **YAML Frontmatter** - `name` and `description` (required per [Agent Skills spec](https://agentskills.io/specification)); optional: license, compatibility, metadata, allowed-tools
 - **Workflow** - Step-by-step execution logic
 - **Defaults** - Explicit default behaviors
 - **Error Handling** - Failure scenarios and recovery
@@ -560,7 +553,7 @@ Before submitting a plugin, verify:
 
 - [ ] All SKILL.md files under 300 lines
 - [ ] Reference files under 100 lines each
-- [ ] All skills have proper YAML frontmatter (description, tags, examples)
+- [ ] All skills have proper YAML frontmatter (name, description; optional metadata/tags per [Agent Skills spec](https://agentskills.io/specification))
 - [ ] Skill descriptions clearly state trigger conditions
 - [ ] All defaults explicitly specified
 - [ ] Error handling documented for MCP failures
@@ -576,6 +569,7 @@ Before submitting a plugin, verify:
 
 ## Additional Resources
 
+- [Agent Skills specification](https://agentskills.io/specification) - Official format for SKILL.md frontmatter and directory structure
 - `.claude/docs/skills_docs.md` - Skill authoring technical reference
 - `.claude/docs/plugin_reference.md` - Plugin manifest specification
 - `../schemas/` - JSON schemas for validation
