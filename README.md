@@ -85,6 +85,11 @@ If you want to add a new plugin to the library, check out our [design guidelines
 
 Repository reviewers, maintainers, and admins can find PR review workflows, merge rules, and CI/CD documentation in the [maintainers guide](./docs/MAINTAINERS_GUIDE.md).
 
+## Additional Resources
+
+- [Introducing Agent Plugins for AWS Blog](https://aws.amazon.com/blogs/developer/introducing-agent-plugins-for-aws/)
+- [Extend Cursor with plugins ft. AWS](https://cursor.com/blog/marketplace)
+
 ## License
 
 This project is licensed under the Apache-2.0 License.
