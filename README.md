@@ -27,6 +27,21 @@ Agent Plugins for AWS equip AI coding agents with the skills to help you archite
 /plugin install deploy-on-aws@agent-plugins-for-aws
 ```
 
+### Kiro
+
+Kiro supports this plugin via [Agent Skills](https://agentskills.io/) and MCP.
+
+#### Import the skill
+
+1. Open the **Agent Steering & Skills** section in the Kiro panel
+2. Click **+** and select **Import a skill**
+3. Choose **GitHub** and enter: `https://github.com/awslabs/agent-plugins`
+4. Select the `plugins/deploy-on-aws/skills/deploy` folder
+
+#### Set up MCP servers
+
+Copy the MCP configuration from `plugins/deploy-on-aws/.kiro/mcp.json` into your workspace or global Kiro MCP settings. Alternatively, open the plugin directory as a workspace and Kiro will auto-detect the `.kiro/mcp.json` configuration.
+
 ### Cursor
 
 Use the official [Cursor marketplace](https://cursor.com/marketplace) to install the plugins from this repository. For additional information, please refer to the [documentation](https://cursor.com/docs/plugins).
@@ -64,7 +79,7 @@ Equips agents with the skills to accelerate AWS deployment - recommending AWS ar
 
 ## Requirements
 
-- Claude Code >=2.1.29 or Cursor released >= Feb 17 2026
+- Claude Code >=2.1.29, Kiro IDE >=0.9 / Kiro CLI >=1.24.0, or Cursor released >= Feb 17 2026
 - AWS CLI configured with appropriate credentials
 
 ## Troubleshooting
