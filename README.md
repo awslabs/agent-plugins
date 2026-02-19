@@ -59,7 +59,7 @@ You can install the **deploy-on-aws** plugin from the [Cursor Marketplace](https
 
 ## deploy-on-aws
 
-Equips agents with agent skills to accelerate AWS deployment - recommending AWS architectures and services, estimating costs, generating Infrastructure as Code (CDK or CloudFormation), and guiding you through deployment.
+Equips agents with skills to accelerate AWS deployment - recommending AWS architectures and services, estimating costs, generating Infrastructure as Code (CDK or CloudFormation), and guiding you through deployment.
 
 ### Workflow
 
