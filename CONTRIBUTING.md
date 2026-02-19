@@ -11,6 +11,10 @@ Depending on your role, please review the appropriate guide for repository-speci
 
 **Using Claude Code?** See the [Claude Code Setup](./docs/DEVELOPMENT_GUIDE.md#claude-code-setup) section in the Development Guide for project-specific configuration.
 
+## RFCs for New Plugins and Major Changes
+
+For **new plugins** or **major changes** to the repository, contributors must first open an [RFC (Request for Comments)](https://github.com/awslabs/agent-plugins/issues) before doing any work. This ensures public visibility and allows maintainers and owners to review the proposal. Once the RFC is approved, you can proceed with your contribution following the steps in [Contributing via Pull Requests](#contributing-via-pull-requests).
+
 ## Reporting Bugs/Feature Requests
 
 We welcome you to use the GitHub issue tracker to report bugs or suggest features.
