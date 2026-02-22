@@ -31,6 +31,37 @@
         "cdk"
       ],
       "version": "1.0.0"
+    },
+    {
+      "category": "development",
+      "description": "Design, build, deploy, test, and debug serverless applications with AWS Serverless services.",
+      "keywords": [
+        "aws",
+        "aws agent skills",
+        "amazon",
+        "serverless",
+        "lambda",
+        "durable functions",
+        "development",
+        "sam",
+        "api-gateway",
+        "eventbridge",
+        "step-functions"
+      ],
+      "name": "aws-serverless",
+      "source": "./plugins/aws-serverless",
+      "tags": [
+        "aws",
+        "serverless",
+        "lambda",
+        "durable functions",
+        "development",
+        "sam",
+        "api-gateway",
+        "eventbridge",
+        "step-functions"
+      ],
+      "version": "1.0.0"
     }
   ]
 }
