@@ -1,7 +1,7 @@
 {
   "metadata": {
     "description": "Agent Plugins for AWS equip AI coding agents with the skills to help you architect, deploy, and operate on AWS.",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "name": "agent-plugins-for-aws",
   "owner": {
@@ -25,7 +25,7 @@
       "name": "deploy-on-aws",
       "source": "./plugins/deploy-on-aws",
       "tags": ["aws", "deploy", "infrastructure", "cdk"],
-      "version": "1.0.0"
+      "version": "1.1.0"
     },
     {
       "category": "location",

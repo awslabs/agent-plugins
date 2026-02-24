@@ -30,19 +30,29 @@ Use `amplify_docs` topic in awsknowledge MCP for framework-specific guidance
 
 ## Database
 
-| Data Pattern      | Default (Dev)          | Default (Prod)         | Override Trigger   |
-| ----------------- | ---------------------- | ---------------------- | ------------------ |
-| PostgreSQL        | Aurora Serverless v2   | Aurora Serverless v2   | "simple RDS" → RDS |
-| MySQL             | Aurora Serverless v2   | Aurora Serverless v2   | "simple RDS" → RDS |
-| NoSQL / Key-Value | DynamoDB               | DynamoDB               | -                  |
-| Redis / Caching   | ElastiCache Serverless | ElastiCache Serverless | -                  |
-| Full-text search  | OpenSearch Serverless  | OpenSearch Serverless  | -                  |
+| Data Pattern         | Default (Dev)          | Default (Prod)         | Override Trigger                       |
+| -------------------- | ---------------------- | ---------------------- | -------------------------------------- |
+| PostgreSQL           | Aurora Serverless v2   | Aurora Serverless v2   | "simple RDS" → RDS                     |
+| MySQL                | Aurora Serverless v2   | Aurora Serverless v2   | "simple RDS" → RDS                     |
+| DocumentDB / MongoDB | DocumentDB Serverless  | DocumentDB Serverless  | "provisioned" → DocumentDB provisioned |
+| NoSQL / Key-Value    | DynamoDB               | DynamoDB               | -                                      |
+| Redis / Caching      | ElastiCache Serverless | ElastiCache Serverless | -                                      |
+| Full-text search     | OpenSearch Serverless  | OpenSearch Serverless  | -                                      |
 
 ### Why Aurora Serverless v2
 
 Scales to near-zero in dev (0.5 ACU minimum), scales up automatically for production.
 Single choice works for both environments. Only use provisioned RDS if user has
 specific cost constraints or compliance requirements.
+
+### Why DocumentDB Serverless for MongoDB
+
+DocumentDB Serverless is the on-demand, auto-scaling configuration of Amazon DocumentDB.
+It dynamically adjusts capacity based on application demand so you only pay for what you
+use. Ideal for dev/test, variable workloads, and new applications where capacity needs
+are unknown. Compatible with MongoDB 3.6, 4.0, 5.0 and 8.0 APIs.
+Use provisioned DocumentDB only when you have predictable, steady-state workloads
+or specific compliance requirements that need fixed instance sizing.
 
 ## Storage
 
