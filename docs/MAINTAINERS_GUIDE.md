@@ -31,9 +31,10 @@ Each plugin has its own GitHub team that owns its plugin directory. Plugin teams
 
 **Current plugin teams:**
 
-| Team                                   | Plugin directory         |
-| -------------------------------------- | ------------------------ |
-| `@awslabs/agent-plugins-deploy-on-aws` | `plugins/deploy-on-aws/` |
+| Team                                             | Plugin directory                   |
+| ------------------------------------------------ | ---------------------------------- |
+| `@awslabs/agent-plugins-deploy-on-aws`           | `plugins/deploy-on-aws/`           |
+| `@awslabs/agent-plugins-amazon-location-service` | `plugins/amazon-location-service/` |
 
 ## PR Review Workflow
 

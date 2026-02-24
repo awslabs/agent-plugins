@@ -26,9 +26,10 @@ To maximize the benefits of plugin-assisted development while maintaining securi
 
 ## Plugins
 
-| Plugin            | Description                                                                                      | Status    |
-| ----------------- | ------------------------------------------------------------------------------------------------ | --------- |
-| **deploy-on-aws** | Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment | Available |
+| Plugin                      | Description                                                                                                       | Status    |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------- | --------- |
+| **deploy-on-aws**           | Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment                  | Available |
+| **amazon-location-service** | Add maps, geocoding, routing, places search, and geospatial features to applications with Amazon Location Service | Available |
 
 ## Installation
 
@@ -44,6 +45,12 @@ To maximize the benefits of plugin-assisted development while maintaining securi
 
 ```bash
 /plugin install deploy-on-aws@agent-plugins-for-aws
+```
+
+or
+
+```bash
+/plugin install amazon-location-service@agent-plugins-for-aws
 ```
 
 ### Cursor
@@ -82,6 +89,22 @@ Equips agents with the skills to accelerate AWS deployment - recommending AWS ar
 | **awsknowledge** | AWS documentation, architecture guidance, and best practices |
 | **awspricing**   | Real-time AWS service pricing for cost estimates             |
 | **aws-iac-mcp**  | IaC best practices for CDK/CloudFormation                    |
+
+## amazon-location-service
+
+Guides developers through adding maps, places search, geocoding, routing, and other geospatial features with Amazon Location Service, including authentication setup, SDK integration, and best practices.
+
+### Agent Skill Triggers
+
+| Agent Skill                 | Triggers                                                                                                                               |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **amazon-location-service** | "add a map", "geocode an address", "calculate a route", "location-aware app", "Amazon Location Service", "geospatial", "places search" |
+
+### MCP Servers
+
+| Server      | Purpose                                |
+| ----------- | -------------------------------------- |
+| **aws-mcp** | AWS documentation and service guidance |
 
 ## Requirements
 

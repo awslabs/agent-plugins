@@ -1,8 +1,10 @@
 # Agent Plugins for AWS
 
+> **Note:** `CLAUDE.md` is a symlink to this file. Only edit `AGENTS.md` — changes apply to both automatically.
+
 ## TL;DR Pitch
 
-This repository supports **plugins** - bundles of skills, MCP servers, and agent configurations that extend capabilities. This repo is the MVP: `awslabs/agent-plugins` marketplace with a single plugin (`deploy-on-aws`) that lets any developer say "deploy this to AWS" and get architecture recommendations, cost estimates, and working IaC.
+This repository supports **plugins** - bundles of skills, MCP servers, and agent configurations that extend capabilities. The `awslabs/agent-plugins` marketplace includes plugins like `deploy-on-aws` (architecture recommendations, cost estimates, and working IaC) and `amazon-location-service` (maps, geocoding, routing, and geospatial features).
 
 ## Core Concepts
 
@@ -35,17 +37,25 @@ agent-plugins/
 │   ├── MAINTAINERS_GUIDE.md      # Reviewer/maintainer processes
 │   └── TROUBLESHOOTING.md        # Plugin troubleshooting
 ├── plugins/
-│   └── deploy-on-aws/
+│   ├── deploy-on-aws/
+│   │   ├── .claude-plugin/
+│   │   │   └── plugin.json       # Plugin manifest
+│   │   ├── .mcp.json             # MCP server definitions
+│   │   └── skills/
+│   │       └── deploy/
+│   │           ├── SKILL.md     # Main skill (auto-triggers)
+│   │           └── references/
+│   │               ├── defaults.md
+│   │               ├── cost-estimation.md
+│   │               └── security.md
+│   └── amazon-location-service/
 │       ├── .claude-plugin/
-│       │   └── plugin.json       # Plugin manifest
-│       ├── .mcp.json             # MCP server definitions
+│       │   └── plugin.json
+│       ├── .mcp.json
 │       └── skills/
-│           └── deploy/
-│               ├── SKILL.md     # Main skill (auto-triggers)
+│           └── amazon-location-service/
+│               ├── SKILL.md
 │               └── references/
-│                   ├── defaults.md
-│                   ├── cost-estimation.md
-│                   └── security.md
 ├── schemas/                      # JSON schemas for manifests
 │   ├── marketplace.schema.json
 │   ├── plugin.schema.json
@@ -61,13 +71,21 @@ agent-plugins/
 └── README.md
 ```
 
-## MCP Servers (deploy-on-aws)
+## MCP Servers
+
+### deploy-on-aws
 
 | Server         | Type  | Purpose                                           |
 | -------------- | ----- | ------------------------------------------------- |
 | `awsknowledge` | HTTP  | AWS documentation, architecture guidance          |
 | `awspricing`   | stdio | Real-time cost estimates                          |
 | `awsiac`       | stdio | IaC best practices (CDK/CloudFormation/Terraform) |
+
+### amazon-location-service
+
+| Server    | Type  | Purpose                                |
+| --------- | ----- | -------------------------------------- |
+| `aws-mcp` | stdio | AWS documentation and service guidance |
 
 ## Workflow: Deploy Skill
 
