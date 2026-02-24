@@ -178,6 +178,40 @@ If issues persist:
    - Include your collected information
    - Describe steps to reproduce the issue
 
+## CI / GitHub Actions
+
+### Re-running Failed Jobs
+
+GitHub Actions workflows can occasionally fail due to intermittent issues (network timeouts, flaky upstream services, etc.). If you believe a failure is not related to your changes:
+
+#### Via the GitHub UI
+
+1. Open the failed check from your pull request's **Checks** tab.
+2. Click **Re-run failed jobs**.
+
+See [Re-running workflows and jobs](https://docs.github.com/en/actions/managing-workflow-runs/re-running-workflows-and-jobs) for details.
+
+#### Via the `gh` CLI
+
+See [Re-run failed jobs from a workflow run](https://docs.github.com/en/rest/actions/workflow-runs?apiVersion=2022-11-28#re-run-failed-jobs-from-a-workflow-run).
+
+```sh
+RUN_ID=0
+
+gh api \
+  --method POST \
+  -H "Accept: application/vnd.github+json" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  /repos/awslabs/agent-plugins/actions/runs/${RUN_ID:-0}/rerun-failed-jobs
+```
+
+Replace `RUN_ID` with the workflow run ID from your pull request's **Checks** tab or from `gh run list --branch <your-branch>`.
+
+#### Required Permissions
+
+- **Repository collaborators** (write access) can re-run workflows directly.
+- **Fork contributors** cannot re-run workflows on the upstream repo. Ask a maintainer to re-run the failed jobs, or push an empty commit (`git commit --allow-empty -m "retry CI"`) to trigger a fresh run.
+
 ## Other AI Assistants
 
 Support for additional AI assistants will be added here as the plugin system expands.
