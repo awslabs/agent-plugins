@@ -8,14 +8,13 @@ Both SAM and CDK synthesize CloudFormation. Choosing between them is a matter of
 | ------------------------ | ------------------------------------- | --------------------------------------------------------- |
 | **Language**             | YAML/JSON (declarative)               | TypeScript, Python, Java, Go, C# (imperative)             |
 | **Learning curve**       | Lower — close to CloudFormation       | Higher — requires familiarity with a programming language |
-| **Local testing**        | `sam local invoke` built-in           | Requires external tools (Localstack, docker)              |
-| **Abstraction level**    | Thin layer over CloudFormation        | Rich L2/L3 constructs handle wiring automatically         |
+| **Abstraction level**    | Handles wiring for Serverless resources | Rich L2/L3 constructs handle wiring automatically         |
 | **Code sharing**         | Template fragments only               | Full reuse via construct libraries (npm, PyPI)            |
-| **Loops and conditions** | Limited (`Fn::If`, no loops)          | Native language constructs (`for`, `if`, maps)            |
+| **Loops and conditions** | Limited          | Native language constructs (`for`, `if`, maps)            |
 | **Testing**              | Manual template review                | Unit tests with `aws-cdk-lib/assertions`                  |
 | **Best for**             | Lambda-centric apps, teams new to IaC | Large teams building reusable infrastructure patterns     |
 
-**Choose SAM** when your primary concern is Lambda functions and you want `sam local invoke` and the SAM MCP tools.
+**Choose SAM** when your primary concern is Lambda functions and you want the SAM MCP tools.
 
 **Choose CDK** when you have complex infrastructure, want to write reusable construct libraries, prefer a programming-language interface, or your team already uses CDK elsewhere.
 

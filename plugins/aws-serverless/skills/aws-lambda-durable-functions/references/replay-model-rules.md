@@ -131,13 +131,14 @@ await context.runInChildContext('process', async (childCtx) => {
 **Python:**
 
 ```python
-def process(child_ctx: DurableContext):
+# Note: validate and process are decorated with @durable_step
+def process_child(child_ctx: DurableContext):
     child_ctx.wait(duration=Duration.from_seconds(1))
-    step1 = child_ctx.step(lambda _: validate(), name='validate')
-    step2 = child_ctx.step(lambda _: process(step1), name='process')
+    step1 = child_ctx.step(validate())
+    step2 = child_ctx.step(process(step1))
     return step2
 
-context.run_in_child_context(process, name='process')
+context.run_in_child_context(func=process_child, name='process')
 ```
 
 ## Rule 3: Closure Mutations Are Lost
@@ -227,10 +228,11 @@ await context.step('process', async () => process());
 **Python:**
 
 ```python
+# Note: Functions are decorated with @durable_step
 context.logger.info('Starting process')  # Deduplicated automatically
-context.step(lambda _: send_email(user.email), name='send-email')
-context.step(lambda _: update_database(data), name='update-db')
-context.step(lambda _: process(), name='process')
+context.step(send_email(user.email))
+context.step(update_database(data))
+context.step(process())
 ```
 
 ### Exception: context.logger

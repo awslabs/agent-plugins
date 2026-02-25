@@ -2,24 +2,22 @@
 
 Comprehensive error handling patterns for durable functions.
 
-## Retry Presets
-
 **TypeScript:**
 
 ```typescript
-import { RetryPresets } from '@aws/durable-execution-sdk-js';
+import { createRetryStrategy, JitterStrategy } from '@aws/durable-execution-sdk-js';
 
 // Exponential backoff with jitter
 const result = await context.step(
   'api-call',
   async () => callAPI(),
   {
-    retryStrategy: RetryPresets.exponentialBackoff({
+    retryStrategy: createRetryStrategy({
       maxAttempts: 5,
       initialDelay: { seconds: 1 },
       maxDelay: { seconds: 60 },
       backoffRate: 2.0,
-      jitter: 'full'
+      jitter: JitterStrategy.FULL
     })
   }
 );
@@ -29,9 +27,10 @@ const result = await context.step(
   'simple-retry',
   async () => operation(),
   {
-    retryStrategy: RetryPresets.fixedDelay({
+    retryStrategy: createRetryStrategy({
       maxAttempts: 3,
-      delay: { seconds: 5 }
+      delay: { seconds: 5 },
+      backoffRate: 1
     })
   }
 );
@@ -120,7 +119,7 @@ const result = await context.step(
   'selective-retry',
   async () => operation(),
   {
-    retryStrategy: RetryPresets.exponentialBackoff({
+    retryStrategy: createRetryStrategy({
       maxAttempts: 3,
       retryableErrorTypes: ['NetworkError', 'TimeoutError'],
       // ValidationError won't be retried
@@ -202,45 +201,31 @@ export const handler = withDurableExecution(async (event, context: DurableContex
 **Python:**
 
 ```python
+# Note: All service methods are decorated with @durable_step
 @durable_execution
 def handler(event: dict, context: DurableContext) -> dict:
     compensations = []
 
     try:
         # Step 1: Reserve inventory
-        reservation = context.step(
-            lambda _: inventory_service.reserve(event['items']),
-            name='reserve-inventory'
-        )
-        compensations.append((
-            'cancel-reservation',
-            lambda: inventory_service.cancel_reservation(reservation['id'])
-        ))
+        reservation = context.step(reserve_inventory(event['items']))
+        compensations.append(('cancel-reservation', cancel_reservation, reservation['id']))
 
         # Step 2: Charge payment
-        payment = context.step(
-            lambda _: payment_service.charge(event['payment_method'], event['amount']),
-            name='charge-payment'
-        )
-        compensations.append((
-            'refund-payment',
-            lambda: payment_service.refund(payment['id'])
-        ))
+        payment = context.step(charge_payment(event['payment_method'], event['amount']))
+        compensations.append(('refund-payment', refund_payment, payment['id']))
 
         # Step 3: Create shipment
-        shipment = context.step(
-            lambda _: shipping_service.create_shipment(event['address'], event['items']),
-            name='create-shipment'
-        )
+        shipment = context.step(create_shipment(event['address'], event['items']))
 
         return {'success': True, 'order_id': shipment['order_id']}
 
     except Exception as error:
         context.logger.error('Order failed, executing compensations', error)
         
-        for name, comp_fn in reversed(compensations):
+        for name, comp_step, resource_id in reversed(compensations):
             try:
-                context.step(lambda _: comp_fn(), name=name)
+                context.step(comp_step(resource_id))
             except Exception as comp_error:
                 context.logger.error(f'Compensation {name} failed', comp_error)
         
@@ -275,7 +260,7 @@ export const handler = withDurableExecution(async (event, context: DurableContex
 **Python:**
 
 ```python
-from aws_durable_execution_sdk_python.errors import UnrecoverableInvocationError
+from aws_durable_execution_sdk_python.exceptions import InvocationError
 
 @durable_execution
 def handler(event: dict, context: DurableContext) -> dict:
@@ -283,7 +268,7 @@ def handler(event: dict, context: DurableContext) -> dict:
     def fetch_user_step(step_ctx: StepContext):
         user = fetch_user(event['user_id'])
         if not user:
-            raise UnrecoverableInvocationError('User not found')
+            raise InvocationError('User not found')
         return user
     
     user = context.step(fetch_user_step())

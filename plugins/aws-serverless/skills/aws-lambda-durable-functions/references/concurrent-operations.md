@@ -35,24 +35,25 @@ const allResults = results.getResults();
 **Python:**
 
 ```python
+# Note: process is decorated with @durable_step
 from aws_durable_execution_sdk_python.concurrency import MapConfig, CompletionConfig
 
 items = [1, 2, 3, 4, 5]
 
 def process_item(ctx: DurableContext, item: int, index: int):
-    return ctx.step(lambda _: process(item), name=f'process-{index}')
+    return ctx.step(process(item), name=f'process-{index}')
 
 results = context.map(
-    items=items,
+    inputs=items,
     func=process_item,
+    name='process-items',
     config=MapConfig(
         max_concurrency=3,
         completion_config=CompletionConfig(
             min_successful=4,
             tolerated_failure_count=1
         )
-    ),
-    name='process-items'
+    )
 )
 
 results.throw_if_error()
@@ -91,25 +92,26 @@ const [user, orders, preferences] = results.getResults();
 **Python:**
 
 ```python
+# Note: fetch_user, fetch_orders, fetch_preferences are decorated with @durable_step
 from aws_durable_execution_sdk_python.concurrency import ParallelConfig
 
 def fetch_user_data(ctx: DurableContext):
-    return ctx.step(lambda _: fetch_user(user_id), name='fetch')
+    return ctx.step(fetch_user(user_id))
 
 def fetch_orders_data(ctx: DurableContext):
-    return ctx.step(lambda _: fetch_orders(user_id), name='fetch')
+    return ctx.step(fetch_orders(user_id))
 
 def fetch_prefs_data(ctx: DurableContext):
-    return ctx.step(lambda _: fetch_preferences(user_id), name='fetch')
+    return ctx.step(fetch_preferences(user_id))
 
 results = context.parallel(
-    branches=[
+    functions=[
         {'name': 'fetch-user', 'func': fetch_user_data},
         {'name': 'fetch-orders', 'func': fetch_orders_data},
         {'name': 'fetch-preferences', 'func': fetch_prefs_data}
     ],
-    config=ParallelConfig(max_concurrency=3),
-    name='parallel-ops'
+    name='parallel-ops',
+    config=ParallelConfig(max_concurrency=3)
 )
 
 user, orders, preferences = results.get_results()

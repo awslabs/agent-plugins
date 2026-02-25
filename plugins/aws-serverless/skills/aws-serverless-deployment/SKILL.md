@@ -1,6 +1,6 @@
 ---
 name: aws-serverless-deployment
-description: "Deploy serverless applications to AWS using AWS SAM and AWS CDK — project scaffolding, IaC templates, CDK constructs, CI/CD pipelines, and deployment workflows"
+description: "AWS SAM and AWS CDK deployment for serverless applications. Triggers on phrases like: SAM template, SAM init, SAM deploy, CDK serverless, CDK Lambda construct, NodejsFunction, PythonFunction, SAM and CDK together, serverless CI/CD pipeline. For general app deployment with service selection, use deploy-on-aws plugin instead."
 argument-hint: "[what are you deploying?]"
 ---
 
@@ -45,26 +45,25 @@ Load the appropriate reference file based on what the user is working on:
 
 ## Configuration
 
-### Authentication Setup
+### AWS CLI Setup
 
-This skill requires AWS credentials configured on the host machine:
+This skill requires that AWS credentials are configured on the host machine:
 
-1. **Install AWS CLI**: Follow the [AWS CLI installation guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
-2. **Configure credentials**: Run `aws configure` or set up named profiles in `~/.aws/credentials`
-3. **Set environment variables** (if not using the default profile):
-   - `AWS_PROFILE` - Named profile to use
-   - `AWS_REGION` - Target AWS region
-4. **Verify access**: Run `aws sts get-caller-identity` to confirm credentials are valid
+**Verify access**: Run `aws sts get-caller-identity` to confirm credentials are valid
 
 ### SAM CLI Setup
 
-1. **Install SAM CLI**: Follow the [SAM CLI installation guide](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html)
-2. **Install Docker Desktop**: Required for `sam_local_invoke` and container-based builds
-3. **Verify**: Run `sam --version` and `docker --version`
+**Verify**: Run `sam --version`
 
-### MCP Server Configuration
+### Container runtime
 
-The MCP server is configured in `.mcp.json` with the following flags:
+**Install a Docker compatible container runtime**: Required for `sam_local_invoke` and container-based builds
+
+### AWS Serverless MCP Server
+
+The default configuration **prevents** write access and **prevents** access to sensitve data such as Lambda functions logs.
+
+To grant accees, add these flags to `.mcp.json`:
 
 - `--allow-write`: Enables write operations (project creation, deployments)
 - `--allow-sensitive-data-access`: Enables access to Lambda logs and API Gateway logs

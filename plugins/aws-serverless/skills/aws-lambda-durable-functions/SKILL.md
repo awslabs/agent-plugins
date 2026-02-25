@@ -1,13 +1,7 @@
 ---
 name: aws-lambda-durable-functions
 description: >
-  Build resilient, long-running AWS Lambda durable functions with automatic state persistence,
-  retry logic, and workflow orchestration for up to 1 year execution. Covers the critical replay
-  model, step operations, wait/callback patterns, concurrent execution (map/parallel), error
-  handling with saga pattern, testing with LocalDurableTestRunner, and deployment with
-  CloudFormation, CDK, and SAM. Use for: lambda durable functions, workflow orchestration,
-  state machines, retry/checkpoint patterns, long-running stateful Lambda functions, saga pattern,
-  agentic AI workflows, human-in-the-loop callbacks, and serverless applications.
+  Build resilient, long-running, multi-step applications with AWS Lambda durable functions with automatic state persistence, retry logic, and orchestration for up to 1 year execution. Covers the critical replay model, step operations, wait/callback patterns, error handling with saga pattern, testing with LocalDurableTestRunner. Triggers on phrases like: lambda durable functions, workflow orchestration, state machines, retry/checkpoint patterns, long-running stateful Lambda functions, saga pattern, human-in-the-loop callbacks, and reliable serverless applications.
 hooks:
   PostToolUse:
     - matcher: "Edit"
@@ -20,7 +14,9 @@ hooks:
 
 Build resilient multi-step applications and AI workflows that can execute for up to 1 year while maintaining reliable progress despite interruptions.
 
-## Prerequisites
+## Onboarding
+
+### Step 1: Validate Prerequisites
 
 Before using AWS Lambda durable functions, verify:
 
@@ -40,7 +36,13 @@ Before using AWS Lambda durable functions, verify:
    - AWS CDK (`cdk --version`) v2.237.1 or higher
    - Direct Lambda deployment access
 
-## SDK Installation
+## Step 2: Check user and project preferences
+
+Ask which IaC framework to use for new projects.
+Ask which programming language to use if unclear, clarify between JavaScript and TypeScript if necessary.
+Ask to create a git repo for projects if one doesn't exist already.
+
+### Step 3: Install SDK
 
 **For TypeScript/JavaScript:**
 
@@ -66,8 +68,9 @@ Load the appropriate reference file based on what the user is working on:
 - **Waiting**, **delays**, **callbacks**, **external systems**, or **polling** -> see [wait-operations.md](references/wait-operations.md)
 - **Parallel execution**, **map operations**, **batch processing**, or **concurrency** -> see [concurrent-operations.md](references/concurrent-operations.md)
 - **Error handling**, **retry strategies**, **saga pattern**, or **compensating transactions** -> see [error-handling.md](references/error-handling.md)
+- **Advanced error handling**, **timeout handling**, **circuit breakers**, or **conditional retries** -> see [advanced-error-handling.md](references/advanced-error-handling.md)
 - **Testing**, **local testing**, **cloud testing**, **test runner**, or **flaky tests** -> see [testing-patterns.md](references/testing-patterns.md)
-- **Deployment**, **CloudFormation**, **CDK**, **SAM**, **log groups**, or **infrastructure** -> see [deployment-iac.md](references/deployment-iac.md)
+- **Deployment**, **CloudFormation**, **CDK**, **SAM**, **log groups**, **deploy**, or **infrastructure** -> see [deployment-iac.md](references/deployment-iac.md)
 - **Advanced patterns**, **GenAI agents**, **completion policies**, **step semantics**, or **custom serialization** -> see [advanced-patterns.md](references/advanced-patterns.md)
 
 ## Quick Reference
@@ -144,12 +147,6 @@ When implementing or modifying tests for durable functions, ALWAYS verify:
 2. Tests get operations by NAME, never by index
 3. Replay behavior is tested with multiple invocations
 4. Use `LocalDurableTestRunner` for local testing
-
-## Guidelines
-
-Ask which IaC framework to use for new projects.
-Ask which programming language to use if unclear, clarify between JavaScript and TypeScript if necessary.
-Ask to create a git repo for projects if one doesn't exist already.
 
 ## Troubleshooting Production Executions
 

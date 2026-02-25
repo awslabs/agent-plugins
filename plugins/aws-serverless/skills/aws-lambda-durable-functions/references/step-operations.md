@@ -4,7 +4,44 @@ Steps are atomic operations with automatic retry and state persistence.
 
 ## Basic Step Patterns
 
-### Named Steps (Recommended)
+### Python: Two Ways to Define Steps
+
+**Recommended: `@durable_step` Decorator**
+
+```python
+from aws_durable_execution_sdk_python import durable_step, StepContext
+
+@durable_step
+def fetch_user(step_ctx: StepContext, user_id: str):
+    """Fetch user from database - reusable step function."""
+    return fetch_user_from_api(user_id)
+
+# Call it - name is automatically inferred from function name
+result = context.step(fetch_user(user_id))
+```
+
+Alternative: **Inline Lambda**
+
+```python
+# For simple one-off operations
+result = context.step(
+    func=lambda step_ctx: fetch_user_from_api(user_id),
+    name='fetch-user'
+)
+```
+
+**Use `@durable_step` for:**
+
+- Reusable step functions
+- Complex logic
+- Better readability and testing
+
+**Use lambda for:**
+
+- Simple inline operations
+- One-off transformations
+
+### TypeScript: Named Steps
 
 **TypeScript:**
 
@@ -12,30 +49,6 @@ Steps are atomic operations with automatic retry and state persistence.
 const result = await context.step('fetch-user', async () => {
   return await fetchUserFromAPI(userId);
 });
-```
-
-**Python:**
-
-```python
-@durable_step
-def fetch_user(step_ctx: StepContext, user_id: str):
-    return fetch_user_from_api(user_id)
-
-result = context.step(fetch_user(user_id))
-```
-
-### Anonymous Steps
-
-**TypeScript:**
-
-```typescript
-const result = await context.step(async () => processData());
-```
-
-**Python:**
-
-```python
-result = context.step(lambda _: process_data(), name='process')
 ```
 
 **Best Practice:** Always name steps for easier debugging and testing.
@@ -47,18 +60,18 @@ result = context.step(lambda _: process_data(), name='process')
 **TypeScript:**
 
 ```typescript
-import { RetryPresets } from '@aws/durable-execution-sdk-js';
+import { createRetryStrategy, JitterStrategy } from '@aws/durable-execution-sdk-js';
 
 const result = await context.step(
   'api-call',
   async () => callExternalAPI(),
   {
-    retryStrategy: RetryPresets.exponentialBackoff({
+    retryStrategy: createRetryStrategy({
       maxAttempts: 5,
       initialDelay: { seconds: 1 },
       maxDelay: { seconds: 60 },
       backoffRate: 2.0,
-      jitter: 'full'
+      jitter: JitterStrategy.FULL
     })
   }
 );
@@ -67,19 +80,20 @@ const result = await context.step(
 **Python:**
 
 ```python
+# Note: api_call is decorated with @durable_step
 from aws_durable_execution_sdk_python.config import StepConfig, Duration
-from aws_durable_execution_sdk_python.retries import RetryStrategyConfig, create_retry_strategy
+from aws_durable_execution_sdk_python.retries import RetryStrategyConfig, create_retry_strategy, JitterStrategy
 
 retry_config = RetryStrategyConfig(
     max_attempts=5,
     initial_delay=Duration.from_seconds(5),
     max_delay=Duration.from_seconds(60),
     backoff_rate=2.0,
-    jitter='full'
+    jitter_strategy=JitterStrategy.FULL
 )
 
 result = context.step(
-    api_call(),
+    func=api_call,
     config=StepConfig(retry_strategy=create_retry_strategy(retry_config))
 )
 ```
@@ -145,7 +159,7 @@ const result = await context.step(
   'selective-retry',
   async () => operation(),
   {
-    retryStrategy: RetryPresets.exponentialBackoff({
+    retryStrategy: createRetryStrategy({
       maxAttempts: 3,
       retryableErrorTypes: ['NetworkError', 'TimeoutError']
     })
@@ -301,11 +315,12 @@ try {
 **Python:**
 
 ```python
-from aws_durable_execution_sdk_python.errors import StepError
+from aws_durable_execution_sdk_python.exceptions import CallableRuntimeError
 
 try:
-    result = context.step(risky_operation(), name='risky')
-except StepError as error:
+    # Note: risky_operation is decorated with @durable_step
+    result = context.step(risky_operation())
+except CallableRuntimeError as error:
     context.logger.error('Step failed', error.cause)
     # Handle or rethrow
 ```

@@ -24,12 +24,12 @@ if [ ! -f "$FILE_PATH" ]; then
   exit 0
 fi
 
-OUTPUT=$(sam validate --template "$FILE_PATH" 2>&1) && STATUS=0 || STATUS=$?
+OUTPUT=$(sam validate --template "$FILE_PATH" --lint 2>&1) && STATUS=0 || STATUS=$?
 
 if [ $STATUS -eq 0 ]; then
-  echo '{"systemMessage": "SAM template validation passed."}'
+  echo '{"systemMessage": "SAM template validation and linting passed."}'
 else
-  echo "$OUTPUT" | jq -Rs '{systemMessage: ("SAM template validation failed:\n" + .)}'
+  echo "$OUTPUT" | jq -Rs '{systemMessage: ("SAM template validation/linting failed:\n" + .)}'
 fi
 
 exit 0

@@ -169,22 +169,29 @@ const finalState = await context.waitForCondition(
 **Python:**
 
 ```python
-from aws_durable_execution_sdk_python.waits import WaitForConditionConfig, ExponentialBackoff
+# Note: get_job_status is decorated with @durable_step
+from aws_durable_execution_sdk_python.waits import WaitForConditionConfig, create_wait_strategy, WaitStrategyConfig
+from aws_durable_execution_sdk_python.config import Duration
 
 def check_job(state: dict, check_ctx):
     status = get_job_status(state['job_id'])
     return {'job_id': state['job_id'], 'status': status}
 
+wait_strategy = create_wait_strategy(
+    WaitStrategyConfig(
+        should_continue_polling=lambda state: state['status'] != 'completed',
+        max_attempts=60,
+        initial_delay=Duration.from_seconds(2),
+        max_delay=Duration.from_seconds(60),
+        backoff_rate=1.5
+    )
+)
+
 result = context.wait_for_condition(
     check=check_job,
     config=WaitForConditionConfig(
         initial_state={'job_id': 'job-123', 'status': 'pending'},
-        condition=lambda state: state['status'] == 'completed',
-        wait_strategy=ExponentialBackoff(
-            initial_wait=Duration.from_seconds(2),
-            max_wait=Duration.from_seconds(60)
-        ),
-        timeout=Duration.from_hours(1)
+        wait_strategy=wait_strategy
     ),
     name='wait-for-job'
 )
@@ -354,7 +361,7 @@ try {
 **Python:**
 
 ```python
-from aws_durable_execution_sdk_python.errors import CallbackError
+from aws_durable_execution_sdk_python.exceptions import CallbackError
 
 try:
     result = context.wait_for_callback(

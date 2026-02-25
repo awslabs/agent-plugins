@@ -13,17 +13,9 @@ Choose the right template based on your use case:
 
 Use `get_serverless_templates` to browse additional templates from Serverless Land for specific patterns (e.g., API + DynamoDB, step functions, event processing).
 
-## Runtime Selection
+## Architecture Selection
 
-| Runtime      | Best For                                             |
-| ------------ | ---------------------------------------------------- |
-| Python 3.12  | Data processing, ML workloads, scripting             |
-| Node.js 22.x | Web APIs, real-time applications                     |
-| Java 21      | Enterprise applications, high-performance computing  |
-| Go 1.x       | Microservices, high-concurrency, low-latency         |
-| .NET 8       | Windows-centric applications, enterprise integration |
-
-**Architecture:** Choose `arm64` (Graviton) for better price-performance unless you have x86-specific dependencies.
+Choose `arm64` (Graviton) for better price-performance unless you have x86-specific dependencies.
 
 ## Project Structure
 
@@ -83,82 +75,6 @@ Use `sam_init` with chosen runtime, template, and dependency manager.
 ### 2. Develop
 
 Write handler code in `src/handlers/`. Create test events in `events/`.
-
-**Python API handler:**
-
-```python
-import json
-import os
-import boto3
-from aws_lambda_powertools import Logger, Tracer
-from aws_lambda_powertools.event_handler import APIGatewayRestResolver
-
-logger = Logger()
-tracer = Tracer()
-app = APIGatewayRestResolver()
-
-table = boto3.resource("dynamodb").Table(os.environ["TABLE_NAME"])
-
-@app.get("/orders/<order_id>")
-@tracer.capture_method
-def get_order(order_id: str):
-    result = table.get_item(Key={"orderId": order_id})
-    item = result.get("Item")
-    if not item:
-        raise app.not_found()
-    return item
-
-@app.post("/orders")
-@tracer.capture_method
-def create_order():
-    body = app.current_event.json_body
-    table.put_item(Item=body)
-    return {"orderId": body["orderId"]}, 201
-
-@logger.inject_lambda_context
-@tracer.capture_lambda_handler
-def handler(event, context):
-    return app.resolve(event, context)
-```
-
-**TypeScript API handler:**
-
-```typescript
-import { Logger } from '@aws-lambda-powertools/logger';
-import { Tracer } from '@aws-lambda-powertools/tracer';
-import type { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
-
-const logger = new Logger();
-const tracer = new Tracer();
-const client = tracer.captureAWSv3Client(DynamoDBDocumentClient.from(new DynamoDBClient({})));
-const tableName = process.env.TABLE_NAME!;
-
-export const handler = async (event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> => {
-  logger.addContext(context);
-  const { httpMethod, pathParameters, body } = event;
-
-  if (httpMethod === 'GET' && pathParameters?.orderId) {
-    const result = await client.send(new GetCommand({
-      TableName: tableName,
-      Key: { orderId: pathParameters.orderId },
-    }));
-    if (!result.Item) {
-      return { statusCode: 404, body: JSON.stringify({ message: 'Not found' }) };
-    }
-    return { statusCode: 200, body: JSON.stringify(result.Item) };
-  }
-
-  if (httpMethod === 'POST' && body) {
-    const item = JSON.parse(body);
-    await client.send(new PutCommand({ TableName: tableName, Item: item }));
-    return { statusCode: 201, body: JSON.stringify({ orderId: item.orderId }) };
-  }
-
-  return { statusCode: 400, body: JSON.stringify({ message: 'Bad request' }) };
-};
-```
 
 ### 3. Build
 
@@ -421,6 +337,19 @@ sam local invoke MyFunction --event events/test.json \
 ```
 
 `sam local generate-event` supports all Lambda event sources (s3, sqs, sns, kinesis, dynamodb, apigateway, etc.). Use it instead of hand-crafting event JSON.
+
+The `sam local start-api` subcommand runs your AWS Lambda functions locally to test through a local HTTP server hos. This lets you test your APIs with real HTTP requests using curl, Postman, or your browser:
+
+```bash
+# Start local API server (default port 3000)
+sam local start-api
+
+# Test with curl
+curl http://localhost:3000/hello
+
+# Use custom port
+sam local start-api --port 8080
+```
 
 ### Cloud Integration Testing
 

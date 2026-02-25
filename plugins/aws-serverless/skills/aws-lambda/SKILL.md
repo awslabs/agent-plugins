@@ -1,6 +1,6 @@
 ---
 name: aws-lambda
-description: "Design, build, deploy, test, and debug serverless applications using AWS Lambda, AWS SAM, Amazon API Gateway, Amazon EventBridge, AWS Step Functions, and event-driven architectures"
+description: "Design, build, deploy, test, and debug serverless applications with AWS Lambda. Triggers on phrases like: Lambda function, event source, serverless application, API Gateway, EventBridge, Step Functions, serverless API, event-driven architecture, Lambda trigger. For deploying non-serverless apps to AWS, use deploy-on-aws plugin instead."
 argument-hint: "[what are you building?]"
 ---
 

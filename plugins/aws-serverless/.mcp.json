@@ -3,9 +3,7 @@
     "aws-serverless-mcp": {
       "command": "uvx",
       "args": [
-        "awslabs.aws-serverless-mcp-server@latest",
-        "--allow-write",
-        "--allow-sensitive-data-access"
+        "awslabs.aws-serverless-mcp-server@latest"
       ],
       "env": {
         "FASTMCP_LOG_LEVEL": "ERROR"

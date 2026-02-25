@@ -108,24 +108,19 @@ export const handler = withDurableExecution(async (event, context: DurableContex
 **Python:**
 
 ```python
+# Note: invoke_ai_model and execute_tool are decorated with @durable_step
 @durable_execution
 def handler(event: dict, context: DurableContext) -> str:
     messages = [{"role": "user", "content": event["prompt"]}]
 
     while True:
-        result = context.step(
-            lambda _: invoke_ai_model(messages),
-            name="invoke-model"
-        )
+        result = context.step(invoke_ai_model(messages))
 
         if result.get("tool") is None:
             return result["response"]
 
         tool = result["tool"]
-        tool_result = context.step(
-            lambda _: execute_tool(tool, result["response"]),
-            name=f"tool-{tool['name']}"
-        )
+        tool_result = context.step(execute_tool(tool, result["response"]))
         messages.append({"role": "assistant", "content": tool_result})
 ```
 
@@ -161,19 +156,20 @@ from aws_durable_execution_sdk_python.waits import WaitForCallbackConfig
 
 @durable_execution
 def handler(event: dict, context: DurableContext) -> dict:
-    plan = context.step(lambda _: generate_plan(event), name='generate-plan')
+    # Note: generate_plan and perform_action are decorated with @durable_step
+    plan = context.step(generate_plan(event))
 
     def submit_approval(callback_id: str):
         send_approval_email(event['approver_email'], plan, callback_id)
 
     answer = context.wait_for_callback(
         submitter=submit_approval,
-        config=WaitForCallbackConfig(timeout=Duration.from_hours(24)),
-        name='wait-for-approval'
+        name='wait-for-approval',
+        config=WaitForCallbackConfig(timeout=Duration.from_hours(24))
     )
 
     if answer == 'APPROVED':
-        context.step(lambda _: perform_action(plan), name='execute')
+        context.step(perform_action(plan))
         return {'status': 'completed'}
     
     return {'status': 'rejected'}

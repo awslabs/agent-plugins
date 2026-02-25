@@ -65,7 +65,7 @@ describe('My Durable Function', () => {
 
 ```python
 import pytest
-from aws_durable_execution_sdk_python_testing import InvocationStatus
+from aws_durable_execution_sdk_python.execution import InvocationStatus
 from my_module import handler
 
 @pytest.mark.durable_execution(
@@ -351,7 +351,7 @@ it('should fail after max retries', async () => {
         throw new Error('Permanent failure');
       },
       {
-        retryStrategy: RetryPresets.exponentialBackoff({ maxAttempts: 3 })
+        retryStrategy: createRetryStrategy({ maxAttempts: 3 })
       }
     );
   });
@@ -493,15 +493,15 @@ await callbackOp.sendCallbackSuccess(JSON.stringify({}));
 
 ## Common Testing Errors
 
-| Error                                 | Cause                                 | Solution                                          |
-| ------------------------------------- | ------------------------------------- | ------------------------------------------------- |
-| `'result' is of type 'unknown'`       | Missing type casting in tests         | Cast result: `as any` or specific type            |
-| `'payload' does not exist in type`    | Wrong test runner API                 | Wrap event in `payload: {}` object                |
-| `Cannot find operation at index`      | Using index for unstable operations   | Use `getOperation("name")` instead                |
-| Flaky callback tests                  | Race condition with callback creation | Use `waitForData(WaitingOperationStatus.STARTED)` |
-| `Unexpected token` in callback result | Forgot to JSON.stringify              | Always stringify: `JSON.stringify(data)`          |
-| Callback result parsing error         | Result is JSON string                 | Parse result: `JSON.parse(result.value)`          |
-| Operation not found by name           | Missing operation name                | Always name operations in handler                 |
+| Error | Cause | Solution |
+|-------|-------|----------|
+| `'result' is of type 'unknown'` | Missing type casting in tests | Cast result: `as any` or specific type |
+| `'payload' does not exist in type` | Wrong test runner API | Wrap event in `payload: {}` object |
+| `Cannot find operation at index` | Using index for unstable operations | Use `getOperation("name")` instead |
+| Flaky callback tests | Race condition with callback creation | Use `waitForData(WaitingOperationStatus.STARTED)` |
+| `Unexpected token` in callback result | Forgot to JSON.stringify | Always stringify: `JSON.stringify(data)` |
+| Callback result parsing error | Result is JSON string | Parse result: `JSON.parse(result.value)` |
+| Operation not found by name | Missing operation name | Always name operations in handler |
 
 ## Jest Configuration
 

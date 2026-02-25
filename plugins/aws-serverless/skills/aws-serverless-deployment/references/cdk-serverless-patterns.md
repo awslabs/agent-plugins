@@ -4,6 +4,8 @@ Common CDK patterns for serverless applications. Each example uses L2 constructs
 
 ## API Gateway HTTP API + Lambda
 
+Creates an HTTP API with CORS configuration and Lambda integration for handling REST endpoints.
+
 ```typescript
 import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
@@ -27,6 +29,8 @@ new cdk.CfnOutput(this, 'ApiUrl', { value: api.apiEndpoint });
 
 ## Lambda Function URL
 
+Exposes a Lambda function directly via HTTPS with optional IAM auth and streaming support.
+
 ```typescript
 const fnUrl = myFunction.addFunctionUrl({
   authType: lambda.FunctionUrlAuthType.NONE,   // or AWS_IAM
@@ -41,6 +45,8 @@ new cdk.CfnOutput(this, 'FunctionUrl', { value: fnUrl.url });
 ```
 
 ## EventBridge Custom Bus + Rule
+
+Sets up a custom event bus with archiving, routing rules, and DLQ for event-driven architectures.
 
 ```typescript
 import * as events from 'aws-cdk-lib/aws-events';
@@ -86,6 +92,8 @@ orderEventBus.grantPutEventsTo(publisherFunction);
 
 ## DynamoDB Table + Lambda
 
+Provisions a DynamoDB table with GSI, point-in-time recovery, and least-privilege Lambda access.
+
 ```typescript
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 
@@ -113,6 +121,8 @@ orderHandler.addEnvironment('TABLE_NAME', ordersTable.tableName);
 ```
 
 ## SQS Queue + Lambda ESM
+
+Configures an SQS queue with DLQ and Lambda event source mapping for asynchronous processing.
 
 ```typescript
 import * as sqs from 'aws-cdk-lib/aws-sqs';
