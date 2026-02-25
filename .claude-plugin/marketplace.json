@@ -1,7 +1,7 @@
 {
   "metadata": {
     "description": "Agent Plugins for AWS equip AI coding agents with the skills to help you architect, deploy, and operate on AWS.",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "name": "agent-plugins-for-aws",
   "owner": {
@@ -24,12 +24,28 @@
       ],
       "name": "deploy-on-aws",
       "source": "./plugins/deploy-on-aws",
-      "tags": [
-        "aws",
-        "deploy",
-        "infrastructure",
-        "cdk"
+      "tags": ["aws", "deploy", "infrastructure", "cdk"],
+      "version": "1.1.0"
+    },
+    {
+      "category": "location",
+      "description": "Guide developers through adding maps, places search, geocoding, routing, and other geospatial features with Amazon Location Service, including authentication setup, SDK integration, and best practices.",
+      "keywords": [
+        "location",
+        "maps",
+        "geocoding",
+        "routing",
+        "places",
+        "geofencing",
+        "tracking",
+        "amazon-location",
+        "maplibre",
+        "address",
+        "coordinates"
       ],
+      "name": "amazon-location-service",
+      "source": "./plugins/amazon-location-service",
+      "tags": ["aws", "location", "maps", "geospatial"],
       "version": "1.0.0"
     },
     {

@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This repository contains Agent Plugins for AWS that equip AI coding agents with the skills to help architects, deploy, and operate on AWS. The primary plugin is `deploy-on-aws`, which provides recommendations, cost estimates, and Infrastructure as Code generation.
+This repository contains Agent Plugins for AWS that equip AI coding agents with the skills to help architects, deploy, and operate on AWS. Plugins include `deploy-on-aws` (recommendations, cost estimates, and Infrastructure as Code generation) and `amazon-location-service` (maps, geocoding, routing, and geospatial features).
 
 ## Technology Stack
 

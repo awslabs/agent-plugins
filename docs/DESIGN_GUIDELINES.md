@@ -96,6 +96,7 @@ Plugins should have a **clear, cohesive purpose**. Bundle related skills and MCP
 **Good plugin scope:**
 
 - `deploy-on-aws` - AWS deployment workflow (architecture, costing, IaC generation)
+- `amazon-location-service` - Geospatial features (maps, geocoding, routing, places search)
 - `database-tools` - Database operations (migrations, backups, schema validation)
 - `security-scanner` - Security analysis (vulnerability scanning, SAST, dependency checks)
 
@@ -167,9 +168,9 @@ metadata:
 **Bad:**
 
 ```yaml
-description: "Deploy to AWS."   # too vague; no trigger phrases or keywords
+description: "Deploy to AWS." # too vague; no trigger phrases or keywords
 metadata:
-  tags: deploy, cloud, stuff   # redundant or meaningless
+  tags: deploy, cloud, stuff # redundant or meaningless
 ```
 
 **Keyword selection checklist:**

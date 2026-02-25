@@ -7,6 +7,7 @@ min_version = "2026.2.4"
 node = "24"
 "npm:markdownlint-cli2" = "0.17"
 "npm:ajv-cli" = "5"
+"npm:dprint" = "0.51"
 "pipx:pre-commit" = "4"
 "pipx:bandit[sarif]" = "1"
 "pipx:checkov" = "3"
@@ -30,11 +31,11 @@ run = [
 
 [tasks.fmt]
 description = "Format all files"
-run = "npx dprint fmt"
+run = "dprint fmt"
 
 [tasks."fmt:check"]
 description = "Check formatting (CI)"
-run = "npx dprint check"
+run = "dprint check"
 
 [tasks."lint:md"]
 description = "Lint Markdown files (includes SKILL.md validation)"
