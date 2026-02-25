@@ -1,6 +1,6 @@
 ---
 name: amazon-location-service
-description: Integrates maps, geocoding, routing, places search, geofencing, and tracking via Amazon Location Service APIs. Use when building location-aware applications or working with geospatial data on AWS.
+description: Integrates Amazon Location Service APIs for AWS applications. Use this skill when users want to add maps (interactive MapLibre or static images); geocode addresses to coordinates or reverse geocode coordinates to addresses; calculate routes, travel times, or service areas; find places and businesses through text search, nearby search, or autocomplete suggestions; retrieve detailed place information including hours, contacts, and addresses; monitor geographical boundaries with geofences; or track device locations. Covers authentication, SDK integration, and all Amazon Location Service capabilities.
 license: MIT-0
 metadata:
   author: aws-geospatial
@@ -76,6 +76,18 @@ Avoid these frequent errors:
 6. **Not handling nested Address objects correctly**: The Address object from GetPlace contains nested objects (`Region.Code`, `Region.Name`, `Country.Code2`, etc.), not flat strings. Access nested properties correctly.
 
 7. **Wrong action names in API Key permissions**: API key `AllowActions` use `geo-maps:`, `geo-places:`, `geo-routes:` prefixes (e.g., `geo-places:Geocode`, `geo-routes:CalculateRoutes`). Do NOT use SDK client names (`@aws-sdk/client-geo-places`) or IAM-style actions. See the Authentication and Permissions section for the complete list.
+
+## Defaults
+
+Use these default choices unless the user explicitly requests otherwise:
+
+- **JavaScript SDK**: Bundled client (CDN) for browser-only apps; npm modular SDKs (@aws-sdk/client-geo-\*) for React and build tool apps
+- **API operations**: Resourceless for Maps/Places/Routes (Geofencing/Tracking always require pre-created resources)
+- **Authentication**: API Key for Maps/Places/Routes; Cognito for Geofencing/Tracking
+- **Map style**: Standard
+- **Coordinate format**: [longitude, latitude] (GeoJSON order)
+
+Override: User can specify "use Cognito for Maps/Places/Routes" or "use bundled client for React".
 
 ## API Selection Guidance
 
