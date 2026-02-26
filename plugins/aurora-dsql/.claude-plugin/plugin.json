@@ -1,0 +1,25 @@
+{
+  "author": {
+    "name": "Amazon Web Services"
+  },
+  "description": "Build with Aurora DSQL - manage schemas, execute queries, handle migrations, and develop applications with DSQL-specific requirements. Aurora DSQL is a serverless, distributed SQL database with PostgreSQL compatibility.",
+  "homepage": "https://github.com/awslabs/agent-plugins",
+  "keywords": [
+    "aws",
+    "aurora",
+    "dsql",
+    "database",
+    "distributed-sql",
+    "serverless",
+    "postgresql",
+    "postgres",
+    "sql",
+    "schema",
+    "migration",
+    "iam-auth"
+  ],
+  "license": "Apache-2.0",
+  "name": "aurora-dsql",
+  "repository": "https://github.com/awslabs/agent-plugins",
+  "version": "1.0.0"
+}
