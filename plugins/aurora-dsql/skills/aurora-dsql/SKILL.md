@@ -140,32 +140,8 @@ See [mcp-tools.md](mcp/mcp-tools.md) for detailed usage and examples.
 
 ## CLI Scripts Available
 
-Bash scripts for cluster management and direct psql connections. All scripts are located in [scripts/](../../scripts/).
-
-**Cluster Management:**
-
-- **create-cluster.sh** - Create new DSQL cluster with optional tags
-- **delete-cluster.sh** - Delete cluster with confirmation prompt
-- **list-clusters.sh** - List all clusters in a region
-- **cluster-info.sh** - Get detailed cluster information
-
-**Database Connection:**
-
-- **psql-connect.sh** - Connect to DSQL using psql with automatic IAM auth token generation
-
-**Data Loading:**
-
-- **loader.sh** - Install and run Aurora DSQL Loader for bulk S3 data loading
-
-**Quick example:**
-
-```bash
-./scripts/create-cluster.sh --region us-east-1
-export CLUSTER=abc123def456
-./scripts/psql-connect.sh
-```
-
-See [scripts/README.md](../../scripts/README.md) for detailed usage and hook configuration.
+Bash scripts in [scripts/](../../scripts/) for cluster management (create, delete, list, cluster info), psql connection, and bulk data loading from local/s3 csv/tsv/parquet files.
+See [scripts/README.md](../../scripts/README.md) for usage and hook configuration.
 
 ---
 
@@ -240,17 +216,7 @@ Always use CREATE INDEX ASYNC in separate transaction
 
 ### Workflow 5: Set Up Scoped Database Roles
 
-MUST load [access-control.md](references/access-control.md) for detailed guidance.
-
-1. Connect as `admin` (the only time admin should be used)
-2. Create database roles with `CREATE ROLE <name> WITH LOGIN`
-3. Create IAM roles with `dsql:DbConnect` for each database role
-4. Map database roles to IAM roles with `AWS IAM GRANT`
-5. Grant schema and table permissions per role
-
-- ALWAYS use scoped database roles for application connections
-- MUST place sensitive data in dedicated schemas, not `public`
-- SHOULD create separate roles per service component
+MUST load [access-control.md](references/access-control.md) for role setup, IAM mapping, and schema permissions.
 
 ### Workflow 6: Table Recreation DDL Migration
 
