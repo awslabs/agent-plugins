@@ -78,7 +78,7 @@ jobs:
           ref: main
 
       - name: Download patch
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v4.1.7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v4.1.7
         with:
           name: repo.patch
           path: ${{ runner.temp }}
