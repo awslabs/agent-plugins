@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "mcp__aurora-dsql.*__transact",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "A DSQL transact operation completed. Verify the result: if it was a DDL change, confirm the schema looks correct using get_schema. If it was a DML change, confirm the affected row count is expected."
+          }
+        ]
+      }
+    ]
+  }
+}

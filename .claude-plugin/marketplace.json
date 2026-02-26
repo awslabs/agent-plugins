@@ -47,6 +47,36 @@
       "source": "./plugins/amazon-location-service",
       "tags": ["aws", "location", "maps", "geospatial"],
       "version": "1.0.0"
+    },
+    {
+      "category": "database",
+      "description": "Build with Aurora DSQL - manage schemas, execute queries, handle migrations, and develop applications with a serverless, distributed SQL database with PostgreSQL compatibility.",
+      "keywords": [
+        "aws",
+        "aws agent skills",
+        "amazon",
+        "aurora",
+        "dsql",
+        "aurora-dsql",
+        "database",
+        "distributed-sql",
+        "distributed",
+        "distributed-database",
+        "serverless",
+        "serverless-database",
+        "postgresql",
+        "postgres",
+        "sql",
+        "schema",
+        "migration",
+        "multi-tenant",
+        "iam-auth",
+        "mcp"
+      ],
+      "name": "aurora-dsql",
+      "source": "./plugins/aurora-dsql",
+      "tags": ["aws", "database", "dsql", "aurora", "distributed-sql", "serverless", "postgresql"],
+      "version": "1.0.0"
     }
   ]
 }
