@@ -28,8 +28,8 @@ straightforward services. Don't ask questions with obvious answers.
 1. **Analyze** - Scan codebase for framework, database, dependencies
 2. **Recommend** - Select AWS services, concisely explain rationale
 3. **Estimate** - Show monthly cost before proceeding
-4. **Generate** - Write IaC code following [CDK best practices](references/cdk-best-practices.md)
-   with [security defaults](references/security.md) applied
+4. **Generate** - Write IaC code following CDK best practices (call `cdk_best_practices`
+   via `awsiac` MCP) with [security defaults](references/security.md) applied
 5. **Validate** - Run synthesis, security scans, and
    [validation script](scripts/validate-stack.sh)
 6. **Deploy** - Execute with user confirmation
@@ -61,8 +61,13 @@ for query patterns.
 
 ### awsiac
 
-Consult for IaC best practices. Use when writing CDK/CloudFormation/Terraform
-to ensure patterns follow AWS recommendations.
+Use for IaC generation and validation:
+
+- **Before writing CDK code** — call `cdk_best_practices` for development guidelines
+- **For construct usage** — call `search_cdk_documentation` with specific construct names
+- **For code examples** — call `search_cdk_samples_and_constructs` with language filter
+- **For template validation** — call `validate_cloudformation_template` on synthesized output
+- **For compliance checks** — call `check_cloudformation_template_compliance`
 
 ### awscdk
 
@@ -74,15 +79,11 @@ CDK-specific guidance and utilities. Use for:
 
 ## CDK Best Practices
 
-When generating IaC (default: CDK TypeScript), follow these rules:
+Call `cdk_best_practices` via the `awsiac` MCP server before generating CDK code.
+In addition to the MCP guidelines, apply these deploy-specific rules:
 
-- **No explicit resource names** — let CDK generate unique names
-- **Use grant methods** for IAM — `table.grantReadWriteData(fn)` not raw policies
-- **Use language-specific Lambda constructs** — `NodejsFunction`, `PythonFunction`
-- **Prefer L2/L3 constructs** over L1 (`CfnXxx`)
-- **Add cdk-nag** for automated best-practice validation
-
-See [cdk-best-practices.md](references/cdk-best-practices.md) for patterns and examples.
+- **Use language-specific Lambda constructs** — `NodejsFunction` (TypeScript),
+  `PythonFunction` (Python) for automatic dependency bundling
 
 ## Pre-Deployment Validation
 
@@ -139,7 +140,7 @@ See [monitoring.md](references/monitoring.md) for CloudWatch alarm patterns by s
 - Always show cost estimate before generating code
 - Apply [security defaults](references/security.md) automatically (encryption,
   private subnets, least privilege)
-- Follow [CDK best practices](references/cdk-best-practices.md) when generating IaC
+- Call `cdk_best_practices` via `awsiac` MCP when generating IaC
 - Run IaC security scans (cfn-nag, checkov) before deployment
 - Set up [monitoring](references/monitoring.md) after deployment
 - Don't ask "Lambda or Fargate?" — just pick the obvious one
@@ -150,6 +151,5 @@ See [monitoring.md](references/monitoring.md) for CloudWatch alarm patterns by s
 - [Service defaults](references/defaults.md)
 - [Security defaults](references/security.md)
 - [Cost estimation patterns](references/cost-estimation.md)
-- [CDK best practices](references/cdk-best-practices.md)
 - [Monitoring and observability](references/monitoring.md)
 - [Validation script](scripts/validate-stack.sh)
