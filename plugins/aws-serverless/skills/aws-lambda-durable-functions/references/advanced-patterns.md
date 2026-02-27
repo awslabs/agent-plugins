@@ -229,116 +229,11 @@ if (results.successCount > 0) {
 
 ## Advanced Error Handling
 
-### Timeout Handling with waitForCallback
+For timeout handling (waitForCallback, Promise.race), conditional retries, and circuit breaker patterns, see [advanced-error-handling.md](advanced-error-handling.md).
 
-Handle callback timeouts with fallback logic:
+## Advanced and Retry Strategies
 
-**TypeScript:**
-
-```typescript
-export const handler = withDurableExecution(async (event, context) => {
-  try {
-    // Wait for external approval with timeout
-    const approval = await context.waitForCallback(
-      'wait-for-approval',
-      async (callbackId, ctx) => {
-        ctx.logger.info('Sending approval request', { callbackId });
-        await sendApprovalEmail(event.approverEmail, callbackId);
-      },
-      { timeout: { hours: 24 } }
-    );
-
-    context.logger.info('Approval received', { approval });
-    return { status: 'approved', approval };
-
-  } catch (error: any) {
-    // Check for callback timeout
-    if (error.name === 'CallbackTimeoutError' ||
-        error.message?.includes('timeout')) {
-
-      context.logger.warn('Approval timed out after 24 hours', {
-        approverEmail: event.approverEmail,
-        error: error.message,
-      });
-
-      // Implement fallback: auto-escalate
-      await context.step('handle-timeout', async (stepCtx) => {
-        stepCtx.logger.info('Escalating to manager due to timeout');
-        await escalateToManager(event);
-      });
-
-      return { status: 'timeout', escalated: true };
-    }
-
-    // Re-throw other errors
-    throw error;
-  }
-});
-```
-
-**Python:**
-
-```python
-@durable_execution
-def handler(event: dict, context: DurableContext) -> dict:
-    try:
-        # Wait for approval
-        def submit_callback(callback_id: str):
-            send_approval_email(event['approver_email'], callback_id)
-
-        approval = context.wait_for_callback(
-            submitter=submit_callback,
-            config=WaitForCallbackConfig(timeout=Duration.from_hours(24)),
-            name='wait-for-approval'
-        )
-
-        return {'status': 'approved', 'approval': approval}
-
-    except Exception as error:
-        # Check for timeout
-        if 'timeout' in str(error).lower():
-            context.logger.warning('Approval timed out')
-
-            # Escalate
-            context.step(
-                lambda _: escalate_to_manager(event),
-                name='handle-timeout'
-            )
-
-            return {'status': 'timeout', 'escalated': True}
-
-        raise
-```
-
-### Local Timeout with Promise.race
-
-For step-level timeouts within a single invocation:
-
-**TypeScript:**
-
-```typescript
-export const handler = withDurableExecution(async (event, context) => {
-  try {
-    // Operation with local timeout
-    const result = await Promise.race([
-      context.step('long-operation', async () => longRunningTask()),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Operation timeout')), 30000)
-      ),
-    ]);
-
-    return result;
-  } catch (error: any) {
-    if (error.message === 'Operation timeout') {
-      context.logger.warn('Operation timed out, implementing fallback');
-      return await context.step('fallback', async () => fallbackOperation());
-    }
-    throw error;
-  }
-});
-```
-
-**Note:** Promise.race only works within a single Lambda invocation. For timeouts across replays, use `timeout` option on `waitForCallback` or `waitForCondition`.
+For conditional retry strategies and circuit breaker patterns, see [advanced-error-handling.md](advanced-error-handling.md).
 
 ## Custom Serialization Patterns
 
@@ -414,95 +309,6 @@ const result = await context.step(
 );
 ```
 
-## Advanced Retry Strategies
-
-### Conditional Retry Based on Error Type
-
-**TypeScript:**
-
-```typescript
-import { createRetryStrategy } from '@aws/durable-execution-sdk-js';
-
-const result = await context.step(
-  'api-call',
-  async () => callExternalAPI(),
-  {
-    retryStrategy: (error, attemptCount) => {
-      // Don't retry client errors (4xx)
-      if (error.statusCode >= 400 && error.statusCode < 500) {
-        return { shouldRetry: false };
-      }
-
-      // Retry server errors (5xx) with exponential backoff
-      if (error.statusCode >= 500) {
-        return {
-          shouldRetry: attemptCount < 5,
-          delay: { seconds: Math.pow(2, attemptCount) }
-        };
-      }
-
-      // Retry network errors with fixed delay
-      if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
-        return {
-          shouldRetry: attemptCount < 10,
-          delay: { seconds: 5 }
-        };
-      }
-
-      // Don't retry unknown errors
-      return { shouldRetry: false };
-    }
-  }
-);
-```
-
-### Circuit Breaker Pattern
-
-**TypeScript:**
-
-```typescript
-let failureCount = 0;
-let lastFailureTime = 0;
-const CIRCUIT_OPEN_DURATION = 60000; // 1 minute
-
-const result = await context.step(
-  'call-with-circuit-breaker',
-  async () => {
-    const now = Date.now();
-
-    // Check if circuit is open
-    if (failureCount >= 5 && (now - lastFailureTime) < CIRCUIT_OPEN_DURATION) {
-      throw new Error('Circuit breaker is open');
-    }
-
-    try {
-      const result = await callExternalService();
-      failureCount = 0; // Reset on success
-      return result;
-    } catch (error) {
-      failureCount++;
-      lastFailureTime = now;
-      throw error;
-    }
-  },
-  {
-    retryStrategy: (error, attemptCount) => {
-      if (error.message === 'Circuit breaker is open') {
-        return {
-          shouldRetry: true,
-          delay: { seconds: 60 } // Wait before checking circuit again
-        };
-      }
-
-      return {
-        shouldRetry: attemptCount < 3,
-        delay: { seconds: 2 }
-      };
-    }
-  }
-);
-```
-
 ## Nested Workflows
 
 ### Parent-Child Workflow Pattern
@@ -564,9 +370,7 @@ export const worker = withDurableExecution(
 
 1. **Dynamic Step Naming**: Use template literals for dynamic operation names
 2. **Structured Logging**: Log reasoning and context with each operation
-3. **Timeout Handling**: Always have fallback logic for callback timeouts
+3. **Error Handling**: See [advanced-error-handling.md](advanced-error-handling.md) for timeout, retry, and circuit breaker patterns
 4. **Completion Policies**: Understand how combined constraints interact
-5. **Retry Strategies**: Implement conditional retries based on error types
-6. **Custom Serialization**: Use proper serdes for complex objects
-7. **Circuit Breakers**: Protect against cascading failures
-8. **Nested Workflows**: Use invoke for modular, composable architectures
+5. **Custom Serialization**: Use proper serdes for complex objects
+6. **Nested Workflows**: Use invoke for modular, composable architectures

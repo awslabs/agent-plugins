@@ -36,11 +36,43 @@ Before using AWS Lambda durable functions, verify:
    - AWS CDK (`cdk --version`) v2.237.1 or higher
    - Direct Lambda deployment access
 
-## Step 2: Check user and project preferences
+## Step 2: Select language and IaC framework
 
-Ask which IaC framework to use for new projects.
-Ask which programming language to use if unclear, clarify between JavaScript and TypeScript if necessary.
-Ask to create a git repo for projects if one doesn't exist already.
+### Language Selection
+
+Default: TypeScript
+
+Override syntax:
+
+- "use Python" → Generate Python code
+- "use JavaScript" → Generate JavaScript code
+
+When not specified, ALWAYS use TypeScript
+
+### IaC framework selection
+
+Default: CDK
+
+Override syntax:
+
+- "use CloudFormation" → Generate YAML templates
+- "use SAM" → Generate YAML templates
+
+When not specified, ALWAYS use CDK
+
+### Error Scenarios
+
+#### Unsupported Language
+
+- List detected language
+- State: "Durable Execution SDK is not yet available for [framework]"
+- Suggest supported languages as alternatives
+
+#### Unsupported IaC Framework
+
+- List detected framework
+- State: "[framework] might not support Lambda durable functions yet"
+- Suggest supported frameworks as alternatives
 
 ### Step 3: Install SDK
 
@@ -72,6 +104,7 @@ Load the appropriate reference file based on what the user is working on:
 - **Testing**, **local testing**, **cloud testing**, **test runner**, or **flaky tests** -> see [testing-patterns.md](references/testing-patterns.md)
 - **Deployment**, **CloudFormation**, **CDK**, **SAM**, **log groups**, **deploy**, or **infrastructure** -> see [deployment-iac.md](references/deployment-iac.md)
 - **Advanced patterns**, **GenAI agents**, **completion policies**, **step semantics**, or **custom serialization** -> see [advanced-patterns.md](references/advanced-patterns.md)
+- **troubleshooting**, **stuck execution**, **failed execution**, **debug execution ID**, or **execution history** -> see [troubleshooting-executions.md](references/troubleshooting-executions.md)
 
 ## Quick Reference
 
@@ -147,60 +180,6 @@ When implementing or modifying tests for durable functions, ALWAYS verify:
 2. Tests get operations by NAME, never by index
 3. Replay behavior is tested with multiple invocations
 4. Use `LocalDurableTestRunner` for local testing
-
-## Troubleshooting Production Executions
-
-**PROACTIVE AGENT**: When users report issues with production durable function executions, spawn a specialized troubleshooting agent.
-
-### When to Spawn Troubleshooting Agent
-
-Spawn the agent when users mention:
-
-- "My execution is stuck"
-- "Execution failed with ID xyz"
-- "Debug execution abc123"
-- "Troubleshoot production execution"
-- "Why is my durable function not completing"
-- Provide an execution ID and need diagnosis
-
-### Agent Instructions
-
-When spawning the troubleshooting agent, provide:
-
-```
-Diagnose durable function execution issue:
-- Function: <function-name>:<alias> (must be qualified ARN)
-- Execution ID: <execution-id>
-
-Steps:
-1. Run: aws lambda get-durable-execution-history --function-name <function> --execution-id <id>
-2. Analyze execution status (RUNNING/SUCCEEDED/FAILED/TIMED_OUT)
-3. Check for stuck operations (PENDING/RUNNING status)
-4. Identify failed operations and error messages
-5. Calculate operation durations and timeline
-6. Diagnose specific issue:
-   - Stuck in WAIT_FOR_CALLBACK: Extract callback ID, suggest manual callback
-   - Failed operations: Show error and retry attempts
-   - Timeout: Calculate total duration, identify slow operations
-   - Unexpected behavior: Compare operation order with expected flow
-7. Provide specific recommendations and next steps
-
-Use jq for JSON parsing and analysis. Reference: references/troubleshooting-production.md for diagnostic patterns.
-```
-
-### Example Usage
-
-```
-User: "My durable function execution abc-123 is stuck on my-function:prod"
-
-Claude: [Spawns Task agent with troubleshooting instructions]
-Agent: [Runs get-durable-execution-history command]
-Agent: [Analyzes with jq queries]
-Agent: [Returns: "Execution stuck in WAIT_FOR_CALLBACK operation 'wait-for-approval'.
-         Callback ID: xyz789. Waiting since 2026-02-14. Timeout in 12 hours.
-         Recommendation: Check if approval email was sent, or manually send callback."]
-Claude: [Presents findings and offers to send manual callback if needed]
-```
 
 ## Resources
 

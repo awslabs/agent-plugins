@@ -2,6 +2,23 @@
 
 Deploy durable functions using CloudFormation, CDK, or SAM.
 
+## IaC framework selection
+
+Default: CDK
+
+Override syntax:
+
+- "use CloudFormation" → Generate YAML templates
+- "use SAM" → Generate YAML templates
+
+When not specified, ALWAYS use CDK
+
+### Error Scenario: Unsupported IaC Framework
+
+- List detected framework
+- State: "[framework] might not support Lambda durable functions yet"
+- Suggest supported frameworks as alternatives
+
 ## Requirements
 
 All durable functions require:
@@ -512,7 +529,7 @@ DurableFunctionErrorAlarm:
 9. **Deploy to multiple environments** (dev, staging, prod)
 10. **Version your infrastructure code** alongside function code
 
-## Troubleshooting
+## Common issues
 
 ### Function Not Durable
 

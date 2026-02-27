@@ -141,10 +141,33 @@ This plugin includes a `PostToolUse` hook that runs `sam validate` automatically
 
 Check for new versions with `uvx pip index versions awslabs.aws-serverless-mcp-server`.
 
-## Guidelines
+## Language selection
 
-Ask which IaC framework (SAM or CDK) to use for new projects.
-Ask which programming language to use if unclear.
+Default: TypeScript
+
+Override syntax:
+
+- "use Python" → Generate Python code
+- "use JavaScript" → Generate JavaScript code
+
+When not specified, ALWAYS use TypeScript
+
+## IaC framework selection
+
+Default: CDK
+
+Override syntax:
+
+- "use CloudFormation" → Generate YAML templates
+- "use SAM" → Generate YAML templates
+
+When not specified, ALWAYS use CDK
+
+### Serverless MCP Server Unavailable
+
+- Inform user: "AWS Serverless MCP not responding"
+- Ask: "Proceed without MCP support?"
+- DO NOT continue without user confirmation
 
 ## Resources
 

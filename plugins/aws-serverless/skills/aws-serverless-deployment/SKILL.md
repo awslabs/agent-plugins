@@ -61,9 +61,9 @@ This skill requires that AWS credentials are configured on the host machine:
 
 ### AWS Serverless MCP Server
 
-The default configuration **prevents** write access and **prevents** access to sensitve data such as Lambda functions logs.
+The default configuration **prevents** write access and **prevents** access to sensitive data such as Lambda functions logs.
 
-To grant accees, add these flags to `.mcp.json`:
+To grant access, add these flags to `.mcp.json`:
 
 - `--allow-write`: Enables write operations (project creation, deployments)
 - `--allow-sensitive-data-access`: Enables access to Lambda logs and API Gateway logs
@@ -72,10 +72,34 @@ To grant accees, add these flags to `.mcp.json`:
 
 This plugin includes a `PostToolUse` hook that runs `sam validate` automatically after any edit to `template.yaml` or `template.yml`. If validation fails, the error is returned as a system message so you can fix it immediately. The hook requires SAM CLI to be installed and silently skips if it is not available. Users can disable it via `/hooks`.
 
-## Guidelines
+## IaC framework selection
 
-Ask which IaC framework (SAM or CDK) to use for new projects.
-Ask which programming language to use if unclear.
+Default: CDK
+
+Override syntax:
+
+- "use CloudFormation" → Generate YAML templates
+
+When not specified, ALWAYS use CDK
+
+### Language selection for CDK
+
+Default: TypeScript
+
+Override syntax:
+
+- "use Python" → Generate Python code
+- "use JavaScript" → Generate JavaScript code
+
+When not specified, ALWAYS use TypeScript
+
+## Error Scenarios
+
+### Serverless MCP Server Unavailable
+
+- Inform user: "AWS Serverless MCP not responding"
+- Ask: "Proceed without MCP support?"
+- DO NOT continue without user confirmation
 
 ## Resources
 

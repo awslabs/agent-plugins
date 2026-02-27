@@ -2,11 +2,22 @@
 
 Quick start guide for building your first durable function.
 
-## Check user and project preferences
+## Language selection
 
-Ask which IaC framework to use for new projects.
-Ask which programming language to use if unclear, clarify between JavaScript and TypeScript if necessary.
-Ask to create a git repo for projects if one doesn't exist already.
+Default: TypeScript
+
+Override syntax:
+
+- "use Python" → Generate Python code
+- "use JavaScript" → Generate JavaScript code
+
+When not specified, ALWAYS use TypeScript
+
+### Error Scenarios: Unsupported Language
+
+- List detected language
+- State: "Durable Execution SDK is not yet available for [framework]"
+- Suggest supported languages as alternatives
 
 ## Basic Handler
 
@@ -337,6 +348,14 @@ When starting a new durable function project:
 - [ ] Verify TypeScript compilation: `npx tsc --noEmit`
 - [ ] Run tests to confirm setup: `npm test`
 - [ ] Review replay model rules (no non-deterministic code outside steps)
+
+## Error Scenarios
+
+### Unsupported Language
+
+- List detected language
+- State: "Durable Execution SDK is not yet available for [language]"
+- List supported languages as alternatives
 
 ## Next Steps
 
