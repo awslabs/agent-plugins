@@ -31,11 +31,11 @@ This gives you CDK's construct model for infrastructure while using SAM CLI's `s
 
 ## When to Use Which
 
-| Scenario                                                                  | Recommendation                                        |
-| ------------------------------------------------------------------------- | ----------------------------------------------------- |
-| New Lambda-centric project, small team                                    | SAM — simpler templates, straightforward workflow     |
-| New project with complex infrastructure (VPCs, multiple services)         | CDK — richer abstractions, `grant*` methods           |
-| Existing SAM project, works fine                                          | Keep SAM — migration cost isn't justified             |
-| Existing SAM project, hitting limits (no loops, hard to share constructs) | Migrate incrementally to CDK                          |
-| Reusable infrastructure patterns shared across teams                      | CDK construct libraries                               |
-| Need local testing with CDK-defined infrastructure                        | CDK for templates, SAM CLI for `sam local invoke`    |
+| Scenario                                                                  | Recommendation                                    |
+| ------------------------------------------------------------------------- | ------------------------------------------------- |
+| New Lambda-centric project, small team                                    | SAM — simpler templates, straightforward workflow |
+| New project with complex infrastructure (VPCs, multiple services)         | CDK — richer abstractions, `grant*` methods       |
+| Existing SAM project, works fine                                          | Keep SAM — migration cost isn't justified         |
+| Existing SAM project, hitting limits (no loops, hard to share constructs) | Migrate incrementally to CDK                      |
+| Reusable infrastructure patterns shared across teams                      | CDK construct libraries                           |
+| Need local testing with CDK-defined infrastructure                        | CDK for templates, SAM CLI for `sam local invoke` |
