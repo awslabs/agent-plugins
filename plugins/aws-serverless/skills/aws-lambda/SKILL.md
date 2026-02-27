@@ -33,7 +33,8 @@ Load the appropriate reference file based on what the user is working on:
 - **Orchestration**, **workflows**, or **Durable Functions vs Step Functions** -> see [references/orchestration-and-workflows.md](references/orchestration-and-workflows.md)
 - **Step Functions**, **ASL**, **state machines**, **JSONata**, **Distributed Map**, or **SDK integrations** -> see [references/step-functions.md](references/step-functions.md)
 - **Observability**, **logging**, **tracing**, **metrics**, **alarms**, or **dashboards** -> see [references/observability.md](references/observability.md)
-- **Optimization**, **cold starts**, **memory tuning**, **cost**, **streaming**, or **Powertools** -> see [references/optimization.md](references/optimization.md)
+- **Optimization**, **cold starts**, **memory tuning**, **cost**, or **streaming** -> see [references/optimization.md](references/optimization.md)
+- **Powertools**, **idempotency**, **feature flags**, **parameters**, **parser**, **batch processing**, or **data masking** -> see [references/powertools.md](references/powertools.md)
 - **Troubleshooting**, **errors**, **debugging**, or **deployment failures** -> see [references/troubleshooting.md](references/troubleshooting.md)
 
 ## Best Practices

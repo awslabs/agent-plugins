@@ -1,7 +1,7 @@
 ---
 name: aws-lambda-durable-functions
 description: >
-  Build resilient, long-running, multi-step applications with AWS Lambda durable functions with automatic state persistence, retry logic, and orchestration for up to 1 year execution. Covers the critical replay model, step operations, wait/callback patterns, error handling with saga pattern, testing with LocalDurableTestRunner. Triggers on phrases like: lambda durable functions, workflow orchestration, state machines, retry/checkpoint patterns, long-running stateful Lambda functions, saga pattern, human-in-the-loop callbacks, and reliable serverless applications.
+  Build resilient, long-running, multi-step applications with AWS Lambda durable functions with automatic state persistence, retry logic, and orchestration for long-running executions. Covers the critical replay model, step operations, wait/callback patterns, error handling with saga pattern, testing with LocalDurableTestRunner. Triggers on phrases like: lambda durable functions, workflow orchestration, state machines, retry/checkpoint patterns, long-running stateful Lambda functions, saga pattern, human-in-the-loop callbacks, and reliable serverless applications.
 hooks:
   PostToolUse:
     - matcher: "Edit"
@@ -29,7 +29,7 @@ Before using AWS Lambda durable functions, verify:
 
 2. **Runtime environment** is ready:
    - For TypeScript/JavaScript: Node.js 22+ (`node --version`)
-   - For Python: Python 3.13+ (`python --version`)
+   - For Python: Python 3.11+ (`python --version`. Note that currently only Lambda runtime environments 3.13+ come with the Durable Execution SDK pre-installed. 3.11 is the min supported Python version by the Durable SDK itself, however, you could use OCI to bring your own container image with your own Python runtime + Durable SDK.)
 
 3. **Deployment capability** exists (one of):
    - AWS SAM CLI (`sam --version`) 1.153.1 or higher

@@ -4,7 +4,7 @@
 
 Serverless observability relies on three pillars — logs, metrics, and traces — but the approach differs from traditional infrastructure. There are no servers to SSH into, functions are distributed by nature, and cold starts create visibility gaps. Every function should emit structured logs, publish custom metrics, and participate in distributed traces from day one.
 
-Use AWS Lambda Powertools as the consistent instrumentation layer across all functions. It handles Logger, Tracer, and Metrics with minimal boilerplate. For installation and the full utilities reference, see [optimization.md](optimization.md).
+Use AWS Lambda Powertools as the consistent instrumentation layer across all functions. It handles Logger, Tracer, and Metrics with minimal boilerplate. For installation and the full utilities reference, see [powertools.md](powertools.md).
 
 ### Decorator Stacking Order
 
