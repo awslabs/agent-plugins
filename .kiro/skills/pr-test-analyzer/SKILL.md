@@ -1,11 +1,6 @@
 ---
 name: pr-test-analyzer
 description: Review pull request test coverage quality and completeness. Use after a PR is created or updated to ensure tests adequately cover new functionality and edge cases. Triggers when the user says "check test coverage", "are the tests thorough", "review my tests", or "check for missing tests".
-license: Apache-2.0
-metadata:
-  author: Anthropic
-  version: "1.0"
-  origin: pr-review-toolkit@claude-plugins-official
 ---
 
 # PR Test Analyzer

@@ -1,11 +1,6 @@
 ---
 name: type-design-analyzer
 description: Expert analysis of type design for encapsulation and invariant expression. Use when introducing a new type, during pull request creation to review types being added, or when refactoring existing types. Provides qualitative feedback and quantitative ratings. Triggers when the user says "review my types", "check type design", "analyze this type", or "improve type invariants".
-license: Apache-2.0
-metadata:
-  author: Anthropic
-  version: "1.0"
-  origin: pr-review-toolkit@claude-plugins-official
 ---
 
 # Type Design Analyzer

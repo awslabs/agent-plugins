@@ -1,11 +1,6 @@
 ---
 name: code-reviewer
 description: Review code for adherence to project guidelines, style guides, and best practices. Use proactively after writing or modifying code, before committing changes or creating pull requests. Checks for style violations, potential issues, and ensures code follows established patterns in project guidelines (CLAUDE.md, AGENTS.md, or .kiro/steering). Also use when the user says "review my code", "check code quality", or "does this look good".
-license: Apache-2.0
-metadata:
-  author: Anthropic
-  version: "1.0"
-  origin: pr-review-toolkit@claude-plugins-official
 ---
 
 # Code Reviewer

@@ -1,11 +1,6 @@
 ---
 name: comment-analyzer
 description: Analyze code comments for accuracy, completeness, and long-term maintainability. Use after generating documentation comments or docstrings, before finalizing a pull request that adds or modifies comments, when reviewing existing comments for technical debt or comment rot, or when verifying that comments accurately reflect the code they describe. Triggers when the user says "check my comments", "review documentation", or "are these comments accurate".
-license: Apache-2.0
-metadata:
-  author: Anthropic
-  version: "1.0"
-  origin: pr-review-toolkit@claude-plugins-official
 ---
 
 # Comment Analyzer

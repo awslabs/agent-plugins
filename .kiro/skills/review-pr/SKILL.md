@@ -1,11 +1,6 @@
 ---
 name: review-pr
 description: Comprehensive PR review using multiple specialized review aspects including code quality, test coverage, error handling, type design, comment accuracy, and code simplification. Use when the user wants a thorough PR review, says "review my PR", "check this PR", or wants to run multiple review aspects at once.
-license: Apache-2.0
-metadata:
-  author: Anthropic
-  version: "1.0"
-  origin: pr-review-toolkit@claude-plugins-official
 ---
 
 # Comprehensive PR Review

@@ -1,11 +1,6 @@
 ---
 name: code-review
 description: Automated code review for pull requests using multiple specialized review passes with confidence-based scoring to filter false positives. Use when reviewing a pull request, performing code review, checking PR quality, or when the user says "review this PR" or "code review".
-license: Apache-2.0
-metadata:
-  author: Anthropic
-  version: "1.0"
-  origin: code-review@claude-plugins-official
 allowed-tools: Bash(gh:*)
 ---
 

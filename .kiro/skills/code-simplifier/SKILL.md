@@ -1,11 +1,6 @@
 ---
 name: code-simplifier
 description: Simplify code for clarity, consistency, and maintainability while preserving all functionality. Use after completing a coding task, writing a logical chunk of code, fixing a bug, or optimizing performance. Triggers when the user says "simplify this code", "clean up the code", "make this more readable", or "refine this implementation".
-license: Apache-2.0
-metadata:
-  author: Anthropic
-  version: "1.0"
-  origin: pr-review-toolkit@claude-plugins-official
 ---
 
 # Code Simplifier

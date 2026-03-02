@@ -1,11 +1,6 @@
 ---
 name: silent-failure-hunter
 description: Identify silent failures, inadequate error handling, and inappropriate fallback behavior in code changes. Use when reviewing code that involves error handling, catch blocks, fallback logic, or any code that could potentially suppress errors. Triggers when the user says "check error handling", "find silent failures", "review catch blocks", or "audit error handling".
-license: Apache-2.0
-metadata:
-  author: Anthropic
-  version: "1.0"
-  origin: pr-review-toolkit@claude-plugins-official
 ---
 
 # Silent Failure Hunter
