@@ -21,15 +21,7 @@ By default, review unstaged changes from `git diff`. The user may specify differ
 
 ## Issue Confidence Scoring
 
-Rate each issue from 0-100:
-
-- **0-25**: Likely false positive or pre-existing issue
-- **26-50**: Minor nitpick not explicitly in project guidelines
-- **51-75**: Valid but low-impact issue
-- **76-90**: Important issue requiring attention
-- **91-100**: Critical bug or explicit guideline violation
-
-Only report issues with confidence >= 80.
+Apply the confidence scoring methodology from project standards. Only report issues with confidence >= 80.
 
 ## Output Format
 

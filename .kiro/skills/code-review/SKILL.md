@@ -55,19 +55,11 @@ Perform 5 independent review passes, each from a different angle:
 
 ### Step 5: Confidence Scoring
 
-For each issue found in Step 4, score it on a scale from 0-100 indicating confidence that the issue is real vs. a false positive:
-
-- **0**: Not confident at all. False positive that doesn't stand up to light scrutiny, or is a pre-existing issue.
-- **25**: Somewhat confident. Might be a real issue, but may also be a false positive. If stylistic, not explicitly called out in project guidelines.
-- **50**: Moderately confident. Verified as real, but might be a nitpick or rare in practice.
-- **75**: Highly confident. Double-checked and verified as very likely real and impactful. For guideline issues, verified the guideline explicitly mentions it.
-- **100**: Absolutely certain. Confirmed as definitely real and frequent in practice.
-
-For issues flagged due to project guideline instructions, double check that the guideline actually calls out that issue specifically.
+For each issue found in Step 4, apply the confidence scoring methodology from project standards. For issues flagged due to project guideline instructions, double check that the guideline actually calls out that issue specifically.
 
 ### Step 6: Filter
 
-Filter out any issues with a score less than 80. If no issues meet this criteria, proceed to Step 8 with "no issues found."
+Filter out any issues below the threshold defined in project standards. If no issues meet the criteria, proceed to Step 8 with "no issues found."
 
 ### Step 7: Re-check Eligibility
 

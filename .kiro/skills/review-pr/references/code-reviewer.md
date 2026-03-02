@@ -12,13 +12,7 @@ Always applicable for any PR review. This is the general-purpose code quality ch
 
 ## Confidence Scoring
 
-Rate each issue 0-100. Only report issues with confidence >= 80.
-
-- **0-25**: Likely false positive or pre-existing issue
-- **26-50**: Minor nitpick not explicitly in guidelines
-- **51-75**: Valid but low-impact
-- **76-90**: Important, requires attention
-- **91-100**: Critical bug or explicit guideline violation
+Apply the confidence scoring methodology from project standards. Only report issues with confidence >= 80.
 
 ## Output
 
