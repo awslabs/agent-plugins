@@ -82,7 +82,7 @@ Use `sam_build` before every deployment. Use `--use-container` for consistent bu
 
 ### 4. Test Locally
 
-Use `sam_local_invoke` with a test event to validate before deploying.
+Use `sam_local_invoke` with a test event to validate before deploying. For API-triggered functions, use `sam local start-api` to test with real HTTP requests (see [Testing > Local Integration Testing](#local-integration-testing) below).
 
 ### 5. Deploy
 

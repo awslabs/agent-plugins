@@ -26,7 +26,7 @@ Load the appropriate reference file based on what the user is working on:
 
 - **Getting started**, **what to build**, **project type decision**, or **working with existing projects** -> see [references/getting-started.md](references/getting-started.md)
 - **SAM**, **CDK**, **deployment**, **IaC templates**, **CDK constructs**, or **CI/CD pipelines** -> see the [aws-serverless-deployment skill](../aws-serverless-deployment/) (separate skill in this plugin)
-- **Web app deployment**, **Lambda Web Adapter**, **API endpoints**, **CORS**, **authentication**, or **custom domains** -> see [references/web-app-deployment.md](references/web-app-deployment.md)
+- **Web app deployment**, **Lambda Web Adapter**, **API endpoints**, **CORS**, **authentication**, **custom domains**, or **sam local start-api** -> see [references/web-app-deployment.md](references/web-app-deployment.md)
 - **Event sources**, **DynamoDB Streams**, **Kinesis**, **SQS**, **Kafka**, **S3 notifications**, or **SNS** -> see [references/event-sources.md](references/event-sources.md)
 - **EventBridge**, **event bus**, **event patterns**, **event design**, **Pipes**, or **schema registry** -> see [references/event-driven-architecture.md](references/event-driven-architecture.md)
 - **Durable functions**, **checkpointing**, **replay model**, **saga pattern**, or **long-running Lambda workflows** -> see the [durable-functions skill](../aws-lambda-durable-functions/) (separate skill in this plugin with full SDK reference, testing, and deployment guides)
