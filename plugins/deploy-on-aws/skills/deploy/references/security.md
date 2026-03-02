@@ -21,15 +21,15 @@ Apply these patterns automatically when generating IaC:
 
 ## Encryption
 
-| Component       | Default (Dev)               | Default (Prod)             | Override Trigger |
-| --------------- | --------------------------- | -------------------------- | ---------------- |
-| S3 buckets      | SSE-S3 (AES-256)            | SSE-KMS (customer-managed) | "no encryption"  |
-| RDS/Aurora      | Encrypted (AWS-managed key) | Encrypted (CMK)            | -                |
-| DocumentDB      | Encrypted (AWS-managed key) | Encrypted (CMK)            | -                |
-| EBS volumes     | Encrypted                   | Encrypted                  | -                |
-| ALB             | TLS 1.2+ only               | TLS 1.2+ only              | -                |
-| Secrets Manager | AWS-managed key             | CMK                        | -                |
-| CloudFront      | TLS 1.2+                    | TLS 1.2+                   | -                |
+| Component         | Default (Dev)               | Default (Prod)             | Override Trigger |
+| ----------------- | --------------------------- | -------------------------- | ---------------- |
+| S3 buckets        | SSE-S3 (AES-256)            | SSE-KMS (customer-managed) | "no encryption"  |
+| RDS/Aurora        | Encrypted (AWS-managed key) | Encrypted (CMK)            | -                |
+| Amazon DocumentDB | Encrypted (AWS-managed key) | Encrypted (CMK)            | -                |
+| EBS volumes       | Encrypted                   | Encrypted                  | -                |
+| ALB               | TLS 1.2+ only               | TLS 1.2+ only              | -                |
+| Secrets Manager   | AWS-managed key             | CMK                        | -                |
+| CloudFront        | TLS 1.2+                    | TLS 1.2+                   | -                |
 
 ### Why SSE-S3 for dev, SSE-KMS for prod
 
@@ -56,13 +56,13 @@ When serving static content via CloudFront:
 
 ## VPC Placement
 
-| Component     | Default (Dev)                    | Default (Prod)                   |
-| ------------- | -------------------------------- | -------------------------------- |
-| Fargate tasks | Private subnet + NAT Gateway     | Private subnet + NAT Gateway     |
-| ALB           | Public subnet                    | Public subnet                    |
-| RDS/Aurora    | Private subnet (no public IP)    | Private subnet (no public IP)    |
-| DocumentDB    | Private subnet (no public IP)    | Private subnet (no public IP)    |
-| Lambda        | VPC-attached if DB access needed | VPC-attached if DB access needed |
+| Component         | Default (Dev)                    | Default (Prod)                   |
+| ----------------- | -------------------------------- | -------------------------------- |
+| Fargate tasks     | Private subnet + NAT Gateway     | Private subnet + NAT Gateway     |
+| ALB               | Public subnet                    | Public subnet                    |
+| RDS/Aurora        | Private subnet (no public IP)    | Private subnet (no public IP)    |
+| Amazon DocumentDB | Private subnet (no public IP)    | Private subnet (no public IP)    |
+| Lambda            | VPC-attached if DB access needed | VPC-attached if DB access needed |
 
 ### Why private subnets for compute
 
@@ -93,13 +93,13 @@ Consult `awsiac` MCP for IAM policy patterns by service.
 
 ## Security Groups
 
-| Component    | Default Inbound              | Default Outbound   |
-| ------------ | ---------------------------- | ------------------ |
-| ALB          | 443 from 0.0.0.0/0           | Fargate SG only    |
-| Fargate      | ALB SG only (on app port)    | 443 (HTTPS), DB SG |
-| RDS/Aurora   | Fargate SG only (on DB port) | None               |
-| DocumentDB   | Fargate SG only (port 27017) | None               |
-| Lambda (VPC) | None                         | 443, DB SG         |
+| Component         | Default Inbound              | Default Outbound   |
+| ----------------- | ---------------------------- | ------------------ |
+| ALB               | 443 from 0.0.0.0/0           | Fargate SG only    |
+| Fargate           | ALB SG only (on app port)    | 443 (HTTPS), DB SG |
+| RDS/Aurora        | Fargate SG only (on DB port) | None               |
+| Amazon DocumentDB | Fargate SG only (port 27017) | None               |
+| Lambda (VPC)      | None                         | 443, DB SG         |
 
 ### Why deny-by-default
 
@@ -156,15 +156,15 @@ Before deployment, run available checks:
 
 ## Logging & Monitoring
 
-| Component       | Default (Dev)          | Default (Prod)             |
-| --------------- | ---------------------- | -------------------------- |
-| CloudTrail      | Account-level (shared) | Account-level (shared)     |
-| VPC Flow Logs   | Disabled               | Enabled (S3 destination)   |
-| ALB Access Logs | Disabled               | Enabled (S3 destination)   |
-| Container logs  | CloudWatch Logs        | CloudWatch Logs            |
-| RDS/Aurora logs | Error log only         | Error + slow query + audit |
-| DocumentDB logs | Profiler (slow ops)    | Profiler + audit           |
-| S3 Access Logs  | Disabled               | Enabled                    |
+| Component              | Default (Dev)          | Default (Prod)             |
+| ---------------------- | ---------------------- | -------------------------- |
+| CloudTrail             | Account-level (shared) | Account-level (shared)     |
+| VPC Flow Logs          | Disabled               | Enabled (S3 destination)   |
+| ALB Access Logs        | Disabled               | Enabled (S3 destination)   |
+| Container logs         | CloudWatch Logs        | CloudWatch Logs            |
+| RDS/Aurora logs        | Error log only         | Error + slow query + audit |
+| Amazon DocumentDB logs | Profiler (slow ops)    | Profiler + audit           |
+| S3 Access Logs         | Disabled               | Enabled                    |
 
 ### Why minimal logging in dev
 
@@ -180,7 +180,7 @@ When user requests "production" or "prod", additionally enable:
 - [ ] ALB Access Logs
 - [ ] S3 Access Logs
 - [ ] RDS Performance Insights
-- [ ] DocumentDB profiler + audit logs exported to CloudWatch Logs
+- [ ] Amazon DocumentDB profiler + audit logs exported to CloudWatch Logs
 - [ ] AWS WAF on ALB (if public-facing web app)
 - [ ] GuardDuty (recommend, don't auto-enable)
 - [ ] Run `checkov` or `cfn-nag` before deployment
