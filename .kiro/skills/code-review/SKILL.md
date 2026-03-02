@@ -76,7 +76,7 @@ Use `gh pr comment` to post the review on the pull request.
 
 Found N issues:
 
-1. <brief description of issue> (CLAUDE.md says "<...>")
+1. <brief description of issue> (guideline says "<...>")
 
 https://github.com/OWNER/REPO/blob/FULL_SHA/path/file.ext#L[start]-L[end]
 
