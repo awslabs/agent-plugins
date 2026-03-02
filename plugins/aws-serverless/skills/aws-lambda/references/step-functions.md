@@ -211,30 +211,9 @@ Avoiding Lambda intermediaries for simple DynamoDB reads/writes, SNS publishes, 
 }
 ```
 
-## Local Testing
+## Testing
 
-**Recommended: TestState API** — test individual states against real AWS without deploying the full state machine:
-
-```bash
-aws stepfunctions test-state \
-  --definition '{"Type":"Task","Resource":"${FunctionArn}","End":true}' \
-  --role-arn arn:aws:iam::123456789012:role/MyRole \
-  --input '{"key":"value"}'
-```
-
-**Step Functions Local (Docker)** — run a local emulator for integration testing. Note it is unsupported and does not have full feature parity:
-
-```bash
-docker run -p 8083:8083 amazon/aws-stepfunctions-local
-
-# Run alongside sam local start-lambda for Lambda-integrated tests
-sam local start-lambda &
-docker run -p 8083:8083 \
-  -e LAMBDA_ENDPOINT=http://host.docker.internal:3001 \
-  amazon/aws-stepfunctions-local
-```
-
-Then use the AWS CLI with `--endpoint-url http://localhost:8083` to create and execute state machines locally.
+For testing Step Functions workflows, see [step-functions-testing-skills.md](step-functions-testing-skills.md) — covers TestState API (mocking, inspection levels, retry simulation, chained tests) and Step Functions Local (Docker).
 
 ## Anti-Polling Pattern
 
