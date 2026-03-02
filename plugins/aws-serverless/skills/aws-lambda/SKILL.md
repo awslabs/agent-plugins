@@ -105,26 +105,27 @@ For detailed troubleshooting, see [references/troubleshooting.md](references/tro
 
 ## Configuration
 
-### Authentication Setup
+### AWS CLI Setup
 
-This skill requires AWS credentials configured on the host machine:
+This skill requires that AWS credentials are configured on the host machine:
 
-1. **Install AWS CLI**: Follow the [AWS CLI installation guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
-2. **Configure credentials**: Run `aws configure` or set up named profiles in `~/.aws/credentials`
-3. **Set environment variables** (if not using the default profile):
-   - `AWS_PROFILE` - Named profile to use
-   - `AWS_REGION` - Target AWS region
-4. **Verify access**: Run `aws sts get-caller-identity` to confirm credentials are valid
+**Verify access**: Run `aws sts get-caller-identity` to confirm credentials are valid
 
 ### SAM CLI Setup
 
-1. **Install SAM CLI**: Follow the [SAM CLI installation guide](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html)
-2. **Install Docker Desktop**: Required for `sam_local_invoke` and container-based builds
-3. **Verify**: Run `sam --version` and `docker --version`
+1. **Install SAM CLI**: Follow the [SAM CLI installation guide](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html)2
+2. **Verify**: Run `sam --version`
+
+### Container Runtime Setup
+
+1. **Install a Docker compatible container runtime**: Required for `sam_local_invoke` and container-based builds
+2. **Verify**: Use an appropriate command such as `docker --version` or `finch --version`
 
 ### MCP Server Configuration
 
-The MCP server is configured in `.mcp.json` with the following flags:
+The default configuration **prevents** write access and **prevents** access to sensitive data such as Lambda functions logs.
+
+To grant access, add these flags to `.mcp.json`:
 
 - `--allow-write`: Enables write operations (project creation, deployments)
 - `--allow-sensitive-data-access`: Enables access to Lambda logs and API Gateway logs

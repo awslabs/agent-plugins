@@ -55,9 +55,10 @@ This skill requires that AWS credentials are configured on the host machine:
 
 **Verify**: Run `sam --version`
 
-### Container runtime
+### Container Runtime Setup
 
-**Install a Docker compatible container runtime**: Required for `sam_local_invoke` and container-based builds
+1. **Install a Docker compatible container runtime**: Required for `sam_local_invoke` and container-based builds
+2. **Verify**: Use an appropriate command such as `docker --version` or `finch --version`
 
 ### AWS Serverless MCP Server
 

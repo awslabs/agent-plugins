@@ -30,6 +30,7 @@ To maximize the benefits of plugin-assisted development while maintaining securi
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------- | --------- |
 | **deploy-on-aws**           | Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment                  | Available |
 | **amazon-location-service** | Add maps, geocoding, routing, places search, and geospatial features to applications with Amazon Location Service | Available |
+| **aws-serverless**          | Build serverless applications with Lambda, API Gateway, EventBridge, Step Functions, and durable functions        | Available |
 
 ## Installation
 
