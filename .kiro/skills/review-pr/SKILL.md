@@ -20,12 +20,12 @@ Run a comprehensive pull request review using multiple specialized review aspect
 
 | Aspect       | Description                                       | Skill                                                      |
 | ------------ | ------------------------------------------------- | ---------------------------------------------------------- |
-| **code**     | General code review for project guidelines        | [code-reviewer](../code-reviewer/SKILL.md)                 |
-| **simplify** | Simplify code for clarity and maintainability     | [code-simplifier](../code-simplifier/SKILL.md)             |
-| **comments** | Analyze code comment accuracy and maintainability | [comment-analyzer](../comment-analyzer/SKILL.md)           |
-| **tests**    | Review test coverage quality and completeness     | [pr-test-analyzer](../pr-test-analyzer/SKILL.md)           |
-| **errors**   | Check error handling for silent failures          | [silent-failure-hunter](../silent-failure-hunter/SKILL.md) |
-| **types**    | Analyze type design and invariants                | [type-design-analyzer](../type-design-analyzer/SKILL.md)   |
+| **code**     | General code review for project guidelines        | [reference](references/code-reviewer.md)         |
+| **simplify** | Simplify code for clarity and maintainability     | [reference](references/code-simplifier.md)       |
+| **comments** | Analyze code comment accuracy and maintainability | [reference](references/comment-analyzer.md)      |
+| **tests**    | Review test coverage quality and completeness     | [reference](references/pr-test-analyzer.md)      |
+| **errors**   | Check error handling for silent failures          | [reference](references/silent-failure-hunter.md) |
+| **types**    | Analyze type design and invariants                | [reference](references/type-design-analyzer.md)  |
 | **all**      | Run all applicable reviews (default)              | -                                                          |
 
 ### 3. Identify Changed Files
