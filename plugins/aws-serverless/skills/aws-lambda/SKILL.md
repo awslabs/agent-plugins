@@ -113,7 +113,7 @@ This skill requires that AWS credentials are configured on the host machine:
 
 ### SAM CLI Setup
 
-1. **Install SAM CLI**: Follow the [SAM CLI installation guide](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html)2
+1. **Install SAM CLI**: Follow the [SAM CLI installation guide](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html)
 2. **Verify**: Run `sam --version`
 
 ### Container Runtime Setup
@@ -123,24 +123,15 @@ This skill requires that AWS credentials are configured on the host machine:
 
 ### MCP Server Configuration
 
-The default configuration **prevents** write access and **prevents** access to sensitive data such as Lambda functions logs.
+**Write access is enabled by default.** The plugin ships with `--allow write` in `.mcp.json`, so the MCP server can create projects, generate IaC, and deploy on behalf of the user.
 
-To grant access, add these flags to `.mcp.json`:
-
-- `--allow-write`: Enables write operations (project creation, deployments)
-- `--allow-sensitive-data-access`: Enables access to Lambda logs and API Gateway logs
+Access to sensitive data (like Lambda and API Gateway logs) is **not** enabled by default. To grant it, add `--allow-sensitive-data-access` to `.mcp.json`.
 
 ### SAM Template Validation Hook
 
-This plugin includes a `PostToolUse` hook that runs `sam validate` automatically after any edit to `template.yaml` or `template.yml`. If validation fails, the error is returned as a system message so you can fix it immediately. The hook requires SAM CLI to be installed and silently skips if it is not available. Users can disable it via `/hooks`.
+This plugin includes a `PostToolUse` hook that runs `sam validate` automatically after any edit to `template.yaml` or `template.yml`. If validation fails, the error is returned as a system message so you can fix it immediately. The hook requires SAM CLI and `jq` to be installed and silently skips if it is not available. Users can disable it via `/hooks`.
 
-**Version policy:** `.mcp.json` uses `awslabs.aws-serverless-mcp-server@latest`. This is intentional — the package is pre-1.0 (currently 0.1.x) and under active development, so pinning would miss bug fixes and new tool capabilities. If you need a stable, reproducible setup, pin to a specific version:
-
-```json
-"args": ["awslabs.aws-serverless-mcp-server@0.1.17", "--allow-write", "--allow-sensitive-data-access"]
-```
-
-Check for new versions with `uvx pip index versions awslabs.aws-serverless-mcp-server`.
+**Verify**: Run `jq --version`
 
 ## Language selection
 

@@ -62,16 +62,15 @@ This skill requires that AWS credentials are configured on the host machine:
 
 ### AWS Serverless MCP Server
 
-The default configuration **prevents** write access and **prevents** access to sensitive data such as Lambda functions logs.
+**Write access is enabled by default.** The plugin ships with `--allow write` in `.mcp.json`, so the MCP server can create projects, generate IaC, and deploy on behalf of the user.
 
-To grant access, add these flags to `.mcp.json`:
-
-- `--allow-write`: Enables write operations (project creation, deployments)
-- `--allow-sensitive-data-access`: Enables access to Lambda logs and API Gateway logs
+Access to sensitive data (like Lambda and API Gateway logs) is **not** enabled by default. To grant it, add `--allow-sensitive-data-access` to `.mcp.json`.
 
 ### SAM Template Validation Hook
 
-This plugin includes a `PostToolUse` hook that runs `sam validate` automatically after any edit to `template.yaml` or `template.yml`. If validation fails, the error is returned as a system message so you can fix it immediately. The hook requires SAM CLI to be installed and silently skips if it is not available. Users can disable it via `/hooks`.
+This plugin includes a `PostToolUse` hook that runs `sam validate` automatically after any edit to `template.yaml` or `template.yml`. If validation fails, the error is returned as a system message so you can fix it immediately. The hook requires SAM CLI and `jq` to be installed and silently skips if it is not available. Users can disable it via `/hooks`.
+
+**Verify**: Run `jq --version`
 
 ## IaC framework selection
 

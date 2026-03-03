@@ -213,7 +213,7 @@ Avoiding Lambda intermediaries for simple DynamoDB reads/writes, SNS publishes, 
 
 ## Testing
 
-For testing Step Functions workflows, see [step-functions-testing-skills.md](step-functions-testing-skills.md) — covers TestState API (mocking, inspection levels, retry simulation, chained tests) and Step Functions Local (Docker).
+For testing Step Functions workflows, see [step-functions-testing.md](step-functions-testing.md) — covers TestState API (mocking, inspection levels, retry simulation, chained tests) and Step Functions Local (Docker).
 
 ## Anti-Polling Pattern
 

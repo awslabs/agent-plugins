@@ -74,6 +74,12 @@ When not specified, ALWAYS use CDK
 - State: "[framework] might not support Lambda durable functions yet"
 - Suggest supported frameworks as alternatives
 
+### Serverless MCP Server Unavailable
+
+- Inform user: "AWS Serverless MCP not responding"
+- Ask: "Proceed without MCP support?"
+- DO NOT continue without user confirmation
+
 ### Step 3: Install SDK
 
 **For TypeScript/JavaScript:**
@@ -180,6 +186,12 @@ When implementing or modifying tests for durable functions, ALWAYS verify:
 2. Tests get operations by NAME, never by index
 3. Replay behavior is tested with multiple invocations
 4. Use `LocalDurableTestRunner` for local testing
+
+### MCP Server Configuration
+
+**Write access is enabled by default.** The plugin ships with `--allow write` in `.mcp.json`, so the MCP server can create projects, generate IaC, and deploy on behalf of the user.
+
+Access to sensitive data (like Lambda and API Gateway logs) is **not** enabled by default. To grant it, add `--allow-sensitive-data-access` to `.mcp.json`.
 
 ## Resources
 
