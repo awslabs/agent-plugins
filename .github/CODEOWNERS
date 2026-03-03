@@ -2,36 +2,37 @@
 
 ## Default owners for everything in the repo
 
-*                         @awslabs/agent-plugins-admins @awslabs/agent-plugins-maintainers
+*                                   @awslabs/agent-plugins-admins @awslabs/agent-plugins-maintainers
 
 ## Adminstrators
 
-.bandit-baseline.json     @awslabs/agent-plugins-admins
-.claude-plugin/           @awslabs/agent-plugins-admins
-.github/                  @awslabs/agent-plugins-admins
-.gitignore                @awslabs/agent-plugins-admins
-.gitleaks-baseline.json   @awslabs/agent-plugins-admins
-.gitleaks.toml            @awslabs/agent-plugins-admins
-.gitleaksignore           @awslabs/agent-plugins-admins
-.markdownlint-cli2.yaml   @awslabs/agent-plugins-admins
-AGENTS.md                 @awslabs/agent-plugins-admins
-CLAUDE.md                 @awslabs/agent-plugins-admins
-CODE_OF_CONDUCT.md        @awslabs/agent-plugins-admins
-CONTRIBUTING.md           @awslabs/agent-plugins-admins
-docs/                     @awslabs/agent-plugins-admins
-dprint.json               @awslabs/agent-plugins-admins
-LICENSE                   @awslabs/agent-plugins-admins
-mise.toml                 @awslabs/agent-plugins-admins
-NOTICE                    @awslabs/agent-plugins-admins
-plugins/                  @awslabs/agent-plugins-admins
-README.md                 @awslabs/agent-plugins-admins
-schemas/                  @awslabs/agent-plugins-admins
-tools/                    @awslabs/agent-plugins-admins
+.bandit-baseline.json               @awslabs/agent-plugins-admins
+.claude-plugin/                     @awslabs/agent-plugins-admins
+.github/                            @awslabs/agent-plugins-admins
+.gitignore                          @awslabs/agent-plugins-admins
+.gitleaks-baseline.json             @awslabs/agent-plugins-admins
+.gitleaks.toml                      @awslabs/agent-plugins-admins
+.gitleaksignore                     @awslabs/agent-plugins-admins
+.markdownlint-cli2.yaml             @awslabs/agent-plugins-admins
+AGENTS.md                           @awslabs/agent-plugins-admins
+CLAUDE.md                           @awslabs/agent-plugins-admins
+CODE_OF_CONDUCT.md                  @awslabs/agent-plugins-admins
+CONTRIBUTING.md                     @awslabs/agent-plugins-admins
+docs/                               @awslabs/agent-plugins-admins
+dprint.json                         @awslabs/agent-plugins-admins
+LICENSE                             @awslabs/agent-plugins-admins
+mise.toml                           @awslabs/agent-plugins-admins
+NOTICE                              @awslabs/agent-plugins-admins
+plugins/                            @awslabs/agent-plugins-admins
+README.md                           @awslabs/agent-plugins-admins
+schemas/                            @awslabs/agent-plugins-admins
+tools/                              @awslabs/agent-plugins-admins
 
 ## Plugins (alphabetically listed)
 
-plugins/deploy-on-aws     @awslabs/agent-plugins-admins @awslabs/agent-plugins-maintainers  @awslabs/agent-plugins-deploy-on-aws
+plugins/amazon-location-service     @awslabs/agent-plugins-admins @awslabs/agent-plugins-maintainers  @awslabs/agent-plugins-agent-plugins-amazon-location-service
+plugins/deploy-on-aws               @awslabs/agent-plugins-admins @awslabs/agent-plugins-maintainers  @awslabs/agent-plugins-deploy-on-aws
 
 ## File must end with CODEOWNERS file
 
-.github/CODEOWNERS         @awslabs/agent-plugins-admins
+.github/CODEOWNERS                  @awslabs/agent-plugins-admins
