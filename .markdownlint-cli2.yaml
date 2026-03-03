@@ -19,7 +19,6 @@ globs:
 # Files to ignore
 ignores:
   - "**/node_modules/**"
-  - ".claude/docs/**"
 
 # Rule configuration
 config:
