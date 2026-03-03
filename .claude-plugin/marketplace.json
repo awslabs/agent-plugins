@@ -97,6 +97,24 @@
         "step functions"
       ],
       "version": "1.0.0"
+    },
+    {
+      "category": "fullstack",
+      "description": "Build full-stack apps with AWS Amplify Gen 2 using guided workflows for authentication, data models, storage, GraphQL APIs, and Lambda functions.",
+      "keywords": [
+        "aws",
+        "amplify",
+        "fullstack",
+        "authentication",
+        "data",
+        "storage",
+        "graphql",
+        "functions"
+      ],
+      "name": "aws-amplify",
+      "source": "./plugins/aws-amplify",
+      "tags": ["aws", "amplify", "fullstack"],
+      "version": "1.0.0"
     }
   ]
 }

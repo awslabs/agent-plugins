@@ -31,6 +31,7 @@ tools/                              @awslabs/agent-plugins-admins
 ## Plugins (alphabetically listed)
 
 plugins/amazon-location-service     @awslabs/agent-plugins-admins @awslabs/agent-plugins-maintainers  @awslabs/agent-plugins-amazon-location-service
+plugins/aws-amplify                 @awslabs/agent-plugins-admins @awslabs/agent-plugins-maintainers  @awslabs/agent-plugins-amplify
 plugins/aws-serverless              @awslabs/agent-plugins-admins @awslabs/agent-plugins-maintainers  @awslabs/agent-plugins-aws-serverless
 plugins/deploy-on-aws               @awslabs/agent-plugins-admins @awslabs/agent-plugins-maintainers  @awslabs/agent-plugins-deploy-on-aws
 plugins/migration-to-aws            @awslabs/agent-plugins-admins @awslabs/agent-plugins-maintainers  @awslabs/agent-plugins-migrate-to-aws

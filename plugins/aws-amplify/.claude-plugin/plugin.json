@@ -1,0 +1,21 @@
+{
+  "author": {
+    "name": "Amazon Web Services"
+  },
+  "description": "Build full-stack apps with AWS Amplify Gen 2 using guided workflows for authentication, data models, storage, GraphQL APIs, and Lambda functions.",
+  "homepage": "https://github.com/awslabs/agent-plugins",
+  "keywords": [
+    "aws",
+    "amplify",
+    "fullstack",
+    "authentication",
+    "data",
+    "storage",
+    "graphql",
+    "functions"
+  ],
+  "license": "Apache-2.0",
+  "name": "aws-amplify",
+  "repository": "https://github.com/awslabs/agent-plugins",
+  "version": "1.0.0"
+}

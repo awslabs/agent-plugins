@@ -31,6 +31,7 @@ To maximize the benefits of plugin-assisted development while maintaining securi
 | **deploy-on-aws**           | Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment                       | Available |
 | **amazon-location-service** | Add maps, geocoding, routing, places search, and geospatial features to applications with Amazon Location Service      | Available |
 | **migration-to-aws**        | Migrate GCP infrastructure to AWS with resource discovery, architecture mapping, cost analysis, and execution planning | Available |
+| **aws-amplify**             | Build full-stack apps with AWS Amplify Gen 2 using guided workflows for auth, data, storage, and functions             | Available |
 | **aws-serverless**          | Build serverless applications with Lambda, API Gateway, EventBridge, Step Functions, and durable functions             | Available |
 
 ## Installation
@@ -53,6 +54,12 @@ or
 
 ```bash
 /plugin install amazon-location-service@agent-plugins-for-aws
+```
+
+or
+
+```bash
+/plugin install aws-amplify@agent-plugins-for-aws
 ```
 
 or
@@ -113,6 +120,29 @@ Guides developers through adding maps, places search, geocoding, routing, and ot
 | Agent Skill                 | Triggers                                                                                                                               |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | **amazon-location-service** | "add a map", "geocode an address", "calculate a route", "location-aware app", "Amazon Location Service", "geospatial", "places search" |
+
+### MCP Servers
+
+| Server      | Purpose                                |
+| ----------- | -------------------------------------- |
+| **aws-mcp** | AWS documentation and service guidance |
+
+## aws-amplify
+
+Build full-stack apps with AWS Amplify Gen 2 using TypeScript code-first development, guided by official AWS Agent Standard Operating Procedures (SOPs).
+
+### Workflow
+
+1. **Backend** - Create Amplify Gen 2 resources (auth, data, storage, functions)
+2. **Sandbox** - Deploy to sandbox for testing
+3. **Frontend & Test** - Connect frontend to backend, verify locally
+4. **Production** - Deploy to production
+
+### Agent Skill Triggers
+
+| Agent Skill          | Triggers                                                                                                     |
+| -------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **amplify-workflow** | "build Amplify app", "create Amplify project", "add auth to Amplify", "deploy Amplify", "full-stack Amplify" |
 
 ### MCP Servers
 
