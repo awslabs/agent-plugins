@@ -8,10 +8,11 @@ Verify these tools before proceeding:
 aws --version                  # AWS CLI
 aws sts get-caller-identity    # Credentials configured
 sam --version                  # SAM CLI
-docker --version               # Docker (required for local testing)
 ```
 
-If `aws sts get-caller-identity` fails, run `aws configure` to set up credentials. If using CDK instead of SAM, also run `cdk --version` — see [cdk-project-setup.md](../../aws-serverless-deployment/references/cdk-project-setup.md).
+**Verify** that any Docker-compatible container runtime is installed (Docker, Finch, Podman, etc.). Use the appropriate command for your runtime (e.g., `finch --version`).
+
+If `aws sts get-caller-identity` fails, ask user to set up credentials. If using CDK instead of SAM, also run `cdk --version` — see [cdk-project-setup.md](../../aws-serverless-deployment/references/cdk-project-setup.md).
 
 ## What Are You Building?
 

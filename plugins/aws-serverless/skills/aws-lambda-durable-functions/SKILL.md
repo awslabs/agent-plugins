@@ -2,12 +2,6 @@
 name: aws-lambda-durable-functions
 description: >
   Build resilient, long-running, multi-step applications with AWS Lambda durable functions with automatic state persistence, retry logic, and orchestration for long-running executions. Covers the critical replay model, step operations, wait/callback patterns, error handling with saga pattern, testing with LocalDurableTestRunner. Triggers on phrases like: lambda durable functions, workflow orchestration, state machines, retry/checkpoint patterns, long-running stateful Lambda functions, saga pattern, human-in-the-loop callbacks, and reliable serverless applications.
-hooks:
-  PostToolUse:
-    - matcher: "Edit"
-      command: "echo 'REMINDER: If you modified a durable function handler, verify replay model rules — all non-deterministic code (Date.now, Math.random, UUID, API calls) MUST be inside steps, no nested durable operations in step functions, closure mutations must be returned not mutated, and side effects outside steps repeat on replay.'"
-    - matcher: "Write"
-      command: "echo 'REMINDER: If you created a durable function handler, verify replay model rules — all non-deterministic code (Date.now, Math.random, UUID, API calls) MUST be inside steps, no nested durable operations in step functions, closure mutations must be returned not mutated, and side effects outside steps repeat on replay. Also ensure tests use LocalDurableTestRunner and get operations by NAME not index.'"
 ---
 
 # AWS Lambda durable functions
