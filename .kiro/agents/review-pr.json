@@ -3,7 +3,6 @@
   "description": "Comprehensive PR review using multiple specialized subagents for code quality, test coverage, error handling, type design, comment accuracy, and code simplification.",
   "prompt": "file://./prompts/review-pr.md",
   "tools": ["read", "shell", "code", "subagent"],
-  "allowedTools": ["read", "code", "shell", "subagent"],
   "toolsSettings": {
     "subagent": {
       "trustedAgents": ["code-review"],
