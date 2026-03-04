@@ -21,9 +21,9 @@ If any of these conditions are true, do not proceed. Inform the user why.
 
 Find all relevant project guideline files from the codebase:
 
-- The root `CLAUDE.md` or `AGENTS.md` file (if one exists)
-- Any guideline files in directories whose files the pull request modified
 - Any `.kiro/steering/` files that may contain project standards
+- The root `AGENTS.md` or `CLAUDE.md` file (if one exists)
+- Any guideline files in directories whose files the pull request modified
 
 Only collect file paths at this stage, not full contents.
 
