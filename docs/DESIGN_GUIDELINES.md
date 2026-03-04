@@ -571,7 +571,5 @@ Before submitting a plugin, verify:
 ## Additional Resources
 
 - [Agent Skills specification](https://agentskills.io/specification) - Official format for SKILL.md frontmatter and directory structure
-- `.claude/docs/skills_docs.md` - Skill authoring technical reference
-- `.claude/docs/plugin_reference.md` - Plugin manifest specification
 - `../schemas/` - JSON schemas for validation
 - `../CLAUDE.md` - Repository-specific instructions
