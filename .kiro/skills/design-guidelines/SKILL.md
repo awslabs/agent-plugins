@@ -5,4 +5,31 @@ description: Plugin design best practices for authoring skills, MCP integrations
 
 # Plugin Design Guidelines
 
-Read `docs/DESIGN_GUIDELINES.md` for the full guide.
+## Workflow
+
+### Step 1: Scope the Plugin
+
+- One plugin = one focused purpose
+- If the description uses "and" more than once, consider splitting
+
+### Step 2: Create the Structure
+
+- `plugin.json` manifest with name, version, description
+- `.mcp.json` for any MCP server integrations
+- `skills/<name>/SKILL.md` (≤300 lines) with `references/` for details (≤100 lines each)
+
+### Step 3: Author SKILL.md
+
+- YAML frontmatter: `name` and `description` required
+- Include trigger phrases and 3–7 keywords in description
+- Write numbered workflow steps with explicit defaults
+- Document error handling for every failure scenario (especially MCP)
+- No vague language ("maybe", "probably", "consider")
+
+### Step 4: Validate
+
+1. `mise run lint:manifests` — validate JSON manifests
+2. `mise run lint:cross-refs` — check cross-references
+3. `mise run build` — full build before committing
+
+For anti-patterns, MCP integration, review checklist, and examples, see references/full-guide.md.
