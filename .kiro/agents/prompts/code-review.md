@@ -1,9 +1,3 @@
----
-name: code-review
-description: Automated code review for pull requests using multiple specialized review passes with confidence-based scoring to filter false positives. Use when reviewing a pull request, performing code review, checking PR quality, or when the user says "review this PR" or "code review".
-allowed-tools: Bash(gh:*)
----
-
 # Code Review
 
 Provide a comprehensive code review for a given pull request.

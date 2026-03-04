@@ -1,0 +1,11 @@
+{
+  "name": "code-review",
+  "description": "Automated code review for pull requests using multiple specialized review passes with confidence-based scoring to filter false positives. Use when reviewing a pull request, performing code review, checking PR quality.",
+  "prompt": "file://./prompts/code-review.md",
+  "tools": ["read", "shell", "write", "code", "subagent"],
+  "allowedTools": ["read", "code"],
+  "resources": [
+    "file://../steering/code-review-standards.md",
+    "file://../../AGENTS.md"
+  ]
+}
