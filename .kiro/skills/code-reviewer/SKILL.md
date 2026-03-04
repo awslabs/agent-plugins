@@ -1,6 +1,6 @@
 ---
 name: code-reviewer
-description: Review code for adherence to project guidelines, style guides, and best practices. Use proactively after writing or modifying code, before committing changes or creating pull requests. Checks for style violations, potential issues, and ensures code follows established patterns in project guidelines (CLAUDE.md, AGENTS.md, or .kiro/steering). Also use when the user says "review my code", "check code quality", or "does this look good".
+description: Review code for adherence to project guidelines, style guides, and best practices. Use proactively after writing or modifying code, before committing changes or creating pull requests. Checks for style violations, potential issues, and ensures code follows established patterns in project guidelines (.kiro/steering/, AGENTS.md, or CLAUDE.md). Also use when the user says "review my code", "check code quality", or "does this look good".
 ---
 
 # Code Reviewer
@@ -13,7 +13,7 @@ By default, review unstaged changes from `git diff`. The user may specify differ
 
 ## Core Review Responsibilities
 
-**Project Guidelines Compliance**: Verify adherence to explicit project rules (typically in CLAUDE.md, AGENTS.md, or `.kiro/steering/`) including import patterns, framework conventions, language-specific style, function declarations, error handling, logging, testing practices, platform compatibility, and naming conventions.
+**Project Guidelines Compliance**: Verify adherence to explicit project rules (typically in `.kiro/steering/`, AGENTS.md, or CLAUDE.md) including import patterns, framework conventions, language-specific style, function declarations, error handling, logging, testing practices, platform compatibility, and naming conventions.
 
 **Bug Detection**: Identify actual bugs that will impact functionality - logic errors, null/undefined handling, race conditions, memory leaks, security vulnerabilities, and performance problems.
 

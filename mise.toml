@@ -134,13 +134,9 @@ run = "uv run tools/semgrep/rules-update.py"
 [tasks."security:checkov"]
 description = "Run Checkov"
 run = '''
-# Checkov uses LOG_LEVEL internally but treats "TRACE" as unknown and crashes.
-# Remap TRACE to DEBUG (the closest supported level) so mise's verbose tracing
-# doesn't break the checkov run.
-log_level=$(echo "$LOG_LEVEL" | tr '[:upper:]' '[:lower:]')
-if [ "$log_level" = "trace" ]; then
-  export LOG_LEVEL=DEBUG
-fi
+# Checkov uses LOG_LEVEL internally and crashes on values it doesn't recognize
+# (e.g. mise's TRACE). Unset it and let checkov use its own default.
+unset LOG_LEVEL
 checkov --quiet --directory .
 '''
 

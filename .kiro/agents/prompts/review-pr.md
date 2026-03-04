@@ -36,16 +36,14 @@ Run `git diff --name-only` to see modified files and determine which reviews app
 
 ### 4. Execute Reviews
 
-For each applicable review aspect, spawn a subagent with the task. Each subagent has access to the corresponding skill via its resources.
-
-Spawn subagents in parallel for efficiency. Each subagent should:
-
-1. Read the changed files relevant to its review aspect
-2. Apply the methodology from its skill
-3. Apply confidence scoring from the code-review-standards steering file
-4. Return findings with file paths and line numbers
-
 Use the `code-review` agent as a subagent for the 5-pass automated code review.
+
+For the remaining review aspects (code-simplifier, comment-analyzer, pr-test-analyzer, silent-failure-hunter, type-design-analyzer), perform the reviews inline using the loaded skill resources. For each:
+
+1. Read the changed files relevant to the review aspect
+2. Apply the methodology from the corresponding skill
+3. Apply confidence scoring from the code-review-standards steering file
+4. Collect findings with file paths and line numbers
 
 ### 5. Aggregate Results
 
