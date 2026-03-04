@@ -17,7 +17,7 @@ Use the **awspricing** MCP server to get accurate cost estimates before generati
 | Aurora PostgreSQL | `AmazonRDS`         | Filter: `databaseEngine` = "Aurora PostgreSQL" |
 | Aurora MySQL      | `AmazonRDS`         | Filter: `databaseEngine` = "Aurora MySQL"      |
 | RDS PostgreSQL    | `AmazonRDS`         | Filter: `databaseEngine` = "PostgreSQL"        |
-| DocumentDB        | `AmazonDocDB`       | MongoDB-compatible managed database            |
+| Amazon DocumentDB | `AmazonDocDB`       | MongoDB-compatible managed database            |
 | ALB               | `AWSELB`            | Application Load Balancer                      |
 | S3                | `AmazonS3`          | Storage and requests                           |
 | CloudFront        | `AmazonCloudFront`  | CDN distribution                               |
@@ -54,9 +54,9 @@ Aurora Serverless v2 charges per ACU-hour (Aurora Capacity Unit).
 
 - ~$180-360/month depending on load
 
-## DocumentDB Serverless Pricing
+## Amazon DocumentDB Serverless Pricing
 
-DocumentDB Serverless charges per DCU-hour (DocumentDB Capacity Unit),
+Amazon DocumentDB Serverless charges per DCU-hour (DocumentDB Capacity Unit),
 storage (GB-month), and I/O (standard config only).
 
 - Minimum: 0.5 DCU
@@ -77,7 +77,7 @@ storage (GB-month), and I/O (standard config only).
 - Dev: ~$70-100/month
 - Production: ~$200-400/month
 
-**Small web app (Fargate + DocumentDB Serverless + ALB):**
+**Small web app (Fargate + Amazon DocumentDB Serverless + ALB):**
 
 - Dev: ~$70-155/month
 - Production: ~$200-450/month

@@ -104,15 +104,6 @@ agent-plugins/
 
 Default to **dev sizing** unless user says "production".
 
-## Reference Documentation
-
-See `.claude/docs/` for Claude Code plugin system reference:
-
-- `plugin_overview.md` - Creating plugins
-- `plugin_marketplace_distribution.md` - Marketplace distribution
-- `plugin_reference.md` - Complete technical reference
-- `skills_docs.md` - Skill authoring guide
-
 ## Development commands (mise)
 
 The project uses [mise](https://mise.jdx.dev) for tool versions and tasks. Ensure mise is installed, then from the repo root:
