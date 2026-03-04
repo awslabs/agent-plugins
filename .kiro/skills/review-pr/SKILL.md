@@ -18,15 +18,15 @@ Run a comprehensive pull request review using multiple specialized review aspect
 
 ### 2. Available Review Aspects
 
-| Aspect       | Description                                       | Skill                                                      |
-| ------------ | ------------------------------------------------- | ---------------------------------------------------------- |
+| Aspect       | Description                                       | Skill                                            |
+| ------------ | ------------------------------------------------- | ------------------------------------------------ |
 | **code**     | General code review for project guidelines        | [reference](references/code-reviewer.md)         |
 | **simplify** | Simplify code for clarity and maintainability     | [reference](references/code-simplifier.md)       |
 | **comments** | Analyze code comment accuracy and maintainability | [reference](references/comment-analyzer.md)      |
 | **tests**    | Review test coverage quality and completeness     | [reference](references/pr-test-analyzer.md)      |
 | **errors**   | Check error handling for silent failures          | [reference](references/silent-failure-hunter.md) |
 | **types**    | Analyze type design and invariants                | [reference](references/type-design-analyzer.md)  |
-| **all**      | Run all applicable reviews (default)              | -                                                          |
+| **all**      | Run all applicable reviews (default)              | -                                                |
 
 ### 3. Identify Changed Files
 
