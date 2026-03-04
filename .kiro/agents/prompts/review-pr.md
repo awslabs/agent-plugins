@@ -13,15 +13,15 @@ Run a comprehensive pull request review using multiple specialized subagents, ea
 
 ### 2. Available Review Aspects
 
-| Aspect       | Description                                       | Skill                    |
-| ------------ | ------------------------------------------------- | ------------------------ |
-| **code**     | General code review for project guidelines        | code-reviewer            |
-| **simplify** | Simplify code for clarity and maintainability     | code-simplifier          |
-| **comments** | Analyze code comment accuracy and maintainability | comment-analyzer         |
-| **tests**    | Review test coverage quality and completeness     | pr-test-analyzer         |
-| **errors**   | Check error handling for silent failures          | silent-failure-hunter    |
-| **types**    | Analyze type design and invariants                | type-design-analyzer     |
-| **all**      | Run all applicable reviews (default)              | -                        |
+| Aspect       | Description                                       | Skill                 |
+| ------------ | ------------------------------------------------- | --------------------- |
+| **code**     | General code review for project guidelines        | code-reviewer         |
+| **simplify** | Simplify code for clarity and maintainability     | code-simplifier       |
+| **comments** | Analyze code comment accuracy and maintainability | comment-analyzer      |
+| **tests**    | Review test coverage quality and completeness     | pr-test-analyzer      |
+| **errors**   | Check error handling for silent failures          | silent-failure-hunter |
+| **types**    | Analyze type design and invariants                | type-design-analyzer  |
+| **all**      | Run all applicable reviews (default)              | -                     |
 
 ### 3. Identify Changed Files
 
