@@ -108,7 +108,7 @@ A workflow with sequential steps, parallel execution, human approval, or checkpo
 
 **Quick start:**
 
-- **Python 3.14+ or Node.js 22+**: Use Lambda Durable Functions for workflows expressed as code — see the [durable-functions skill](../../aws-lambda-durable-functions/) for comprehensive guidance
+- **Python 3.11+ or Node.js 22+**: Use Lambda durable functions for workflows expressed as code — see the [durable-functions skill](../../aws-lambda-durable-functions/) for comprehensive guidance
 - **Any runtime**: Use Step Functions for visual orchestration with 200+ AWS service integrations
 - **High-throughput, short-lived**: Use Step Functions Express (100k+ exec/sec)
 

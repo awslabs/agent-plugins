@@ -4,6 +4,12 @@
 
 set -euo pipefail
 
+# Skip if jq is not installed
+if ! command -v jq &> /dev/null; then
+  echo '{"systemMessage": "jq not found — SAM template validation skipped. Install jq for automatic validation."}'
+  exit 0
+fi
+
 INPUT=$(cat)
 
 FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
@@ -16,6 +22,7 @@ esac
 
 # Skip if SAM CLI is not installed
 if ! command -v sam &> /dev/null; then
+  echo '{"systemMessage": "SAM CLI not found — template validation skipped. Install SAM CLI for automatic validation."}'
   exit 0
 fi
 
@@ -29,7 +36,9 @@ OUTPUT=$(sam validate --template "$FILE_PATH" --lint 2>&1) && STATUS=0 || STATUS
 if [ $STATUS -eq 0 ]; then
   echo '{"systemMessage": "SAM template validation and linting passed."}'
 else
-  echo "$OUTPUT" | jq -Rs '{systemMessage: ("SAM template validation/linting failed:\n" + .)}'
+  FORMATTED=$(echo "$OUTPUT" | jq -Rs '{systemMessage: ("SAM template validation/linting failed:\n" + .)}' 2>/dev/null) || \
+    FORMATTED="{\"systemMessage\": \"SAM template validation/linting failed:\\n$OUTPUT\"}"
+  echo "$FORMATTED"
 fi
 
 exit 0

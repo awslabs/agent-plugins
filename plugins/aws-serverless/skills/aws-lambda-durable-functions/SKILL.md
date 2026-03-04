@@ -162,7 +162,7 @@ aws lambda invoke --function-name my-function output.json
 
 Your Lambda execution role MUST have the `AWSLambdaBasicDurableExecutionRolePolicy` managed policy attached. This includes:
 
-- `lambda:CheckpointDurableExecutions` - Persist execution state
+- `lambda:CheckpointDurableExecution` - Persist execution state
 - `lambda:GetDurableExecutionState` - Retrieve execution state
 - CloudWatch Logs permissions
 
@@ -189,7 +189,7 @@ When implementing or modifying tests for durable functions, ALWAYS verify:
 
 ### MCP Server Configuration
 
-**Write access is enabled by default.** The plugin ships with `--allow write` in `.mcp.json`, so the MCP server can create projects, generate IaC, and deploy on behalf of the user.
+**Write access is enabled by default.** The plugin ships with `--allow-write` in `.mcp.json`, so the MCP server can create projects, generate IaC, and deploy on behalf of the user.
 
 Access to sensitive data (like Lambda and API Gateway logs) is **not** enabled by default. To grant it, add `--allow-sensitive-data-access` to `.mcp.json`.
 

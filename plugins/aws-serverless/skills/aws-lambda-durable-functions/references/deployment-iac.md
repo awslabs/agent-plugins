@@ -226,7 +226,7 @@ Outputs:
   FunctionArn:
     Value: !GetAtt DurableFunction.Arn
   AliasArn:
-    Value: !Ref DurableFunctionAlias
+    Value: !Ref DurableFunction.Alias
 ```
 
 **Deploy:**
@@ -554,6 +554,6 @@ aws lambda invoke --function-name myFunction ...
 
 ### Checkpoint Permission Denied
 
-**Issue:** `AccessDeniedException: User is not authorized to perform: lambda:CheckpointDurableExecutions`
+**Issue:** `AccessDeniedException: User is not authorized to perform: lambda:CheckpointDurableExecution`
 
 **Solution:** Add `AWSLambdaBasicDurableExecutionRolePolicy` to execution role.

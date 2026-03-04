@@ -68,7 +68,7 @@
 
 - Default account limit: **1,000 concurrent executions** per region (shared across all functions)
 - **Concurrency ≠ requests per second**: Concurrency = avg_RPS × avg_duration_seconds
-- Burst limit: Lambda can scale by **500 new concurrent executions per 10 seconds** (on-demand)
+- Burst limit: Lambda can scale by **1,000 new concurrent executions per 10 seconds** (on-demand)
 
 **Diagnosis:**
 

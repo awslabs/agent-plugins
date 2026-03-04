@@ -7,7 +7,7 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/validate-template.sh",
-            "timeout": 30
+            "timeout": 120
           }
         ]
       }

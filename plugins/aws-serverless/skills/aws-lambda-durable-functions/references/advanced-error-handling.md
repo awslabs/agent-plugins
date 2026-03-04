@@ -190,6 +190,8 @@ result = context.step(
 
 Protect against cascading failures by temporarily stopping requests to failing services:
 
+**⚠️ Replay model caveat:** The examples below use closure mutations (`failureCount`, `lastFailureTime`) for simplicity. These variables reset on replay, so the circuit breaker state is not preserved across Lambda invocations. For production use, store circuit breaker state in a step return value or an external store (e.g., DynamoDB) to survive replays.
+
 **TypeScript:**
 
 ```typescript

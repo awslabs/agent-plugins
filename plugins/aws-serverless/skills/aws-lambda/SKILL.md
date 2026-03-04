@@ -32,6 +32,7 @@ Load the appropriate reference file based on what the user is working on:
 - **Durable functions**, **checkpointing**, **replay model**, **saga pattern**, or **long-running Lambda workflows** -> see the [durable-functions skill](../aws-lambda-durable-functions/) (separate skill in this plugin with full SDK reference, testing, and deployment guides)
 - **Orchestration**, **workflows**, or **Durable Functions vs Step Functions** -> see [references/orchestration-and-workflows.md](references/orchestration-and-workflows.md)
 - **Step Functions**, **ASL**, **state machines**, **JSONata**, **Distributed Map**, or **SDK integrations** -> see [references/step-functions.md](references/step-functions.md)
+- **Step Functions testing**, **TestState API**, **mocking service integrations**, or **state machine unit tests** -> see [references/step-functions-testing.md](references/step-functions-testing.md)
 - **Observability**, **logging**, **tracing**, **metrics**, **alarms**, or **dashboards** -> see [references/observability.md](references/observability.md)
 - **Optimization**, **cold starts**, **memory tuning**, **cost**, or **streaming** -> see [references/optimization.md](references/optimization.md)
 - **Powertools**, **idempotency**, **feature flags**, **parameters**, **parser**, **batch processing**, or **data masking** -> see [references/powertools.md](references/powertools.md)
@@ -123,13 +124,13 @@ This skill requires that AWS credentials are configured on the host machine:
 
 ### MCP Server Configuration
 
-**Write access is enabled by default.** The plugin ships with `--allow write` in `.mcp.json`, so the MCP server can create projects, generate IaC, and deploy on behalf of the user.
+**Write access is enabled by default.** The plugin ships with `--allow-write` in `.mcp.json`, so the MCP server can create projects, generate IaC, and deploy on behalf of the user.
 
 Access to sensitive data (like Lambda and API Gateway logs) is **not** enabled by default. To grant it, add `--allow-sensitive-data-access` to `.mcp.json`.
 
 ### SAM Template Validation Hook
 
-This plugin includes a `PostToolUse` hook that runs `sam validate` automatically after any edit to `template.yaml` or `template.yml`. If validation fails, the error is returned as a system message so you can fix it immediately. The hook requires SAM CLI and `jq` to be installed and silently skips if it is not available. Users can disable it via `/hooks`.
+This plugin includes a `PostToolUse` hook that runs `sam validate` automatically after any edit to `template.yaml` or `template.yml`. If validation fails, the error is returned as a system message so you can fix it immediately. The hook requires SAM CLI and `jq` to be installed; if either is missing, validation is skipped with a system message. Users can disable it via `/hooks`.
 
 **Verify**: Run `jq --version`
 
