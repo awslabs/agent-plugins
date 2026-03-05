@@ -30,7 +30,7 @@ Before using AWS Lambda durable functions, verify:
    - AWS CDK (`cdk --version`) v2.237.1 or higher
    - Direct Lambda deployment access
 
-## Step 2: Select language and IaC framework
+### Step 2: Select language and IaC framework
 
 ### Language Selection
 

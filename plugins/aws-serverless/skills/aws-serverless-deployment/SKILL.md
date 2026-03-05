@@ -79,6 +79,7 @@ Default: CDK
 Override syntax:
 
 - "use CloudFormation" → Generate YAML templates
+- "use SAM" → Generate YAML templates
 
 When not specified, ALWAYS use CDK
 

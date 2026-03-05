@@ -60,9 +60,9 @@
         "durable functions",
         "development",
         "sam",
-        "api-gateway",
+        "api gateway",
         "eventbridge",
-        "step-functions"
+        "step functions"
       ],
       "name": "aws-serverless",
       "source": "./plugins/aws-serverless",
@@ -73,9 +73,9 @@
         "durable functions",
         "development",
         "sam",
-        "api-gateway",
+        "api gateway",
         "eventbridge",
-        "step-functions"
+        "step functions"
       ],
       "version": "1.0.0"
     }

@@ -62,18 +62,20 @@ const result = await context.waitForCallback(
 **Python:**
 
 ```python
-from aws_durable_execution_sdk_python.waits import WaitForCallbackConfig
+from aws_durable_execution_sdk_python.config import WaitForCallbackConfig
 
-def submit_approval(callback_id: str):
+# Wait for external approval
+def submit_approval(callback_id: str, ctx):
+    ctx.logger.info('Sending approval request')
     send_approval_email(approver_email, callback_id)
 
 result = context.wait_for_callback(
     submitter=submit_approval,
+    name='wait-for-approval',
     config=WaitForCallbackConfig(
         timeout=Duration.from_hours(24),
         heartbeat_timeout=Duration.from_minutes(5)
-    ),
-    name='wait-for-approval'
+    )
 )
 ```
 
@@ -87,7 +89,7 @@ aws lambda send-durable-execution-callback-success \
   --payload '{"status": "approved", "comments": "Looks good"}'
 ```
 
-**SDK:**
+**SDK (TypeScript):**
 
 ```typescript
 import { LambdaClient, SendDurableExecutionCallbackSuccessCommand } from '@aws-sdk/client-lambda';
@@ -97,6 +99,19 @@ await client.send(new SendDurableExecutionCallbackSuccessCommand({
   CallbackId: callbackId,
   Payload: JSON.stringify({ status: 'approved' })
 }));
+```
+
+**SDK (Python / boto3):**
+
+```python
+import boto3
+import json
+
+lambda_client = boto3.client('lambda')
+lambda_client.send_durable_execution_callback_success(
+    CallbackId=callback_id,
+    Result=json.dumps({'status': 'approved'})
+)
 ```
 
 ### Callback Failure
@@ -362,12 +377,16 @@ try {
 
 ```python
 from aws_durable_execution_sdk_python.exceptions import CallbackError
+from aws_durable_execution_sdk_python.config import WaitForCallbackConfig
 
 try:
+    def submit_approval(callback_id: str, ctx):
+        send_approval(callback_id)
+
     result = context.wait_for_callback(
-        submitter=send_approval,
-        config=WaitForCallbackConfig(timeout=Duration.from_hours(24)),
-        name='wait-approval'
+        submitter=submit_approval,
+        name='wait-approval',
+        config=WaitForCallbackConfig(timeout=Duration.from_hours(24))
     )
 except CallbackError as error:
     if error.error_type == 'Timeout':

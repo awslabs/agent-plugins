@@ -218,12 +218,6 @@ SAM builds the image locally during `sam build` and pushes it to ECR during `sam
 ### Seekable OCI (SOCI) Lazy Loading
 
 Container images have longer cold starts than zip because Lambda must download the full image before starting. SOCI creates an index that enables lazy loading — Lambda pulls only the layers needed at startup and fetches the rest in the background.
-
-```bash
-# Create a SOCI index for an existing ECR image
-aws soci create-index --image-uri 123456789012.dkr.ecr.us-east-1.amazonaws.com/my-function:latest
-```
-
 SOCI is most beneficial for images larger than 250 MB. For smaller images, the overhead of maintaining the index may not be worthwhile.
 
 ### Best Practices
@@ -338,7 +332,7 @@ sam local invoke MyFunction --event events/test.json \
 
 `sam local generate-event` supports all Lambda event sources (s3, sqs, sns, kinesis, dynamodb, apigateway, etc.). Use it instead of hand-crafting event JSON.
 
-The `sam local start-api` subcommand runs your AWS Lambda functions locally to test through a local HTTP server hos. This lets you test your APIs with real HTTP requests using curl, Postman, or your browser:
+The `sam local start-api` subcommand runs your AWS Lambda functions locally to test through a local HTTP server host. This lets you test your APIs with real HTTP requests using curl, Postman, or your browser:
 
 ```bash
 # Start local API server (default port 3000)

@@ -133,7 +133,7 @@ Validate event payloads at the system boundary using typed schemas. Catches malf
 **Python (Pydantic):**
 
 ```python
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 from aws_lambda_powertools.utilities.parser import event_parser
 from aws_lambda_powertools.utilities.parser.envelopes import ApiGatewayEnvelope
 
@@ -142,7 +142,7 @@ class OrderRequest(BaseModel):
     amount: float
     currency: str = "USD"
 
-    @validator("amount")
+    @field_validator("amount")
     def amount_must_be_positive(cls, v):
         if v <= 0:
             raise ValueError("amount must be positive")

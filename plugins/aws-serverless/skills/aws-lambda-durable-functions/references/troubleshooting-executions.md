@@ -22,6 +22,12 @@ Diagnose durable function execution issue:
 - Function: <function-name>:<alias> (must be qualified ARN)
 - Execution ID: <execution-id>
 
+CRITICAL SAFETY RULES:
+- This is READ-ONLY diagnosis
+- NEVER call StopDurableExecution or any termination APIs
+- NEVER modify execution state
+- Only suggest manual remediation if user explicitly requests it
+
 Steps:
 1. Run: aws lambda get-durable-execution-history --function-name <function> --execution-id <id>
 2. Analyze execution status (RUNNING/SUCCEEDED/FAILED/TIMED_OUT)

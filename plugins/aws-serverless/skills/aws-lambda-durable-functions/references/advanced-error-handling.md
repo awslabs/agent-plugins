@@ -2,292 +2,93 @@
 
 Advanced error handling patterns for durable functions, including timeout handling, circuit breakers, and conditional retry strategies.
 
-## Timeout Handling with waitForCallback
+## Timeout Handling with Callbacks
 
-Handle callback timeouts with fallback logic:
+**Pattern:** Wait for an external callback with a timeout, and implement fallback logic if the timeout is reached.
 
-**TypeScript:**
+**Implementation approach:**
 
-```typescript
-export const handler = withDurableExecution(async (event, context) => {
-  try {
-    // Wait for external approval with timeout
-    const approval = await context.waitForCallback(
-      'wait-for-approval',
-      async (callbackId, ctx) => {
-        ctx.logger.info('Sending approval request', { callbackId });
-        await sendApprovalEmail(event.approverEmail, callbackId);
-      },
-      { timeout: { hours: 24 } }
-    );
+1. Use `waitForCallback` (TypeScript) or `wait_for_callback` (Python) with a timeout configuration set in the config argument
+2. Wrap in try-catch to handle timeout errors
+3. Check if the error is a timeout
+4. Implement fallback logic in a step (e.g., escalate to manager, use default value, retry with different parameters)
+5. Return appropriate status indicating timeout occurred
 
-    context.logger.info('Approval received', { approval });
-    return { status: 'approved', approval };
+**Key considerations:**
 
-  } catch (error: any) {
-    // Check for callback timeout
-    if (error.name === 'CallbackTimeoutError' ||
-        error.message?.includes('timeout')) {
+- Timeout errors are thrown when the callback doesn't complete within the specified duration
+- Fallback logic should be in a step to ensure it's checkpointed
+- Log timeout events for monitoring and debugging
 
-      context.logger.warn('Approval timed out after 24 hours', {
-        approverEmail: event.approverEmail,
-        error: error.message,
-      });
+## Local Timeout with Promise.race in Typescript SDK
 
-      // Implement fallback: auto-escalate
-      await context.step('handle-timeout', async (stepCtx) => {
-        stepCtx.logger.info('Escalating to manager due to timeout');
-        await escalateToManager(event);
-      });
+**Pattern:** Implement a timeout for a step operation within a single Lambda invocation.
 
-      return { status: 'timeout', escalated: true };
-    }
+**Implementation approach:**
 
-    // Re-throw other errors
-    throw error;
-  }
-});
-```
+1. Use `Promise.race()` to race the step operation against a timeout promise
+2. The timeout promise rejects after the specified duration
+3. Catch the timeout error and implement fallback logic
+4. Execute fallback operation in a separate step
 
-**Python:**
-
-```python
-@durable_execution
-def handler(event: dict, context: DurableContext) -> dict:
-    try:
-        # Wait for approval
-        def submit_callback(callback_id: str):
-            send_approval_email(event['approver_email'], callback_id)
-
-        approval = context.wait_for_callback(
-            submitter=submit_callback,
-            config=WaitForCallbackConfig(timeout=Duration.from_hours(24)),
-            name='wait-for-approval'
-        )
-
-        return {'status': 'approved', 'approval': approval}
-
-    except Exception as error:
-        # Check for timeout
-        if 'timeout' in str(error).lower():
-            context.logger.warning('Approval timed out')
-
-            # Escalate
-            context.step(
-                lambda _: escalate_to_manager(event),
-                name='handle-timeout'
-            )
-
-            return {'status': 'timeout', 'escalated': True}
-
-        raise
-```
-
-## Local Timeout with Promise.race
-
-For step-level timeouts within a single invocation:
-
-**TypeScript:**
-
-```typescript
-export const handler = withDurableExecution(async (event, context) => {
-  try {
-    // Operation with local timeout
-    const result = await Promise.race([
-      context.step('long-operation', async () => longRunningTask()),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Operation timeout')), 30000)
-      ),
-    ]);
-
-    return result;
-  } catch (error: any) {
-    if (error.message === 'Operation timeout') {
-      context.logger.warn('Operation timed out, implementing fallback');
-      return await context.step('fallback', async () => fallbackOperation());
-    }
-    throw error;
-  }
-});
-```
-
-**Note:** Promise.race only works within a single Lambda invocation. For timeouts across replays, use `timeout` option on `waitForCallback` or `waitForCondition`.
+**Important limitation:**
+In TypeScript, native setTimeout (and patterns like Promise.race using it) will fail during execution replays. To create a reliable timeout that persists across execution (expands over multi invocations), always use the timeout parameter provided by waitForCallback or waitForCondition
 
 ## Conditional Retry Based on Error Type
 
-**TypeScript:**
+**Pattern:** Retry operations selectively based on the type of error encountered.
 
-```typescript
-import { createRetryStrategy } from '@aws/durable-execution-sdk-js';
+**Implementation approach:**
 
-const result = await context.step(
-  'api-call',
-  async () => callExternalAPI(),
-  {
-    retryStrategy: (error, attemptCount) => {
-      // Don't retry client errors (4xx)
-      if (error.statusCode >= 400 && error.statusCode < 500) {
-        return { shouldRetry: false };
-      }
+1. Define a custom retry strategy function that examines the error
+2. For client errors (4xx): Don't retry - these are permanent failures
+3. For server errors (5xx): Retry with exponential backoff
+4. For network errors: Retry with fixed delay
+5. For unknown errors: Don't retry by default
 
-      // Retry server errors (5xx) with exponential backoff
-      if (error.statusCode >= 500) {
-        return {
-          shouldRetry: attemptCount < 5,
-          delay: { seconds: Math.pow(2, attemptCount) }
-        };
-      }
+**Key considerations:**
 
-      // Retry network errors with fixed delay
-      if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
-        return {
-          shouldRetry: attemptCount < 10,
-          delay: { seconds: 5 }
-        };
-      }
-
-      // Don't retry unknown errors
-      return { shouldRetry: false };
-    }
-  }
-);
-```
-
-**Python:**
-
-```python
-def custom_retry_strategy(error: Exception, attempt_count: int) -> RetryDecision:
-    # Don't retry client errors
-    if hasattr(error, 'status_code'):
-        if 400 <= error.status_code < 500:
-            return RetryDecision(should_retry=False)
-        
-        # Retry server errors with exponential backoff
-        if error.status_code >= 500:
-            return RetryDecision(
-                should_retry=attempt_count < 5,
-                delay=Duration.from_seconds(2 ** attempt_count)
-            )
-    
-    # Retry network errors
-    if isinstance(error, (ConnectionError, TimeoutError)):
-        return RetryDecision(
-            should_retry=attempt_count < 10,
-            delay=Duration.from_seconds(5)
-        )
-    
-    # Don't retry unknown errors
-    return RetryDecision(should_retry=False)
-
-result = context.step(
-    lambda _: call_external_api(),
-    name='api-call',
-    retry_strategy=custom_retry_strategy
-)
-```
+- Client errors (400-499) typically indicate bad input and shouldn't be retried
+- Server errors (500-599) are often transient and benefit from retry
+- Network errors (connection refused, timeout) should retry with reasonable limits
+- Use exponential backoff for server errors to avoid overwhelming the service
+- Set maximum retry attempts to prevent infinite loops
 
 ## Circuit Breaker Pattern
 
-Protect against cascading failures by temporarily stopping requests to failing services:
+**Pattern:** Temporarily stop making requests to a failing external service to prevent cascading failures.
 
-**⚠️ Replay model caveat:** The examples below use closure mutations (`failureCount`, `lastFailureTime`) for simplicity. These variables reset on replay, so the circuit breaker state is not preserved across Lambda invocations. For production use, store circuit breaker state in a step return value or an external store (e.g., DynamoDB) to survive replays.
+**Implementation approach:**
 
-**TypeScript:**
+1. Track failure count and last failure time (note: these reset on replay due to closure mutations)
+2. Check if circuit is "open" (too many recent failures)
+3. If open, throw a circuit breaker error and wait before retrying
+4. If closed, attempt the operation
+5. On success, reset failure count
+6. On failure, increment failure count and record timestamp
+7. Configure retry strategy to wait longer when circuit is open
 
-```typescript
-let failureCount = 0;
-let lastFailureTime = 0;
-const CIRCUIT_OPEN_DURATION = 60000; // 1 minute
+**Important caveat:** The example implementations use closure variables (`failureCount`, `lastFailureTime`) which reset on replay. For production use, store circuit breaker state in:
 
-const result = await context.step(
-  'call-with-circuit-breaker',
-  async () => {
-    const now = Date.now();
+- A step return value that persists across replays
+- An external store like DynamoDB
+- A durable variable pattern
 
-    // Check if circuit is open
-    if (failureCount >= 5 && (now - lastFailureTime) < CIRCUIT_OPEN_DURATION) {
-      throw new Error('Circuit breaker is open');
-    }
+**Key considerations:**
 
-    try {
-      const result = await callExternalService();
-      failureCount = 0; // Reset on success
-      return result;
-    } catch (error) {
-      failureCount++;
-      lastFailureTime = now;
-      throw error;
-    }
-  },
-  {
-    retryStrategy: (error, attemptCount) => {
-      if (error.message === 'Circuit breaker is open') {
-        return {
-          shouldRetry: true,
-          delay: { seconds: 60 } // Wait before checking circuit again
-        };
-      }
-
-      return {
-        shouldRetry: attemptCount < 3,
-        delay: { seconds: 2 }
-      };
-    }
-  }
-);
-```
-
-**Python:**
-
-```python
-failure_count = 0
-last_failure_time = 0
-CIRCUIT_OPEN_DURATION = 60  # seconds
-
-def call_with_circuit_breaker():
-    global failure_count, last_failure_time
-    now = time.time()
-    
-    # Check if circuit is open
-    if failure_count >= 5 and (now - last_failure_time) < CIRCUIT_OPEN_DURATION:
-        raise Exception('Circuit breaker is open')
-    
-    try:
-        result = call_external_service()
-        failure_count = 0  # Reset on success
-        return result
-    except Exception as error:
-        failure_count += 1
-        last_failure_time = now
-        raise
-
-def circuit_breaker_retry(error: Exception, attempt_count: int) -> RetryDecision:
-    if 'Circuit breaker is open' in str(error):
-        return RetryDecision(
-            should_retry=True,
-            delay=Duration.from_seconds(60)
-        )
-    
-    return RetryDecision(
-        should_retry=attempt_count < 3,
-        delay=Duration.from_seconds(2)
-    )
-
-result = context.step(
-    lambda _: call_with_circuit_breaker(),
-    name='call-with-circuit-breaker',
-    retry_strategy=circuit_breaker_retry
-)
-```
+- Circuit breaker prevents cascading failures to downstream services
+- The "open" duration should be long enough for the service to recover
+- Reset the circuit on successful operations
+- Log circuit state changes for monitoring
 
 ## Error Handling Best Practices
 
-1. **Timeout Handling**: Always implement fallback logic for callback timeouts
-2. **Conditional Retries**: Retry based on error type (don't retry client errors)
-3. **Circuit Breakers**: Protect against cascading failures to external services
-4. **Structured Logging**: Log error context for debugging
-5. **Graceful Degradation**: Return partial results when possible
-6. **Error Classification**: Distinguish between transient and permanent failures
+1. **Timeout Handling**: Always implement fallback logic for callback timeouts - don't let executions fail silently
+2. **Conditional Retries**: Classify errors as transient vs permanent, only retry transient errors
+3. **Circuit Breakers**: Protect against cascading failures to external services, especially for high-volume operations
+4. **Structured Logging**: Log error context (error type, attempt count, operation name) for debugging
+5. **Graceful Degradation**: Return partial results when possible rather than failing completely
+6. **Error Classification**: Distinguish between client errors (don't retry), server errors (retry with backoff), and network errors (retry with fixed delay)
 
 ## Common Error Patterns
 
@@ -297,6 +98,7 @@ result = context.step(
 - Service unavailable (503)
 - Rate limiting (429)
 - Database connection failures
+- Temporary infrastructure issues
 
 ### Permanent Errors (Should Not Retry)
 
@@ -304,9 +106,10 @@ result = context.step(
 - Authentication failures (401, 403)
 - Resource not found (404)
 - Business logic violations
+- Validation errors
 
 ### Timeout Errors (Need Fallback)
 
-- Callback timeouts
-- External system delays
-- Long-running operations
+- Callback timeouts - external system didn't respond in time
+- External system delays - service is slow or unresponsive
+- Long-running operations - operation exceeded expected duration
