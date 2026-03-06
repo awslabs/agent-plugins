@@ -383,7 +383,7 @@ it('should fail after max retries', async () => {
   const execution = await runner.run({ payload: {} });
 
   expect(execution.getStatus()).toBe('FAILED');
-  expect(execution.getError()?.message).toContain('Permanent failure');
+  expect(execution.getError()?.errorMessage).toContain('Permanent failure');
 });
 ```
 

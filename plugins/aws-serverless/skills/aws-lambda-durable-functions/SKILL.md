@@ -139,6 +139,15 @@ def handler(event: dict, context: DurableContext) -> dict:
 3. **Closure mutations are lost on replay** - return values from steps
 4. **Side effects outside steps repeat** - use `context.logger` (replay-aware)
 
+### Python API Differences
+
+The Python SDK differs from TypeScript in several key areas:
+
+- **Steps**: Use `@durable_step` decorator + `context.step(my_step(args))`, or inline `context.step(lambda _: ..., name='...')`. Prefer the decorator for automatic step naming.
+- **Wait**: `context.wait(duration=Duration.from_seconds(n), name='...')`
+- **Exceptions**: `ExecutionError` (permanent), `InvocationError` (transient), `CallbackError` (callback failures)
+- **Testing**: Use `DurableFunctionTestRunner` class directly - instantiate with handler, use context manager, call `run(input=...)`
+
 ### Invocation Requirements
 
 Durable functions **require qualified ARNs** (version, alias, or `$LATEST`):
