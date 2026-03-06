@@ -3,8 +3,7 @@
   "excludes": [
     "**/node_modules/**",
     "**/.git/**",
-    "**/dist/**",
-    "**/.claude/docs/**"
+    "**/dist/**"
   ],
   "indentWidth": 2,
   "json": {
