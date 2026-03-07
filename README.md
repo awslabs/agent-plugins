@@ -82,6 +82,7 @@ Equips agents with the skills to accelerate AWS deployment - recommending AWS ar
 | Agent Skill | Triggers                                                                                                              |
 | ----------- | --------------------------------------------------------------------------------------------------------------------- |
 | **deploy**  | "deploy to AWS", "host on AWS", "run this on AWS", "AWS architecture", "estimate AWS cost", "generate infrastructure" |
+| **diagram** | "architecture diagram", "draw architecture", "generate diagram", "infrastructure diagram", "AWS diagram"              |
 
 ### MCP Servers
 

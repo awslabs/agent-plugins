@@ -11,7 +11,7 @@
   "plugins": [
     {
       "category": "deployment",
-      "description": "Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment.",
+      "description": "Deploy applications to AWS with architecture recommendations, cost estimates, IaC deployment, and architecture diagram generation.",
       "keywords": [
         "aws",
         "aws agent skills",
@@ -20,12 +20,14 @@
         "cdk",
         "cloudformation",
         "infrastructure",
-        "pricing"
+        "pricing",
+        "diagram",
+        "architecture"
       ],
       "name": "deploy-on-aws",
       "source": "./plugins/deploy-on-aws",
-      "tags": ["aws", "deploy", "infrastructure", "cdk"],
-      "version": "1.1.0"
+      "tags": ["aws", "deploy", "infrastructure", "cdk", "diagram"],
+      "version": "1.2.0"
     },
     {
       "category": "location",

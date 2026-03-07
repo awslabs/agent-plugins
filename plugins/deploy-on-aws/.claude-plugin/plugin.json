@@ -2,7 +2,7 @@
   "author": {
     "name": "Amazon Web Services"
   },
-  "description": "Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment.",
+  "description": "Deploy applications to AWS with architecture recommendations, cost estimates, IaC deployment, and architecture diagram generation.",
   "homepage": "https://github.com/awslabs/agent-plugins",
   "keywords": [
     "aws",
@@ -10,10 +10,12 @@
     "infrastructure",
     "cdk",
     "cloudformation",
-    "pricing"
+    "pricing",
+    "diagram",
+    "architecture"
   ],
   "license": "Apache-2.0",
   "name": "deploy-on-aws",
   "repository": "https://github.com/awslabs/agent-plugins",
-  "version": "1.1.0"
+  "version": "1.2.0"
 }
