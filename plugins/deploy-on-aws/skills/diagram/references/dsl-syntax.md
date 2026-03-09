@@ -6,11 +6,11 @@
 from diagrams import Diagram, Cluster, Edge
 from diagrams.aws.compute import EC2, Lambda
 from diagrams.aws.database import RDS
-from diagrams.aws.network import ELB
+from diagrams.aws.network import ALB
 
 with Diagram("Title", show=False, filename="generated-diagrams/name"):
     with Cluster("VPC"):
-        lb = ELB("ALB")
+        lb = ALB("ALB")
         with Cluster("Private Subnet"):
             servers = [EC2("web1"), EC2("web2")]
         db = RDS("PostgreSQL")
@@ -103,8 +103,7 @@ with Cluster("VPC"):
 
 ```python
 from diagrams.custom import Custom
-from urllib.request import urlretrieve
 
-icon_path, _ = urlretrieve("https://example.com/icon.png", "icon.png")
-custom_node = Custom("My Service", icon_path)
+# Place icon files in your project directory beforehand
+custom_node = Custom("My Service", "./icons/my-service.png")
 ```

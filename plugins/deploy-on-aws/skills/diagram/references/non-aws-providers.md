@@ -109,14 +109,14 @@ from diagrams import Diagram, Cluster
 from diagrams.aws.database import Aurora
 from diagrams.custom import Custom
 from diagrams.k8s.compute import Pod
-from urllib.request import urlretrieve
 
-rabbitmq_url = "https://jpadilla.github.io/rabbitmqapp/assets/img/icon.png"
-rabbitmq_icon, _ = urlretrieve(rabbitmq_url, "rabbitmq.png")
+# Place icon files in your project directory beforehand.
+# Download from official sources and save locally, e.g.:
+#   curl -o icons/rabbitmq.png https://rabbitmq.com/img/rabbitmq-logo.png
 
 with Diagram("Custom Icons", show=False, filename="generated-diagrams/custom"):
     with Cluster("Consumers"):
         consumers = [Pod("worker"), Pod("worker"), Pod("worker")]
-    queue = Custom("Message queue", rabbitmq_icon)
+    queue = Custom("Message queue", "icons/rabbitmq.png")
     queue >> consumers >> Aurora("Database")
 ```

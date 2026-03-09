@@ -56,7 +56,8 @@ with Diagram("Clustered Web Services", show=False, filename="generated-diagrams/
         svc_group = [ECS("web1"), ECS("web2"), ECS("web3")]
     with Cluster("DB Cluster"):
         db_primary = RDS("userdb")
-        db_primary - [RDS("userdb ro")]
+        db_replica = RDS("userdb ro")
+        db_primary - db_replica
     memcached = ElastiCache("memcached")
     dns >> lb >> svc_group
     svc_group >> db_primary

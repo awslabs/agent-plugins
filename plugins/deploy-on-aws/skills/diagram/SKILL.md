@@ -15,15 +15,15 @@ Load the appropriate reference file based on what the user is building:
 
 - **Any diagram** -> ALWAYS load [references/dsl-syntax.md](references/dsl-syntax.md) first for DSL syntax, constructor options, connections, clusters, and edge styles
 - **AWS architecture**, **cloud infrastructure**, or **AWS services** -> load [references/aws-services.md](references/aws-services.md) for AWS import paths, common icons, and 5 AWS examples
-- **Kubernetes**, **on-premises**, **SaaS**, **flowcharts**, **sequence diagrams**, **custom icons**, or **non-AWS diagrams** -> load [references/non-aws-providers.md](references/non-aws-providers.md) for K8s, on-prem, flowchart, and custom icon examples
+- **Kubernetes**, **on-premises**, **SaaS**, **flowcharts**, **process flows**, **custom icons**, or **non-AWS diagrams** -> load [references/non-aws-providers.md](references/non-aws-providers.md) for K8s, on-prem, flowchart, and custom icon examples
 
 ## Workflow
 
 1. Load [references/dsl-syntax.md](references/dsl-syntax.md)
 2. Load the relevant provider reference (AWS or non-AWS)
 3. Write a Python script using the `diagrams` DSL
-4. Run: `mkdir -p generated-diagrams && python diagram.py`
-5. Verify the PNG was created in `generated-diagrams/`
+4. Run: `mkdir -p generated-diagrams && python3 diagram.py`
+5. Verify the output file was created in `generated-diagrams/`
 
 ## Critical Rules
 
