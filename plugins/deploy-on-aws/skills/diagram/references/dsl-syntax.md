@@ -44,7 +44,7 @@ node1 >> Edge(label="HTTPS", color="darkgreen", style="dashed") >> node2
 ```python
 with Cluster("VPC"):
     with Cluster("Public Subnet"):
-        lb = ELB("ALB")
+        lb = ALB("ALB")
     with Cluster("Private Subnet"):
         app = [EC2("app1"), EC2("app2")]
     with Cluster("Data"):
@@ -93,7 +93,7 @@ primary - RDS("replica")
 ```python
 with Cluster("VPC"):
     with Cluster("Public"):
-        lb = ELB("ALB")
+        lb = ALB("ALB")
     with Cluster("Private"):
         app = [EC2("app1"), EC2("app2")]
     lb >> app

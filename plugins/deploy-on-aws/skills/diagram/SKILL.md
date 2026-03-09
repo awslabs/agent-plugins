@@ -31,6 +31,7 @@ Load the appropriate reference file based on what the user is building:
 - ALWAYS set `filename="generated-diagrams/<name>"` (no `.png` extension)
 - ALWAYS use explicit imports: `from diagrams.aws.compute import EC2`
 - ALWAYS run `mkdir -p generated-diagrams` before executing
+- Add `generated-diagrams/` to `.gitignore` to avoid committing output artifacts
 - Use `Cluster()` to group related resources (VPCs, subnets, namespaces)
 - Use `Edge(label=, color=, style=)` for labeled or styled connections
 
