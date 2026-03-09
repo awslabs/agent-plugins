@@ -2,18 +2,18 @@
 
 ## AWS Service Categories
 
-| Category | Import Path | Common Icons |
-|----------|------------|--------------|
-| `analytics` | `diagrams.aws.analytics` | Athena, EMR, Glue, Kinesis, Redshift, Quicksight |
-| `compute` | `diagrams.aws.compute` | EC2, Lambda, ECS, EKS, Fargate, Batch |
-| `database` | `diagrams.aws.database` | RDS, Aurora, DynamoDB, ElastiCache, Redshift, Neptune |
-| `integration` | `diagrams.aws.integration` | SQS, SNS, StepFunctions, EventBridge, MQ |
-| `management` | `diagrams.aws.management` | CloudWatch, CloudFormation, SystemsManager |
-| `ml` | `diagrams.aws.ml` | Sagemaker, Rekognition, Comprehend, Bedrock |
-| `network` | `diagrams.aws.network` | VPC, ELB, ALB, NLB, CloudFront, Route53, APIGateway |
-| `security` | `diagrams.aws.security` | IAM, Cognito, WAF, KMS, Shield, SecretsManager |
-| `storage` | `diagrams.aws.storage` | S3, EBS, EFS, FSx, Backup |
-| `general` | `diagrams.aws.general` | User, Users, Client, InternetGateway |
+| Category      | Import Path                | Common Icons                                          |
+| ------------- | -------------------------- | ----------------------------------------------------- |
+| `analytics`   | `diagrams.aws.analytics`   | Athena, EMR, Glue, Kinesis, Redshift, Quicksight      |
+| `compute`     | `diagrams.aws.compute`     | EC2, Lambda, ECS, EKS, Fargate, Batch                 |
+| `database`    | `diagrams.aws.database`    | RDS, Aurora, DynamoDB, ElastiCache, Redshift, Neptune |
+| `integration` | `diagrams.aws.integration` | SQS, SNS, StepFunctions, EventBridge, MQ              |
+| `management`  | `diagrams.aws.management`  | CloudWatch, CloudFormation, SystemsManager            |
+| `ml`          | `diagrams.aws.ml`          | Sagemaker, Rekognition, Comprehend, Bedrock           |
+| `network`     | `diagrams.aws.network`     | VPC, ELB, ALB, NLB, CloudFront, Route53, APIGateway   |
+| `security`    | `diagrams.aws.security`    | IAM, Cognito, WAF, KMS, Shield, SecretsManager        |
+| `storage`     | `diagrams.aws.storage`     | S3, EBS, EFS, FSx, Backup                             |
+| `general`     | `diagrams.aws.general`     | User, Users, Client, InternetGateway                  |
 
 Other categories: `ar`, `blockchain`, `business`, `cost`, `devtools`, `enablement`, `enduser`, `engagement`, `game`, `iot`, `media`, `migration`, `mobile`, `quantum`, `robotics`, `satellite`.
 

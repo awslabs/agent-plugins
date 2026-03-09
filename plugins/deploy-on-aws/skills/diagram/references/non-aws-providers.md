@@ -2,30 +2,30 @@
 
 ## Kubernetes Categories
 
-| Category | Common Icons |
-|----------|-------------|
-| `k8s.compute` | Pod, Deployment, StatefulSet, ReplicaSet, DaemonSet, Job |
-| `k8s.network` | Service, Ingress, NetworkPolicy |
-| `k8s.storage` | PV, PVC, StorageClass |
-| `k8s.controlplane` | APIServer, Scheduler, ControllerManager |
-| `k8s.clusterconfig` | HPA, Namespace, Quota |
-| `k8s.rbac` | Role, RoleBinding, ClusterRole |
+| Category            | Common Icons                                             |
+| ------------------- | -------------------------------------------------------- |
+| `k8s.compute`       | Pod, Deployment, StatefulSet, ReplicaSet, DaemonSet, Job |
+| `k8s.network`       | Service, Ingress, NetworkPolicy                          |
+| `k8s.storage`       | PV, PVC, StorageClass                                    |
+| `k8s.controlplane`  | APIServer, Scheduler, ControllerManager                  |
+| `k8s.clusterconfig` | HPA, Namespace, Quota                                    |
+| `k8s.rbac`          | Role, RoleBinding, ClusterRole                           |
 
 ## On-Premises Categories
 
-| Category | Common Icons |
-|----------|-------------|
-| `onprem.compute` | Server |
-| `onprem.database` | PostgreSQL, MySQL, MongoDB, Cassandra |
-| `onprem.container` | Docker |
-| `onprem.ci` | Jenkins, GitlabCI, GithubActions |
-| `onprem.monitoring` | Prometheus, Grafana, Datadog |
-| `onprem.logging` | Fluentd, Loki |
-| `onprem.queue` | Kafka, RabbitMQ, Celery |
-| `onprem.network` | Nginx, HAProxy, Traefik |
-| `onprem.inmemory` | Redis, Memcached |
-| `onprem.vcs` | Git, Github, Gitlab |
-| `onprem.iac` | Terraform, Ansible |
+| Category            | Common Icons                          |
+| ------------------- | ------------------------------------- |
+| `onprem.compute`    | Server                                |
+| `onprem.database`   | PostgreSQL, MySQL, MongoDB, Cassandra |
+| `onprem.container`  | Docker                                |
+| `onprem.ci`         | Jenkins, GitlabCI, GithubActions      |
+| `onprem.monitoring` | Prometheus, Grafana, Datadog          |
+| `onprem.logging`    | Fluentd, Loki                         |
+| `onprem.queue`      | Kafka, RabbitMQ, Celery               |
+| `onprem.network`    | Nginx, HAProxy, Traefik               |
+| `onprem.inmemory`   | Redis, Memcached                      |
+| `onprem.vcs`        | Git, Github, Gitlab                   |
+| `onprem.iac`        | Terraform, Ansible                    |
 
 ## Flowchart Shapes
 

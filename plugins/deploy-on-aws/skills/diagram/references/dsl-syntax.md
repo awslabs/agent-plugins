@@ -54,24 +54,24 @@ with Cluster("VPC"):
 
 ## Edge Styles
 
-| Parameter | Values |
-|-----------|--------|
-| `color` | `"darkgreen"`, `"firebrick"`, `"brown"`, `"darkorange"`, `"black"`, any CSS color |
-| `style` | `"solid"`, `"dashed"`, `"dotted"`, `"bold"` |
-| `label` | Any string |
+| Parameter | Values                                                                            |
+| --------- | --------------------------------------------------------------------------------- |
+| `color`   | `"darkgreen"`, `"firebrick"`, `"brown"`, `"darkorange"`, `"black"`, any CSS color |
+| `style`   | `"solid"`, `"dashed"`, `"dotted"`, `"bold"`                                       |
+| `label`   | Any string                                                                        |
 
 ## Provider Import Paths
 
-| Provider | Import Pattern | Example |
-|----------|---------------|---------|
-| AWS | `diagrams.aws.<category>` | `from diagrams.aws.compute import EC2` |
-| GCP | `diagrams.gcp.<category>` | `from diagrams.gcp.storage import GCS` |
-| Kubernetes | `diagrams.k8s.<category>` | `from diagrams.k8s.compute import Pod` |
-| On-premises | `diagrams.onprem.<category>` | `from diagrams.onprem.database import PostgreSQL` |
-| SaaS | `diagrams.saas.<category>` | `from diagrams.saas.chat import Slack` |
+| Provider    | Import Pattern                    | Example                                             |
+| ----------- | --------------------------------- | --------------------------------------------------- |
+| AWS         | `diagrams.aws.<category>`         | `from diagrams.aws.compute import EC2`              |
+| GCP         | `diagrams.gcp.<category>`         | `from diagrams.gcp.storage import GCS`              |
+| Kubernetes  | `diagrams.k8s.<category>`         | `from diagrams.k8s.compute import Pod`              |
+| On-premises | `diagrams.onprem.<category>`      | `from diagrams.onprem.database import PostgreSQL`   |
+| SaaS        | `diagrams.saas.<category>`        | `from diagrams.saas.chat import Slack`              |
 | Programming | `diagrams.programming.<category>` | `from diagrams.programming.flowchart import Action` |
-| Generic | `diagrams.generic.<category>` | `from diagrams.generic.compute import Rack` |
-| Custom | `diagrams.custom` | `Custom("name", "icon.png")` |
+| Generic     | `diagrams.generic.<category>`     | `from diagrams.generic.compute import Rack`         |
+| Custom      | `diagrams.custom`                 | `Custom("name", "icon.png")`                        |
 
 ## Common Patterns
 
