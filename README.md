@@ -61,6 +61,12 @@ or
 /plugin install migration-to-aws@agent-plugins-for-aws
 ```
 
+or
+
+```bash
+/plugin install aws-serverless@agent-plugins-for-aws
+```
+
 ### Cursor
 
 You can install the **deploy-on-aws** plugin from the [Cursor Marketplace](https://cursor.com/marketplace/aws). For additional information, please refer to the [Cursor plugin documentation](https://cursor.com/docs/plugins). You can also install within the Cursor application:
@@ -138,6 +144,30 @@ Helps you systematically migrate GCP infrastructure to AWS through Terraform res
 | ---------------- | ------------------------------------------------ |
 | **awsknowledge** | AWS documentation, architecture guidance         |
 | **awspricing**   | Real-time AWS service pricing for cost estimates |
+
+## aws-serverless
+
+Design, build, deploy, test, and debug serverless applications with AWS Lambda, API Gateway, EventBridge, Step Functions, and durable functions. Includes SAM and CDK deployment workflows, a SAM template validation hook, and the AWS Lambda durable functions skill for building resilient, long-running, multi-step applications.
+
+### Agent Skill Triggers
+
+| Agent Skill                      | Triggers                                                                                                                                                                     |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **aws-lambda**                   | "Lambda function", "event source", "serverless application", "API Gateway", "EventBridge", "Step Functions", "serverless API", "event-driven architecture", "Lambda trigger" |
+| **aws-serverless-deployment**    | "use SAM", "SAM template", "SAM init", "SAM deploy", "CDK serverless", "CDK Lambda construct", "NodejsFunction", "PythonFunction", "serverless CI/CD pipeline"               |
+| **aws-lambda-durable-functions** | "lambda durable functions", "workflow orchestration", "state machines", "retry/checkpoint patterns", "long-running stateful Lambda", "saga pattern", "human-in-the-loop"     |
+
+### MCP Servers
+
+| Server                 | Purpose                                                                              |
+| ---------------------- | ------------------------------------------------------------------------------------ |
+| **aws-serverless-mcp** | Serverless development guidance, project scaffolding, IaC generation, and deployment |
+
+### Hooks
+
+| Hook                        | Trigger                                       | Action                                        |
+| --------------------------- | --------------------------------------------- | --------------------------------------------- |
+| **SAM template validation** | After edits to `template.yaml`/`template.yml` | Runs `sam validate` and reports errors inline |
 
 ## Requirements
 
