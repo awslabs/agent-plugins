@@ -99,7 +99,7 @@ with Diagram("On-Prem Service", show=False, filename="generated-diagrams/onprem"
         grpcsvc >> Edge(color="black") >> db
     aggregator = Fluentd("logging")
     aggregator >> Edge(label="parse") >> Kafka("stream")
-    ingress >> Edge(color="darkgreen") << grpcsvc >> Edge(color="darkorange") >> aggregator
+    ingress >> Edge(color="darkgreen") >> grpcsvc >> Edge(color="darkorange") >> aggregator
 ```
 
 ## Example: Custom Icons

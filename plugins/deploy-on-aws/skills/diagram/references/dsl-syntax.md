@@ -20,13 +20,14 @@ with Diagram("Title", show=False, filename="generated-diagrams/name"):
 ## Diagram Constructor
 
 ```python
-Diagram(
-    name="Diagram Title",     # Title shown on the diagram
-    show=False,                # ALWAYS False -- don't open viewer
+with Diagram(
+    "Diagram Title",               # Title shown on the diagram
+    show=False,                    # ALWAYS False -- don't open viewer
     filename="generated-diagrams/name",  # Output path (no .png extension)
-    direction="TB",            # TB (top-bottom), LR (left-right), BT, RL
-    outformat="png",           # png (default), jpg, svg, pdf
-)
+    direction="TB",                # TB (top-bottom), LR (left-right), BT, RL
+    outformat="png",               # png (default), jpg, svg, pdf
+):
+    pass  # Add nodes and connections here
 ```
 
 ## Connections

@@ -55,7 +55,7 @@ Requires two dependencies installed locally:
    - macOS: `brew install graphviz`
    - Ubuntu/Debian: `sudo apt-get install graphviz`
    - Amazon Linux/RHEL: `sudo yum install graphviz`
-2. **Python diagrams package**: `pip install diagrams`
+2. **Python diagrams package**: `python3 -m pip install diagrams`
 
 **Verify:** `dot -V && python3 -c "import diagrams; print('OK')"`
 
@@ -70,7 +70,7 @@ If `dot` command not found:
 If `import diagrams` fails:
 
 - Inform user: "Python diagrams package not installed."
-- Show: `pip install diagrams`
+- Show: `python3 -m pip install diagrams`
 - DO NOT proceed without the package
 
 ## References
