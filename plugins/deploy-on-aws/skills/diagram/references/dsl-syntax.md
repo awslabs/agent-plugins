@@ -4,7 +4,7 @@
 
 ```python
 from diagrams import Diagram, Cluster, Edge
-from diagrams.aws.compute import EC2, Lambda
+from diagrams.aws.compute import EC2
 from diagrams.aws.database import RDS
 from diagrams.aws.network import ALB
 

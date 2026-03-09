@@ -5,7 +5,7 @@ description: "Generate architecture diagrams as code using the Python diagrams D
 
 # Architecture Diagram Generation
 
-Generate architecture diagrams using the Python [diagrams](https://diagrams.mingrammer.com/) package. Write a Python script, run it, and produce a PNG.
+Generate architecture diagrams using the Python [diagrams](https://diagrams.mingrammer.com/) package. Write a Python script, run it, and produce an image (PNG by default).
 
 Supports AWS (29 service categories), Kubernetes, on-premises, GCP, SaaS, and custom icons via the `diagrams` DSL.
 
@@ -33,7 +33,7 @@ Load the appropriate reference file based on what the user is building:
 - ALWAYS run `mkdir -p generated-diagrams` before executing
 - Add `generated-diagrams/` to `.gitignore` to avoid committing output artifacts
 - Use `Cluster()` to group related resources (VPCs, subnets, namespaces)
-- Use `Edge(label=, color=, style=)` for labeled or styled connections
+- Use `Edge(label="HTTPS", color="darkgreen", style="dashed")` for labeled or styled connections
 
 ## Defaults
 
