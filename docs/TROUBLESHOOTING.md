@@ -189,7 +189,7 @@ GitHub Actions workflows can occasionally fail due to intermittent issues (netwo
 1. Open the failed check from your pull request's **Checks** tab.
 2. Click **Re-run failed jobs**.
 
-See [Re-running workflows and jobs](https://docs.github.com/en/actions/managing-workflow-runs/re-running-workflows-and-jobs) for details.
+See [Re-running workflows and jobs](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs) for details.
 
 #### Via the `gh` CLI
 

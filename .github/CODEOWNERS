@@ -33,6 +33,7 @@ tools/                              @awslabs/agent-plugins-admins
 plugins/amazon-location-service     @awslabs/agent-plugins-admins @awslabs/agent-plugins-maintainers  @awslabs/agent-plugins-agent-plugins-amazon-location-service
 plugins/aws-serverless              @awslabs/agent-plugins-admins @awslabs/agent-plugins-maintainers  @awslabs/agent-plugins-aws-serverless
 plugins/deploy-on-aws               @awslabs/agent-plugins-admins @awslabs/agent-plugins-maintainers  @awslabs/agent-plugins-deploy-on-aws
+plugins/migration-to-aws            @awslabs/agent-plugins-admins @awslabs/agent-plugins-maintainers  @awslabs/agent-plugins-migrate-to-aws
 
 ## File must end with CODEOWNERS file
 
