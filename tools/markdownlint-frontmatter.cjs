@@ -5,11 +5,29 @@
  * Required:
  * - name: skill identifier (kebab-case)
  * - description: when to use this skill (min 20 chars)
+ *
+ * Also enforces a property whitelist per skill-frontmatter.schema.json.
  */
 
 "use strict";
 
 const path = require("path");
+
+// Allowed frontmatter properties per the skill-frontmatter schema
+// Core spec properties + common extensions (license, metadata)
+const ALLOWED_PROPERTIES = new Set([
+  "name",
+  "description",
+  "context",
+  "agent",
+  "model",
+  "allowed-tools",
+  "argument-hint",
+  "user-invocable",
+  "disable-model-invocation",
+  "license",
+  "metadata",
+]);
 
 module.exports = {
   names: ["skill-frontmatter", "SKILL002"],
@@ -143,6 +161,18 @@ module.exports = {
           lineNumber: 2,
           detail: "Description cannot contain XML tags",
           context: "XML tag in description",
+        });
+      }
+    }
+
+    // Check for non-spec frontmatter properties
+    const topLevelKeys = frontmatter.match(/^[a-z][\w-]*(?=:)/gm) || [];
+    for (const key of topLevelKeys) {
+      if (!ALLOWED_PROPERTIES.has(key)) {
+        onError({
+          lineNumber: 2,
+          detail: `Non-spec frontmatter property: "${key}" (allowed: ${[...ALLOWED_PROPERTIES].sort().join(", ")})`,
+          context: "Unknown property",
         });
       }
     }

@@ -65,6 +65,33 @@ run = [
     { task = "lint:cross-refs"}
 ]
 
+# =============
+# VALIDATION
+# =============
+
+[tasks."validate:refs"]
+description = "Detect broken links and orphaned reference files"
+run = "uv run tools/validate-references.py"
+
+[tasks."validate:size"]
+description = "Check SKILL.md sizes and flag extraction candidates"
+run = "uv run tools/validate-size.py"
+
+[tasks.validate]
+description = "Run all validation checks"
+run = [
+    { task = "validate:refs" },
+    { task = "validate:size" }
+]
+
+# =============
+# SCAFFOLDING
+# =============
+
+[tasks."init:skill"]
+description = "Scaffold a new skill directory"
+run = "uv run tools/init-skill.py"
+
 # =========
 # SECURITY
 # =========
@@ -114,9 +141,10 @@ run = [
 # ===============
 
 [tasks.build]
-description = "Complete build: lint, format, security scans"
+description = "Complete build: lint, format, validate, security scans"
 run = [
     { task = "lint" },
     { task = "fmt:check" },
+    { task = "validate" },
     { task = "security"}
 ]

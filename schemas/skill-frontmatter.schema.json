@@ -1,7 +1,7 @@
 {
   "$id": "https://awslabs.github.io/agent-plugins/schemas/skill-frontmatter.schema.json",
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "additionalProperties": true,
+  "additionalProperties": false,
   "description": "Schema for YAML frontmatter in SKILL.md files",
   "properties": {
     "agent": {
@@ -32,6 +32,14 @@
       "default": false,
       "description": "Prevent Claude from auto-loading",
       "type": "boolean"
+    },
+    "license": {
+      "description": "SPDX license identifier",
+      "type": "string"
+    },
+    "metadata": {
+      "description": "Plugin-specific metadata (author, version, etc.)",
+      "type": "object"
     },
     "model": {
       "description": "Model to use when skill is active",
