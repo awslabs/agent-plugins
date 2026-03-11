@@ -61,27 +61,42 @@ def find_skill_root(source_file: Path) -> Path | None:
     return None
 
 
+def _is_under_root(resolved: Path) -> bool:
+    """Reject candidates that escape the repository root."""
+    try:
+        resolved.relative_to(ROOT)
+        return True
+    except ValueError:
+        return False
+
+
 def resolve_ref(ref: str, source_file: Path) -> list[Path]:
-    """Resolve a reference path to candidate file paths."""
+    """Resolve a reference path to candidate file paths.
+
+    All candidates are clamped to ROOT — paths that escape the repository
+    via symlinks or ../ traversal are silently dropped.
+    """
     # Skip URLs, mailto, fragment-only links
     if ref.startswith(("http://", "https://", "mailto:", "#")):
         return []
 
-    candidates = []
+    candidates: list[Path] = []
+
+    def _add(raw: Path) -> None:
+        resolved = raw.resolve()
+        if _is_under_root(resolved) and resolved not in candidates:
+            candidates.append(resolved)
+
     # Try relative to the source file's directory
-    candidates.append((source_file.parent / ref).resolve())
+    _add(source_file.parent / ref)
     # Also try relative to the skill root
     skill_root = find_skill_root(source_file)
     if skill_root:
-        from_root = (skill_root / ref).resolve()
-        if from_root not in candidates:
-            candidates.append(from_root)
+        _add(skill_root / ref)
         # Try relative to the skill's references/ directory
         # Handles convention where files in references/ use short paths like
         # `design-refs/foo.md` meaning `references/design-refs/foo.md`
-        from_refs = (skill_root / "references" / ref).resolve()
-        if from_refs not in candidates:
-            candidates.append(from_refs)
+        _add(skill_root / "references" / ref)
     return candidates
 
 
