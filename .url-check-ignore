@@ -1,0 +1,20 @@
+# URL patterns to skip during liveness checks.
+# Each line is a substring match — if the URL contains this string, it's skipped.
+
+# Localhost / example / placeholder URLs
+https://localhost
+https://127.0.0.1
+https://example.com
+https://your-
+https://my-
+https://myapp.
+
+# CloudFormation / SAM template variables in URLs
+${AWS::
+
+# API endpoints (not browsable)
+https://maps.geo.
+https://places.geo.
+https://routes.geo.
+https://geofencing.geo.
+https://tracking.geo.

@@ -4,6 +4,7 @@
 min_version = "2026.2.4"
 
 [tools]
+uv = "0.10"
 node = "24"
 "npm:markdownlint-cli2" = "0.17"
 "npm:ajv-cli" = "5"
@@ -65,6 +66,37 @@ run = [
     { task = "lint:cross-refs"}
 ]
 
+# =============
+# VALIDATION
+# =============
+
+[tasks."validate:refs"]
+description = "Detect broken links and orphaned reference files"
+run = "uv run tools/validate-references.py"
+
+[tasks."validate:size"]
+description = "Check SKILL.md sizes and flag extraction candidates"
+run = "uv run tools/validate-size.py"
+
+[tasks."validate:urls"]
+description = "Check HTTPS URLs in markdown files return 200 (network-dependent, not in build)"
+run = "uv run tools/validate-urls.py"
+
+[tasks.validate]
+description = "Run all validation checks"
+run = [
+    { task = "validate:refs" },
+    { task = "validate:size" }
+]
+
+# =============
+# SCAFFOLDING
+# =============
+
+[tasks."init:skill"]
+description = "Scaffold a new skill directory"
+run = "uv run tools/init-skill.py"
+
 # =========
 # SECURITY
 # =========
@@ -114,9 +146,10 @@ run = [
 # ===============
 
 [tasks.build]
-description = "Complete build: lint, format, security scans"
+description = "Complete build: lint, format, validate, security scans"
 run = [
     { task = "lint" },
     { task = "fmt:check" },
+    { task = "validate" },
     { task = "security"}
 ]
