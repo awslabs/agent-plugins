@@ -210,7 +210,7 @@ Integrates with the [AWS MCP Server](https://docs.aws.amazon.com/aws-mcp/latest/
 
 - [Amazon Location Service Developer Guide](https://docs.aws.amazon.com/location/latest/developerguide/)
 - [Amazon Location Service API Reference](https://docs.aws.amazon.com/location/latest/APIReference/)
-- [Amazon Location Service Samples Repository](https://github.com/aws-geospatial/amazon-location-samples)
+- [Amazon Location Service Samples](https://github.com/aws-geospatial)
 
 ## Reference Files
 

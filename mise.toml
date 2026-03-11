@@ -77,6 +77,10 @@ run = "uv run tools/validate-references.py"
 description = "Check SKILL.md sizes and flag extraction candidates"
 run = "uv run tools/validate-size.py"
 
+[tasks."validate:urls"]
+description = "Check HTTPS URLs in markdown files return 200 (network-dependent, not in build)"
+run = "uv run tools/validate-urls.py"
+
 [tasks.validate]
 description = "Run all validation checks"
 run = [
