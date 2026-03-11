@@ -21,6 +21,8 @@ EXT = r"md|py|ts|js|json|yaml|yml|toml|txt|tsx|jsx|sh|cjs|mjs"
 # Patterns for extracting file references from markdown
 INLINE_CODE_RE = re.compile(rf"`([^`]+\.(?:{EXT}))`")
 MD_LINK_RE = re.compile(rf"\[(?:[^\]]*)\]\(([^)]+\.(?:{EXT}))\)")
+# Directory links: [text](../some-skill/) — treated as linking to SKILL.md
+MD_DIR_LINK_RE = re.compile(r"\[(?:[^\]]*)\]\((\.\./[^)]+/)\)")
 # Plain-text paths containing references/ (catches table cells, prose)
 # Negative lookbehind prevents matching partial paths inside markdown link hrefs
 # e.g. won't match "references/foo.md" from "../../other-skill/references/foo.md"
@@ -39,6 +41,9 @@ def extract_refs(text: str) -> set[str]:
     for pattern in (INLINE_CODE_RE, MD_LINK_RE):
         refs.update(pattern.findall(text))
     refs.update(PLAIN_REF_RE.findall(text))
+    # Directory links like ../other-skill/ → treat as ../other-skill/SKILL.md
+    for dir_ref in MD_DIR_LINK_RE.findall(text):
+        refs.add(dir_ref + "SKILL.md")
     return refs
 
 

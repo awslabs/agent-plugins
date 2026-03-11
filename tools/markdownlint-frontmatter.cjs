@@ -12,22 +12,40 @@
 "use strict";
 
 const path = require("path");
+const fs = require("fs");
 
-// Allowed frontmatter properties per the skill-frontmatter schema
-// Core spec properties + common extensions (license, metadata)
-const ALLOWED_PROPERTIES = new Set([
-  "name",
-  "description",
-  "context",
-  "agent",
-  "model",
-  "allowed-tools",
-  "argument-hint",
-  "user-invocable",
-  "disable-model-invocation",
-  "license",
-  "metadata",
-]);
+// Allowed frontmatter properties — derived from skill-frontmatter.schema.json
+// at runtime to avoid drift between the schema and this rule.
+function loadAllowedProperties() {
+  const fallback = new Set([
+    "name",
+    "description",
+    "context",
+    "agent",
+    "model",
+    "allowed-tools",
+    "argument-hint",
+    "user-invocable",
+    "disable-model-invocation",
+    "license",
+    "metadata",
+  ]);
+
+  try {
+    const schemaPath = path.resolve(__dirname, "..", "schemas", "skill-frontmatter.schema.json");
+    // nosemgrep: gitlab.eslint.detect-non-literal-fs-filename
+    const schema = JSON.parse(fs.readFileSync(schemaPath, "utf8"));
+    if (schema && schema.properties && typeof schema.properties === "object") {
+      return new Set(Object.keys(schema.properties));
+    }
+  } catch {
+    // Fall back to hardcoded set if schema can't be read
+  }
+
+  return fallback;
+}
+
+const ALLOWED_PROPERTIES = loadAllowedProperties();
 
 module.exports = {
   names: ["skill-frontmatter", "SKILL002"],

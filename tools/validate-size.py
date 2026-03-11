@@ -87,7 +87,7 @@ def main() -> int:
         return 0
 
     has_errors = False
-    results: list[tuple[str, str, int, int, str]] = []
+    results: list[tuple[str, Path, int, int, str]] = []
 
     for plugin_name, skill_name, skill_md in skills:
         text = skill_md.read_text(encoding="utf-8")
@@ -105,7 +105,7 @@ def main() -> int:
             level = "ideal"
 
         label = f"{plugin_name}/{skill_name}"
-        results.append((label, skill_name, lines, tokens, level))
+        results.append((label, skill_md, lines, tokens, level))
 
     # Sort by line count descending
     results.sort(key=lambda r: r[2], reverse=True)
@@ -135,26 +135,22 @@ def main() -> int:
 
     # Show extraction candidates for oversized skills
     oversized = [
-        (label, skill_name)
-        for label, skill_name, lines, _, level in results
+        (label, skill_md)
+        for label, skill_md, _, _, level in results
         if level in ("error", "warning")
     ]
     if oversized:
         print(f"\n{BOLD}Extraction candidates:{RESET}")
-        for label, skill_name in oversized:
-            # Find the matching skill path
-            for plugin_name, sn, skill_md in skills:
-                if sn == skill_name:
-                    text = skill_md.read_text(encoding="utf-8")
-                    candidates = find_extraction_candidates(text)
-                    if candidates:
-                        print(f"\n  {YELLOW}{label}{RESET}:")
-                        for c in candidates:
-                            print(f"    → {c}")
-                    break
+        for label, skill_md in oversized:
+            text = skill_md.read_text(encoding="utf-8")
+            candidates = find_extraction_candidates(text)
+            if candidates:
+                print(f"\n  {YELLOW}{label}{RESET}:")
+                for c in candidates:
+                    print(f"    → {c}")
 
-    error_count = sum(1 for _, _, _, _, level in results if level == "error")
-    warn_count = sum(1 for _, _, _, _, level in results if level == "warning")
+    error_count = sum(1 for *_, level in results if level == "error")
+    warn_count = sum(1 for *_, level in results if level == "warning")
     print(
         f"\n{BOLD}Summary:{RESET} {len(results)} skills,"
         f" {error_count} over {WARNING_MAX} (error),"

@@ -7,19 +7,20 @@
 import re
 import sys
 from pathlib import Path
+from string import Template
 
 ROOT = Path(__file__).resolve().parent.parent
 PLUGINS_DIR = ROOT / "plugins"
 NAME_RE = re.compile(r"^[a-z][a-z0-9-]*$")
 
-SKILL_TEMPLATE = """\
+SKILL_TEMPLATE = Template("""\
 ---
-name: {name}
+name: $name
 description: >
-  {description}
+  $description
 ---
 
-# {title}
+# $title
 
 ## When to Use
 
@@ -40,7 +41,7 @@ description: >
 ## References
 
 - `references/` — [FILL: Describe what detailed reference material is available.]
-"""
+""")
 
 
 def main() -> int:
@@ -101,7 +102,7 @@ def main() -> int:
     title = skill_name.replace("-", " ").title()
     skill_dir.mkdir(parents=True)
     (skill_dir / "SKILL.md").write_text(
-        SKILL_TEMPLATE.format(name=skill_name, description=description, title=title),
+        SKILL_TEMPLATE.substitute(name=skill_name, description=description, title=title),
         encoding="utf-8",
     )
     refs_dir = skill_dir / "references"
