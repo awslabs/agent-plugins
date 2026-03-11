@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["httpx"]
+# dependencies = ["httpx>=0.28,<1"]
 # ///
 """Check that HTTPS URLs in markdown files are reachable.
 
@@ -91,18 +91,28 @@ async def check_url(
     client: "httpx.AsyncClient",
     url: str,
     semaphore: asyncio.Semaphore,
+    gh_token: str | None = None,
+    gh_hosts: tuple[str, ...] = (),
 ) -> tuple[str, int | None, str | None]:
     """Check a single URL. Returns (url, status_code, error_or_note)."""
     import httpx
+    from urllib.parse import urlparse
+
+    # Only attach auth header for GitHub domains — never leak tokens to third parties
+    req_headers: dict[str, str] = {}
+    if gh_token:
+        host = urlparse(url).hostname or ""
+        if any(host == h or host.endswith("." + h) for h in gh_hosts):
+            req_headers["Authorization"] = f"Bearer {gh_token}"
 
     async with semaphore:
         for attempt in range(1 + RETRIES):
             try:
                 # Try HEAD first
-                resp = await client.head(url, follow_redirects=True, timeout=TIMEOUT)
+                resp = await client.head(url, headers=req_headers, follow_redirects=True, timeout=TIMEOUT)
                 if resp.status_code == 405 or resp.status_code >= 500:
                     # Server rejects HEAD or is erroring — try GET
-                    resp = await client.get(url, follow_redirects=True, timeout=TIMEOUT)
+                    resp = await client.get(url, headers=req_headers, follow_redirects=True, timeout=TIMEOUT)
 
                 # Check for permanent redirects in the redirect history
                 redirect_note = None
@@ -153,17 +163,16 @@ async def main_async(strict: bool) -> int:
         print(f" ({ignored_count} ignored)", end="")
     print("\n")
 
-    # Add GitHub token if available
-    headers = {"User-Agent": "agent-plugins-url-checker/1.0"}
+    # GitHub token for rate limit avoidance — ONLY sent to GitHub domains
+    base_headers = {"User-Agent": "agent-plugins-url-checker/1.0"}
     gh_token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
-    if gh_token:
-        headers["Authorization"] = f"Bearer {gh_token}"
+    gh_hosts = ("github.com", "api.github.com", "raw.githubusercontent.com")
 
     semaphore = asyncio.Semaphore(CONCURRENCY)
 
-    async with httpx.AsyncClient(headers=headers) as client:
+    async with httpx.AsyncClient(headers=base_headers) as client:
         tasks = [
-            check_url(client, url, semaphore)
+            check_url(client, url, semaphore, gh_token=gh_token, gh_hosts=gh_hosts)
             for url in sorted(urls_to_check.keys())
         ]
         results = await asyncio.gather(*tasks)

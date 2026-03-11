@@ -57,8 +57,11 @@ def main() -> int:
     skill_name = sys.argv[2]
     description = sys.argv[3]
 
-    # Validate plugin exists
-    plugin_dir = PLUGINS_DIR / plugin_name
+    # Validate plugin exists and is under PLUGINS_DIR (no path traversal)
+    plugin_dir = (PLUGINS_DIR / plugin_name).resolve()
+    if not plugin_dir.is_relative_to(PLUGINS_DIR.resolve()):
+        print(f"Error: plugin name must not contain path traversal: '{plugin_name}'")
+        return 1
     if not plugin_dir.is_dir():
         print(f"Error: plugin '{plugin_name}' not found at {plugin_dir}")
         available = sorted(
@@ -102,7 +105,7 @@ def main() -> int:
     title = skill_name.replace("-", " ").title()
     skill_dir.mkdir(parents=True)
     (skill_dir / "SKILL.md").write_text(
-        SKILL_TEMPLATE.substitute(name=skill_name, description=description, title=title),
+        SKILL_TEMPLATE.safe_substitute(name=skill_name, description=description, title=title),
         encoding="utf-8",
     )
     refs_dir = skill_dir / "references"
