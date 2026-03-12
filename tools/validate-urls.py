@@ -233,6 +233,16 @@ async def main_async(strict: bool) -> int:
 
 
 def main() -> int:
+    try:
+        import httpx  # noqa: F401
+    except ModuleNotFoundError:
+        print(
+            f"{RED}Missing dependency: httpx.{RESET}\n"
+            "Run this script via `uv run tools/validate-urls.py` "
+            "or install httpx in your environment."
+        )
+        return 2
+
     strict = "--strict" in sys.argv
     return asyncio.run(main_async(strict))
 
