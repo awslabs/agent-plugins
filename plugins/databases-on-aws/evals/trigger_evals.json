@@ -1,0 +1,82 @@
+[
+  {
+    "query": "I need to set up a multi-tenant schema in Aurora DSQL with proper isolation between our SaaS customers. Each customer has orders, products, and users tables.",
+    "should_trigger": true
+  },
+  {
+    "query": "we're building on dsql and need to migrate our mysql schema over - got about 30 tables with foreign keys, enums, and auto_increment columns",
+    "should_trigger": true
+  },
+  {
+    "query": "Help me connect to my serverless distributed SQL database on AWS from a Python Flask app",
+    "should_trigger": true
+  },
+  {
+    "query": "What are the transaction limits in Aurora DSQL? I need to batch insert about 50k rows.",
+    "should_trigger": true
+  },
+  {
+    "query": "I'm getting OCC serialization errors in my DSQL cluster when multiple users update the same row",
+    "should_trigger": true
+  },
+  {
+    "query": "create an index on the orders table in my dsql database, columns: customer_id, created_at",
+    "should_trigger": true
+  },
+  {
+    "query": "How do I set up IAM authentication tokens for my Aurora DSQL cluster in a Java Spring Boot app?",
+    "should_trigger": true
+  },
+  {
+    "query": "I want to change a column type from VARCHAR to TEXT in my DSQL table but I heard ALTER COLUMN TYPE doesn't work directly",
+    "should_trigger": true
+  },
+  {
+    "query": "Set up connection pooling for our production Aurora DSQL cluster - we have about 200 microservices connecting",
+    "should_trigger": true
+  },
+  {
+    "query": "help me write a query to get all orders for a specific tenant in my distributed sql database on aws, making sure we handle the sql injection risk properly",
+    "should_trigger": true
+  },
+  {
+    "query": "I need to set up an Aurora Serverless v2 PostgreSQL cluster with read replicas for my analytics workload",
+    "should_trigger": false
+  },
+  {
+    "query": "Help me create a DynamoDB table with a sort key and GSI for my user profiles",
+    "should_trigger": false
+  },
+  {
+    "query": "Write a SQL query to join three tables and calculate running totals using window functions",
+    "should_trigger": false
+  },
+  {
+    "query": "Deploy my Next.js app to AWS with a database backend",
+    "should_trigger": false
+  },
+  {
+    "query": "How do I configure RDS Proxy for connection pooling with my Aurora PostgreSQL database?",
+    "should_trigger": false
+  },
+  {
+    "query": "Set up a Redshift Serverless cluster for our data warehouse with cross-region replication",
+    "should_trigger": false
+  },
+  {
+    "query": "I need to migrate my PostgreSQL database from GCP Cloud SQL to AWS",
+    "should_trigger": false
+  },
+  {
+    "query": "What's the best way to handle distributed transactions across multiple microservices?",
+    "should_trigger": false
+  },
+  {
+    "query": "Help me set up ElastiCache Redis for session management in my Node.js app",
+    "should_trigger": false
+  },
+  {
+    "query": "I want to use Amazon Neptune for a social network graph with friend-of-friend queries",
+    "should_trigger": false
+  }
+]

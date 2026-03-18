@@ -26,13 +26,14 @@ To maximize the benefits of plugin-assisted development while maintaining securi
 
 ## Plugins
 
-| Plugin                      | Description                                                                                                            | Status    |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------- | --------- |
-| **deploy-on-aws**           | Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment                       | Available |
-| **amazon-location-service** | Add maps, geocoding, routing, places search, and geospatial features to applications with Amazon Location Service      | Available |
-| **migration-to-aws**        | Migrate GCP infrastructure to AWS with resource discovery, architecture mapping, cost analysis, and execution planning | Available |
-| **aws-amplify**             | Build full-stack apps with AWS Amplify Gen 2 using guided workflows for auth, data, storage, and functions             | Available |
-| **aws-serverless**          | Build serverless applications with Lambda, API Gateway, EventBridge, Step Functions, and durable functions             | Available |
+| Plugin                      | Description                                                                                                            | Status                                |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| **amazon-location-service** | Add maps, geocoding, routing, places search, and geospatial features to applications with Amazon Location Service      | Available                             |
+| **aws-amplify**             | Build full-stack apps with AWS Amplify Gen 2 using guided workflows for auth, data, storage, and functions             | Available                             |
+| **aws-serverless**          | Build serverless applications with Lambda, API Gateway, EventBridge, Step Functions, and durable functions             | Available                             |
+| **databases-on-aws**        | Database guidance for the AWS database portfolio — schema design, queries, migrations, and multi-tenant patterns       | Some Services Available (Aurora DSQL) |
+| **deploy-on-aws**           | Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment                       | Available                             |
+| **migration-to-aws**        | Migrate GCP infrastructure to AWS with resource discovery, architecture mapping, cost analysis, and execution planning | Available                             |
 
 ## Installation
 
@@ -47,12 +48,6 @@ To maximize the benefits of plugin-assisted development while maintaining securi
 #### Install a plugin
 
 ```bash
-/plugin install deploy-on-aws@agent-plugins-for-aws
-```
-
-or
-
-```bash
 /plugin install amazon-location-service@agent-plugins-for-aws
 ```
 
@@ -65,13 +60,25 @@ or
 or
 
 ```bash
-/plugin install migration-to-aws@agent-plugins-for-aws
+/plugin install aws-serverless@agent-plugins-for-aws
 ```
 
 or
 
 ```bash
-/plugin install aws-serverless@agent-plugins-for-aws
+/plugin install databases-on-aws@agent-plugins-for-aws
+```
+
+or
+
+```bash
+/plugin install deploy-on-aws@agent-plugins-for-aws
+```
+
+or
+
+```bash
+/plugin install migration-to-aws@agent-plugins-for-aws
 ```
 
 ### Cursor
@@ -84,32 +91,6 @@ You can install the **deploy-on-aws** plugin from the [Cursor Marketplace](https
 - Select the plugin you want to install and click `Add to Cursor`
 - Select the scope for the installed plugin
 - The plugin should appear under `Plugins -> Installed`
-
-## deploy-on-aws
-
-Equips agents with the skills to accelerate AWS deployment - recommending AWS architectures and services, estimating costs, generating Infrastructure as Code (CDK or CloudFormation), and guiding you through deployment.
-
-### Workflow
-
-1. **Analyze** - Scan codebase for framework, database, dependencies
-2. **Recommend** - Select AWS services with concise rationale
-3. **Estimate** - Show cost estimates before proceeding
-4. **Generate** - Write IaC code (CDK/CloudFormation)
-5. **Deploy** - Execute with user confirmation
-
-### Agent Skill Triggers
-
-| Agent Skill | Triggers                                                                                                              |
-| ----------- | --------------------------------------------------------------------------------------------------------------------- |
-| **deploy**  | "deploy to AWS", "host on AWS", "run this on AWS", "AWS architecture", "estimate AWS cost", "generate infrastructure" |
-
-### MCP Servers
-
-| Server           | Purpose                                                      |
-| ---------------- | ------------------------------------------------------------ |
-| **awsknowledge** | AWS documentation, architecture guidance, and best practices |
-| **awspricing**   | Real-time AWS service pricing for cost estimates             |
-| **aws-iac-mcp**  | IaC best practices for CDK/CloudFormation                    |
 
 ## amazon-location-service
 
@@ -150,6 +131,79 @@ Build full-stack apps with AWS Amplify Gen 2 using TypeScript code-first develop
 | ----------- | -------------------------------------- |
 | **aws-mcp** | AWS documentation and service guidance |
 
+## aws-serverless
+
+Design, build, deploy, test, and debug serverless applications with AWS Lambda, API Gateway, EventBridge, Step Functions, and durable functions. Includes SAM and CDK deployment workflows, a SAM template validation hook, and the AWS Lambda durable functions skill for building resilient, long-running, multi-step applications.
+
+### Agent Skill Triggers
+
+| Agent Skill                      | Triggers                                                                                                                                                                     |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **aws-lambda**                   | "Lambda function", "event source", "serverless application", "API Gateway", "EventBridge", "Step Functions", "serverless API", "event-driven architecture", "Lambda trigger" |
+| **aws-serverless-deployment**    | "use SAM", "SAM template", "SAM init", "SAM deploy", "CDK serverless", "CDK Lambda construct", "NodejsFunction", "PythonFunction", "serverless CI/CD pipeline"               |
+| **aws-lambda-durable-functions** | "lambda durable functions", "workflow orchestration", "state machines", "retry/checkpoint patterns", "long-running stateful Lambda", "saga pattern", "human-in-the-loop"     |
+
+### MCP Servers
+
+| Server                 | Purpose                                                                              |
+| ---------------------- | ------------------------------------------------------------------------------------ |
+| **aws-serverless-mcp** | Serverless development guidance, project scaffolding, IaC generation, and deployment |
+
+### Hooks
+
+| Hook                        | Trigger                                       | Action                                        |
+| --------------------------- | --------------------------------------------- | --------------------------------------------- |
+| **SAM template validation** | After edits to `template.yaml`/`template.yml` | Runs `sam validate` and reports errors inline |
+
+## databases-on-aws
+
+Database guidance for the AWS database portfolio. Design schemas, execute queries, handle migrations, build applications, and choose the right database for your workload. Currently includes Aurora DSQL — a serverless, PostgreSQL-compatible distributed SQL database.
+
+### Agent Skill Triggers
+
+| Agent Skill | Triggers                                                                                                                                      |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **dsql**    | "Aurora DSQL", "DSQL schema", "distributed SQL database", "serverless PostgreSQL-compatible database", "create DSQL table", "migrate to DSQL" |
+
+### MCP Servers
+
+| Server           | Purpose                                                                          |
+| ---------------- | -------------------------------------------------------------------------------- |
+| **awsknowledge** | AWS documentation, architecture guidance, and best practices                     |
+| **aurora-dsql**  | Direct database operations — queries, schema, transactions (disabled by default) |
+
+### Hooks
+
+| Hook                    | Trigger                     | Action                                                   |
+| ----------------------- | --------------------------- | -------------------------------------------------------- |
+| **Schema verification** | After `transact` operations | Prompts verification of schema changes and affected rows |
+
+## deploy-on-aws
+
+Equips agents with the skills to accelerate AWS deployment - recommending AWS architectures and services, estimating costs, generating Infrastructure as Code (CDK or CloudFormation), and guiding you through deployment.
+
+### Workflow
+
+1. **Analyze** - Scan codebase for framework, database, dependencies
+2. **Recommend** - Select AWS services with concise rationale
+3. **Estimate** - Show cost estimates before proceeding
+4. **Generate** - Write IaC code (CDK/CloudFormation)
+5. **Deploy** - Execute with user confirmation
+
+### Agent Skill Triggers
+
+| Agent Skill | Triggers                                                                                                              |
+| ----------- | --------------------------------------------------------------------------------------------------------------------- |
+| **deploy**  | "deploy to AWS", "host on AWS", "run this on AWS", "AWS architecture", "estimate AWS cost", "generate infrastructure" |
+
+### MCP Servers
+
+| Server           | Purpose                                                      |
+| ---------------- | ------------------------------------------------------------ |
+| **awsknowledge** | AWS documentation, architecture guidance, and best practices |
+| **awspricing**   | Real-time AWS service pricing for cost estimates             |
+| **aws-iac-mcp**  | IaC best practices for CDK/CloudFormation                    |
+
 ## migration-to-aws
 
 Helps you systematically migrate GCP infrastructure to AWS through Terraform resource discovery, architecture mapping, cost estimation, and execution planning.
@@ -174,30 +228,6 @@ Helps you systematically migrate GCP infrastructure to AWS through Terraform res
 | ---------------- | ------------------------------------------------ |
 | **awsknowledge** | AWS documentation, architecture guidance         |
 | **awspricing**   | Real-time AWS service pricing for cost estimates |
-
-## aws-serverless
-
-Design, build, deploy, test, and debug serverless applications with AWS Lambda, API Gateway, EventBridge, Step Functions, and durable functions. Includes SAM and CDK deployment workflows, a SAM template validation hook, and the AWS Lambda durable functions skill for building resilient, long-running, multi-step applications.
-
-### Agent Skill Triggers
-
-| Agent Skill                      | Triggers                                                                                                                                                                     |
-| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **aws-lambda**                   | "Lambda function", "event source", "serverless application", "API Gateway", "EventBridge", "Step Functions", "serverless API", "event-driven architecture", "Lambda trigger" |
-| **aws-serverless-deployment**    | "use SAM", "SAM template", "SAM init", "SAM deploy", "CDK serverless", "CDK Lambda construct", "NodejsFunction", "PythonFunction", "serverless CI/CD pipeline"               |
-| **aws-lambda-durable-functions** | "lambda durable functions", "workflow orchestration", "state machines", "retry/checkpoint patterns", "long-running stateful Lambda", "saga pattern", "human-in-the-loop"     |
-
-### MCP Servers
-
-| Server                 | Purpose                                                                              |
-| ---------------------- | ------------------------------------------------------------------------------------ |
-| **aws-serverless-mcp** | Serverless development guidance, project scaffolding, IaC generation, and deployment |
-
-### Hooks
-
-| Hook                        | Trigger                                       | Action                                        |
-| --------------------------- | --------------------------------------------- | --------------------------------------------- |
-| **SAM template validation** | After edits to `template.yaml`/`template.yml` | Runs `sam validate` and reports errors inline |
 
 ## Requirements
 
