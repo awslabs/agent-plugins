@@ -198,7 +198,7 @@ Globals:
         OTEL_TRACES_SAMPLER: xray
 ```
 
-Layer ARNs vary by runtime and architecture. Check the [ADOT Lambda layer documentation](https://aws-otel.github.io/docs/getting-started/lambda) for the correct ARN for your runtime (Python, Node.js, Java, .NET) and architecture (amd64, arm64).
+Layer ARNs vary by runtime and architecture. Check the [ADOT Lambda layer documentation](https://aws-otel.github.io/docs/getting-started/lambda/) for the correct ARN for your runtime (Python, Node.js, Java, .NET) and architecture (amd64, arm64).
 
 **SLO configuration** happens in the CloudWatch console or via API after deployment — define SLIs (latency percentile, error rate, availability) and set objectives with burn rate alerting.
 

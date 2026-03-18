@@ -1,0 +1,20 @@
+{
+  "author": {
+    "name": "Amazon Web Services"
+  },
+  "description": "This no-cost tool assesses your current cloud provider's usage, geography, and billing data to estimate and compare AWS services and pricing, and recommends migration or continued use of your current provider. AWS pricing is based on current published pricing and may vary over time. The tool may generate a .migration folder containing comparison and migration execution data, which you may delete upon completion or use to migrate to AWS.",
+  "homepage": "https://github.com/awslabs/agent-plugins",
+  "keywords": [
+    "aws",
+    "gcp",
+    "google-cloud",
+    "migration",
+    "cloud-migration",
+    "terraform",
+    "fargate"
+  ],
+  "license": "Apache-2.0",
+  "name": "migration-to-aws",
+  "repository": "https://github.com/awslabs/agent-plugins",
+  "version": "1.0.0"
+}

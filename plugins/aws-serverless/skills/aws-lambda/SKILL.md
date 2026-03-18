@@ -166,6 +166,6 @@ When not specified, ALWAYS use CDK
 
 - [AWS SAM Documentation](https://docs.aws.amazon.com/serverless-application-model/)
 - [AWS Lambda Documentation](https://docs.aws.amazon.com/lambda/)
-- [AWS Lambda Powertools](https://docs.powertools.aws.dev/lambda/)
+- [AWS Lambda Powertools](https://docs.aws.amazon.com/powertools/)
 - [AWS CDK Documentation](https://docs.aws.amazon.com/cdk/)
 - [AWS Serverless MCP Server](https://github.com/awslabs/mcp/tree/main/src/aws-serverless-mcp-server)
