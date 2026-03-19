@@ -6,7 +6,7 @@
 | ------------- | -------------------------- | ----------------------------------------------------- |
 | `analytics`   | `diagrams.aws.analytics`   | Athena, EMR, Glue, Kinesis, Redshift, Quicksight      |
 | `compute`     | `diagrams.aws.compute`     | EC2, Lambda, ECS, EKS, Fargate, Batch                 |
-| `database`    | `diagrams.aws.database`    | RDS, Aurora, DynamoDB, ElastiCache, Redshift, Neptune |
+| `database`    | `diagrams.aws.database`    | RDS, Aurora, DynamoDB, ElastiCache, Neptune           |
 | `integration` | `diagrams.aws.integration` | SQS, SNS, StepFunctions, EventBridge, MQ              |
 | `management`  | `diagrams.aws.management`  | CloudWatch, CloudFormation, SystemsManager            |
 | `ml`          | `diagrams.aws.ml`          | Sagemaker, Rekognition, Comprehend, Bedrock           |

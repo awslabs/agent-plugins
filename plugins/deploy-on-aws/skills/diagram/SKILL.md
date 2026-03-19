@@ -34,11 +34,12 @@ Load the appropriate reference file based on what the user is building:
 - Add `generated-diagrams/` to `.gitignore` to avoid committing output artifacts
 - Use `Cluster()` to group related resources (VPCs, subnets, namespaces)
 - Use `Edge(label="HTTPS", color="darkgreen", style="dashed")` for labeled or styled connections
+- **SVG sanitization**: When using `outformat="svg"`, sanitize all diagram titles, node labels, and edge labels — strip HTML tags and special characters (`<`, `>`, `&`, `"`, `'`) before passing them to the `diagrams` DSL. Unsanitized input rendered as SVG can become an XSS vector if served on a web page.
 
 ## Defaults
 
 Default output format: PNG
-Default layout direction: TB (top-to-bottom)
+Skill convention layout direction: TB (top-to-bottom) — the library default is LR, but this skill uses TB for more readable top-down diagrams
 
 Override syntax:
 
