@@ -26,13 +26,13 @@ To maximize the benefits of plugin-assisted development while maintaining securi
 
 ## Plugins
 
-| Plugin                      | Description                                                                                                            | Status    |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------- | --------- |
+| Plugin                      | Description                                                                                                                       | Status    |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | --------- |
 | **deploy-on-aws**           | Deploy applications to AWS with architecture recommendations, cost estimates, IaC deployment, and architecture diagram generation | Available |
-| **amazon-location-service** | Add maps, geocoding, routing, places search, and geospatial features to applications with Amazon Location Service      | Available |
-| **migration-to-aws**        | Migrate GCP infrastructure to AWS with resource discovery, architecture mapping, cost analysis, and execution planning | Available |
-| **aws-amplify**             | Build full-stack apps with AWS Amplify Gen 2 using guided workflows for auth, data, storage, and functions             | Available |
-| **aws-serverless**          | Build serverless applications with Lambda, API Gateway, EventBridge, Step Functions, and durable functions             | Available |
+| **amazon-location-service** | Add maps, geocoding, routing, places search, and geospatial features to applications with Amazon Location Service                 | Available |
+| **migration-to-aws**        | Migrate GCP infrastructure to AWS with resource discovery, architecture mapping, cost analysis, and execution planning            | Available |
+| **aws-amplify**             | Build full-stack apps with AWS Amplify Gen 2 using guided workflows for auth, data, storage, and functions                        | Available |
+| **aws-serverless**          | Build serverless applications with Lambda, API Gateway, EventBridge, Step Functions, and durable functions                        | Available |
 
 ## Installation
 

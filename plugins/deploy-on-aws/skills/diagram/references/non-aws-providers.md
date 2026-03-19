@@ -9,7 +9,7 @@
 | `k8s.storage`       | PV, PVC, StorageClass                                    |
 | `k8s.controlplane`  | APIServer, Scheduler, ControllerManager                  |
 | `k8s.clusterconfig` | HPA, LimitRange, Limits, Quota                           |
-| `k8s.group`         | Namespace                                                 |
+| `k8s.group`         | Namespace                                                |
 | `k8s.rbac`          | Role, RoleBinding, ClusterRole                           |
 
 ## On-Premises Categories
