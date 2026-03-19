@@ -81,7 +81,14 @@ agent-plugins/
 │   ├── plugin.schema.json
 │   ├── mcp.schema.json
 │   └── skill-frontmatter.schema.json
-├── tools/                        # Lint/validation scripts
+├── tools/                        # Lint, validation, and eval scripts
+│   ├── evals/                    # Eval suites for plugins, kept separate from plugin clients
+│   │   └── databases-on-aws/
+│   │       ├── README.md
+│   │       ├── evals.json
+│   │       ├── trigger_evals.json
+│   │       └── scripts/
+│   │           └── run_functional_evals.py
 │   ├── validate-cross-refs.cjs
 │   └── ...
 ├── mise.toml                     # Tool versions and tasks

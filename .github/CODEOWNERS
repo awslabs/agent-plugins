@@ -37,6 +37,10 @@ plugins/databases-on-aws            @awslabs/agent-plugins-admins @awslabs/agent
 plugins/deploy-on-aws               @awslabs/agent-plugins-admins @awslabs/agent-plugins-maintainers  @awslabs/agent-plugins-deploy-on-aws
 plugins/migration-to-aws            @awslabs/agent-plugins-admins @awslabs/agent-plugins-maintainers  @awslabs/agent-plugins-migrate-to-aws
 
+## Evals (match plugin ownership)
+
+tools/evals/databases-on-aws        @awslabs/agent-plugins-admins @awslabs/agent-plugins-maintainers  @awslabs/agent-plugins-dsql
+
 ## File must end with CODEOWNERS file
 
 .github/CODEOWNERS                  @awslabs/agent-plugins-admins
