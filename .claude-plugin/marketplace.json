@@ -60,7 +60,7 @@
     },
     {
       "category": "observability",
-      "description": "Comprehensive AWS observability platform combining CloudWatch Logs, Metrics, Alarms, Application Signals (APM), CloudTrail security auditing, and automated codebase observability gap analysis.",
+      "description": "Comprehensive AWS observability and FinOps platform combining CloudWatch Logs, Metrics, Alarms, Application Signals (APM), CloudTrail security auditing, Billing & Cost Management, and automated codebase observability gap analysis.",
       "keywords": [
         "aws",
         "observability",
@@ -73,7 +73,11 @@
         "apm",
         "cloudtrail",
         "security",
-        "tracing"
+        "tracing",
+        "billing",
+        "cost-management",
+        "finops",
+        "incident-response"
       ],
       "name": "observability-on-aws",
       "source": "./plugins/observability-on-aws",
@@ -81,7 +85,8 @@
         "aws",
         "observability",
         "monitoring",
-        "cloudwatch"
+        "cloudwatch",
+        "finops"
       ],
       "version": "1.0.0"
     },

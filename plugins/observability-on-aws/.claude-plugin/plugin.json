@@ -2,7 +2,7 @@
   "author": {
     "name": "Amazon Web Services"
   },
-  "description": "Comprehensive AWS observability platform combining CloudWatch Logs, Metrics, Alarms, Application Signals (APM), CloudTrail security auditing, and automated codebase observability gap analysis for complete monitoring, troubleshooting, and optimization.",
+  "description": "Comprehensive AWS observability and FinOps platform combining CloudWatch Logs, Metrics, Alarms, Application Signals (APM), CloudTrail security auditing, Billing & Cost Management, and automated codebase observability gap analysis for monitoring, troubleshooting, cost optimization, and incident response.",
   "homepage": "https://github.com/awslabs/agent-plugins",
   "keywords": [
     "aws",
@@ -16,7 +16,11 @@
     "apm",
     "cloudtrail",
     "security",
-    "tracing"
+    "tracing",
+    "billing",
+    "cost-management",
+    "finops",
+    "incident-response"
   ],
   "license": "Apache-2.0",
   "name": "observability-on-aws",
