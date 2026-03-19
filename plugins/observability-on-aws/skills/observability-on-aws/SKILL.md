@@ -85,4 +85,4 @@ by bin(5m) as timeWindow
 - **Logs**: Use `describe_log_groups` to discover groups, then `execute_log_insights_query`
 - **Metrics**: Use Sum for count metrics, Average for utilization, percentiles for latency
 - **CloudTrail**: Check Lake first (`list_event_data_stores`), fall back to CloudWatch Logs, then `lookup_events`
-- **Costs**: Use `get_cost_and_usage` for spend analysis, `get_cost_forecast` for projections, `list_recommendations` for right-sizing
+- **Costs**: Use `cost-explorer` tool for spend analysis, `compute-optimizer` for right-sizing
