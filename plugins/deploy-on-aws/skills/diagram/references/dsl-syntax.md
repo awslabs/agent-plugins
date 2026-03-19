@@ -43,14 +43,20 @@ node1 >> Edge(label="HTTPS", color="darkgreen", style="dashed") >> node2
 ## Clusters
 
 ```python
-with Cluster("VPC"):
-    with Cluster("Public Subnet"):
-        lb = ALB("ALB")
-    with Cluster("Private Subnet"):
-        app = [EC2("app1"), EC2("app2")]
-    with Cluster("Data"):
-        db = RDS("db")
-    lb >> app >> db
+from diagrams import Diagram, Cluster
+from diagrams.aws.compute import EC2
+from diagrams.aws.database import RDS
+from diagrams.aws.network import ALB
+
+with Diagram("Clusters", show=False, direction="TB", filename="generated-diagrams/clusters"):
+    with Cluster("VPC"):
+        with Cluster("Public Subnet"):
+            lb = ALB("ALB")
+        with Cluster("Private Subnet"):
+            app = [EC2("app1"), EC2("app2")]
+        with Cluster("Data"):
+            db = RDS("db")
+        lb >> app >> db
 ```
 
 ## Edge Styles
@@ -92,12 +98,17 @@ primary - RDS("replica")
 ### Nested Clusters
 
 ```python
-with Cluster("VPC"):
-    with Cluster("Public"):
-        lb = ALB("ALB")
-    with Cluster("Private"):
-        app = [EC2("app1"), EC2("app2")]
-    lb >> app
+from diagrams import Diagram, Cluster
+from diagrams.aws.compute import EC2
+from diagrams.aws.network import ALB
+
+with Diagram("Nested", show=False, direction="TB", filename="generated-diagrams/nested"):
+    with Cluster("VPC"):
+        with Cluster("Public"):
+            lb = ALB("ALB")
+        with Cluster("Private"):
+            app = [EC2("app1"), EC2("app2")]
+        lb >> app
 ```
 
 ### Custom Nodes

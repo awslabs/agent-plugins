@@ -35,6 +35,8 @@ Load the appropriate reference file based on what the user is building:
 - Use `Cluster()` to group related resources (VPCs, subnets, namespaces)
 - Use `Edge(label="HTTPS", color="darkgreen", style="dashed")` for labeled or styled connections
 - **SVG sanitization**: When using `outformat="svg"`, sanitize all diagram titles, node labels, and edge labels — strip HTML tags and special characters (`<`, `>`, `&`, `"`, `'`) before passing them to the `diagrams` DSL. Unsanitized input rendered as SVG can become an XSS vector if served on a web page.
+- **Import allowlist**: ONLY import from `diagrams.*` modules. NEVER import `os`, `sys`, `subprocess`, `shutil`, `socket`, `requests`, `urllib`, or any non-diagrams module. Before executing, review the generated script to confirm it contains ONLY diagrams DSL code.
+- **Safe file paths for Custom nodes**: When using `Custom("name", "path")`, ONLY use relative paths within the project directory (e.g., `./icons/logo.png`). NEVER use absolute paths, paths with `..`, or paths outside the working directory.
 
 ## Defaults
 
@@ -54,13 +56,15 @@ Requires two dependencies installed locally:
 
 1. **GraphViz** (system package providing `dot`):
    - macOS: `brew install graphviz`
-   - Ubuntu/Debian: `sudo apt-get install graphviz`
-   - Amazon Linux/RHEL: `sudo yum install graphviz`
-2. **Python diagrams package**: `python3 -m pip install diagrams`
+   - Ubuntu/Debian: `sudo apt-get install graphviz` (requires user confirmation for sudo)
+   - Amazon Linux/RHEL: `sudo yum install graphviz` (requires user confirmation for sudo)
+2. **Python diagrams package**: `python3 -m pip install "diagrams>=0.23,<1.0"`
+
+Using a virtual environment is recommended to avoid global installs: `python3 -m venv .venv && source .venv/bin/activate`
 
 **Verify:** `dot -V && python3 -c "import diagrams; print('OK')"`
 
-### Missing Dependencies
+### Error Handling
 
 If `dot` command not found:
 
@@ -71,8 +75,19 @@ If `dot` command not found:
 If `import diagrams` fails:
 
 - Inform user: "Python diagrams package not installed."
-- Show: `python3 -m pip install diagrams`
+- Show: `python3 -m pip install "diagrams>=0.23,<1.0"`
 - DO NOT proceed without the package
+
+If the script fails with a **syntax error**, **runtime error**, or **incorrect import path**:
+
+- Show the error message to the user
+- Fix the script and re-run
+
+If the output file is **not created** or is **empty** after execution:
+
+- Check for GraphViz rendering errors in stderr
+- Verify all node class names are valid imports
+- Re-run with corrected script
 
 ## References
 
