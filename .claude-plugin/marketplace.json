@@ -24,7 +24,12 @@
       ],
       "name": "deploy-on-aws",
       "source": "./plugins/deploy-on-aws",
-      "tags": ["aws", "deploy", "infrastructure", "cdk"],
+      "tags": [
+        "aws",
+        "deploy",
+        "infrastructure",
+        "cdk"
+      ],
       "version": "1.1.0"
     },
     {
@@ -45,7 +50,12 @@
       ],
       "name": "amazon-location-service",
       "source": "./plugins/amazon-location-service",
-      "tags": ["aws", "location", "maps", "geospatial"],
+      "tags": [
+        "aws",
+        "location",
+        "maps",
+        "geospatial"
+      ],
       "version": "1.0.0"
     },
     {
@@ -65,9 +75,14 @@
         "security",
         "tracing"
       ],
-      "name": "aws-observability",
-      "source": "./plugins/aws-observability",
-      "tags": ["aws", "observability", "monitoring", "cloudwatch"],
+      "name": "observability-on-aws",
+      "source": "./plugins/observability-on-aws",
+      "tags": [
+        "aws",
+        "observability",
+        "monitoring",
+        "cloudwatch"
+      ],
       "version": "1.0.0"
     },
     {
@@ -86,7 +101,12 @@
       ],
       "name": "migration-to-aws",
       "source": "./plugins/migration-to-aws",
-      "tags": ["aws", "gcp", "migration", "infrastructure"],
+      "tags": [
+        "aws",
+        "gcp",
+        "migration",
+        "infrastructure"
+      ],
       "version": "1.0.0"
     },
     {
@@ -135,7 +155,11 @@
       ],
       "name": "aws-amplify",
       "source": "./plugins/aws-amplify",
-      "tags": ["aws", "amplify", "fullstack"],
+      "tags": [
+        "aws",
+        "amplify",
+        "fullstack"
+      ],
       "version": "1.0.0"
     }
   ]

@@ -19,7 +19,7 @@
     "tracing"
   ],
   "license": "Apache-2.0",
-  "name": "aws-observability",
+  "name": "observability-on-aws",
   "repository": "https://github.com/awslabs/agent-plugins",
   "version": "1.0.0"
 }

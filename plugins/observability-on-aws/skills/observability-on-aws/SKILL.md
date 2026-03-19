@@ -1,5 +1,5 @@
 ---
-name: aws-observability
+name: observability-on-aws
 description: "Comprehensive AWS observability platform combining CloudWatch Logs, Metrics, Alarms, Application Signals (APM), CloudTrail security auditing, Billing & Cost Management, and automated codebase observability gap analysis. Triggers on phrases like: CloudWatch logs, metrics, alarms, monitoring, observability, application signals, APM, distributed tracing, performance, latency, errors, troubleshooting, root cause analysis, security audit, CloudTrail, log analysis, alerting, SLO, incident response, observability gaps, missing instrumentation, AWS costs, billing, cost anomaly."
 ---
 
@@ -85,4 +85,4 @@ by bin(5m) as timeWindow
 - **Logs**: Use `describe_log_groups` to discover groups, then `execute_log_insights_query`
 - **Metrics**: Use Sum for count metrics, Average for utilization, percentiles for latency
 - **CloudTrail**: Check Lake first (`list_event_data_stores`), fall back to CloudWatch Logs, then `lookup_events`
-- **Costs**: Use `cost-explorer` tool for spend analysis, `compute-optimizer` for right-sizing
+- **Costs**: Use `get_cost_and_usage` for spend analysis, `get_cost_forecast` for projections, `list_recommendations` for right-sizing
