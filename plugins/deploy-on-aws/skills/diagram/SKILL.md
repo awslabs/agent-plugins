@@ -7,7 +7,7 @@ description: "Generate architecture diagrams as code using the Python diagrams D
 
 Generate architecture diagrams using the Python [diagrams](https://diagrams.mingrammer.com/) package. Write a Python script, run it, and produce an image (PNG by default).
 
-Supports AWS (29 service categories), Kubernetes, on-premises, GCP, SaaS, and custom icons via the `diagrams` DSL.
+Supports AWS (26 service categories), Kubernetes, on-premises, GCP, SaaS, and custom icons via the `diagrams` DSL.
 
 ## When to Load Reference Files
 

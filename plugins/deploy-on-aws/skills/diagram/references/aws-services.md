@@ -6,9 +6,9 @@
 | ------------- | -------------------------- | ----------------------------------------------------- |
 | `analytics`   | `diagrams.aws.analytics`   | Athena, EMR, Glue, Kinesis, Redshift, Quicksight      |
 | `compute`     | `diagrams.aws.compute`     | EC2, Lambda, ECS, EKS, Fargate, Batch                 |
-| `database`    | `diagrams.aws.database`    | RDS, Aurora, DynamoDB, ElastiCache, Neptune           |
-| `integration` | `diagrams.aws.integration` | SQS, SNS, StepFunctions, EventBridge, MQ              |
-| `management`  | `diagrams.aws.management`  | CloudWatch, CloudFormation, SystemsManager            |
+| `database`    | `diagrams.aws.database`    | RDS, Aurora, Dynamodb, ElastiCache, Neptune           |
+| `integration` | `diagrams.aws.integration` | SQS, SNS, StepFunctions, Eventbridge, MQ              |
+| `management`  | `diagrams.aws.management`  | Cloudwatch, Cloudformation, SystemsManager            |
 | `ml`          | `diagrams.aws.ml`          | Sagemaker, Rekognition, Comprehend, Bedrock           |
 | `network`     | `diagrams.aws.network`     | VPC, ELB, ALB, NLB, CloudFront, Route53, APIGateway   |
 | `security`    | `diagrams.aws.security`    | IAM, Cognito, WAF, KMS, Shield, SecretsManager        |
@@ -25,7 +25,7 @@ from diagrams.aws.compute import EC2
 from diagrams.aws.database import RDS
 from diagrams.aws.network import ELB
 
-with Diagram("Web Service", show=False, filename="generated-diagrams/aws-basic"):
+with Diagram("Web Service", show=False, direction="TB", filename="generated-diagrams/aws-basic"):
     ELB("lb") >> EC2("web") >> RDS("userdb")
 ```
 
@@ -49,7 +49,7 @@ from diagrams.aws.compute import ECS
 from diagrams.aws.database import RDS, ElastiCache
 from diagrams.aws.network import ELB, Route53
 
-with Diagram("Clustered Web Services", show=False, filename="generated-diagrams/aws-clustered"):
+with Diagram("Clustered Web Services", show=False, direction="TB", filename="generated-diagrams/aws-clustered"):
     dns = Route53("dns")
     lb = ELB("lb")
     with Cluster("Services"):
@@ -73,7 +73,7 @@ from diagrams.aws.analytics import Redshift
 from diagrams.aws.integration import SQS
 from diagrams.aws.storage import S3
 
-with Diagram("Event Processing", show=False, filename="generated-diagrams/aws-events"):
+with Diagram("Event Processing", show=False, direction="TB", filename="generated-diagrams/aws-events"):
     source = EKS("k8s source")
     with Cluster("Event Flows"):
         with Cluster("Event Workers"):

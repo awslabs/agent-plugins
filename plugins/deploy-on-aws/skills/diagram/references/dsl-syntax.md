@@ -8,7 +8,7 @@ from diagrams.aws.compute import EC2
 from diagrams.aws.database import RDS
 from diagrams.aws.network import ALB
 
-with Diagram("Title", show=False, filename="generated-diagrams/name"):
+with Diagram("Title", show=False, direction="TB", filename="generated-diagrams/name"):
     with Cluster("VPC"):
         lb = ALB("ALB")
         with Cluster("Private Subnet"):
@@ -33,8 +33,8 @@ with Diagram(
 ## Connections
 
 ```python
-node1 >> node2 >> node3          # Left to right flow
-node1 << node2                   # Right to left flow
+node1 >> node2 >> node3          # Directed connection: node1 -> node2 -> node3
+node1 << node2                   # Reverse connection: node2 -> node1
 node1 - node2                    # Bidirectional
 node1 >> [node2, node3, node4]   # Fan out to multiple
 node1 >> Edge(label="HTTPS", color="darkgreen", style="dashed") >> node2

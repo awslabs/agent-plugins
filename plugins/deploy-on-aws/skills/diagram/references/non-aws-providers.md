@@ -21,7 +21,7 @@
 | `onprem.container`  | Docker                                |
 | `onprem.ci`         | Jenkins, GitlabCI, GithubActions      |
 | `onprem.monitoring` | Prometheus, Grafana, Datadog          |
-| `onprem.logging`    | Fluentd, Loki                         |
+| `onprem.logging`    | Fluentbit, Loki                       |
 | `onprem.queue`      | Kafka, RabbitMQ, Celery               |
 | `onprem.network`    | Nginx, HAProxy, Traefik               |
 | `onprem.inmemory`   | Redis, Memcached                      |
@@ -35,7 +35,7 @@ from diagrams.programming.flowchart import (
     Action,          # Rectangle -- process step
     Decision,        # Diamond -- yes/no branch
     InputOutput,     # Parallelogram -- data input/output
-    Predefined,      # Double-border rectangle -- predefined process
+    PredefinedProcess,  # Double-border rectangle -- predefined process
     Delay,           # Half-oval -- wait/delay
 )
 ```
@@ -48,7 +48,7 @@ from diagrams.k8s.compute import Deployment, Pod, ReplicaSet
 from diagrams.k8s.clusterconfig import HPA
 from diagrams.k8s.network import Ingress, Service
 
-with Diagram("Exposed Pod", show=False, filename="generated-diagrams/k8s-exposed"):
+with Diagram("Exposed Pod", show=False, direction="TB", filename="generated-diagrams/k8s-exposed"):
     net = Ingress("domain.com") >> Service("svc")
     net >> [Pod("pod1"), Pod("pod2"), Pod("pod3")] << ReplicaSet("rs") << Deployment("dp") << HPA("hpa")
 ```
@@ -57,16 +57,16 @@ with Diagram("Exposed Pod", show=False, filename="generated-diagrams/k8s-exposed
 
 ```python
 from diagrams import Diagram
-from diagrams.programming.flowchart import Action, Decision, Delay, InputOutput, Predefined
+from diagrams.programming.flowchart import Action, Decision, Delay, InputOutput, PredefinedProcess
 
-with Diagram("Order Processing", show=False, filename="generated-diagrams/flow"):
-    start = Predefined("Start")
+with Diagram("Order Processing", show=False, direction="TB", filename="generated-diagrams/flow"):
+    start = PredefinedProcess("Start")
     order = InputOutput("Order Received")
     check = Decision("In Stock?")
     process = Action("Process Order")
     wait = Delay("Backorder")
     ship = Action("Ship Order")
-    end = Predefined("End")
+    end = PredefinedProcess("End")
     start >> order >> check
     check >> process >> ship >> end
     check >> wait >> process
@@ -79,12 +79,12 @@ from diagrams import Diagram, Cluster, Edge
 from diagrams.onprem.compute import Server
 from diagrams.onprem.database import PostgreSQL
 from diagrams.onprem.inmemory import Redis
-from diagrams.onprem.logging import Fluentd
+from diagrams.onprem.logging import Fluentbit
 from diagrams.onprem.monitoring import Grafana, Prometheus
 from diagrams.onprem.network import Nginx
 from diagrams.onprem.queue import Kafka
 
-with Diagram("On-Prem Service", show=False, filename="generated-diagrams/onprem"):
+with Diagram("On-Prem Service", show=False, direction="TB", filename="generated-diagrams/onprem"):
     ingress = Nginx("ingress")
     metrics = Prometheus("metric")
     metrics << Edge(color="firebrick", style="dashed") << Grafana("monitoring")
@@ -98,7 +98,7 @@ with Diagram("On-Prem Service", show=False, filename="generated-diagrams/onprem"
         db = PostgreSQL("users")
         db - Edge(color="brown", style="dotted") - PostgreSQL("replica")
         grpcsvc >> Edge(color="black") >> db
-    aggregator = Fluentd("logging")
+    aggregator = Fluentbit("logging")
     aggregator >> Edge(label="parse") >> Kafka("stream")
     ingress >> Edge(color="darkgreen") >> grpcsvc >> Edge(color="darkorange") >> aggregator
 ```
@@ -115,7 +115,7 @@ from diagrams.k8s.compute import Pod
 # Download from official sources and save locally, e.g.:
 #   curl -o icons/rabbitmq.png https://rabbitmq.com/img/rabbitmq-logo.png
 
-with Diagram("Custom Icons", show=False, filename="generated-diagrams/custom"):
+with Diagram("Custom Icons", show=False, direction="TB", filename="generated-diagrams/custom"):
     with Cluster("Consumers"):
         consumers = [Pod("worker"), Pod("worker"), Pod("worker")]
     queue = Custom("Message queue", "icons/rabbitmq.png")
