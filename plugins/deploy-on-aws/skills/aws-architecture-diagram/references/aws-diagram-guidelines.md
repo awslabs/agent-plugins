@@ -152,7 +152,7 @@ If you need to add additional colors to your diagram, make sure the color values
 - **Weight**: Regular in most cases. Bold can be used for extra emphasis. Do not use Thin or Light (they fail accessibility standards below most diagram-needed font sizes).
 - **Size**: 12px
 - **Color**: #16191F or #000000 for most icon/illustration labels
-- **Additional styling**: *Italics* is preferred over underlines. (In a diagram with arrows/lines, underlines can add unnecessary visual noise.)
+- **Additional styling**: _Italics_ is preferred over underlines. (In a diagram with arrows/lines, underlines can add unnecessary visual noise.)
 
 ### Labels and text
 
@@ -358,7 +358,7 @@ Use typography rules consistently within your image and make sure they are large
 **Regular text:**
 
 - **Font:** Amazon Ember (download from the Typography website: http://typography.aka.amazon.com/fonts/0 if not pre-installed)
-- **Weight/style:** Regular, **Bold**, or *Italic*. Stay away from underlines -- the lines can add unnecessary visual noise and introduce room for confusion with connective lines and arrows.
+- **Weight/style:** Regular, **Bold**, or _Italic_. Stay away from underlines -- the lines can add unnecessary visual noise and introduce room for confusion with connective lines and arrows.
 - **Size:** 12px (larger is OK for certain circumstances, but no smaller)
 
 **Monospace text:**
@@ -414,7 +414,7 @@ Make sure that your graphics or the concepts that they describe are accessible t
 - Provide enough contrast in the image so that it can be perceived by people with moderately low vision.
 - **Add alt text:**
   - Write a concise description of the image. Try to keep this description under 100 characters if possible, and avoid repeating text that is already used elsewhere in the content.
-    > **Note:** For some complex images such as charts or workflow diagrams, a 100-character description might not be adequate to fully convey the content of the image. In this case, ensure that you are providing a more detailed description in the main content of the page, above or below the image. The alt text itself should then concisely describe the *general* content of the image.
+    > **Note:** For some complex images such as charts or workflow diagrams, a 100-character description might not be adequate to fully convey the content of the image. In this case, ensure that you are providing a more detailed description in the main content of the page, above or below the image. The alt text itself should then concisely describe the _general_ content of the image.
   - Don't mention the type of image it is, unless the type of image is the point of the content. That's because screen readers already say "Image of" at the beginning of each alt text vocalization.
     - Instead of writing "picture of..." or "graphic of..." or "screenshot of...", describe only the main point of the image in relation to the content.
     - For something like a workflow diagram, describe the graphic's important elements "as a workflow" or "depicted in a workflow."
@@ -501,36 +501,36 @@ Leave a comment and/or email aws-doc-graphics@amazon.com and let's discuss!
 
 The following images were referenced in the original document. They are not embedded in this markdown file but are listed here for completeness. Original filenames correspond to the `XWiki_files/` directory of the saved HTML page.
 
-| Filename | Context / Description |
-|---|---|
-| `banner-diagrams.png` | Page banner image |
-| `Picture1.png` | Architecture diagram example (diagram types table) |
-| `process-flow-diagram.png` | Process/flow diagram example (diagram types table) |
-| `data-viz.png` | Data visualization example (diagram types table) |
-| `example-dg.png` | Other conceptual diagram example (diagram types table) |
-| `guides-size.png` | Guideline 1 -- Grid of screens A-I showing recommended vs. not-recommended diagram size proportions within browser viewports |
-| `bp-light.png` | Guideline 2 -- Good example: diagram in light mode with proper spacing and padding |
-| `bp-d1.png` | Guideline 2 -- Bad example: transparent background in dark mode; objects/text hard to see |
-| `bp-d2.png` | Guideline 2 -- Bad example: white background but no outside padding in dark mode |
-| `bp-d3.png` | Guideline 2 -- Bad example: unequal padding (left only) in dark mode |
-| `bp-d4.png` | Guideline 2 -- Bad example: unequal padding on all sides in dark mode |
-| `bp-d5.png` | Guideline 2 -- Best practice: equal 8px padding on all four sides in dark mode |
-| `category-service-resource_icons.png` | Guideline 3.1 -- Shows category icons, service icons, and resource icons from the AWS architecture icon kit |
-| `general-icons.png` | Guideline 3.1 -- Shows general-purpose AWS icons and illustrations (users, cloud, internet, etc.) |
-| `3p-tech.png` | Guideline 3.1 -- Shows third-party technology icons/logos used in diagrams |
-| `basic-shapes.png` | Guideline 3.1 -- Shows basic shapes (squares, rectangles, circles) with AWS palette fills and borders |
-| `lines-arrows.png` | Guideline 3.1 -- Shows line and arrow style examples (solid, dashed, open/closed pointers) |
-| `Screen Shot 2020-12-30 at 11.08.23 AM.png` | Cheat sheet -- Arrow with open pointer (preferred style) |
-| `Screen Shot 2020-12-30 at 11.08.28 AM.png` | Cheat sheet -- Arrow with closed pointer (not preferred) |
-| `Screen Shot 2021-12-01 at 1.18.59 PM.png` | Guideline 3.2 -- AWS Brand color palette preview |
-| `Screen Shot 2020-06-08 at 8.31.54 AM.png` | Guideline 3.2 -- AWS Design System (Polaris) color palette preview |
-| `border.png` | Guideline 4 -- Diagram with non-recommended visible border around Region containers |
-| `shadow.png` | Guideline 4 -- Diagram with non-recommended shadow around Region containers |
-| `Artboard-1.png` | Guideline 7.1 -- Three AWS cloud icon styles that are NOT compliant for China site (highlighted with red circles) |
-| `Artboard-2.png` | Guideline 7.1 -- Compliant alternatives: removed AWS logo, changed label, or used generic cloud icon |
-| `service-labels.png` | Guideline 7.2 -- Labels not compliant: services labeled with "AWS" prefix |
-| `global_china_2.png` | Guideline 7.2 -- Labels Option 1: profile out the image for the China site |
-| `global-china_1.png` | Guideline 7.2 -- Labels Option 2: Region-specific diagram versions (global vs. China) |
-| `service-labels_option-3.png` | Guideline 7.2 -- Labels Option 3: Region-neutral diagram omitting "AWS" from labels |
-| `embedded-text.png` | Guideline 7.2 -- Descriptive text not compliant: "AWS" embedded as description text |
-| `logo.png` | Site logo (navigation chrome, not content) |
+| Filename                                    | Context / Description                                                                                                        |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `banner-diagrams.png`                       | Page banner image                                                                                                            |
+| `Picture1.png`                              | Architecture diagram example (diagram types table)                                                                           |
+| `process-flow-diagram.png`                  | Process/flow diagram example (diagram types table)                                                                           |
+| `data-viz.png`                              | Data visualization example (diagram types table)                                                                             |
+| `example-dg.png`                            | Other conceptual diagram example (diagram types table)                                                                       |
+| `guides-size.png`                           | Guideline 1 -- Grid of screens A-I showing recommended vs. not-recommended diagram size proportions within browser viewports |
+| `bp-light.png`                              | Guideline 2 -- Good example: diagram in light mode with proper spacing and padding                                           |
+| `bp-d1.png`                                 | Guideline 2 -- Bad example: transparent background in dark mode; objects/text hard to see                                    |
+| `bp-d2.png`                                 | Guideline 2 -- Bad example: white background but no outside padding in dark mode                                             |
+| `bp-d3.png`                                 | Guideline 2 -- Bad example: unequal padding (left only) in dark mode                                                         |
+| `bp-d4.png`                                 | Guideline 2 -- Bad example: unequal padding on all sides in dark mode                                                        |
+| `bp-d5.png`                                 | Guideline 2 -- Best practice: equal 8px padding on all four sides in dark mode                                               |
+| `category-service-resource_icons.png`       | Guideline 3.1 -- Shows category icons, service icons, and resource icons from the AWS architecture icon kit                  |
+| `general-icons.png`                         | Guideline 3.1 -- Shows general-purpose AWS icons and illustrations (users, cloud, internet, etc.)                            |
+| `3p-tech.png`                               | Guideline 3.1 -- Shows third-party technology icons/logos used in diagrams                                                   |
+| `basic-shapes.png`                          | Guideline 3.1 -- Shows basic shapes (squares, rectangles, circles) with AWS palette fills and borders                        |
+| `lines-arrows.png`                          | Guideline 3.1 -- Shows line and arrow style examples (solid, dashed, open/closed pointers)                                   |
+| `Screen Shot 2020-12-30 at 11.08.23 AM.png` | Cheat sheet -- Arrow with open pointer (preferred style)                                                                     |
+| `Screen Shot 2020-12-30 at 11.08.28 AM.png` | Cheat sheet -- Arrow with closed pointer (not preferred)                                                                     |
+| `Screen Shot 2021-12-01 at 1.18.59 PM.png`  | Guideline 3.2 -- AWS Brand color palette preview                                                                             |
+| `Screen Shot 2020-06-08 at 8.31.54 AM.png`  | Guideline 3.2 -- AWS Design System (Polaris) color palette preview                                                           |
+| `border.png`                                | Guideline 4 -- Diagram with non-recommended visible border around Region containers                                          |
+| `shadow.png`                                | Guideline 4 -- Diagram with non-recommended shadow around Region containers                                                  |
+| `Artboard-1.png`                            | Guideline 7.1 -- Three AWS cloud icon styles that are NOT compliant for China site (highlighted with red circles)            |
+| `Artboard-2.png`                            | Guideline 7.1 -- Compliant alternatives: removed AWS logo, changed label, or used generic cloud icon                         |
+| `service-labels.png`                        | Guideline 7.2 -- Labels not compliant: services labeled with "AWS" prefix                                                    |
+| `global_china_2.png`                        | Guideline 7.2 -- Labels Option 1: profile out the image for the China site                                                   |
+| `global-china_1.png`                        | Guideline 7.2 -- Labels Option 2: Region-specific diagram versions (global vs. China)                                        |
+| `service-labels_option-3.png`               | Guideline 7.2 -- Labels Option 3: Region-neutral diagram omitting "AWS" from labels                                          |
+| `embedded-text.png`                         | Guideline 7.2 -- Descriptive text not compliant: "AWS" embedded as description text                                          |
+| `logo.png`                                  | Site logo (navigation chrome, not content)                                                                                   |

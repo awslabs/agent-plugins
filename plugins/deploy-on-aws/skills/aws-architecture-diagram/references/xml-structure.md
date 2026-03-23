@@ -56,12 +56,12 @@ Groups MUST have `container=1` in style. Children set `parent` to the group's ID
 
 ## Container Types
 
-| Type | Style | When to use |
-|------|-------|-------------|
-| **AWS Group** | `shape=mxgraph.aws4.group;grIcon=...;container=1;pointerEvents=0;` | VPC, subnets, regions, AZs |
-| **Swimlane** (titled) | `swimlane;startSize=30;` | Container with visible title bar or connectable container |
-| **Group** (invisible) | `group;` | No visual border, no connections |
-| **Custom container** | Add `container=1;pointerEvents=0;` to any shape | Any shape as container |
+| Type                  | Style                                                              | When to use                                               |
+| --------------------- | ------------------------------------------------------------------ | --------------------------------------------------------- |
+| **AWS Group**         | `shape=mxgraph.aws4.group;grIcon=...;container=1;pointerEvents=0;` | VPC, subnets, regions, AZs                                |
+| **Swimlane** (titled) | `swimlane;startSize=30;`                                           | Container with visible title bar or connectable container |
+| **Group** (invisible) | `group;`                                                           | No visual border, no connections                          |
+| **Custom container**  | Add `container=1;pointerEvents=0;` to any shape                    | Any shape as container                                    |
 
 Always add `pointerEvents=0;` to containers that MUST NOT capture connections between children. Only omit it when the container itself needs to be connectable.
 
@@ -174,34 +174,34 @@ edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;elbow=vertical;startArrow=non
 
 ## Useful Style Properties
 
-| Property | Values | Use for |
-|----------|--------|---------|
-| `rounded=1` | 0 or 1 | Rounded corners |
-| `whiteSpace=wrap` | wrap | Text wrapping |
-| `fillColor=#E6F2FF` | Hex color | Background color |
-| `strokeColor=#147EBA` | Hex color | Border color |
-| `fontColor=#333333` | Hex color | Text color |
-| `shape=cylinder3` | shape name | Database cylinders |
-| `ellipse` | style keyword | Circles/ovals |
-| `rhombus` | style keyword | Diamonds |
-| `container=1` | 0 or 1 | Enable container behavior |
-| `pointerEvents=0` | 0 or 1 | Prevent container from capturing child connections |
-| `exitX`/`exitY` | 0-1 | Edge exit point on source shape |
-| `entryX`/`entryY` | 0-1 | Edge entry point on target shape |
-| `jettySize=auto` | auto or px | Port spacing on orthogonal edges |
+| Property              | Values        | Use for                                            |
+| --------------------- | ------------- | -------------------------------------------------- |
+| `rounded=1`           | 0 or 1        | Rounded corners                                    |
+| `whiteSpace=wrap`     | wrap          | Text wrapping                                      |
+| `fillColor=#E6F2FF`   | Hex color     | Background color                                   |
+| `strokeColor=#147EBA` | Hex color     | Border color                                       |
+| `fontColor=#333333`   | Hex color     | Text color                                         |
+| `shape=cylinder3`     | shape name    | Database cylinders                                 |
+| `ellipse`             | style keyword | Circles/ovals                                      |
+| `rhombus`             | style keyword | Diamonds                                           |
+| `container=1`         | 0 or 1        | Enable container behavior                          |
+| `pointerEvents=0`     | 0 or 1        | Prevent container from capturing child connections |
+| `exitX`/`exitY`       | 0-1           | Edge exit point on source shape                    |
+| `entryX`/`entryY`     | 0-1           | Edge entry point on target shape                   |
+| `jettySize=auto`      | auto or px    | Port spacing on orthogonal edges                   |
 
 ## Layout Sizing Reference
 
-| Element | Width | Height |
-|---------|-------|--------|
-| Service icon | 78 | 78 |
-| Small resource icon | 48 | 48 |
-| Text label | varies | 20 |
-| VPC group (typical) | 800-1200 | 500-800 |
-| Subnet group (typical) | 350-550 | 400-700 |
-| AZ group (typical) | 380-580 | 420-720 |
-| Region group (typical) | 900-1400 | 600-900 |
-| AWS Cloud group | 1000-1500 | 700-1000 |
+| Element                | Width     | Height   |
+| ---------------------- | --------- | -------- |
+| Service icon           | 78        | 78       |
+| Small resource icon    | 48        | 48       |
+| Text label             | varies    | 20       |
+| VPC group (typical)    | 800-1200  | 500-800  |
+| Subnet group (typical) | 350-550   | 400-700  |
+| AZ group (typical)     | 380-580   | 420-720  |
+| Region group (typical) | 900-1400  | 600-900  |
+| AWS Cloud group        | 1000-1500 | 700-1000 |
 
 ## References
 

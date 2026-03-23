@@ -32,16 +32,16 @@ This renders as "AWS Lambda" with "compress queries" in italics below it.
 
 ## Category Fill Colors
 
-| Category | fillColor |
-|----------|-----------|
-| Compute / Containers | `#ED7100` |
-| Database | `#C925D1` |
-| Analytics / Networking | `#8C4FFF` |
-| Storage | `#3F8624` |
+| Category                             | fillColor |
+| ------------------------------------ | --------- |
+| Compute / Containers                 | `#ED7100` |
+| Database                             | `#C925D1` |
+| Analytics / Networking               | `#8C4FFF` |
+| Storage                              | `#3F8624` |
 | Application Integration / Management | `#E7157B` |
-| Security | `#DD344C` |
-| AI/ML | `#01A88D` |
-| General | `#232F3D` |
+| Security                             | `#DD344C` |
+| AI/ML                                | `#01A88D` |
+| General                              | `#232F3D` |
 
 ## Font and Typography
 
@@ -167,13 +167,13 @@ Set `parent="containerId"` on child cells. Children use **relative coordinates**
 
 ## Container Types
 
-| Type | Style | When to use |
-|------|-------|-------------|
-| **AWS Group** | `shape=mxgraph.aws4.group;grIcon=...;container=1;pointerEvents=0;` | VPC, subnets, regions, AZs |
+| Type                       | Style                                                                                | When to use                                                           |
+| -------------------------- | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| **AWS Group**              | `shape=mxgraph.aws4.group;grIcon=...;container=1;pointerEvents=0;`                   | VPC, subnets, regions, AZs                                            |
 | **Service workflow group** | `shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_step_functions_workflow;...` | Step Functions workflows, ECS clusters, or any service-level grouping |
-| **Swimlane** (titled) | `swimlane;startSize=30;` | Only when the container itself needs connections (rare) |
-| **Group** (invisible) | `group;` | No visual border needed, container has no connections |
-| **Custom container** | Add `container=1;pointerEvents=0;` to any shape style | Any shape acting as a container without its own connections |
+| **Swimlane** (titled)      | `swimlane;startSize=30;`                                                             | Only when the container itself needs connections (rare)               |
+| **Group** (invisible)      | `group;`                                                                             | No visual border needed, container has no connections                 |
+| **Custom container**       | Add `container=1;pointerEvents=0;` to any shape style                                | Any shape acting as a container without its own connections           |
 
 **Step Functions workflow group** (useful for showing multi-step pipelines):
 

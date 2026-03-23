@@ -100,12 +100,12 @@ In the legend, add an italic note explaining their role BELOW all step descripti
 
 ## Service Placement
 
-| Service | Correct Container |
-|---------|-------------------|
-| ALB, NAT Gateway, Bastion | Public subnet |
-| EC2, ECS/Fargate, Lambda (VPC), RDS, ElastiCache | Private subnet |
-| Transit Gateway, VPN Gateway | VPC level (not in subnet) |
-| Route 53, CloudFront, S3, IAM, CloudWatch | Outside VPC |
-| Users, On-premises | Outside AWS Cloud boundary |
+| Service                                          | Correct Container          |
+| ------------------------------------------------ | -------------------------- |
+| ALB, NAT Gateway, Bastion                        | Public subnet              |
+| EC2, ECS/Fargate, Lambda (VPC), RDS, ElastiCache | Private subnet             |
+| Transit Gateway, VPN Gateway                     | VPC level (not in subnet)  |
+| Route 53, CloudFront, S3, IAM, CloudWatch        | Outside VPC                |
+| Users, On-premises                               | Outside AWS Cloud boundary |
 
 **External actor coordinates**: External actors MUST have coordinates that place them visually OUTSIDE the AWS Cloud group rectangle — at least 40px from the boundary.

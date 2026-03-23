@@ -10,17 +10,17 @@ Every diagram MUST have a title group: title (30px bold), subtitle (16px), orang
 
 ## Dark/Light Adaptive Contrast
 
-| Element | Property | Value |
-|---------|----------|-------|
-| AWS Cloud fills | `fillColor` | `light-dark(#232F3E0D,#232F3E0D)` |
-| Region fills | `fillColor` | `light-dark(#0C7B7D0D,#0C7B7D0D)` |
-| VPC fills | `fillColor` | `light-dark(#8C4FFF0D,#8C4FFF0D)` |
-| Public subnet fills | `fillColor` | `light-dark(#2488140D,#2488140D)` |
-| Private subnet fills | `fillColor` | `light-dark(#147EBA0D,#147EBA0D)` |
-| Users container stroke | `strokeColor` | `light-dark(#666666,#D4D4D4)` |
-| Legend background | `fillColor` | `light-dark(#EDF3FF,#305363)` |
-| Legend step text | inline CSS | `color: light-dark(rgb(0,0,0), rgb(255,255,255))` |
-| Line Styles box | `fillColor` | `light-dark(#F5F5F5,#29393B)` |
+| Element                | Property      | Value                                             |
+| ---------------------- | ------------- | ------------------------------------------------- |
+| AWS Cloud fills        | `fillColor`   | `light-dark(#232F3E0D,#232F3E0D)`                 |
+| Region fills           | `fillColor`   | `light-dark(#0C7B7D0D,#0C7B7D0D)`                 |
+| VPC fills              | `fillColor`   | `light-dark(#8C4FFF0D,#8C4FFF0D)`                 |
+| Public subnet fills    | `fillColor`   | `light-dark(#2488140D,#2488140D)`                 |
+| Private subnet fills   | `fillColor`   | `light-dark(#147EBA0D,#147EBA0D)`                 |
+| Users container stroke | `strokeColor` | `light-dark(#666666,#D4D4D4)`                     |
+| Legend background      | `fillColor`   | `light-dark(#EDF3FF,#305363)`                     |
+| Legend step text       | inline CSS    | `color: light-dark(rgb(0,0,0), rgb(255,255,255))` |
+| Line Styles box        | `fillColor`   | `light-dark(#F5F5F5,#29393B)`                     |
 
 **Hex+alpha**: `#0C7B7D0D` = teal at ~5% opacity (last two hex digits are alpha). Add `fillStyle=auto;` when using `light-dark()` fills.
 
@@ -56,17 +56,17 @@ Small teal `#007CBD` badges (28x28, fontSize=16) placed near arrows. See `xml-te
 
 ### Category Tint Colors
 
-| Category | fillColor (tint) | strokeColor | Example Services |
-|----------|-------------------|-------------|-----------------|
-| Compute | `#FFF2E8` | `#ED7100` | Lambda, EC2, ECS, Fargate |
-| Database | `#F5E6F7` | `#C925D1` | DynamoDB, RDS, Aurora |
-| Analytics/Networking | `#EDE7F6` | `#8C4FFF` | API Gateway, VPC, CloudFront, Kinesis |
-| Storage | `#E8F5E9` | `#3F8624` | S3, EBS, EFS |
-| App Integration | `#FCE4EC` | `#E7157B` | EventBridge, SQS, SNS, Step Functions |
-| AI/ML | `#E0F2F1` | `#01A88D` | SageMaker, Bedrock |
-| Security | `#FFEBEE` | `#DD344C` | IAM, Cognito, WAF, KMS |
-| IoT | `#E8F5E9` | `#1A9C37` | IoT Core, Greengrass, IoT Analytics |
-| General/Auxiliary | `#F5F5F5` | `#666666` | CloudWatch, auxiliary services |
+| Category             | fillColor (tint) | strokeColor | Example Services                      |
+| -------------------- | ---------------- | ----------- | ------------------------------------- |
+| Compute              | `#FFF2E8`        | `#ED7100`   | Lambda, EC2, ECS, Fargate             |
+| Database             | `#F5E6F7`        | `#C925D1`   | DynamoDB, RDS, Aurora                 |
+| Analytics/Networking | `#EDE7F6`        | `#8C4FFF`   | API Gateway, VPC, CloudFront, Kinesis |
+| Storage              | `#E8F5E9`        | `#3F8624`   | S3, EBS, EFS                          |
+| App Integration      | `#FCE4EC`        | `#E7157B`   | EventBridge, SQS, SNS, Step Functions |
+| AI/ML                | `#E0F2F1`        | `#01A88D`   | SageMaker, Bedrock                    |
+| Security             | `#FFEBEE`        | `#DD344C`   | IAM, Cognito, WAF, KMS                |
+| IoT                  | `#E8F5E9`        | `#1A9C37`   | IoT Core, Greengrass, IoT Analytics   |
+| General/Auxiliary    | `#F5F5F5`        | `#666666`   | CloudWatch, auxiliary services        |
 
 Container 120x120, icon 48x48 at (x=36, y=30). See `xml-templates-structure.md` for XML.
 
@@ -86,14 +86,14 @@ Font size hierarchy:
 
 Add `sketch=1;curveFitting=1;jiggle=2` to all non-icon elements. Keep `sketch=0` on service icons. See `example-sketch.drawio`.
 
-| Element | Default | Sketch |
-|---------|---------|--------|
-| Font | Helvetica | Comic Sans MS |
-| Container fills | static tint | `light-dark(LIGHT_TINT,#000000)` |
-| Icon label text | `fontColor=#232F3E` | `<font style="color: light-dark(rgb(0,0,0), rgb(245,245,245));">` |
-| Users container | `fillColor=#f5f5f5` | `fillColor=light-dark(#F5F5F5,#000000);fontColor=light-dark(#333333,#FAFAFA)` |
-| Badge number text | `fontColor=#FFFFFF` | `<font style="color: light-dark(rgb(0,0,0), rgb(255,255,255));">` |
-| Legend badge | `fontColor=#FFFFFF` | `fontColor=light-dark(#000000,#121212)` |
+| Element           | Default             | Sketch                                                                        |
+| ----------------- | ------------------- | ----------------------------------------------------------------------------- |
+| Font              | Helvetica           | Comic Sans MS                                                                 |
+| Container fills   | static tint         | `light-dark(LIGHT_TINT,#000000)`                                              |
+| Icon label text   | `fontColor=#232F3E` | `<font style="color: light-dark(rgb(0,0,0), rgb(245,245,245));">`             |
+| Users container   | `fillColor=#f5f5f5` | `fillColor=light-dark(#F5F5F5,#000000);fontColor=light-dark(#333333,#FAFAFA)` |
+| Badge number text | `fontColor=#FFFFFF` | `<font style="color: light-dark(rgb(0,0,0), rgb(255,255,255));">`             |
+| Legend badge      | `fontColor=#FFFFFF` | `fontColor=light-dark(#000000,#121212)`                                       |
 
 ## AgentCore Icons
 

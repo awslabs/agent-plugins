@@ -33,11 +33,11 @@ Key flags:
 
 ## Supported Formats
 
-| Format | Embed XML | Notes |
-|--------|-----------|-------|
+| Format | Embed XML  | Notes                                    |
+| ------ | ---------- | ---------------------------------------- |
 | `png`  | Yes (`-e`) | Viewable everywhere, editable in draw.io |
-| `svg`  | Yes (`-e`) | Scalable, editable in draw.io |
-| `pdf`  | Yes (`-e`) | Printable, editable in draw.io |
+| `svg`  | Yes (`-e`) | Scalable, editable in draw.io            |
+| `pdf`  | Yes (`-e`) | Printable, editable in draw.io           |
 
 ## File Naming
 
