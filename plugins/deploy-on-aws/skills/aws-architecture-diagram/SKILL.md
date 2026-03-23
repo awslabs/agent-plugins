@@ -223,11 +223,13 @@ points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0
 ### Edge Styles
 
 **Standard connection** (most common):
+
 ```
 edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;
 ```
 
 **Dashed (optional/async):**
+
 ```
 edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;
 ```
@@ -259,27 +261,10 @@ The `x` value on the geometry controls position along the edge (-1 = source end,
 
 ### Edges
 
-Standard connection: `edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;`
-
-- Use `edgeStyle=orthogonalEdgeStyle` for right-angle connectors (most common)
-- **Space nodes generously** -- at least 200px horizontal / 120px vertical gaps between icons
-- **Always connect edges to service icons**, not to container/group shapes. If services are inside a container, target the icon cell ID (e.g., `target="lambda-1"`), not the container ID. Container shapes with `pointerEvents=0` won't render connections properly.
-- Use `exitX`/`exitY` and `entryX`/`entryY` (values 0-1) to control which side of a node an edge connects to. Spread connections across different sides to prevent overlap
-- **Leave room for arrowheads**: Ensure at least 20px of straight segment before the target and after the source. If the final segment is too short, the arrowhead overlaps the bend and looks broken
-- When nodes are close together or nearly aligned, the auto-router may place a bend too close to a shape. Fix by increasing node spacing or adding explicit waypoints
-- Add explicit **waypoints** when edges would overlap:
-  ```xml
-  <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="a" target="b">
-    <mxGeometry relative="1" as="geometry">
-      <Array as="points">
-        <mxPoint x="300" y="150"/>
-        <mxPoint x="300" y="250"/>
-      </Array>
-    </mxGeometry>
-  </mxCell>
-  ```
-- Use `rounded=1` on edges for cleaner bends
-- Use `jettySize=auto` for better port spacing on orthogonal edges
+- **Always connect edges to service icons**, not to container/group shapes. Target the icon cell ID, not the container ID.
+- Use `exitX`/`exitY` and `entryX`/`entryY` (values 0-1) to control connection sides. Spread connections across different sides.
+- **Leave room for arrowheads**: At least 20px straight segment before target and after source.
+- Add explicit **waypoints** (`<Array as="points"><mxPoint x="X" y="Y"/></Array>`) when edges would overlap.
 - Align all nodes to a grid (multiples of 10)
 
 ### Groups and Containers
@@ -290,20 +275,24 @@ Standard connection: `edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;j
 - All group shapes MUST use `light-dark()` fills (see Style Rules above)
 - Full group style strings: `references/group-styles.md`
 - Container type reference: `references/xml-structure.md`
+
 ### When to use containers vs flat layout
 
 **Prefer flat layouts for most diagrams.** Place all service icons as direct children of the AWS Cloud group, and use text cells for section/column labels. This produces the cleanest edge routing because all icons share the same coordinate space.
 
 **Only use nested containers when they represent real infrastructure boundaries:**
+
 - VPC, subnets, AZs, regions, security groups — these are real containment
 - Step Functions workflows, ECS clusters — service-level grouping with a clear boundary
 
 **Do NOT use swimlane containers just to visually group columns** (e.g., "Authentication", "Data Layer", "API Layer"). This causes:
+
 - Cross-container edge routing problems (edges between different containers produce messy orthogonal paths)
 - Oversized containers with wasted space
 - Coordinate confusion between parent frames
 
 Instead, use a text cell label above each column of icons:
+
 ```xml
 <mxCell id="col-auth" value="&lt;b&gt;Authentication&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#DD344C;" vertex="1" parent="aws-cloud">
   <mxGeometry x="60" y="40" width="160" height="20" as="geometry" />
@@ -326,6 +315,7 @@ Set `parent="containerId"` on child cells. Children use **relative coordinates**
 | **Custom container** | Add `container=1;pointerEvents=0;` to any shape style | Any shape acting as a container without its own connections |
 
 **Step Functions workflow group** (useful for showing multi-step pipelines):
+
 ```
 points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_step_functions_workflow;strokeColor=#CD2264;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#CD2264;dashed=0
 ```
@@ -349,6 +339,7 @@ points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0
 ### Complex Diagram Scaling (13+ services)
 
 For diagrams with 13+ services, increase spacing to prevent crowding:
+
 - Horizontal spacing: 220px (up from 180px)
 - Vertical spacing: 160px (up from 120px)
 - Page size: `pageWidth=1600;pageHeight=1200` minimum
@@ -361,17 +352,20 @@ For diagrams with 13+ services, increase spacing to prevent crowding:
 Study `references/example-event-driven.drawio` and `references/example-complex-platform.drawio` for correct edge routing patterns.
 
 **Basic rules:**
+
 - Use `edgeStyle=orthogonalEdgeStyle` for right-angle connectors
 - For simple adjacent connections (A directly next to B), let draw.io auto-route — do NOT set entry/exit points
 - Leave 20px straight segment before target and after source for arrowheads
 - Edges always leave PERPENDICULAR to the container face and route OUTWARD — the first segment after exiting a container MUST move AWAY from the container, never back into it. If an edge exits from the bottom (`exitY=1`), the first segment goes DOWN. If it exits right (`exitX=1`), the first segment goes RIGHT.
 
 **Multiple edges from one service** (CRITICAL):
+
 - When a service has 2+ outgoing edges, each edge MUST exit from a DIFFERENT side or a different point on the same side
 - Example: Lambda → AgentCore (`exitX=0.5;exitY=1` bottom), Lambda → Step Functions (`exitX=1;exitY=0.5` right), Lambda → EventBridge (`exitX=1;exitY=0.75` right-lower)
 - When 2+ edges enter the same target from the same direction, offset entry points: `entryX=0.25;entryY=0` and `entryX=0.5;entryY=0` (not both at 0.5)
 
 **Waypoints for non-adjacent routing** (CRITICAL):
+
 - When an edge must route AROUND intervening containers, add explicit waypoints using `<Array as="points"><mxPoint x="X" y="Y"/></Array>` inside the edge's `<mxGeometry>`
 - Create clean L-shaped (2 waypoints) or U-shaped (3 waypoints) paths
 - Route waypoints through clear lanes between container rows/columns
@@ -381,11 +375,13 @@ Study `references/example-event-driven.drawio` and `references/example-complex-p
 ### Handling Overlaps
 
 **Always add `labelBackgroundColor=#ffffff`** to every edge label. This prevents labels from blending with crossing edges or nearby icon labels. Include it in the `edgeLabel` style by default — not as an afterthought:
+
 ```
 labelBackgroundColor=#ffffff
 ```
 
 Only reroute an edge (via waypoints or different exit/entry points) when the overlap is severe and the reroute is simple and clean — avoid complex rerouting that could make arrows harder to follow. The label zones to be aware of:
+
 - **78px icons**: ~25px label height below the icon (total footprint ~103px tall)
 - **48px icons**: ~20px label height below (total footprint ~68px tall)
 - **Group labels**: 30px reserved at the top-left of AWS group shapes
@@ -413,6 +409,7 @@ For complex diagrams (7+ services or multiple branching paths):
 See `references/xml-templates-structure.md` for badge and legend XML. See `references/style-guide.md` for detailed legend rules.
 
 **Auxiliary/monitoring services**: ONLY CloudWatch, CloudTrail, X-Ray, and IAM are auxiliary. These do NOT get step numbers and do NOT get edges. Place them inside a dedicated **"Auxiliary Services" group** — a dashed, unfilled rectangle (`rounded=0;fillColor=none;dashed=1;verticalAlign=top`) labeled "Auxiliary Services". Placement rules:
+
 - MUST be INSIDE the AWS Cloud boundary (not outside it)
 - MUST be in a free corner where it does NOT overlap or interfere with primary services or their edges
 - MUST NOT be placed where the legend panel would cover it — if the legend is on the right, place auxiliary at bottom-left
@@ -452,9 +449,11 @@ Each diagram gets a **descriptive filename** in kebab-case, placed in `./docs/` 
    b. If validation passes, generate a draw.io preview URL
 6. If validation fails, fix the errors and rewrite the file
 7. **Only after validation passes**, generate the browser preview link by running:
+
    ```bash
    python3 ${PLUGIN_ROOT}/scripts/lib/drawio_url.py ./docs/<filename>.drawio --open
    ```
+
    This compresses the XML and opens `app.diagrams.net` with the diagram loaded instantly. Do NOT run this if validation failed.
 8. If the user requested an export format (png, svg, pdf):
    a. Check if draw.io desktop CLI is available
@@ -492,4 +491,3 @@ Each diagram gets a **descriptive filename** in kebab-case, placed in `./docs/` 
 - Include a title/label on the diagram describing the architecture
 - ALWAYS set `background="#FFFFFF"` on the mxGraphModel element — AWS guidelines require white background, never transparent
 - Do NOT read existing `.drawio` files as reference when generating diagrams — use only the templates and rules in this skill and its references. Reading raw XML examples overloads context and degrades output quality.
-

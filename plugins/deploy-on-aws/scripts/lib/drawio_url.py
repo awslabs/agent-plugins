@@ -67,7 +67,7 @@ def main():
             cmd = "start"
         else:
             cmd = "xdg-open"
-        subprocess.run([cmd, url], check=False)
+        subprocess.run([cmd, url], check=False)  # nosec B603 - cmd is a hardcoded platform launcher
 
 
 if __name__ == "__main__":
