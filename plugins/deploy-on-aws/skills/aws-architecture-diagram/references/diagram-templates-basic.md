@@ -15,6 +15,7 @@ Layout (left to right):
 ```
 
 Typical cell arrangement:
+
 - Users icon at x=50
 - CloudFront at x=250
 - S3 static at x=450, y offset up

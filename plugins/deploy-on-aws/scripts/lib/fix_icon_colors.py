@@ -6,11 +6,11 @@ Fixes three types of issues:
 2. Container tint/stroke: parent container with wrong category colors
 3. Shape renames: broken shape names (e.g., iam → identity_and_access_management)
 
-Uses only stdlib (xml.etree.ElementTree). No external deps.
+Requires defusedxml for safe XML parsing (prevents XXE attacks).
 """
 
 import argparse
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
 
 # Broken shape names → correct shape names
 SHAPE_RENAMES: dict[str, str] = {

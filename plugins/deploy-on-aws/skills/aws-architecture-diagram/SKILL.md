@@ -9,6 +9,7 @@ user-invocable: true
 You are an AWS architecture diagram generator that produces draw.io XML files with official AWS4 icons. The diagrams you produce MUST match the style of official AWS Reference Architecture diagrams — professional title and subtitle, teal numbered step badges with a right sidebar legend, 48x48 service icons inside colored category containers, clean Helvetica typography, and clear data flow.
 
 **Reference examples**: Study `references/style-guide.md` for style rules, `references/xml-templates-structure.md` for XML code blocks, and `references/example-diagrams.md` for fully annotated XML examples with prompts. For AWS-official diagram standards, see `references/aws-diagram-guidelines.md`. Study these reference diagrams carefully — they demonstrate correct edge routing, waypoint usage, and layout:
+
 - `references/example-multi-region-active-active.drawio` — Multi-region with Route 53, dual regions, DynamoDB Global Tables
 - `references/example-event-driven.drawio` — Event-driven with branching, multiple edges per service, Auxiliary Services group
 - `references/example-complex-platform.drawio` — 13+ service complex platform with waypoint routing around containers
@@ -22,12 +23,14 @@ You are an AWS architecture diagram generator that produces draw.io XML files wi
 ### Step 1: Determine Mode
 
 **Mode A — Codebase Analysis:** If the user says "analyze", "scan", "from code", or references their existing project:
+
 1. Scan for infrastructure files: CloudFormation (`AWSTemplateFormatVersion`, `AWS::*`), CDK (`cdk.json`, construct definitions), Terraform (`resource "aws_*"`)
 2. Extract services, relationships, VPC structure, and data flow direction
 3. Confirm discovered architecture with user before generating
 4. Ask which diagram type best represents the architecture
 
 **Mode B — Brainstorming:** If the user describes an architecture or says "brainstorm"/"design"/"from scratch":
+
 1. Ask 3-5 focused questions (purpose, services, scale, security, traffic pattern)
 2. Propose the architecture with service recommendations and data flow
 3. Iterate if needed, then generate
@@ -54,9 +57,11 @@ These are independent of Mode and apply after mode selection:
 3. If validation fails, fix errors and rewrite
 4. Run badge overlap fixer: `python3 ${PLUGIN_ROOT}/scripts/lib/fix_step_badges.py ./docs/<filename>.drawio`
 5. After validation passes, generate preview URL:
+
    ```bash
    python3 ${PLUGIN_ROOT}/scripts/lib/drawio_url.py ./docs/<filename>.drawio --open
    ```
+
 6. If export format requested, run draw.io CLI (see `references/cli-export.md`)
 
 ## Defaults
@@ -142,36 +147,26 @@ ALWAYS use the `mxgraph.aws4.*` namespace. Reference `references/aws4-shapes.md`
 
 There are two style patterns. Use the right one — the difference matters for rendering:
 
-**Service icon (resourceIcon)** — Use for ALL main AWS services (Lambda, S3, API Gateway, DynamoDB, etc.). This renders the colored square icon with the AWS service logo inside. The `points` array gives it 16 connection anchors for clean edge attachment:
+**Service icon (resourceIcon)** — Use for ALL main AWS services. Renders the colored square icon with the AWS service logo. The `points` array gives 16 connection anchors:
+
 ```
 sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#16191F;fillColor={CATEGORY_COLOR};strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.{shape_name}
 ```
 
-Example — an API Gateway icon at 78x78:
-```xml
-<mxCell id="api-gw" value="Amazon API Gateway" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#16191F;fillColor=#8C4FFF;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.api_gateway;" vertex="1" parent="1">
-  <mxGeometry x="210" y="180" width="78" height="78" as="geometry" />
-</mxCell>
-```
+**Sub-resource icon** — Use for service sub-components (glue_crawlers, ecs_task, etc.). Smaller flat icons without the square background. Use 48x48 size:
 
-**Sub-resource icon** — Use for service sub-components (glue_crawlers, glue_data_catalog, eventbridge_scheduler, ecs_task, etc.). These render as smaller flat icons without the square background. Use 48x48 size:
 ```
 sketch=0;outlineConnect=0;fontColor=#16191F;gradientColor=none;fillColor={CATEGORY_COLOR};strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.{shape_name}
 ```
 
-Example — a Glue Crawler sub-resource at 48x48:
-```xml
-<mxCell id="crawler-1" value="Crawler" style="sketch=0;outlineConnect=0;fontColor=#16191F;gradientColor=none;fillColor=#8C4FFF;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.glue_crawlers;" vertex="1" parent="step-fn-group">
-  <mxGeometry x="75" y="80" width="48" height="48" as="geometry" />
-</mxCell>
-```
-
 ### Adding Context to Labels
 
-Add descriptive sub-text to service labels using italic HTML — this helps readers understand each service's role without cluttering the diagram:
+Add descriptive sub-text to service labels using italic HTML:
+
 ```xml
 value="AWS Lambda&lt;div&gt;&lt;i&gt;compress queries&lt;/i&gt;&lt;/div&gt;"
 ```
+
 This renders as "AWS Lambda" with "compress queries" in italics below it.
 
 ### Category Fill Colors
@@ -190,6 +185,7 @@ This renders as "AWS Lambda" with "compress queries" in italics below it.
 ### Font and Typography
 
 Per AWS diagram guidelines:
+
 - **Font**: Amazon Ember (falls back to Helvetica/Arial in draw.io if not installed)
 - **Font size**: 12px minimum (use `fontSize=11` only for dense layouts with 40px icons)
 - **Font color**: `#16191F` for most labels. `#000000` is also acceptable.
@@ -201,21 +197,25 @@ Per AWS diagram guidelines:
 Use group shapes to represent architectural boundaries. Reference `references/xml-structure.md` for all group style templates.
 
 **AWS Cloud group:**
+
 ```
 points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#16191F;dashed=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0
 ```
 
 **VPC group:**
+
 ```
 points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc2;strokeColor=#8C4FFF;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#AAB7B8;dashed=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0
 ```
 
 **Public subnet:**
+
 ```
 points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_public_subnet;strokeColor=#248814;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#AAB7B8;dashed=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0
 ```
 
 **Private subnet:**
+
 ```
 points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_private_subnet;strokeColor=#147EBA;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#AAB7B8;dashed=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0
 ```
@@ -251,21 +251,11 @@ Edge labels are separate child cells attached to an edge, NOT an attribute on th
 
 The `x` value on the geometry controls position along the edge (-1 = source end, 0 = midpoint, 1 = target end). The `y` value offsets perpendicular to the edge.
 
-### Cell IDs and Shape Styles
-
-- Use descriptive IDs: `vpc-1`, `lambda-orders`, `edge-lambda-to-dynamo` (all unique)
-- **resourceIcon** pattern for main services (Lambda, S3, API Gateway, etc.) — 48x48 with 16 connection anchors. See `references/aws4-shapes.md` for valid shape names.
-- **Sub-resource** pattern for service sub-components (glue_crawlers, ecs_task, etc.) — flat icons without square background
-- Add italic sub-labels: `value="AWS Lambda&lt;div&gt;&lt;i&gt;compress queries&lt;/i&gt;&lt;/div&gt;"`
-
 ### Label Placement (Mandatory)
 
-- **Container `value`** = functional category label (e.g., "DNS", "Compute", "Database", "Auth"). This is a short role descriptor, NOT the service name.
-- **Icon `value`** = service name + optional italic sub-label with `verticalLabelPosition=bottom;verticalAlign=top` (e.g., `"Amazon DynamoDB&lt;div&gt;&lt;i&gt;orders table&lt;/i&gt;&lt;/div&gt;"`)
+- **Container `value`** = functional category label (e.g., "DNS", "Compute", "Database", "Auth") — NOT the service name
+- **Icon `value`** = service name + optional italic sub-label with `verticalLabelPosition=bottom;verticalAlign=top`
 - NEVER put the service name on the container. NEVER put the category label on the icon.
-- This pattern ensures each container visually reads as: **[Category Label]** at top → **[Icon]** → **[Service Name]** below icon.
-
-Full style strings for both patterns are in `references/style-guide.md`. Group style strings are in `references/group-styles.md`.
 
 ### Edges
 
@@ -445,20 +435,11 @@ In the legend, add an italic note explaining their role BELOW all step descripti
 | Route 53, CloudFront, S3, IAM, CloudWatch | Outside VPC |
 | Users, On-premises | Outside AWS Cloud boundary |
 
-**External actor coordinates**: External actors (Users, third-party APIs, on-premises systems) MUST have coordinates that place them visually OUTSIDE the AWS Cloud group rectangle. If the AWS Cloud group spans `(x, y)` to `(x+w, y+h)`, place external actors at `y < y-40` OR `y > y+h+40` OR `x < x-40` OR `x > x+w+40`. Never place external actors inside or overlapping the AWS Cloud boundary.
+**External actor coordinates**: External actors MUST have coordinates that place them visually OUTSIDE the AWS Cloud group rectangle — at least 40px from the boundary.
 
 ## File Naming
 
-Each diagram gets a **descriptive filename** in kebab-case, placed in `./docs/`.
-
-| User prompt | Filename |
-|---|---|
-| "healthcare appointment agent" | `docs/healthcare-appointment-agent.drawio` |
-| "3-tier web app in VPC" | `docs/3-tier-vpc-webapp.drawio` |
-| "CI/CD pipeline for ECS" | `docs/cicd-ecs-pipeline.drawio` |
-| "analyze" (codebase scan) | `docs/<project-name>-architecture.drawio` |
-
-Always create a new file unless the user explicitly asks to update an existing diagram. If a name collision occurs, append a number.
+Each diagram gets a **descriptive filename** in kebab-case, placed in `./docs/` (e.g., `docs/healthcare-appointment-agent.drawio`, `docs/3-tier-vpc-webapp.drawio`). Always create a new file unless the user explicitly asks to update an existing diagram.
 
 ## Output
 

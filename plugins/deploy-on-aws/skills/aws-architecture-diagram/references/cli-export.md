@@ -19,6 +19,7 @@ drawio -x -f <format> -e -b 10 -o <output> <input.drawio>
 ```
 
 Key flags:
+
 - `-x` / `--export`: export mode (required)
 - `-f` / `--format`: output format (png, svg, pdf)
 - `-e` / `--embed-diagram`: embed diagram XML in the output (remains editable in draw.io)

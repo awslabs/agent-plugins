@@ -8,6 +8,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Ensure defusedxml is available (required for safe XML parsing)
+python3 -c "import defusedxml" 2>/dev/null || pip3 install --quiet defusedxml
+
 # Read stdin (hook input JSON)
 INPUT=$(cat)
 

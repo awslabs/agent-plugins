@@ -32,6 +32,7 @@
 This page provides visual style guidelines and other best practices (e.g., legal and accessibility compliance) for diagrams on the AWS Documentation website. A diagram creator may apply these best practices regardless of the tool or software used to create style-aligned and compliant diagrams. These guidelines assume little to no background in design.
 
 For documentation writers and editors seeking step-by-step instructions using specific drawing tools and/or Zonbook integration, see:
+
 - "Create, modify, and add graphics and screenshots" (internal wiki: AWSDocs/editing/graphics/)
 - "Add images using zonbook" (internal wiki: AWSDocs/get-started/zonbook-reference/#HAddimages)
 
@@ -54,6 +55,7 @@ Several types of diagrams can help customers understand AWS services and feature
 **What is it**: A graphical representation of a set of concepts and objects within an ecosystem.
 
 **Useful for:**
+
 - Visualizing overall system or application design
 - Communicating interconnected and complex relationships across services, features, and their containing contexts (such as VPC, Regions, AZs, etc.)
 - Highlighting which part of the overall architecture a service or feature may serve
@@ -65,6 +67,7 @@ Several types of diagrams can help customers understand AWS services and feature
 **What is it**: A combination of illustrations, connective lines, short facts, and/or labels, that communicates a visual story or overview.
 
 **Useful for:**
+
 - Presenting a short and simple breakdown of workflows
 - Showing users which set of tutorial steps they might be focused on with a given section/page
 
@@ -75,6 +78,7 @@ Several types of diagrams can help customers understand AWS services and feature
 **What is it:** The visual presentation of data, numbers or facts in a pictorial or graphical format. Data visualizations can help customers understand difficult concepts or identify new patterns.
 
 **Useful for:**
+
 - Showing the relationship of one or more variables on an output (such as how time and usage impacts cost, how seasonality impacts capacity, etc.)
 
 **Tip:** Create data visualizations using graphing tools you are comfortable with (Excel, D3, Vega-Lite, etc).
@@ -289,12 +293,14 @@ Generally, we do not recommend using general icons from third party/open-sourced
 As a general rule, you may use a third party technology icon as part of an educational/referential diagram if that organization has publicly published the icon along with expressed written permissions to use it.
 
 **Do:**
+
 - Use icons in a way that is truthful and accurate
 - Check the 3P's website for published logos/icons and licensing rules
 - Review the Customer Reference Finder database for customers who have permitted us to use their logos
 - If you are working directly with a company and you ask for permissions via email, save the email
 
 **Don't:**
+
 - Don't modify styling of 3P icons (e.g., adding borders, adding or changing colors, cropping, scaling disproportionately, adding text, etc.)
 - Don't use 3P icons in a way that may suggest an endorsement, affiliation, or sponsorship/co-branding (e.g., combining logos into one logo, implying a relationship between two products)
 
@@ -350,11 +356,13 @@ Use typography rules consistently within your image and make sure they are large
 #### Font, weight, size, emphasis
 
 **Regular text:**
+
 - **Font:** Amazon Ember (download from the Typography website: http://typography.aka.amazon.com/fonts/0 if not pre-installed)
 - **Weight/style:** Regular, **Bold**, or *Italic*. Stay away from underlines -- the lines can add unnecessary visual noise and introduce room for confusion with connective lines and arrows.
 - **Size:** 12px (larger is OK for certain circumstances, but no smaller)
 
 **Monospace text:**
+
 - **Font:** Use one of the following: **Monaco, Menlo, Consolas, Courier Prime, Courier, Courier New**
 - **Weight/style:** Regular or **Bold**
 - **Size:** 12px (larger is OK for certain circumstances, but no smaller)
@@ -371,13 +379,13 @@ Use typography rules consistently within your image and make sure they are large
 
 This guideline is a reiteration of Guideline 2. When you finish creating your image and get ready to save, triple-check that you have even padding to the top, left, right, and bottom of the focus of your image. Additionally, make sure that your image software didn't sneak in an unwanted border or outline shadow while saving your image (this sometimes happens).
 
-#### Non-recommended: Border
+### Non-recommended: Border
 
 <!-- Image: border.png -- Architecture diagram with a visible border surrounding the Region containers. This outer border is not recommended. Dimensions: 592x355px -->
 
 Image with non-recommended border surrounding the Region containers.
 
-#### Non-recommended: Shadow
+### Non-recommended: Shadow
 
 <!-- Image: shadow.png -- Architecture diagram with a visible shadow effect surrounding the Region containers. This outer shadow is not recommended. Dimensions: 592x352px -->
 

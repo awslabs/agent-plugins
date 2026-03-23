@@ -8,13 +8,13 @@ Chains all fixers in sequence:
 4. fix_legend_size — resize legend panel to match diagram height
 
 Reads JSON from stdin (PostToolUse hook format) or accepts file path as argument.
-Uses only stdlib. No external deps.
+Requires defusedxml for safe XML parsing (prevents XXE attacks).
 """
 
 import argparse
 import json
 import sys
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
 from pathlib import Path
 
 # Import sibling modules

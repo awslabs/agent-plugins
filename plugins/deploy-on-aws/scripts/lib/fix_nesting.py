@@ -13,11 +13,11 @@ This script:
 4. Converts children's relative coordinates to absolute by adding
    the region's offset
 
-Uses only stdlib (xml.etree.ElementTree). No external deps.
+Requires defusedxml for safe XML parsing (prevents XXE attacks).
 """
 
 import argparse
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
 
 
 def get_style_dict(style_str: str) -> dict[str, str]:

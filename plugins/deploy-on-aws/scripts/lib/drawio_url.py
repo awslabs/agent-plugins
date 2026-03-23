@@ -10,7 +10,7 @@ Usage: python3 drawio_url.py <file.drawio> [--open]
 """
 
 import json
-import subprocess
+import subprocess  # nosec B404 # nosemgrep: gitlab.bandit.B404 - opens URLs in browser via platform launcher
 import sys
 import zlib
 from base64 import b64encode

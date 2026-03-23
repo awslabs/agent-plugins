@@ -79,6 +79,7 @@ Region: `light-dark(#0C7B7D0D,#0C7B7D0D)` / `#00A4A6`. VPC: `light-dark(#8C4FFF0
 **Default mode**: `fontFamily=Helvetica`. **Sketch mode**: `fontFamily=Comic Sans MS`. Do NOT use Amazon Ember or other fonts.
 
 Font size hierarchy:
+
 - Title: 30px bold | Subtitle: 16px | Group titles: 14px bold | Container labels: 12px bold | Service labels: 10px | Edge labels: 11px | Legend badge: 22px bold (legend) / 16px bold (on-diagram) | Legend text: 14px
 
 ## Sketch Mode
