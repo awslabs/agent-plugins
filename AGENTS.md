@@ -4,7 +4,7 @@
 
 ## TL;DR Pitch
 
-This repository supports **plugins** - bundles of skills, MCP servers, and agent configurations that extend capabilities. The `awslabs/agent-plugins` marketplace includes plugins like `deploy-on-aws` (architecture recommendations, cost estimates, and working IaC) and `amazon-location-service` (maps, geocoding, routing, and geospatial features).
+This repository supports **plugins** - bundles of skills, MCP servers, and agent configurations that extend capabilities. The `awslabs/agent-plugins` marketplace includes plugins like `deploy-on-aws` (architecture recommendations, cost estimates, and working IaC), `amazon-location-service` (maps, geocoding, routing, and geospatial features), and `migration-to-aws` (GCP-to-AWS migration with resource discovery, architecture mapping, and cost analysis).
 
 ## Core Concepts
 
@@ -48,12 +48,20 @@ agent-plugins/
 │   │               ├── defaults.md
 │   │               ├── cost-estimation.md
 │   │               └── security.md
-│   └── amazon-location-service/
+│   ├── amazon-location-service/
 │       ├── .claude-plugin/
 │       │   └── plugin.json
 │       ├── .mcp.json
 │       └── skills/
 │           └── amazon-location-service/
+│               ├── SKILL.md
+│               └── references/
+│   └── migration-to-aws/
+│       ├── .claude-plugin/
+│       │   └── plugin.json
+│       ├── .mcp.json
+│       └── skills/
+│           └── gcp-to-aws/
 │               ├── SKILL.md
 │               └── references/
 ├── schemas/                      # JSON schemas for manifests
@@ -86,6 +94,13 @@ agent-plugins/
 | Server    | Type  | Purpose                                |
 | --------- | ----- | -------------------------------------- |
 | `aws-mcp` | stdio | AWS documentation and service guidance |
+
+### migration-to-aws
+
+| Server         | Type  | Purpose                                         |
+| -------------- | ----- | ----------------------------------------------- |
+| `awsknowledge` | HTTP  | AWS documentation and architecture guidance     |
+| `awspricing`   | stdio | Real-time AWS service pricing for cost analysis |
 
 ## Workflow: Deploy Skill
 

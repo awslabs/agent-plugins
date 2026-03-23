@@ -4,6 +4,7 @@
 min_version = "2026.2.4"
 
 [tools]
+uv = "0.10"
 node = "24"
 "npm:markdownlint-cli2" = "0.17"
 "npm:ajv-cli" = "5"
@@ -65,6 +66,37 @@ run = [
     { task = "lint:cross-refs"}
 ]
 
+# =============
+# VALIDATION
+# =============
+
+[tasks."validate:refs"]
+description = "Detect broken links and orphaned reference files"
+run = "uv run tools/validate-references.py"
+
+[tasks."validate:size"]
+description = "Check SKILL.md sizes and flag extraction candidates"
+run = "uv run tools/validate-size.py"
+
+[tasks."validate:urls"]
+description = "Check HTTPS URLs in markdown files return 200 (network-dependent, not in build)"
+run = "uv run tools/validate-urls.py"
+
+[tasks.validate]
+description = "Run all validation checks"
+run = [
+    { task = "validate:refs" },
+    { task = "validate:size" }
+]
+
+# =============
+# SCAFFOLDING
+# =============
+
+[tasks."init:skill"]
+description = "Scaffold a new skill directory"
+run = "uv run tools/init-skill.py"
+
 # =========
 # SECURITY
 # =========
@@ -78,7 +110,7 @@ run = [
 [tasks."security:semgrep"]
 description = "Run SemGrepOSS"
 run = [
-  "semgrep scan --quiet --oss-only --metrics=off --config=r/all --max-log-list-entries=0 --exclude-rule='ai.generic.detect-generic-ai-anthprop.detect-generic-ai-anthprop' --exclude-rule='generic.secrets.security.detected-sonarqube-docs-api-key.detected-sonarqube-docs-api-key' --exclude-rule='apex.lang.best-practice.ncino.accessmodifiers.globalaccessmodifiers.global-access-modifiers' --exclude-rule='apex.lang.best-practice.ncino.urls.absoluteurls.absolute-urls' --exclude-rule='apex.lang.security.ncino.dml.apexcsrfconstructor.apex-csrf-constructor' --exclude-rule='apex.lang.security.ncino.dml.dmlnativestatements.dml-native-statements' --exclude-rule='apex.lang.security.ncino.encryption.badcrypto.bad-crypto' --exclude-rule='apex.lang.security.ncino.endpoints.insecurehttprequest.insecure-http-request' --exclude-rule='apex.lang.security.ncino.endpoints.namedcredentialsconstantmatch.named-credentials-constant-match' --exclude-rule='apex.lang.security.ncino.endpoints.namedcredentialsstringmatch.named-credentials-string-match' --exclude-rule='apex.lang.security.ncino.injection.apexsoqlinjectionfromunescapedurlparam.soql-injection-unescaped-url-param' --exclude-rule='apex.lang.security.ncino.injection.apexsoqlinjectionunescapedparam.soql-injection-unescaped-param' --exclude-rule='apex.lang.security.ncino.sharing.specifysharinglevel.specify-sharing-level' --exclude-rule='apex.lang.security.ncino.system.systemdebug.system-debug' --exclude-rule='elixir.lang.best-practice.deprecated-bnot-operator.deprecated_bnot_operator' --exclude-rule='elixir.lang.best-practice.deprecated-bxor-operator.deprecated_bxor_operator' --exclude-rule='elixir.lang.best-practice.deprecated-calendar-iso-day-of-week-3.deprecated_calendar_iso_day_of_week_3' --exclude-rule='elixir.lang.best-practice.deprecated-use-bitwise.deprecated_use_bitwise' --exclude-rule='elixir.lang.best-practice.enum-map-into.enum_map_into'              --exclude-rule='elixir.lang.best-practice.enum-map-join.enum_map_join' --exclude-rule='elixir.lang.correctness.atom-exhaustion.atom_exhaustion'"
+ "semgrep scan --quiet --oss-only --metrics=off --config=r/all --max-log-list-entries=0 --exclude-rule='ai.generic.detect-generic-ai-anthprop.detect-generic-ai-anthprop' --exclude-rule='generic.secrets.security.detected-sonarqube-docs-api-key.detected-sonarqube-docs-api-key' --exclude-rule='apex.lang.best-practice.ncino.accessmodifiers.globalaccessmodifiers.global-access-modifiers' --exclude-rule='apex.lang.best-practice.ncino.urls.absoluteurls.absolute-urls' --exclude-rule='apex.lang.security.ncino.dml.apexcsrfconstructor.apex-csrf-constructor' --exclude-rule='apex.lang.security.ncino.dml.dmlnativestatements.dml-native-statements' --exclude-rule='apex.lang.security.ncino.encryption.badcrypto.bad-crypto' --exclude-rule='apex.lang.security.ncino.endpoints.insecurehttprequest.insecure-http-request' --exclude-rule='apex.lang.security.ncino.endpoints.namedcredentialsconstantmatch.named-credentials-constant-match' --exclude-rule='apex.lang.security.ncino.endpoints.namedcredentialsstringmatch.named-credentials-string-match' --exclude-rule='apex.lang.security.ncino.injection.apexsoqlinjectionfromunescapedurlparam.soql-injection-unescaped-url-param' --exclude-rule='apex.lang.security.ncino.injection.apexsoqlinjectionunescapedparam.soql-injection-unescaped-param' --exclude-rule='apex.lang.security.ncino.sharing.specifysharinglevel.specify-sharing-level' --exclude-rule='apex.lang.security.ncino.system.systemdebug.system-debug' --exclude-rule='elixir.lang.best-practice.deprecated-bnot-operator.deprecated_bnot_operator' --exclude-rule='elixir.lang.best-practice.deprecated-bxor-operator.deprecated_bxor_operator' --exclude-rule='elixir.lang.best-practice.deprecated-calendar-iso-day-of-week-3.deprecated_calendar_iso_day_of_week_3' --exclude-rule='elixir.lang.best-practice.deprecated-use-bitwise.deprecated_use_bitwise' --exclude-rule='elixir.lang.best-practice.enum-map-into.enum_map_into' --exclude-rule='elixir.lang.best-practice.enum-map-join.enum_map_join' --exclude-rule='elixir.lang.correctness.atom-exhaustion.atom_exhaustion' --exclude-rule='ai.generic.detect-generic-ai-oai.detect-generic-ai-oai'"
 ]
 
 [tasks."security:checkov"]
@@ -114,9 +146,10 @@ run = [
 # ===============
 
 [tasks.build]
-description = "Complete build: lint, format, security scans"
+description = "Complete build: lint, format, validate, security scans"
 run = [
     { task = "lint" },
     { task = "fmt:check" },
+    { task = "validate" },
     { task = "security"}
 ]

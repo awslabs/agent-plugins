@@ -37,7 +37,7 @@ jobs:
           ref: main
 
       - name: Setup mise
-        uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
+        uses: jdx/mise-action@c1ecc8f748cd28cdeabf76dab3cccde4ce692fe4 # v4.0.0
         with:
           cache: true
 
@@ -78,7 +78,7 @@ jobs:
           ref: main
 
       - name: Download patch
-        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v4.1.8.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v4.1.8.0.1
         with:
           name: repo.patch
           path: ${{ runner.temp }}
