@@ -46,9 +46,10 @@ These are independent of Mode and apply after mode selection:
 ### Step 3: Generate Diagram XML
 
 1. Select the best diagram type (see Diagram Types)
-2. Follow XML Generation Rules below
+2. Follow XML generation rules in `references/xml-generation-rules.md`
 3. Apply style rules from `references/style-guide.md`
-4. Apply styling selections from Step 2
+4. Apply layout guidelines from `references/layout-guidelines.md`
+5. Apply styling selections from Step 2
 
 ### Step 4: Validate and Export
 
@@ -114,9 +115,11 @@ See `references/diagram-templates-basic.md` and `references/diagram-templates-ad
 
 ## XML Generation Rules
 
+For detailed XML templates, style strings, and code examples, see `references/xml-generation-rules.md`. Key structural rules:
+
 ### Required Structure
 
-Always use the full `mxfile` wrapper with `grid="0"`:
+Always use the full `mxfile` wrapper:
 
 ```xml
 <mxfile host="Electron" version="29.6.1">
@@ -132,307 +135,30 @@ Always use the full `mxfile` wrapper with `grid="0"`:
 </mxfile>
 ```
 
-- Cell `id="0"` is the root layer (always required)
-- Cell `id="1"` is the default parent layer (always required)
+- Cell `id="0"` is the root layer; cell `id="1"` is the default parent (both always required)
 - All diagram elements use `parent="1"` unless nested inside a container
-- Set `dx`/`dy` on mxGraphModel to control the visible canvas area (use larger values like `dx="1900" dy="2100"` for diagrams with negative-coordinate elements)
+- Use descriptive cell IDs: `vpc-1`, `lambda-orders`, `s3-assets`, `edge-lambda-to-dynamo`
 
-### Cell ID Convention
+### Key Principles
 
-Use descriptive IDs for readability: `vpc-1`, `lambda-orders`, `s3-assets`, `edge-lambda-to-dynamo`. All IDs must be unique.
-
-### AWS4 Shape Styles
-
-ALWAYS use the `mxgraph.aws4.*` namespace. Reference `references/aws4-shapes.md` for the full list of valid shape names by category.
-
-There are two style patterns. Use the right one — the difference matters for rendering:
-
-**Service icon (resourceIcon)** — Use for ALL main AWS services. Renders the colored square icon with the AWS service logo. The `points` array gives 16 connection anchors:
-
-```
-sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#16191F;fillColor={CATEGORY_COLOR};strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.{shape_name}
-```
-
-**Sub-resource icon** — Use for service sub-components (glue_crawlers, ecs_task, etc.). Smaller flat icons without the square background. Use 48x48 size:
-
-```
-sketch=0;outlineConnect=0;fontColor=#16191F;gradientColor=none;fillColor={CATEGORY_COLOR};strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.{shape_name}
-```
-
-### Adding Context to Labels
-
-Add descriptive sub-text to service labels using italic HTML:
-
-```xml
-value="AWS Lambda&lt;div&gt;&lt;i&gt;compress queries&lt;/i&gt;&lt;/div&gt;"
-```
-
-This renders as "AWS Lambda" with "compress queries" in italics below it.
-
-### Category Fill Colors
-
-| Category | fillColor |
-|----------|-----------|
-| Compute / Containers | `#ED7100` |
-| Database | `#C925D1` |
-| Analytics / Networking | `#8C4FFF` |
-| Storage | `#3F8624` |
-| Application Integration / Management | `#E7157B` |
-| Security | `#DD344C` |
-| AI/ML | `#01A88D` |
-| General | `#232F3D` |
-
-### Font and Typography
-
-Per AWS diagram guidelines:
-
-- **Font**: Amazon Ember (falls back to Helvetica/Arial in draw.io if not installed)
-- **Font size**: 12px minimum (use `fontSize=11` only for dense layouts with 40px icons)
-- **Font color**: `#16191F` for most labels. `#000000` is also acceptable.
-- **Font weight**: Regular (`fontStyle=0`) for most text. Bold (`fontStyle=1`) for emphasis only.
-- **Italics** preferred over underlines for secondary text — underlines create visual noise with arrows/lines.
-
-### Group Shapes (VPC, Subnets, Regions, AZs)
-
-Use group shapes to represent architectural boundaries. Reference `references/xml-structure.md` for all group style templates.
-
-**AWS Cloud group:**
-
-```
-points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#16191F;dashed=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0
-```
-
-**VPC group:**
-
-```
-points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc2;strokeColor=#8C4FFF;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#AAB7B8;dashed=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0
-```
-
-**Public subnet:**
-
-```
-points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_public_subnet;strokeColor=#248814;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#AAB7B8;dashed=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0
-```
-
-**Private subnet:**
-
-```
-points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_private_subnet;strokeColor=#147EBA;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#AAB7B8;dashed=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0
-```
-
-### Edge Styles
-
-**Standard connection** (most common):
-
-```
-edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;
-```
-
-**Dashed (optional/async):**
-
-```
-edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;
-```
-
-The `orthogonalLoop=1;jettySize=auto` properties give edges better automatic routing around obstacles. Always include them on orthogonal edges.
-
-### Edge Labels
-
-Edge labels are separate child cells attached to an edge, NOT an attribute on the edge itself. Use `connectable="0"` and `edgeLabel` style with `relative="1"` geometry so the label positions itself along the edge:
-
-```xml
-<mxCell id="edge-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="api-gw" target="kinesis">
-  <mxGeometry relative="1" as="geometry" />
-</mxCell>
-<mxCell id="edge-1-label" value="query logs" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;" connectable="0" vertex="1" parent="edge-1">
-  <mxGeometry relative="1" x="-0.3" y="0" as="geometry">
-    <mxPoint as="offset" />
-  </mxGeometry>
-</mxCell>
-```
-
-The `x` value on the geometry controls position along the edge (-1 = source end, 0 = midpoint, 1 = target end). The `y` value offsets perpendicular to the edge.
-
-### Label Placement (Mandatory)
-
-- **Container `value`** = functional category label (e.g., "DNS", "Compute", "Database", "Auth") — NOT the service name
-- **Icon `value`** = service name + optional italic sub-label with `verticalLabelPosition=bottom;verticalAlign=top`
-- NEVER put the service name on the container. NEVER put the category label on the icon.
-
-### Edges
-
-- **Always connect edges to service icons**, not to container/group shapes. Target the icon cell ID, not the container ID.
-- Use `exitX`/`exitY` and `entryX`/`entryY` (values 0-1) to control connection sides. Spread connections across different sides.
-- **Leave room for arrowheads**: At least 20px straight segment before target and after source.
-- Add explicit **waypoints** (`<Array as="points"><mxPoint x="X" y="Y"/></Array>`) when edges would overlap.
-- Align all nodes to a grid (multiples of 10)
-
-### Groups and Containers
-
-- Set `parent="containerId"` on children; children use **relative coordinates**
-- Add `container=1;pointerEvents=0;` to group styles — **EXCEPT Region groups which MUST use `container=0`**
-- **Region groups are decoration-only**: Use `container=0;pointerEvents=0;` on Region. Services positioned visually inside the region rectangle still have `parent="aws-cloud"` or `parent="1"` with absolute coordinates. This prevents nesting depth from breaking edge auto-routing.
-- All group shapes MUST use `light-dark()` fills (see Style Rules above)
-- Full group style strings: `references/group-styles.md`
-- Container type reference: `references/xml-structure.md`
-
-### When to use containers vs flat layout
-
-**Prefer flat layouts for most diagrams.** Place all service icons as direct children of the AWS Cloud group, and use text cells for section/column labels. This produces the cleanest edge routing because all icons share the same coordinate space.
-
-**Only use nested containers when they represent real infrastructure boundaries:**
-
-- VPC, subnets, AZs, regions, security groups — these are real containment
-- Step Functions workflows, ECS clusters — service-level grouping with a clear boundary
-
-**Do NOT use swimlane containers just to visually group columns** (e.g., "Authentication", "Data Layer", "API Layer"). This causes:
-
-- Cross-container edge routing problems (edges between different containers produce messy orthogonal paths)
-- Oversized containers with wasted space
-- Coordinate confusion between parent frames
-
-Instead, use a text cell label above each column of icons:
-
-```xml
-<mxCell id="col-auth" value="&lt;b&gt;Authentication&lt;/b&gt;" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#DD344C;" vertex="1" parent="aws-cloud">
-  <mxGeometry x="60" y="40" width="160" height="20" as="geometry" />
-</mxCell>
-```
-
-### External Actors
-
-Users/clients MUST be in a visible container (`fillColor=#f5f5f5`) with adaptive stroke. Icon `value=""`, label on the container. Edges connect to the container, not the icon. NEVER use `shape=actor`. See `references/xml-templates-structure.md`.
-Set `parent="containerId"` on child cells. Children use **relative coordinates** within the container.
-
-### Container types
-
-| Type | Style | When to use |
-|------|-------|-------------|
-| **AWS Group** | `shape=mxgraph.aws4.group;grIcon=...;container=1;pointerEvents=0;` | VPC, subnets, regions, AZs |
-| **Service workflow group** | `shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_step_functions_workflow;...` | Step Functions workflows, ECS clusters, or any service-level grouping |
-| **Swimlane** (titled) | `swimlane;startSize=30;` | Only when the container itself needs connections (rare) |
-| **Group** (invisible) | `group;` | No visual border needed, container has no connections |
-| **Custom container** | Add `container=1;pointerEvents=0;` to any shape style | Any shape acting as a container without its own connections |
-
-**Step Functions workflow group** (useful for showing multi-step pipelines):
-
-```
-points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_step_functions_workflow;strokeColor=#CD2264;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#CD2264;dashed=0
-```
-
-**Placement rule**: External actors MUST be placed BELOW the title block. The title group occupies y=30 to y≈120. Place external actors at **y >= 140**. NEVER place any diagram element overlapping the title area. Vertically, align external actors with the top of the AWS Cloud group so the edge to the first service runs horizontally.
-
-**Clear path rule**: Do NOT place any service container between external actors and their first target (usually API Gateway). If Users is at the left and API Gateway is inside AWS Cloud, ensure no other service (like Cognito, WAF) is positioned in the direct horizontal path between them. Place auth/security services BELOW or ABOVE the main entry flow, not in line with it.
+- ALWAYS use `mxgraph.aws4.*` namespace. Use `resourceIcon;resIcon=` for main service icons, sub-resource style for components.
+- Container `value` = category label (e.g., "DNS", "Compute"). Icon `value` = service name + optional italic sub-label. NEVER put the service name on the container.
+- Edges connect to service icons, not containers. Use `exitX`/`exitY` and `entryX`/`entryY` (0-1) to control connection sides.
+- Edge labels are separate child cells with `connectable="0"` and `relative="1"` geometry.
+- Region groups use `container=0` (decoration-only). VPC/subnets use `container=1`.
+- Prefer flat layouts. Only use nested containers for real infrastructure boundaries (VPC, subnets, AZs).
+- External actors use visible containers (`fillColor=#f5f5f5`), placed BELOW title block at y >= 140.
 
 ## Layout Guidelines
 
-### Spacing and Overlap Prevention
+For detailed spacing rules, edge routing patterns, and placement tables, see `references/layout-guidelines.md`. Key rules:
 
-- 180px horizontal / 120px vertical gaps between 120px service group containers
-- Group padding: 30px all sides, children start at y=40, x=20 minimum
-- Account for ~20px label height below each 48x48 icon; 60px gap between vertical tiers
-- Edge labels MUST NOT overlap service icons or description text — use `y` offset to shift
-- 30px clearance between arrow endpoints and italic description text
-- Place standalone services 200px+ from top-left corner of Region/VPC groups
-- Align all positions to grid multiples of 10
-
-### Complex Diagram Scaling (13+ services)
-
-For diagrams with 13+ services, increase spacing to prevent crowding:
-
-- Horizontal spacing: 220px (up from 180px)
-- Vertical spacing: 160px (up from 120px)
-- Page size: `pageWidth=1600;pageHeight=1200` minimum
-- Route long-distance edges around service clusters using explicit waypoints (`<Array as="points"><mxPoint x=... y=.../></Array>`)
-- Arrows MUST NOT cross through service container rectangles — use waypoints to route around them
-- For edges connecting services that are NOT horizontally or vertically adjacent, ALWAYS add explicit waypoints to route around intervening containers
-
-### Edge Routing
-
-Study `references/example-event-driven.drawio` and `references/example-complex-platform.drawio` for correct edge routing patterns.
-
-**Basic rules:**
-
-- Use `edgeStyle=orthogonalEdgeStyle` for right-angle connectors
-- For simple adjacent connections (A directly next to B), let draw.io auto-route — do NOT set entry/exit points
-- Leave 20px straight segment before target and after source for arrowheads
-- Edges always leave PERPENDICULAR to the container face and route OUTWARD — the first segment after exiting a container MUST move AWAY from the container, never back into it. If an edge exits from the bottom (`exitY=1`), the first segment goes DOWN. If it exits right (`exitX=1`), the first segment goes RIGHT.
-
-**Multiple edges from one service** (CRITICAL):
-
-- When a service has 2+ outgoing edges, each edge MUST exit from a DIFFERENT side or a different point on the same side
-- Example: Lambda → AgentCore (`exitX=0.5;exitY=1` bottom), Lambda → Step Functions (`exitX=1;exitY=0.5` right), Lambda → EventBridge (`exitX=1;exitY=0.75` right-lower)
-- When 2+ edges enter the same target from the same direction, offset entry points: `entryX=0.25;entryY=0` and `entryX=0.5;entryY=0` (not both at 0.5)
-
-**Waypoints for non-adjacent routing** (CRITICAL):
-
-- When an edge must route AROUND intervening containers, add explicit waypoints using `<Array as="points"><mxPoint x="X" y="Y"/></Array>` inside the edge's `<mxGeometry>`
-- Create clean L-shaped (2 waypoints) or U-shaped (3 waypoints) paths
-- Route waypoints through clear lanes between container rows/columns
-- Example: To route from Lambda (right side) around to DynamoDB (below), exit right then create a vertical lane: `exit=(1,0.25)` → waypoint at (x_far_right, y_lambda) → waypoint at (x_far_right, y_dynamo) → enters DynamoDB from right
-- See the edge patterns in `references/example-event-driven.drawio` for real examples with 2-3 waypoints per edge
-
-### Handling Overlaps
-
-**Always add `labelBackgroundColor=#ffffff`** to every edge label. This prevents labels from blending with crossing edges or nearby icon labels. Include it in the `edgeLabel` style by default — not as an afterthought:
-
-```
-labelBackgroundColor=#ffffff
-```
-
-Only reroute an edge (via waypoints or different exit/entry points) when the overlap is severe and the reroute is simple and clean — avoid complex rerouting that could make arrows harder to follow. The label zones to be aware of:
-
-- **78px icons**: ~25px label height below the icon (total footprint ~103px tall)
-- **48px icons**: ~20px label height below (total footprint ~68px tall)
-- **Group labels**: 30px reserved at the top-left of AWS group shapes
-
-For parallel edges sharing a corridor, offset them by 20px using explicit waypoints and spread connections across different anchor points on the node.
-
-### Layout Patterns
-
-- **Top-to-bottom (tiered)**: Best for VPC architectures with user -> LB -> compute -> DB flow
-- **Left-to-right (pipeline)**: Best for data pipelines and CI/CD
-- **Column-based (reference architecture)**: Best for complex multi-service platforms with labeled columns
-
-### Step Badges and Legend
-
-For complex diagrams (7+ services or multiple branching paths):
-
-**On-diagram badges**: Teal `#007CBD` 28x28 rounded rectangles near arrow source ends. Place at the **source end** of the arrow (NOT midpoint — midpoint is for edge labels). Offset 20px above/left. Minimum 10px clearance from icons and labels.
-
-**Right sidebar legend**: Panel at `x = diagram_right_edge + 40`, same `y` as title group (y=30). Teal badges (40x38) + bold title + bullet descriptions per step. All step text MUST use `color: light-dark(...)` for dark mode. Increase `mxGraphModel dx` to accommodate sidebar.
-
-**Legend height MUST match the diagram**: Set `legend-outer` height to span from `y=30` to the bottom of the AWS Cloud group + 20px padding. The legend panel MUST visually extend the full height of the diagram, never shorter. If the diagram bottom is at y=1170, legend height should be ~1160px.
-
-**Legend MUST NOT cover any diagram elements**: Ensure the legend panel's x position is far enough right that it does not overlap any external actors, service containers, or edges. If there are external actors on the right side (e.g., external APIs), place them to the LEFT of the legend or increase `mxGraphModel dx` to create more space.
-
-See `references/xml-templates-structure.md` for badge and legend XML. See `references/style-guide.md` for detailed legend rules.
-
-**Auxiliary/monitoring services**: ONLY CloudWatch, CloudTrail, X-Ray, and IAM are auxiliary. These do NOT get step numbers and do NOT get edges. Place them inside a dedicated **"Auxiliary Services" group** — a dashed, unfilled rectangle (`rounded=0;fillColor=none;dashed=1;verticalAlign=top`) labeled "Auxiliary Services". Placement rules:
-
-- MUST be INSIDE the AWS Cloud boundary (not outside it)
-- MUST be in a free corner where it does NOT overlap or interfere with primary services or their edges
-- MUST NOT be placed where the legend panel would cover it — if the legend is on the right, place auxiliary at bottom-left
-- The dashed box MUST be large enough to contain all auxiliary service containers with padding (at least 20px on all sides)
-- Auxiliary service containers MUST use their correct category tint colors (CloudWatch: `#FCE4EC`/`#E7157B`, X-Ray: same, IAM: `#FFEBEE`/`#DD344C`) — NOT gray
-
-In the legend, add an italic note explaining their role BELOW all step descriptions but ABOVE the Line Styles box — as a separate text element, not inside the Line Styles box.
-
-**All other services (App Runner, Cognito, Secrets Manager, etc.) are primary services** that MUST have edges connecting them to the data flow and MUST receive step numbers.
-
-**Decision points**: Maximum 1-2 per diagram. Use `fontStyle=2` (italic) for `[condition]` text on edge labels. Dashed arrows ONLY for failure/fallback paths.
-
-### Service Placement
-
-| Service | Correct Container |
-|---------|-------------------|
-| ALB, NAT Gateway, Bastion | Public subnet |
-| EC2, ECS/Fargate, Lambda (VPC), RDS, ElastiCache | Private subnet |
-| Transit Gateway, VPN Gateway | VPC level (not in subnet) |
-| Route 53, CloudFront, S3, IAM, CloudWatch | Outside VPC |
-| Users, On-premises | Outside AWS Cloud boundary |
-
-**External actor coordinates**: External actors MUST have coordinates that place them visually OUTSIDE the AWS Cloud group rectangle — at least 40px from the boundary.
+- **Spacing**: 180px horizontal / 120px vertical gaps. For 13+ services, increase to 220px/160px.
+- **Edge routing**: Use `orthogonalEdgeStyle`. Add explicit waypoints for non-adjacent routing. Edges leave perpendicular to container face.
+- **Multiple edges**: Each outgoing edge MUST exit from a different point. Spread entry points when multiple edges enter the same target.
+- **Step badges/legend**: Teal `#007CBD` 28x28 badges near arrow sources. Right sidebar legend for 7+ services. Legend height MUST match diagram height.
+- **Auxiliary services**: Only CloudWatch, CloudTrail, X-Ray, IAM. No step numbers, no edges. Place in dashed "Auxiliary Services" group inside AWS Cloud boundary.
+- **All other services are primary** — MUST have edges and step numbers.
 
 ## File Naming
 
@@ -442,7 +168,7 @@ Each diagram gets a **descriptive filename** in kebab-case, placed in `./docs/` 
 
 1. Create the `docs/` directory if it does not exist
 2. Derive the filename from the user's prompt (see File Naming above)
-3. **Always create new files** unless the user explicitly asks to update an existing diagram (see Create vs Update above)
+3. **Always create new files** unless the user explicitly asks to update an existing diagram
 4. Save the diagram to `./docs/<descriptive-name>.drawio`
 5. After writing, the PostToolUse hook will automatically:
    a. Validate the XML (structure, AWS shapes, edges, geometry)
@@ -487,7 +213,7 @@ Each diagram gets a **descriptive filename** in kebab-case, placed in `./docs/` 
 - For complex diagrams (7+ services), ALWAYS add step badges and legend
 - Use descriptive cell IDs, not random strings (e.g., `vpc-1`, `lambda-orders`, not `cell-47`)
 - Add italic sub-labels to service icons to clarify their role in the architecture
-- Only include services the user explicitly mentions or that are core to the data flow. Do NOT add cross-cutting concerns (IAM, CloudWatch, CloudTrail, KMS, S3 for logs, etc.) unless the user asks for them — they clutter the diagram and distract from the architecture story
+- Only include services the user explicitly mentions or that are core to the data flow. Do NOT add cross-cutting concerns (IAM, CloudWatch, CloudTrail, KMS, S3 for logs, etc.) unless the user asks for them
 - Include a title/label on the diagram describing the architecture
-- ALWAYS set `background="#FFFFFF"` on the mxGraphModel element — AWS guidelines require white background, never transparent
-- Do NOT read existing `.drawio` files as reference when generating diagrams — use only the templates and rules in this skill and its references. Reading raw XML examples overloads context and degrades output quality.
+- ALWAYS set `background="#FFFFFF"` on the mxGraphModel element
+- Do NOT read existing `.drawio` files as reference when generating diagrams — use only the templates and rules in this skill and its references
