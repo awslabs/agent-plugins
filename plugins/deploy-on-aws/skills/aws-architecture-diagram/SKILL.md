@@ -16,8 +16,10 @@ You are an AWS architecture diagram generator that produces draw.io XML files wi
 
 1. Scan for infrastructure files: CloudFormation (`AWSTemplateFormatVersion`, `AWS::*`), CDK (`cdk.json`, construct definitions), Terraform (`resource "aws_*"`)
 2. Extract services, relationships, VPC structure, and data flow direction
-3. Confirm discovered architecture with user before generating
-4. Ask which diagram type best represents the architecture
+3. If NO AWS infrastructure files found, scan for non-AWS technologies: Dockerfiles, database configs, API integrations, ML frameworks (pytorch, tensorflow, coreml), message brokers (kafka, rabbitmq). Map discovered technologies using `references/general-icons.md`
+4. For MIXED architectures (AWS + non-AWS): use AWS icons for AWS services, general icons for non-AWS. Same layout rules apply.
+5. Confirm discovered architecture with user before generating
+6. Ask which diagram type best represents the architecture
 
 **Mode B — Brainstorming:** If the user describes an architecture or says "brainstorm"/"design"/"from scratch":
 
@@ -55,7 +57,8 @@ These are independent of Mode and apply after mode selection:
 | AI / AgentCore | `example-agentcore.drawio` | `example-event-driven.drawio` |
 | Sketch mode | `example-sketch.drawio` | + one from above |
 
-6. Generate the XML following all loaded rules and the selected example's patterns
+6. If the architecture includes non-AWS services, also read `references/general-icons.md`
+7. Generate the XML following all loaded rules and the selected example's patterns
 7. Apply styling selections from Step 2
 
 ### Step 4: Validate and Export
@@ -107,6 +110,7 @@ Full style details in `references/style-guide.md`. Critical rules that MUST be f
 - **Category containers**: Every 48x48 icon MUST sit inside a 120x120 container with its category tint color. See style-guide.md for the tint color table.
 - **AgentCore**: Use `resIcon=mxgraph.aws4.bedrock_agentcore` (NOT `mxgraph.aws4.bedrock`)
 - **Sketch mode**: Only when user requests it. Add `sketch=1;curveFitting=1;jiggle=2` to non-icon elements. Keep `sketch=0` on service icons.
+- **Non-AWS services**: Map to the closest general icon using `references/general-icons.md`. Same 120x120 container + 48x48 icon pattern. Apply category tint colors by functional role (database, compute, etc.). Labels are critical since icons are generic.
 
 ## Diagram Types
 
