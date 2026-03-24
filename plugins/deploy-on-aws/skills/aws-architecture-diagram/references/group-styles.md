@@ -1,6 +1,6 @@
 # AWS Group and Edge Style Templates
 
-Complete style strings for draw.io AWS group shapes and edge types. Copy directly into `style=` attributes.
+Style strings for draw.io AWS groups and edges. Copy directly into `style=` attributes.
 
 ## AWS Cloud
 
@@ -67,25 +67,30 @@ points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0
 ## Edge Styles
 
 ### Standard directional
-
 ```
 edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;elbow=vertical;startArrow=none;endFill=1;strokeColor=#545B64;rounded=0
 ```
-
 ### Bidirectional
-
 ```
 edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;elbow=vertical;startArrow=block;startFill=1;endFill=1;strokeColor=#545B64;rounded=0
 ```
-
 ### Dashed (async/optional)
-
 ```
 edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;elbow=vertical;startArrow=none;endFill=1;strokeColor=#545B64;rounded=0;dashed=1
 ```
-
 ### Open arrow (data flow)
-
 ```
 edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;elbow=vertical;startArrow=none;endFill=0;strokeColor=#545B64;rounded=0
 ```
+
+## Useful Style Properties
+
+| Property | Values | Use for |
+| --- | --- | --- |
+| `rounded=1` | 0/1 | Rounded corners |
+| `fillColor`/`strokeColor`/`fontColor` | Hex color | Background / border / text color |
+| `shape=cylinder3` / `ellipse` / `rhombus` | keyword | Database cylinders / circles / diamonds |
+| `container=1` | 0/1 | Enable container behavior |
+| `pointerEvents=0` | 0/1 | Prevent container capturing child connections |
+| `exitX`/`exitY`/`entryX`/`entryY` | 0-1 | Edge exit/entry points on shapes |
+| `jettySize=auto` | auto/px | Port spacing on orthogonal edges |

@@ -1,27 +1,24 @@
 # Layout Guidelines
 
-Detailed spacing, edge routing, overlap prevention, and placement rules for AWS architecture diagrams.
+Spacing, edge routing, overlap prevention, and placement rules for AWS architecture diagrams.
 
 ## Spacing and Overlap Prevention
 
 - 180px horizontal / 120px vertical gaps between 120px service group containers
-- Group padding: 30px all sides, children start at y=40, x=20 minimum
-- Account for ~20px label height below each 48x48 icon; 60px gap between vertical tiers
-- Edge labels MUST NOT overlap service icons or description text — use `y` offset to shift
-- 30px clearance between arrow endpoints and italic description text
-- Place standalone services 200px+ from top-left corner of Region/VPC groups
+- Group padding: 30px all sides; children start at y=40, x=20 minimum
+- ~20px label height below each 48x48 icon; 60px gap between vertical tiers
+- Edge labels MUST NOT overlap icons or text — use `y` offset to shift; 30px clearance from arrow endpoints to italic text
+- Standalone services 200px+ from top-left corner of Region/VPC groups
 - Align all positions to grid multiples of 10
 
 ## Complex Diagram Scaling (13+ services)
 
-For diagrams with 13+ services, increase spacing to prevent crowding:
+For diagrams with 13+ services, increase spacing:
 
-- Horizontal spacing: 220px (up from 180px)
-- Vertical spacing: 160px (up from 120px)
-- Page size: `pageWidth=1600;pageHeight=1200` minimum
-- Route long-distance edges around service clusters using explicit waypoints (`<Array as="points"><mxPoint x=... y=.../></Array>`)
-- Arrows MUST NOT cross through service container rectangles — use waypoints to route around them
-- For edges connecting services that are NOT horizontally or vertically adjacent, ALWAYS add explicit waypoints to route around intervening containers
+- Horizontal: 220px; Vertical: 160px; Page: `pageWidth=1600;pageHeight=1200` minimum
+- Route long-distance edges around clusters using explicit waypoints (`<Array as="points"><mxPoint x=... y=.../></Array>`)
+- Arrows MUST NOT cross through service containers — use waypoints to route around them
+- For non-adjacent service connections, ALWAYS add explicit waypoints to route around intervening containers
 
 ## Edge Routing
 
@@ -30,9 +27,9 @@ Study `example-event-driven.drawio` and `example-complex-platform.drawio` for co
 **Basic rules:**
 
 - Use `edgeStyle=orthogonalEdgeStyle` for right-angle connectors
-- For simple adjacent connections (A directly next to B), let draw.io auto-route — do NOT set entry/exit points
+- For simple adjacent connections, let draw.io auto-route — do NOT set entry/exit points
 - Leave 20px straight segment before target and after source for arrowheads
-- Edges always leave PERPENDICULAR to the container face and route OUTWARD — the first segment after exiting a container MUST move AWAY from the container, never back into it. If an edge exits from the bottom (`exitY=1`), the first segment goes DOWN. If it exits right (`exitX=1`), the first segment goes RIGHT.
+- Edges leave PERPENDICULAR to the container face and route OUTWARD — first segment MUST move AWAY from the container (exit bottom → go DOWN, exit right → go RIGHT)
 
 **Multiple edges from one service** (CRITICAL):
 
@@ -50,19 +47,11 @@ Study `example-event-driven.drawio` and `example-complex-platform.drawio` for co
 
 ## Handling Overlaps
 
-**Always add `labelBackgroundColor=#ffffff`** to every edge label. This prevents labels from blending with crossing edges or nearby icon labels. Include it in the `edgeLabel` style by default — not as an afterthought:
+**Always add `labelBackgroundColor=#ffffff`** to every edge label to prevent blending with crossing edges. Include it in the `edgeLabel` style by default.
 
-```
-labelBackgroundColor=#ffffff
-```
+Only reroute an edge when the overlap is severe and the reroute is simple and clean. Label zone footprints: 78px icons = ~103px tall (with label), 48px icons = ~68px tall, group labels = 30px at top-left.
 
-Only reroute an edge (via waypoints or different exit/entry points) when the overlap is severe and the reroute is simple and clean — avoid complex rerouting that could make arrows harder to follow. The label zones to be aware of:
-
-- **78px icons**: ~25px label height below the icon (total footprint ~103px tall)
-- **48px icons**: ~20px label height below (total footprint ~68px tall)
-- **Group labels**: 30px reserved at the top-left of AWS group shapes
-
-For parallel edges sharing a corridor, offset them by 20px using explicit waypoints and spread connections across different anchor points on the node.
+For parallel edges sharing a corridor, offset by 20px using explicit waypoints and spread connections across different anchor points.
 
 ## Layout Patterns
 
@@ -74,27 +63,13 @@ For parallel edges sharing a corridor, offset them by 20px using explicit waypoi
 
 For complex diagrams (7+ services or multiple branching paths):
 
-**On-diagram badges**: Teal `#007CBD` 28x28 rounded rectangles near arrow source ends. Place at the **source end** of the arrow (NOT midpoint — midpoint is for edge labels). Offset 20px above/left. Minimum 10px clearance from icons and labels.
+**On-diagram badges**: Teal `#007CBD` 28x28 rounded rectangles near arrow source ends. Place at **source end** (NOT midpoint). Offset 20px above/left. Min 10px clearance from icons/labels.
 
-**Right sidebar legend**: Panel at `x = diagram_right_edge + 40`, same `y` as title group (y=30). Teal badges (40x38) + bold title + bullet descriptions per step. All step text MUST use `color: light-dark(...)` for dark mode. Increase `mxGraphModel dx` to accommodate sidebar.
+**Right sidebar legend**: Panel at `x = diagram_right_edge + 40`, `y=30`. Teal badges (40x38) + bold title + bullet descriptions. All step text MUST use `color: light-dark(...)` for dark mode. Increase `mxGraphModel dx` to accommodate.
 
-**Legend height MUST match the diagram**: Set `legend-outer` height to span from `y=30` to the bottom of the AWS Cloud group + 20px padding. The legend panel MUST visually extend the full height of the diagram, never shorter. If the diagram bottom is at y=1170, legend height should be ~1160px.
+**Legend height MUST match diagram**: `legend-outer` height from `y=30` to AWS Cloud bottom + 20px. MUST NOT cover diagram elements. See `xml-templates-structure.md` for XML, `style-guide.md` for rules.
 
-**Legend MUST NOT cover any diagram elements**: Ensure the legend panel's x position is far enough right that it does not overlap any external actors, service containers, or edges. If there are external actors on the right side (e.g., external APIs), place them to the LEFT of the legend or increase `mxGraphModel dx` to create more space.
-
-See `xml-templates-structure.md` for badge and legend XML. See `style-guide.md` for detailed legend rules.
-
-**Auxiliary/monitoring services**: ONLY CloudWatch, CloudTrail, X-Ray, and IAM are auxiliary. These do NOT get step numbers and do NOT get edges. Place them inside a dedicated **"Auxiliary Services" group** — a dashed, unfilled rectangle (`rounded=0;fillColor=none;dashed=1;verticalAlign=top`) labeled "Auxiliary Services". Placement rules:
-
-- MUST be INSIDE the AWS Cloud boundary (not outside it)
-- MUST be in a free corner where it does NOT overlap or interfere with primary services or their edges
-- MUST NOT be placed where the legend panel would cover it — if the legend is on the right, place auxiliary at bottom-left
-- The dashed box MUST be large enough to contain all auxiliary service containers with padding (at least 20px on all sides)
-- Auxiliary service containers MUST use their correct category tint colors (CloudWatch: `#FCE4EC`/`#E7157B`, X-Ray: same, IAM: `#FFEBEE`/`#DD344C`) — NOT gray
-
-In the legend, add an italic note explaining their role BELOW all step descriptions but ABOVE the Line Styles box — as a separate text element, not inside the Line Styles box.
-
-**All other services (App Runner, Cognito, Secrets Manager, etc.) are primary services** that MUST have edges connecting them to the data flow and MUST receive step numbers.
+**Auxiliary/monitoring services**: ONLY CloudWatch, CloudTrail, X-Ray, and IAM are auxiliary. No step numbers, no edges. Place inside a dashed, unfilled rectangle (`rounded=0;fillColor=none;dashed=1;verticalAlign=top`) labeled "Auxiliary Services". Must be INSIDE AWS Cloud, in a free corner, not covered by legend. Use correct tint colors (CloudWatch/X-Ray: `#FCE4EC`/`#E7157B`, IAM: `#FFEBEE`/`#DD344C`) — NOT gray. Add italic legend note BELOW step descriptions, ABOVE Line Styles box. **All other services are primary** and MUST have edges and step numbers.
 
 **Decision points**: Maximum 1-2 per diagram. Use `fontStyle=2` (italic) for `[condition]` text on edge labels. Dashed arrows ONLY for failure/fallback paths.
 
@@ -109,3 +84,16 @@ In the legend, add an italic note explaining their role BELOW all step descripti
 | Users, On-premises                               | Outside AWS Cloud boundary |
 
 **External actor coordinates**: External actors MUST have coordinates that place them visually OUTSIDE the AWS Cloud group rectangle — at least 40px from the boundary.
+
+## Layout Sizing Reference
+
+| Element                | Width     | Height   |
+| ---------------------- | --------- | -------- |
+| Service icon           | 78        | 78       |
+| Small resource icon    | 48        | 48       |
+| Text label             | varies    | 20       |
+| VPC group (typical)    | 800-1200  | 500-800  |
+| Subnet group (typical) | 350-550   | 400-700  |
+| AZ group (typical)     | 380-580   | 420-720  |
+| Region group (typical) | 900-1400  | 600-900  |
+| AWS Cloud group        | 1000-1500 | 700-1000 |

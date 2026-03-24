@@ -5,7 +5,6 @@ Ready-to-use patterns for common AWS architectures. Use these as starting points
 ## Serverless Web Application
 
 Services: CloudFront → API Gateway → Lambda → DynamoDB, with S3 for static assets and Cognito for auth.
-
 ```
 Layout (left to right):
   [Users] → [CloudFront] → [S3 Bucket (static)]
@@ -94,19 +93,8 @@ Layout (left to right, pipeline flow):
 
 ```
 Layout (left to right, pipeline stages):
-  [CodeCommit/GitHub] → [CodeBuild] → [CodeDeploy] → [Target]
-
-  Detailed:
-  [Developer] → [CodeCommit]
-  [CodeCommit] → [CodePipeline]
-  [CodePipeline] → [CodeBuild (build)]
-  [CodeBuild] → [S3 (artifacts)]
-  [CodePipeline] → [CodeBuild (test)]
-  [CodePipeline] → [CodeDeploy (staging)]
-  [CodePipeline] → [Manual Approval]
-  [CodePipeline] → [CodeDeploy (production)]
-
+  [Developer] → [CodeCommit] → [CodePipeline] → [CodeBuild] → [S3 (artifacts)]
+  [CodePipeline] → [CodeDeploy (staging)] → [Manual Approval] → [CodeDeploy (prod)]
   [ECR] if deploying containers
-  [CloudWatch] monitoring pipeline
-  [SNS] for notifications
+  [CloudWatch] monitoring, [SNS] for notifications
 ```

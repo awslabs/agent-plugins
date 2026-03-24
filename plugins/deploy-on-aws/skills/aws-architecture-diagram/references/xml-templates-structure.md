@@ -5,22 +5,18 @@ Ready-to-use XML code blocks for diagram scaffolding. For edge and container exa
 ## Title + Subtitle Block
 
 ```xml
-<!-- Title group container -->
 <mxCell id="title-group" connectable="0" style="group;fontFamily=Helvetica;" value="" vertex="1" parent="1">
   <mxGeometry height="83" width="1200" x="50" y="30" as="geometry" />
 </mxCell>
-
-<!-- Title text: 30px bold -->
+<!-- Title: 30px bold -->
 <mxCell id="title-text" style="text;html=1;resizable=1;points=[];autosize=1;align=left;verticalAlign=top;spacingTop=-4;fontSize=30;fontStyle=1;fontFamily=Helvetica;" value="Architecture Title Here" vertex="1" parent="title-group">
   <mxGeometry height="42" width="800" as="geometry" />
 </mxCell>
-
-<!-- Subtitle text: 16px regular -->
+<!-- Subtitle: 16px regular -->
 <mxCell id="subtitle-text" style="text;html=1;resizable=0;points=[];autosize=1;align=left;verticalAlign=top;spacingTop=-4;fontSize=16;fontFamily=Helvetica;" value="One-line description of what the architecture does" vertex="1" parent="title-group">
   <mxGeometry height="25" width="800" x="5" y="40" as="geometry" />
 </mxCell>
-
-<!-- Separator line: orange/amber stroke -->
+<!-- Separator: orange/amber stroke -->
 <mxCell id="title-separator" style="line;strokeWidth=2;html=1;fontSize=14;strokeColor=#FF9900;fontFamily=Helvetica;" value="" vertex="1" parent="title-group">
   <mxGeometry height="10" width="1190" x="5" y="70" as="geometry" />
 </mxCell>
