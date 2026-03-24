@@ -8,13 +8,12 @@ Chains all fixers in sequence:
 4. fix_legend_size — resize legend panel to match diagram height
 
 Reads JSON from stdin (PostToolUse hook format) or accepts file path as argument.
-Requires defusedxml for safe XML parsing (prevents XXE attacks).
 """
 
 import argparse
 import json
 import sys
-import defusedxml.ElementTree as ET
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 # Import sibling modules
@@ -234,7 +233,6 @@ def fix_legend_size(tree: ET.ElementTree, verbose: bool = False) -> int:
     diagram_bottom = 0
     for cell in root_elem.iter("mxCell"):
         parent = cell.get("parent", "")
-        style = cell.get("style", "")
 
         # Look at root-level elements (parent="1") that are large groups
         if parent == "1" and cell.get("vertex") == "1":
@@ -283,7 +281,7 @@ def main() -> None:
             data = json.load(sys.stdin)
             file_path = data.get("tool_input", {}).get("file_path", "")
         except (json.JSONDecodeError, KeyError):
-            pass
+            pass  # Expected when not invoked as PostToolUse hook (CLI mode)
 
     if not file_path or not file_path.endswith((".drawio", ".drawio.xml")):
         # Not a drawio file, exit silently (hook compatibility)

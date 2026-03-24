@@ -15,14 +15,12 @@ Improved algorithm (v2):
    d. After moving all badges, re-check — repeat up to 3 passes
 5. Update badge mxGeometry (convert back to parent-relative coords)
 
-Requires defusedxml for safe XML parsing (prevents XXE attacks).
 """
 
 import argparse
 import math
 import re
-import sys
-import defusedxml.ElementTree as ET
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 
 
