@@ -1,0 +1,26 @@
+{
+  "author": {
+    "name": "Amazon Web Services"
+  },
+  "description": "Expert database guidance for the AWS database portfolio. Design schemas, execute queries, handle migrations, and choose the right database for your workload.",
+  "homepage": "https://github.com/awslabs/agent-plugins",
+  "keywords": [
+    "aws",
+    "aurora",
+    "database",
+    "databases",
+    "distributed-sql",
+    "dsql",
+    "iam-auth",
+    "migration",
+    "postgresql",
+    "postgres",
+    "schema",
+    "serverless",
+    "sql"
+  ],
+  "license": "Apache-2.0",
+  "name": "databases-on-aws",
+  "repository": "https://github.com/awslabs/agent-plugins",
+  "version": "1.0.0"
+}

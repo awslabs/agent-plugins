@@ -10,27 +10,6 @@
   },
   "plugins": [
     {
-      "category": "deployment",
-      "description": "Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment. Generate validated AWS architecture diagrams as draw.io XML.",
-      "keywords": [
-        "aws",
-        "aws agent skills",
-        "amazon",
-        "deploy",
-        "cdk",
-        "cloudformation",
-        "infrastructure",
-        "pricing",
-        "diagrams",
-        "draw.io",
-        "architecture"
-      ],
-      "name": "deploy-on-aws",
-      "source": "./plugins/deploy-on-aws",
-      "tags": ["aws", "deploy", "infrastructure", "cdk", "diagrams"],
-      "version": "1.2.0"
-    },
-    {
       "category": "location",
       "description": "Guide developers through adding maps, places search, geocoding, routing, and other geospatial features with Amazon Location Service, including authentication setup, SDK integration, and best practices.",
       "keywords": [
@@ -52,22 +31,21 @@
       "version": "1.0.0"
     },
     {
-      "category": "migration",
-      "description": "This no-cost tool assesses your current cloud provider's usage, geography, and billing data to estimate and compare AWS services and pricing, and recommends migration or continued use of your current provider. AWS pricing is based on current published pricing and may vary over time. The tool may generate a .migration folder containing comparison and migration execution data, which you may delete upon completion or use to migrate to AWS.",
+      "category": "fullstack",
+      "description": "Build full-stack apps with AWS Amplify Gen 2 using guided workflows for authentication, data models, storage, GraphQL APIs, and Lambda functions.",
       "keywords": [
         "aws",
-        "gcp",
-        "google-cloud",
-        "migration",
-        "cloud-migration",
-        "terraform",
-        "fargate",
-        "rds",
-        "eks"
+        "amplify",
+        "fullstack",
+        "authentication",
+        "data",
+        "storage",
+        "graphql",
+        "functions"
       ],
-      "name": "migration-to-aws",
-      "source": "./plugins/migration-to-aws",
-      "tags": ["aws", "gcp", "migration", "infrastructure"],
+      "name": "aws-amplify",
+      "source": "./plugins/aws-amplify",
+      "tags": ["aws", "amplify", "fullstack"],
       "version": "1.0.0"
     },
     {
@@ -102,21 +80,68 @@
       "version": "1.0.0"
     },
     {
-      "category": "fullstack",
-      "description": "Build full-stack apps with AWS Amplify Gen 2 using guided workflows for authentication, data models, storage, GraphQL APIs, and Lambda functions.",
+      "category": "database",
+      "description": "Expert database guidance for the AWS database portfolio. Design schemas, execute queries, handle migrations, and choose the right database for your workload.",
       "keywords": [
         "aws",
-        "amplify",
-        "fullstack",
-        "authentication",
-        "data",
-        "storage",
-        "graphql",
-        "functions"
+        "aws agent skills",
+        "amazon",
+        "aurora",
+        "database",
+        "databases",
+        "distributed-sql",
+        "dsql",
+        "iam-auth",
+        "migration",
+        "postgresql",
+        "postgres",
+        "schema",
+        "serverless",
+        "sql"
       ],
-      "name": "aws-amplify",
-      "source": "./plugins/aws-amplify",
-      "tags": ["aws", "amplify", "fullstack"],
+      "name": "databases-on-aws",
+      "source": "./plugins/databases-on-aws",
+      "tags": ["aws", "database", "aurora", "dsql", "serverless", "postgresql"],
+      "version": "1.0.0"
+    },
+    {
+      "category": "deployment",
+      "description": "Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment. Generate validated AWS architecture diagrams as draw.io XML.",
+      "keywords": [
+        "aws",
+        "aws agent skills",
+        "amazon",
+        "deploy",
+        "cdk",
+        "cloudformation",
+        "infrastructure",
+        "pricing",
+        "diagrams",
+        "draw.io",
+        "architecture"
+      ],
+      "name": "deploy-on-aws",
+      "source": "./plugins/deploy-on-aws",
+      "tags": ["aws", "deploy", "infrastructure", "cdk", "diagrams"],
+      "version": "1.2.0"
+    },
+    {
+      "category": "migration",
+      "description": "This no-cost tool assesses your current cloud provider's usage, geography, and billing data to estimate and compare AWS services and pricing, and recommends migration or continued use of your current provider. AWS pricing is based on current published pricing and may vary over time. The tool may generate a .migration folder containing comparison and migration execution data, which you may delete upon completion or use to migrate to AWS.",
+      "keywords": [
+        "aws",
+        "gcp",
+        "google-cloud",
+        "migration",
+        "cloud-migration",
+        "terraform",
+        "fargate",
+        "rds",
+        "eks"
+      ],
+      "name": "migration-to-aws",
+      "source": "./plugins/migration-to-aws",
+      "tags": ["aws", "gcp", "migration", "infrastructure"],
       "version": "1.0.0"
     }
   ]
