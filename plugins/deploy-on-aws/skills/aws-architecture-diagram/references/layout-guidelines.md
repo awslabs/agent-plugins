@@ -47,7 +47,7 @@ Study `example-event-driven.drawio` and `example-complex-platform.drawio` for co
 
 ## Handling Overlaps
 
-**Always add `labelBackgroundColor=#ffffff`** to every edge label to prevent blending with crossing edges. Include it in the `edgeLabel` style by default.
+**Always add `labelBackgroundColor=none`** to every edge label. NEVER use `labelBackgroundColor=#ffffff` — it breaks dark mode adaptive contrast.
 
 Only reroute an edge when the overlap is severe and the reroute is simple and clean. Label zone footprints: 78px icons = ~103px tall (with label), 48px icons = ~68px tall, group labels = 30px at top-left.
 

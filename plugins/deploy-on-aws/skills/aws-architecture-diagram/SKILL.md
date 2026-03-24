@@ -131,7 +131,7 @@ Always use the full `mxfile` wrapper:
 ```xml
 <mxfile host="Electron" version="29.6.1">
   <diagram name="Page-1" id="diagram-1">
-    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0" background="#FFFFFF">
+    <mxGraphModel dx="1200" dy="800" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1100" pageHeight="850" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -222,5 +222,5 @@ Each diagram gets a **descriptive filename** in kebab-case, placed in `./docs/` 
 - Add italic sub-labels to service icons to clarify their role in the architecture
 - Only include services the user explicitly mentions or that are core to the data flow. Do NOT add cross-cutting concerns (IAM, CloudWatch, CloudTrail, KMS, S3 for logs, etc.) unless the user asks for them
 - Include a title/label on the diagram describing the architecture
-- ALWAYS set `background="#FFFFFF"` on the mxGraphModel element
+- NEVER set `background="#FFFFFF"` on mxGraphModel — it breaks dark mode adaptive contrast
 - Do NOT read existing `.drawio` files as reference when generating diagrams — use only the templates and rules in this skill and its references

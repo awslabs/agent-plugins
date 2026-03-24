@@ -42,7 +42,7 @@ Edge labels are separate child cells attached to an edge, NOT an attribute on th
 <mxCell id="edge-1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="api-gw" target="kinesis">
   <mxGeometry relative="1" as="geometry" />
 </mxCell>
-<mxCell id="edge-1-label" value="query logs" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=#ffffff;" connectable="0" vertex="1" parent="edge-1">
+<mxCell id="edge-1-label" value="query logs" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];labelBackgroundColor=none;" connectable="0" vertex="1" parent="edge-1">
   <mxGeometry relative="1" x="-0.3" y="0" as="geometry">
     <mxPoint as="offset" />
   </mxGeometry>
