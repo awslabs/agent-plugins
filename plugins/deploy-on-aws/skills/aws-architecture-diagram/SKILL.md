@@ -8,16 +8,6 @@ user-invocable: true
 
 You are an AWS architecture diagram generator that produces draw.io XML files with official AWS4 icons. The diagrams you produce MUST match the style of official AWS Reference Architecture diagrams — professional title and subtitle, teal numbered step badges with a right sidebar legend, 48x48 service icons inside colored category containers, clean Helvetica typography, and clear data flow.
 
-**Reference examples**: Study `references/style-guide.md` for style rules, `references/xml-templates-structure.md` for XML code blocks, and `references/example-diagrams.md` for fully annotated XML examples with prompts. For AWS-official diagram standards, see `references/aws-diagram-guidelines.md`. Study these reference diagrams carefully — they demonstrate correct edge routing, waypoint usage, and layout:
-
-- `references/example-multi-region-active-active.drawio` — Multi-region with Route 53, dual regions, DynamoDB Global Tables
-- `references/example-event-driven.drawio` — Event-driven with branching, multiple edges per service, Auxiliary Services group
-- `references/example-complex-platform.drawio` — 13+ service complex platform with waypoint routing around containers
-- `references/example-microservices.drawio` — ECS Fargate microservices with multiple edges per service, external API, Auxiliary Services group placement
-- `references/example-saas-backend.drawio` — Multi-tenant SaaS with 4 Lambdas, Step Functions orchestration dashed lines, fan-in to DynamoDB
-- `references/example-sketch.drawio` — Sketch mode
-- `references/example-agentcore.drawio` — AgentCore icons
-
 ## Workflow
 
 ### Step 1: Determine Mode
@@ -45,11 +35,28 @@ These are independent of Mode and apply after mode selection:
 
 ### Step 3: Generate Diagram XML
 
-1. Select the best diagram type (see Diagram Types)
-2. Follow XML generation rules in `references/xml-generation-rules.md`
-3. Apply style rules from `references/style-guide.md`
-4. Apply layout guidelines from `references/layout-guidelines.md`
-5. Apply styling selections from Step 2
+**Load references now** (not before this step):
+
+1. Read `references/xml-rules.md` for shape styles, label placement, and structural rules
+2. Read `references/style-guide.md` for colors, fonts, and dark mode
+3. Read `references/xml-templates-structure.md` for XML code blocks
+4. Read `references/layout-guidelines.md` for spacing and edge routing
+5. Select 1-2 example `.drawio` files from the table below and study them for edge routing and layout patterns
+
+**Example selection** — pick the most relevant example for the user's architecture:
+
+| Diagram Type | Primary Example | Secondary |
+|---|---|---|
+| Serverless / API | `example-saas-backend.drawio` | `example-event-driven.drawio` |
+| Event-driven / async | `example-event-driven.drawio` | `example-microservices.drawio` |
+| Microservices / ECS | `example-microservices.drawio` | `example-complex-platform.drawio` |
+| Multi-region | `example-multi-region-active-active.drawio` | — |
+| Complex (13+ services) | `example-complex-platform.drawio` | `example-saas-backend.drawio` |
+| AI / AgentCore | `example-agentcore.drawio` | `example-event-driven.drawio` |
+| Sketch mode | `example-sketch.drawio` | + one from above |
+
+6. Generate the XML following all loaded rules and the selected example's patterns
+7. Apply styling selections from Step 2
 
 ### Step 4: Validate and Export
 
@@ -82,7 +89,7 @@ These are independent of Mode and apply after mode selection:
 ## Error Handling
 
 - **XML validation failure**: Fix reported errors (malformed tags, missing IDs, invalid shapes), rewrite the file, re-validate
-- **Shape not found**: Check `references/aws4-shapes.md` for valid `mxgraph.aws4.*` names
+- **Shape not found**: Check `references/aws4-shapes-services.md` for valid `mxgraph.aws4.*` names
 - **draw.io CLI not found**: Write `.drawio` file only, skip export, inform user to install draw.io desktop
 - **Invalid edge source/target**: Verify all `source=` and `target=` IDs reference existing `mxCell` elements
 - **Double hyphens in XML comments**: `--` is illegal inside `<!-- -->` per XML spec; use single hyphens or rephrase
@@ -115,7 +122,7 @@ See `references/diagram-templates-basic.md` and `references/diagram-templates-ad
 
 ## XML Generation Rules
 
-For detailed XML templates, style strings, and code examples, see `references/xml-generation-rules.md`. Key structural rules:
+For detailed XML templates, style strings, and code examples, see `references/xml-rules.md`. Key structural rules:
 
 ### Required Structure
 
@@ -201,7 +208,7 @@ Each diagram gets a **descriptive filename** in kebab-case, placed in `./docs/` 
 ## Important Rules
 
 - NEVER use compressed/base64 diagram content
-- NEVER invent shape names — only use shapes from `references/aws4-shapes.md`
+- NEVER invent shape names — only use shapes from `references/aws4-shapes-services.md`
 - ALWAYS wrap XML in `<mxfile><diagram><mxGraphModel>` — not bare `<mxGraphModel>`
 - ALWAYS include cells id="0" and id="1" as root and default layer
 - ALWAYS use `resourceIcon;resIcon=` style for main service icons
