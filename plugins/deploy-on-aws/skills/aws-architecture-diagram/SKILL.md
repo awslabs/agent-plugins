@@ -47,19 +47,19 @@ These are independent of Mode and apply after mode selection:
 
 **Example selection** — pick the most relevant example for the user's architecture:
 
-| Diagram Type | Primary Example | Secondary |
-|---|---|---|
-| Serverless / API | `example-saas-backend.drawio` | `example-event-driven.drawio` |
-| Event-driven / async | `example-event-driven.drawio` | `example-microservices.drawio` |
-| Microservices / ECS | `example-microservices.drawio` | `example-complex-platform.drawio` |
-| Multi-region | `example-multi-region-active-active.drawio` | — |
-| Complex (13+ services) | `example-complex-platform.drawio` | `example-saas-backend.drawio` |
-| AI / AgentCore | `example-agentcore.drawio` | `example-event-driven.drawio` |
-| Sketch mode | `example-sketch.drawio` | + one from above |
+| Diagram Type           | Primary Example                             | Secondary                         |
+| ---------------------- | ------------------------------------------- | --------------------------------- |
+| Serverless / API       | `example-saas-backend.drawio`               | `example-event-driven.drawio`     |
+| Event-driven / async   | `example-event-driven.drawio`               | `example-microservices.drawio`    |
+| Microservices / ECS    | `example-microservices.drawio`              | `example-complex-platform.drawio` |
+| Multi-region           | `example-multi-region-active-active.drawio` | —                                 |
+| Complex (13+ services) | `example-complex-platform.drawio`           | `example-saas-backend.drawio`     |
+| AI / AgentCore         | `example-agentcore.drawio`                  | `example-event-driven.drawio`     |
+| Sketch mode            | `example-sketch.drawio`                     | + one from above                  |
 
-6. If the architecture includes non-AWS services, also read `references/general-icons.md`
-7. Generate the XML following all loaded rules and the selected example's patterns
-7. Apply styling selections from Step 2
+1. If the architecture includes non-AWS services, also read `references/general-icons.md`
+2. Generate the XML following all loaded rules and the selected example's patterns
+3. Apply styling selections from Step 2
 
 ### Step 4: Validate and Export
 

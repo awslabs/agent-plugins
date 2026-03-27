@@ -16,7 +16,7 @@ This script:
 """
 
 import argparse
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
 
 
 def get_style_dict(style_str: str) -> dict[str, str]:

@@ -5,6 +5,7 @@ Ready-to-use patterns for common AWS architectures. Use these as starting points
 ## Serverless Web Application
 
 Services: CloudFront → API Gateway → Lambda → DynamoDB, with S3 for static assets and Cognito for auth.
+
 ```
 Layout (left to right):
   [Users] → [CloudFront] → [S3 Bucket (static)]

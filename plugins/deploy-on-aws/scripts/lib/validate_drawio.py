@@ -11,7 +11,7 @@ validate_drawio.py - Validates draw.io XML files for:
 import json
 import re
 import sys
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
 from pathlib import Path
 
 # Load valid AWS4 shapes

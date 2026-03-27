@@ -11,3 +11,5 @@ Deterministic fixers run automatically via the `validate-drawio.sh` PostToolUse 
 All scripts are in `scripts/lib/`. The pipeline is orchestrated by `scripts/lib/post_process_drawio.py`, which chains them in sequence. No manual invocation is needed when using the PostToolUse hook.
 
 The PostToolUse hook fires on all Edit/Write operations but exits immediately (<10ms) for non-.drawio files.
+
+**Dependency**: The pipeline requires `defusedxml` (`pip3 install defusedxml>=0.7.1`). If missing, the hook skips validation and shows an install prompt.

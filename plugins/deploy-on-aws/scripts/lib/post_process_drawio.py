@@ -13,7 +13,7 @@ Reads JSON from stdin (PostToolUse hook format) or accepts file path as argument
 import argparse
 import json
 import sys
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
 from pathlib import Path
 
 # Import sibling modules

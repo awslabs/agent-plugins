@@ -9,7 +9,7 @@ Fixes three types of issues:
 """
 
 import argparse
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
 
 # Broken shape names → correct shape names
 SHAPE_RENAMES: dict[str, str] = {
