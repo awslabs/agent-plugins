@@ -1,0 +1,24 @@
+{
+  "author": {
+    "name": "Amazon Web Services"
+  },
+  "description": "AWS development toolkit — 25 skills, 11 agents, 5 MCP servers, and hooks for building, migrating, and reviewing well-architected applications on AWS.",
+  "homepage": "https://github.com/awslabs/agent-plugins",
+  "keywords": [
+    "aws",
+    "cdk",
+    "cloudformation",
+    "terraform",
+    "serverless",
+    "well-architected",
+    "iac",
+    "migration",
+    "gcp",
+    "azure",
+    "bedrock"
+  ],
+  "license": "Apache-2.0",
+  "name": "aws-dev-toolkit",
+  "repository": "https://github.com/awslabs/agent-plugins",
+  "version": "0.4.1"
+}
