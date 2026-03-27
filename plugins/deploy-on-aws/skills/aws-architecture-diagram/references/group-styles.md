@@ -92,12 +92,12 @@ edgeStyle=orthogonalEdgeStyle;html=1;endArrow=open;elbow=vertical;startArrow=non
 
 ## Useful Style Properties
 
-| Property | Values | Use for |
-| --- | --- | --- |
-| `rounded=1` | 0/1 | Rounded corners |
-| `fillColor`/`strokeColor`/`fontColor` | Hex color | Background / border / text color |
-| `shape=cylinder3` / `ellipse` / `rhombus` | keyword | Database cylinders / circles / diamonds |
-| `container=1` | 0/1 | Enable container behavior |
-| `pointerEvents=0` | 0/1 | Prevent container capturing child connections |
-| `exitX`/`exitY`/`entryX`/`entryY` | 0-1 | Edge exit/entry points on shapes |
-| `jettySize=auto` | auto/px | Port spacing on orthogonal edges |
+| Property                                  | Values    | Use for                                       |
+| ----------------------------------------- | --------- | --------------------------------------------- |
+| `rounded=1`                               | 0/1       | Rounded corners                               |
+| `fillColor`/`strokeColor`/`fontColor`     | Hex color | Background / border / text color              |
+| `shape=cylinder3` / `ellipse` / `rhombus` | keyword   | Database cylinders / circles / diamonds       |
+| `container=1`                             | 0/1       | Enable container behavior                     |
+| `pointerEvents=0`                         | 0/1       | Prevent container capturing child connections |
+| `exitX`/`exitY`/`entryX`/`entryY`         | 0-1       | Edge exit/entry points on shapes              |
+| `jettySize=auto`                          | auto/px   | Port spacing on orthogonal edges              |
