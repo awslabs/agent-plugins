@@ -36,6 +36,7 @@ To maximize the benefits of plugin-assisted development while maintaining securi
 | **databases-on-aws**        | Database guidance for the AWS database portfolio — schema design, queries, migrations, and multi-tenant patterns       | Some Services Available (Aurora DSQL) |
 | **deploy-on-aws**           | Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment                       | Available                             |
 | **migration-to-aws**        | Migrate GCP infrastructure to AWS with resource discovery, architecture mapping, cost analysis, and execution planning | Available                             |
+| **sagemaker-ai**            | Build, train, and deploy AI models with deep AWS AI/ML expertise brought directly into your coding assistants, covering the surface area of [Amazon SageMaker AI](https://aws.amazon.com/sagemaker/ai/) | Available                             |
 
 ## Installation
 
@@ -81,6 +82,12 @@ or
 
 ```bash
 /plugin install migration-to-aws@agent-plugins-for-aws
+```
+
+or
+
+```bash
+/plugin install sagemaker-ai@agent-plugins-for-aws
 ```
 
 ### Cursor
@@ -230,6 +237,10 @@ Helps you systematically migrate GCP infrastructure to AWS through Terraform res
 | ---------------- | ------------------------------------------------ |
 | **awsknowledge** | AWS documentation, architecture guidance         |
 | **awspricing**   | Real-time AWS service pricing for cost estimates |
+
+## sagemaker-ai
+
+Build, train, and deploy AI models with deep AWS AI/ML expertise brought directly into your coding assistants, covering the surface area of [Amazon SageMaker AI](https://aws.amazon.com/sagemaker/ai/). [Learn more](./plugins/sagemaker-ai/README.md).
 
 ## Requirements
 
