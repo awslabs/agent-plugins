@@ -23,7 +23,7 @@ Nova deploys as a model-on-variant (no inference components), so you invoke the 
 
 ## Prerequisites
 
-Requires SageMaker Python SDK >= 3.6.0 (installed by Cell 1).
+Requires SageMaker Python SDK >= 3.7.0 (installed by Cell 1).
 
 ## Workflow
 

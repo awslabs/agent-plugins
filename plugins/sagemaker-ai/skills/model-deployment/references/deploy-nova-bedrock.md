@@ -20,7 +20,7 @@ Uses the SageMaker PySdk `BedrockModelBuilder` to deploy a Nova fine-tuned LoRA 
 
 ## Prerequisites
 
-Requires SageMaker Python SDK >= 3.6.0 with `BedrockModelBuilder` Nova support (installed by Cell 1).
+Requires SageMaker Python SDK >= 3.7.0 with `BedrockModelBuilder` Nova support (installed by Cell 1).
 
 ## Workflow
 

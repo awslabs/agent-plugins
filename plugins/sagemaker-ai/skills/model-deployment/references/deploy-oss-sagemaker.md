@@ -10,7 +10,7 @@
 
 ## Overview
 
-Uses the SageMaker PySdk `JumpStartModel` to resolve the base model S3 URI and container image, rather than manually querying `describe_hub_content` and parsing the hub content document JSON. Requires `sagemaker>=3.0.0`.
+Uses the SageMaker PySdk `JumpStartModel` to resolve the base model S3 URI and container image, rather than manually querying `describe_hub_content` and parsing the hub content document JSON. Requires `sagemaker>=3.7.0`.
 
 **Required inputs** (collected in the steps below):
 
@@ -23,7 +23,7 @@ Uses the SageMaker PySdk `JumpStartModel` to resolve the base model S3 URI and c
 
 ### SDK Version
 
-Requires `sagemaker>=3.0.0` with `JumpStartModel` support.
+Requires `sagemaker>=3.7.0` with `JumpStartModel` support.
 
 ## Key Gotchas
 
@@ -129,7 +129,7 @@ To run:
 
 ## Common Issues
 
-- **"No module named 'sagemaker.jumpstart'"**: Upgrade SDK: `pip install --upgrade sagemaker>=3.0.0`
+- **"No module named 'sagemaker.jumpstart'"**: Upgrade SDK: `pip install --upgrade sagemaker>=3.7.0`
 - **"ModuleNotFoundError" for vllm_async_service**: Using LMI 0.31.0 container. Use `OPTION_ROLLING_BATCH=lmi-dist` instead of `OPTION_ENTRYPOINT`.
 - **Base IC fails health check**: Check `MinMemoryRequiredInMb` fits within instance memory. Reduce if needed.
 - **"Inference Component Name header is required"**: Must pass `InferenceComponentName` when invoking the endpoint.

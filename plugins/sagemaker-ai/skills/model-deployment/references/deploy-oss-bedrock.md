@@ -32,7 +32,7 @@ The `hf_merged/` folder must contain: `.safetensors` files, `config.json`, `toke
 
 ### SDK Version
 
-Requires `sagemaker>=3.0.0` with `BedrockModelBuilder` support.
+Requires `sagemaker>=3.7.0` with `BedrockModelBuilder` support.
 
 ## Workflow
 
@@ -123,7 +123,7 @@ To run:
 ## Common Issues
 
 - **"Model weights are larger than 200GB"**: Cannot use this pathway.
-- **"No module named 'sagemaker.serve.bedrock_model_builder'"**: Upgrade SDK: `pip install --upgrade sagemaker>=3.0.0`
+- **"No module named 'sagemaker.serve.bedrock_model_builder'"**: Upgrade SDK: `pip install --upgrade sagemaker>=3.7.0`
 - **Import starts but uses wrong region**: Known issue — `BedrockModelBuilder` defaults to us-east-1. The notebook code overrides this.
 - **"Access denied to S3"**: Add S3 read permissions to the IAM role for the model bucket.
 - **"Provided IAM role could not be assumed"**: Ensure role has trust policy for `bedrock.amazonaws.com`.
@@ -133,6 +133,6 @@ To run:
 After the notebook runs successfully, tell the user:
 
 - **Model**: `[MODEL_NAME]` has been imported to Bedrock
-- **How to invoke**: Use the Bedrock Converse API with the imported model ARN
+- **How to invoke**: Use the Bedrock `invoke_model` API with the imported model ARN
 - **Billing**: Pay per request — no cost while idle
 - **Cleanup**: When done, delete the imported model using the AWS MCP tool `delete-imported-model` (Bedrock service) with the model name.
