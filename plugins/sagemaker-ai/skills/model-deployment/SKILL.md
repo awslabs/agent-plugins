@@ -1,6 +1,8 @@
 ---
 name: model-deployment
 description: Generates a Jupyter notebook that deploys fine-tuned models from SageMaker Serverless Model Customization to SageMaker endpoints or Bedrock. Use when the user says "deploy my model", "create an endpoint", "make it available", or asks about deployment options. Identifies the correct deployment pathway (Nova vs OSS), generates deployment code, and handles endpoint configuration.
+metadata:
+  version: "1.0.0"
 ---
 
 # Model Deployment

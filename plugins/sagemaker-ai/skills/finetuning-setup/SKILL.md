@@ -1,6 +1,8 @@
 ---
 name: finetuning-setup
 description: Selects a base model and fine-tuning technique (SFT, DPO, or RLVR) for the user's use case by querying SageMaker Hub. Use when the user asks which model or technique to use, wants to start fine-tuning, or mentions a model name or family (e.g., "Llama", "Mistral") — always activate even for known model names because the exact Hub model ID must be resolved. Queries available models, validates technique compatibility, and confirms selections.
+metadata:
+  version: "1.0.0"
 ---
 
 # Finetuning Setup

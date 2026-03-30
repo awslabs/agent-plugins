@@ -1,6 +1,8 @@
 ---
 name: use-case-specification
 description: Creates a reusable use case specification file that defines the business problem, stakeholders, and measurable success criteria for model customization, as recommended by the AWS Responsible AI Lens. Use as the default first step in any model customization plan. Skip only if the user explicitly declines or already has a use case specification to reuse. Captures problem statement, primary users, and LLM-as-a-Judge success tenets.
+metadata:
+  version: "1.0.0"
 ---
 
 # Use Case Specification

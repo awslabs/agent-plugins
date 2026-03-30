@@ -1,6 +1,8 @@
 ---
 name: finetuning
 description: Generates a Jupyter notebook that fine-tunes a base model using SageMaker serverless training jobs. Use when the user says "start training", "fine-tune my model", "I'm ready to train", or when the plan reaches the finetuning step. Supports SFT, DPO, and RLVR trainers, including RLVR Lambda reward function creation.
+metadata:
+  version: "1.0.0"
 ---
 
 # Prerequisites

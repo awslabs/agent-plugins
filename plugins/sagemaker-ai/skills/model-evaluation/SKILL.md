@@ -1,6 +1,8 @@
 ---
 name: model-evaluation
 description: Generates a Jupyter notebook that evaluates a fine-tuned SageMaker model using LLM-as-a-Judge. Use when the user says "evaluate my model", "how did my model perform", "compare models", or after a training job completes. Supports built-in and custom evaluation metrics, evaluation dataset setup, and judge model selection.
+metadata:
+  version: "1.0.0"
 ---
 
 # Model Evaluation Code Generator

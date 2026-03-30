@@ -1,6 +1,8 @@
 ---
 name: hyperpod-ssm
 description: Remote command execution and file transfer on SageMaker HyperPod cluster nodes via AWS Systems Manager (SSM). This is the primary interface for accessing HyperPod nodes — direct SSH is not available. Use when any skill, workflow, or user request needs to execute commands on cluster nodes, upload files to nodes, read/download files from nodes, run diagnostics, install packages, or perform any operation requiring shell access to HyperPod instances. Other HyperPod skills depend on this skill for all node-level operations.
+metadata:
+  version: "1.0.0"
 ---
 
 # HyperPod SSM Access

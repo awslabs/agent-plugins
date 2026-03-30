@@ -1,6 +1,8 @@
 ---
 name: dataset-transformation
 description: Generates a Jupyter notebook that transforms datasets between ML schemas for model training or evaluation. Use when the user says "transform", "convert", "reformat", "change the format", or when a dataset's schema needs to change to match the target format — always use this skill for format changes rather than writing inline transformation code. Supports OpenAI chat, SageMaker SFT/DPO/RLVR, HuggingFace preference, Bedrock Nova, VERL, and custom JSONL formats from local files or S3.
+metadata:
+  version: "1.0.0"
 ---
 
 # Dataset Transformation Agent

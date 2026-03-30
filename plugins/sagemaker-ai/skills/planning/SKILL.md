@@ -1,6 +1,8 @@
 ---
 name: planning
 description: Discovers user intent and generates a structured, step-by-step customization plan that orchestrates other skills. Always activate at the start of every conversation, when all tasks in a plan are completed, or when the user asks to modify the current plan. Handles intent discovery, plan generation, plan iteration, and mid-execution plan alterations. When in doubt, use this skill.
+metadata:
+  version: "1.0.0"
 ---
 
 # Planning

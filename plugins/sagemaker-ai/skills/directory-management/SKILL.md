@@ -1,6 +1,8 @@
 ---
 name: directory-management
 description: Manages project directory setup and artifact organization. Use when starting a new project, resuming an existing one, or when a PLAN.md needs to be associated with a project directory. Creates the project folder structure (specs/, scripts/, notebooks/) and resolves project naming.
+metadata:
+  version: "1.0.0"
 ---
 
 # Directory Management
