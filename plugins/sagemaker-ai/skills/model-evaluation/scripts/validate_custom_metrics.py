@@ -104,7 +104,7 @@ def main():
 
     arg = sys.argv[1]
     try:
-        with open(arg) as f:
+        with open(arg, encoding="utf-8") as f:
             raw = f.read()
     except (FileNotFoundError, IsADirectoryError):
         raw = arg

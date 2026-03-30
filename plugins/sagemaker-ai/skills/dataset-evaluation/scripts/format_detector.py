@@ -441,11 +441,11 @@ def _validate_verl_legacy_prompt(record: dict, line_num: int) -> list[Validation
 FORMAT_SCHEMAS = {
     FormatType.NOVA_SFT: {
         "required_fields": {"messages": list},
-        "message_validator": lambda msgs, ln: _validate_nova_messages(msgs, ln, is_dpo=False),
+        "message_validator": lambda msgs, ln: _validate_nova_messages(msgs, ln, is_dpo=False),  # nosemgrep: python.lang.maintainability.return.return-not-in-function -- lambda inside dict literal, not a bare return
     },
     FormatType.NOVA_DPO: {
         "required_fields": {"messages": list},
-        "message_validator": lambda msgs, ln: _validate_nova_messages(msgs, ln, is_dpo=True),
+        "message_validator": lambda msgs, ln: _validate_nova_messages(msgs, ln, is_dpo=True),  # nosemgrep: python.lang.maintainability.return.return-not-in-function -- lambda inside dict literal, not a bare return
     },
     FormatType.NOVA_RLVR: {
         "required_fields": {"messages": list, "reference_answer": dict},
@@ -653,7 +653,7 @@ if __name__ == "__main__":
         if args.json:
             output = {
                 "format_type": result.format_type.value,
-                "is_valid": result.is_valid,
+                "is_valid": result.is_valid,  # nosemgrep: python.lang.maintainability.is-function-without-parentheses -- dataclass field, not a method
                 "confidence": result.confidence.value,
                 "lines_sampled": result.lines_sampled,
                 "errors": [
@@ -664,7 +664,7 @@ if __name__ == "__main__":
             print(json.dumps(output, indent=2))
         else:
             print(f"Format: {result.format_type.value}")
-            print(f"Valid: {'✓' if result.is_valid else '✗'}")
+            print(f"Valid: {'✓' if result.is_valid else '✗'}")  # nosemgrep: python.lang.maintainability.is-function-without-parentheses -- dataclass field, not a method
             print(f"Confidence: {result.confidence.name}")
             print(f"Lines sampled: {result.lines_sampled}")
             if result.errors:
@@ -672,7 +672,7 @@ if __name__ == "__main__":
                 for err in result.errors:
                     print(f"  Line {err.line_number}: {err.message}")
         
-        sys.exit(0 if result.is_valid else 1)
+        sys.exit(0 if result.is_valid else 1)  # nosemgrep: python.lang.maintainability.is-function-without-parentheses -- dataclass field, not a method
     except (FileNotFoundError, IOError, ValueError) as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
