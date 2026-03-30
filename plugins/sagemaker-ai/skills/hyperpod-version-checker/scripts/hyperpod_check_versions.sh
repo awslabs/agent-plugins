@@ -29,7 +29,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # --- Color setup ---
-if $USE_COLOR && [ -t 1 ] && ! $JSON_OUTPUT; then
+if [[ "$USE_COLOR" == "true" ]] && [ -t 1 ] && [[ "$JSON_OUTPUT" != "true" ]]; then
     RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
 else
     RED=''; GREEN=''; YELLOW=''; BLUE=''; NC=''
@@ -46,7 +46,7 @@ log() {
     local stripped
     stripped=$(echo -e "$@" | sed 's/\x1b\[[0-9;]*m//g')
     echo "$stripped" >> "$OUTPUT_FILE"
-    if ! $JSON_OUTPUT; then
+    if [[ "$JSON_OUTPUT" != "true" ]]; then
         echo -e "$@"
     fi
 }
@@ -91,7 +91,7 @@ if cmd_exists nvidia-smi; then
     DRIVER_VER=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>/dev/null | head -1)
     if [ $? -ne 0 ] || [ -z "$DRIVER_VER" ] || [[ "$DRIVER_VER" == *"failed"* ]] || [[ "$DRIVER_VER" == *"NVIDIA-SMI"* ]]; then
         DRIVER_VER=""
-        if $IS_NEURON; then
+        if [[ "$IS_NEURON" == "true" ]]; then
             log "${YELLOW}NVIDIA driver: N/A (Trainium/Inferentia instance)${NC}"
         else
             log "${YELLOW}nvidia-smi found but driver not responding${NC}"
@@ -242,7 +242,7 @@ if [ -z "$LIBFABRIC_VER" ]; then
     cmd_exists fi_info && FI_INFO="fi_info"
     [ -z "$FI_INFO" ] && [ -f /opt/amazon/efa/bin/fi_info ] && FI_INFO="/opt/amazon/efa/bin/fi_info"
     if [ -n "$FI_INFO" ]; then
-        LIBFABRIC_VER=$($FI_INFO --version 2>&1 | grep "libfabric" | sed -n 's/.*libfabric: \([0-9.]*\).*/\1/p' | head -1)
+        LIBFABRIC_VER=$("$FI_INFO" --version 2>&1 | grep "libfabric" | sed -n 's/.*libfabric: \([0-9.]*\).*/\1/p' | head -1)
         log "Libfabric ($FI_INFO): $LIBFABRIC_VER"
     fi
 fi
@@ -255,7 +255,7 @@ FI_CMD=""
 cmd_exists fi_info && FI_CMD="fi_info"
 [ -z "$FI_CMD" ] && [ -f /opt/amazon/efa/bin/fi_info ] && FI_CMD="/opt/amazon/efa/bin/fi_info"
 if [ -n "$FI_CMD" ]; then
-    if $FI_CMD -p efa 2>&1 | grep -q "provider: efa"; then
+    if "$FI_CMD" -p efa 2>&1 | grep -q "provider: efa"; then
         log "${GREEN}EFA provider available${NC}"
     else
         log "${YELLOW}EFA provider not detected${NC}"
@@ -357,14 +357,14 @@ NEURON_LS=$(cmd_or_path neuron-ls "$NEURON_BIN/neuron-ls")
 if [ -x "$NEURON_LS" ]; then
     NEURON_DETECTED=true
     log "Neuron devices:"
-    $NEURON_LS 2>/dev/null | while read -r line; do log "  $line"; done
+    "$NEURON_LS" 2>/dev/null | while read -r line; do log "  $line"; done
     log ""
 fi
 
 # Neuron compiler
 NEURON_CC=$(cmd_or_path neuronx-cc "$NEURON_BIN/neuronx-cc")
 if [ -x "$NEURON_CC" ]; then
-    NEURON_CC_VER=$($NEURON_CC --version 2>&1 | head -1)
+    NEURON_CC_VER=$("$NEURON_CC" --version 2>&1 | head -1)
     VERSIONS[NEURON_COMPILER]="$NEURON_CC_VER"
     log "Neuron Compiler: $NEURON_CC_VER"
     NEURON_DETECTED=true
@@ -406,7 +406,7 @@ if [ -x "$NEURON_TOP" ]; then
     NEURON_DETECTED=true
 fi
 
-if ! $NEURON_DETECTED; then
+if [[ "$NEURON_DETECTED" != "true" ]]; then
     log "${YELLOW}Neuron SDK not found (expected on non-Trainium/Inferentia instances)${NC}"
 fi
 log ""
@@ -514,7 +514,7 @@ log ""
 log "Report saved to: $OUTPUT_FILE"
 
 # --- JSON output (stdout only) ---
-if $JSON_OUTPUT; then
+if [[ "$JSON_OUTPUT" == "true" ]]; then
     cat <<EOF
 {
   "hostname": "$(hostname)",

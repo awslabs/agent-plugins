@@ -9,6 +9,8 @@
 # Build target from parts: use --cluster-id, --group, --instance-id instead of --target
 set -euo pipefail
 
+command -v jq >/dev/null 2>&1 || { echo "Error: jq is required but not installed" >&2; exit 1; }
+
 REGION="${AWS_DEFAULT_REGION:-us-west-2}"
 TARGET="" ; CLUSTER_ID="" ; GROUP="" ; INSTANCE_ID=""
 MODE="exec" ; CMD="" ; LOCAL_PATH="" ; REMOTE_PATH=""
@@ -48,13 +50,7 @@ b64_encode() {
 
 json_cmd() {
   local cmd="$1"
-  if command -v jq >/dev/null 2>&1; then
-    jq -n --arg c "$cmd" '{"command":[$c]}'
-  else
-    local escaped
-    escaped=$(printf '%s' "$cmd" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g')
-    printf '{"command":["%s"]}\n' "$escaped"
-  fi
+  jq -n --arg c "$cmd" '{"command":[$c]}'
 }
 
 case "$MODE" in

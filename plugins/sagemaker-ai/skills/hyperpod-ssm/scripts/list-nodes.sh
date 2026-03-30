@@ -19,8 +19,9 @@ done
 # Paginate to collect ALL nodes
 NODES='[]'; NEXT=""
 while :; do
-  PAGE=$(aws sagemaker list-cluster-nodes --cluster-name "$CLUSTER" --region "$REGION" \
-    ${NEXT:+--next-token "$NEXT"} --output json)
+  CMD=(aws sagemaker list-cluster-nodes --cluster-name "$CLUSTER" --region "$REGION" --output json)
+  [[ -n "$NEXT" ]] && CMD+=(--next-token "$NEXT")
+  PAGE=$("${CMD[@]}")
   NODES=$(echo "$NODES" "$PAGE" | jq -s '.[0] + .[1].ClusterNodeSummaries')
   NEXT=$(echo "$PAGE" | jq -r '.NextToken // empty')
   [[ -z "$NEXT" ]] && break
