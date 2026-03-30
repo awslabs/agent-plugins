@@ -54,7 +54,6 @@ else:
 
 training_job = TrainingJob.get(training_job_name=TRAINING_JOB_NAME, region=REGION)
 builder = BedrockModelBuilder(model=training_job)
-builder._bedrock_client = boto3.client("bedrock", region_name=REGION)
 
 result = builder.deploy(
     job_name=MODEL_NAME,

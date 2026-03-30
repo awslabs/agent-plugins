@@ -155,13 +155,13 @@ metrics = [
 
 fig, axes = plt.subplots(1, len(metrics), figsize=(4 * len(metrics), 3))
 for idx, metric in enumerate(metrics):
-history = client.get_metric_history(run_id, metric)
-if history:
-axes[idx].plot([h.step for h in history], [h.value for h in history], linewidth=2, marker='o', markersize=4)
-axes[idx].set_xlabel('Step')
-axes[idx].set_ylabel(metric.split('/')[-1])
-axes[idx].set_title(metric, fontweight='bold')
-axes[idx].grid(True, alpha=0.3)
+    history = client.get_metric_history(run_id, metric)
+    if history:
+        axes[idx].plot([h.step for h in history], [h.value for h in history], linewidth=2, marker='o', markersize=4)
+        axes[idx].set_xlabel('Step')
+        axes[idx].set_ylabel(metric.split('/')[-1])
+        axes[idx].set_title(metric, fontweight='bold')
+        axes[idx].grid(True, alpha=0.3)
 
 plt.suptitle(f'Training Metrics: {training_job.training_job_name}', fontweight='bold')
 plt.tight_layout()

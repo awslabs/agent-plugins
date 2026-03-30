@@ -50,5 +50,5 @@ Follow the workflow shown below. Locate the dataset, check the file type, and re
 
 ```bash
 # With the file path argument identified in workflow step 1
-python src/format_detector.py local_path/to/dataset
+python scripts/format_detector.py local_path/to/dataset
 ```

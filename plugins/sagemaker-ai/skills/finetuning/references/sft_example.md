@@ -146,12 +146,12 @@ client = MlflowClient()
 
 fig, axes = plt.subplots(1, 2, figsize=(12, 3))
 for idx, metric in enumerate(["total_loss", "val_eval_total_loss"]):
-history = client.get_metric_history(run_id, metric)
-axes[idx].plot([h.step for h in history], [h.value for h in history], linewidth=2, marker='o', markersize=4)
-axes[idx].set_xlabel('Step')
-axes[idx].set_ylabel('Loss')
-axes[idx].set_title(metric, fontweight='bold')
-axes[idx].grid(True, alpha=0.3)
+    history = client.get_metric_history(run_id, metric)
+    axes[idx].plot([h.step for h in history], [h.value for h in history], linewidth=2, marker='o', markersize=4)
+    axes[idx].set_xlabel('Step')
+    axes[idx].set_ylabel('Loss')
+    axes[idx].set_title(metric, fontweight='bold')
+    axes[idx].grid(True, alpha=0.3)
 
 plt.suptitle(f'Training Metrics: {training_job.training_job_name}', fontweight='bold')
 plt.tight_layout()
