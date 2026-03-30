@@ -55,8 +55,9 @@ Does this plan look right, or would you like to change anything?
 
 - Before presenting a plan, always read `references/skill-routing-constraints.md` and validate the plan against it.
 - Draw tasks from the skills available in your context. Use each skill's name and description to determine relevance.
+- Only offer capabilities that are covered by an available skill. Do not offer, suggest, or imply the ability to help with tasks that no skill supports. If the user needs something outside the available skills, explain that it is not supported.
 - Not every plan needs every skill. Tailor the plan to the user's actual intent.
-- If the user already has artifacts (a dataset, a trained model, etc.), skip the steps that produce them.
+- If the user already has artifacts (e.g., a trained model), skip the steps that produce them.
 - Keep plans short. Only include tasks that are necessary.
 
 When the user approves the plan, write it to `PLAN.md` using the following format. Save the file under the project directory structure defined by the directory-management skill, if available.

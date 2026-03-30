@@ -141,8 +141,8 @@ def reward_function(sample: Dict[str, Any], index: int) -> Dict[str, Any]:
     # Note the below lines of code are examples and will not work for your use case
     # You MUST update them to match YOUR use case
     # Extract the response and reference
-    messages = sample.get('messages', [])
-    reference_answer = sample.get('reference_answer', {}).get('text', '')
+    messages = sample.get('messages', sample.get('prompt', []))
+    reference_answer = sample.get('reference_answer', {}).get('text', '') or sample.get('reward_model', {}).get('ground_truth', '')
 
     # Get the question and assistant's response
     question = ""

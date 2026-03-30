@@ -142,6 +142,8 @@ For each value you don't already have, ask one at a time.
 
 ### Step 10: Confirm configuration
 
+Summarize everything and ask for approval:
+
 > "Here's the evaluation setup:
 >
 > - Task: [task]

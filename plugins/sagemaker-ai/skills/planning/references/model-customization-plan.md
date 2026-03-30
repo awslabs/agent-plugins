@@ -12,4 +12,6 @@ A typical model customization workflow follows these steps in order:
 
 Not every plan needs every step. Users may skip steps if they already have the required artifacts (e.g., skip steps 3–4 if they have validated data, or skip to deployment if they have a trained model).
 
+**Note:** This skills package does not support data generation. Do not suggest, offer, or imply that you have the ability to generate data. If the user asks about this, make it clear that the skills do not support this ability.
+
 **Note:** Evaluation datasets require a different format than training datasets (e.g., SageMaker Eval `query`/`response` vs SFT `prompt`/`completion`). If the user has a separate eval dataset, it may need its own validation and transformation pass before model evaluation.
