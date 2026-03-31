@@ -20,16 +20,13 @@ This list applies to both built-in and custom metrics — the SDK does not disti
 
 Source: `sagemaker.train.constants._ALLOWED_EVALUATOR_MODELS` (sagemaker SDK v3)
 
-## Before Recommending
+## Selection Guidance
 
 Verify each candidate is active in the user's region. Use the AWS MCP tool `get-foundation-model` (Bedrock service) with the model identifier and region. Extract `modelDetails.modelLifecycle.status` from the response.
 
 Only include models that return `ACTIVE`. Models marked `LEGACY` will fail at evaluation time.
 
-## Selection Guidance
+Present all active models to the user and let them choose. **NEVER recommend or suggest any particular model.** Only display the list. If the user asks for guidance, you may share these general trade-offs so they can decide:
 
-Present all active models to the user and let them choose. **NEVER recommend or suggest any particular model.** Only display the list. If the user asks for guidance, you may share these trade-offs:
-
-- Simple tasks (QA, classification) → Claude 3.5 Haiku (fast, cost-effective)
-- Complex reasoning (math, multi-step) → Claude 3.5 Sonnet v2 (higher quality)
-- Budget-conscious → Claude 3.5 Haiku or Mistral Large
+- Cost vs quality: Smaller models are faster and cheaper; larger models produce higher-quality judgments
+- Task complexity: Simple tasks (QA, classification) may not need the most capable model; complex reasoning (math, multi-step) benefits from stronger models
