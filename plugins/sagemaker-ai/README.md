@@ -154,7 +154,12 @@ Learn more about AWS Identity and Access Management for Amazon SageMaker AI [her
 #### Configuration
 
 - Set `AWS_DEFAULT_REGION` to your preferred AWS region (e.g., `us-east-1`) for your customization workflow. See [Configuring environment variables](https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-envvars.html) for details. If you're using isolated environments such as conda or venv, make sure to set your environment variables within your environment.
-- When deploying a customized model to Bedrock for inference, set your region inference policy to control scale of inference geographically or globally. See [Bedrock documentation](https://aws.amazon.com/blogs/machine-learning/getting-started-with-cross-region-inference-in-amazon-bedrock/).
+- SageMaker LLM as a Judge: This feature is powered by Amazon Bedrock Evaluations. Your use of this feature is subject to pricing of Amazon Bedrock Evaluations, see the [Service Terms](https://aws.amazon.com/service-terms/) applicable to Amazon Bedrock, and the terms that apply to your usage of third-party models. Amazon Bedrock Evaluations may securely transmit data across AWS Regions within your geography for processing. For more information, access [Amazon Bedrock Evaluations documentation](https://docs.aws.amazon.com/bedrock/latest/userguide/evaluation-judge.html).
+- When deploying a customized model to Bedrock for inference, set your region inference policy to control scale of inference geographically or globally. See [Bedrock documentation](https://docs.aws.amazon.com/bedrock/latest/userguide/cross-region-inference.html).
+- Callouts:
+  - Nova models are subject to the following restrictions:
+    - Only available for customization in us-east-1
+    - Not supported for model evaluation with LLMaaJ.
 
 ## Customizing Skills for Your Organization
 
