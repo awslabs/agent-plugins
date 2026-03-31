@@ -7,25 +7,25 @@ This plugin brings deep AWS AI/ML expertise directly into your coding assistant,
 
 ## Agent Skills
 
-| # | Skill | Description | Documentation |
-|---|---|---|---|
-| 1 | `planning` | Builds a dynamic, step-by-step plan tailored to your intents | [SKILL.md](skills/planning/SKILL.md) |
-| 2 | `directory-management` | Manages project directory setup, artifact organization, and plan association for new or existing projects | [SKILL.md](skills/directory-management/SKILL.md) |
-| 3 | `use-case-specification` | Guided, conversational process to define your model customization use case goals, key stakeholders, and success criteria | [SKILL.md](skills/use-case-specification/SKILL.md) |
-| 4 | `dataset-evaluation` | Dataset quality validation, format detection, and data requirements analysis | [SKILL.md](skills/dataset-evaluation/SKILL.md) |
-| 5 | `dataset-transformation` | Dataset format conversion and preparation for SageMaker-compatible training formats | [SKILL.md](skills/dataset-transformation/SKILL.md) |
-| 6 | `finetuning-setup` | Fine-tuning technique selection (SFT, DPO, RVLR, etc.) and base model selection | [SKILL.md](skills/finetuning-setup/SKILL.md) |
-| 7 | `finetuning` | Hyperparameter configuration and training job execution | [SKILL.md](skills/finetuning/SKILL.md) |
-| 8 | `model-evaluation` | Evaluation design, benchmark selection, LLM-as-a-judge, and model comparison | [SKILL.md](skills/model-evaluation/SKILL.md) |
-| 9 | `model-deployment` | Deployment configuration and endpoint setup (SageMaker or Bedrock) | [SKILL.md](skills/model-deployment/SKILL.md) |
-| 10 | `hyperpod-ssm` | Remote command execution and file transfer on HyperPod cluster nodes via SSM | [SKILL.md](skills/hyperpod-ssm/SKILL.md) |
-| 11 | `hyperpod-version-checker` | Check and compare software component versions across HyperPod cluster nodes | [SKILL.md](skills/hyperpod-version-checker/SKILL.md) |
-| 12 | `hyperpod-issue-report` | Generate diagnostic reports for HyperPod troubleshooting and support cases | [SKILL.md](skills/hyperpod-issue-report/SKILL.md) |
+| #  | Skill                      | Description                                                                                                              | Documentation                                        |
+| -- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| 1  | `planning`                 | Builds a dynamic, step-by-step plan tailored to your intents                                                             | [SKILL.md](skills/planning/SKILL.md)                 |
+| 2  | `directory-management`     | Manages project directory setup, artifact organization, and plan association for new or existing projects                | [SKILL.md](skills/directory-management/SKILL.md)     |
+| 3  | `use-case-specification`   | Guided, conversational process to define your model customization use case goals, key stakeholders, and success criteria | [SKILL.md](skills/use-case-specification/SKILL.md)   |
+| 4  | `dataset-evaluation`       | Dataset quality validation, format detection, and data requirements analysis                                             | [SKILL.md](skills/dataset-evaluation/SKILL.md)       |
+| 5  | `dataset-transformation`   | Dataset format conversion and preparation for SageMaker-compatible training formats                                      | [SKILL.md](skills/dataset-transformation/SKILL.md)   |
+| 6  | `finetuning-setup`         | Fine-tuning technique selection (SFT, DPO, RVLR, etc.) and base model selection                                          | [SKILL.md](skills/finetuning-setup/SKILL.md)         |
+| 7  | `finetuning`               | Hyperparameter configuration and training job execution                                                                  | [SKILL.md](skills/finetuning/SKILL.md)               |
+| 8  | `model-evaluation`         | Evaluation design, benchmark selection, LLM-as-a-judge, and model comparison                                             | [SKILL.md](skills/model-evaluation/SKILL.md)         |
+| 9  | `model-deployment`         | Deployment configuration and endpoint setup (SageMaker or Bedrock)                                                       | [SKILL.md](skills/model-deployment/SKILL.md)         |
+| 10 | `hyperpod-ssm`             | Remote command execution and file transfer on HyperPod cluster nodes via SSM                                             | [SKILL.md](skills/hyperpod-ssm/SKILL.md)             |
+| 11 | `hyperpod-version-checker` | Check and compare software component versions across HyperPod cluster nodes                                              | [SKILL.md](skills/hyperpod-version-checker/SKILL.md) |
+| 12 | `hyperpod-issue-report`    | Generate diagnostic reports for HyperPod troubleshooting and support cases                                               | [SKILL.md](skills/hyperpod-issue-report/SKILL.md)    |
 
 ## MCP Servers
 
-| # | Server | Description |
-|---|---|---|
+| # | Server    | Description                                                 |
+| - | --------- | ----------------------------------------------------------- |
 | 1 | `aws-mcp` | AWS documentation and SOP retrieval via `mcp-proxy-for-aws` |
 
 ## Installation
@@ -44,11 +44,11 @@ Install the `sagemaker-ai` plugin from the AWS Agent Plugins Marketplace via the
 
 For coding assistants that don't support agent plugins directly (for example, Kiro CLI or IDE as of Mar 2026), install the MCP server and Skills separately as shown below.
 
-**Step 1: Configure the MCP server**
+#### Step 1: Configure the MCP server
 
 Add the contents from the `.mcp.json` file to your platform's MCP configuration file (e.g., `.kiro/settings/mcp.json` for Kiro, `.vscode/mcp.json` for VS Code).
 
-**Step 2: Install Skills**
+#### Step 2: Install Skills
 
 You may use the [Skills CLI](https://github.com/vercel-labs/skills) (from Vercel Labs) to install the skills into your platform:
 
