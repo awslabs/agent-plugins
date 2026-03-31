@@ -4,373 +4,74 @@ Advanced techniques and patterns for sophisticated durable function workflows.
 
 ## Advanced GenAI Agent Patterns
 
-### Agent with Reasoning and Dynamic Step Naming
+Build agentic loops with durable step-backed tool execution and dynamic step naming. Each AI model invocation and tool execution is a separate durable step, ensuring replay safety. Use template literals or string formatting for dynamic step names (e.g., `execute-tool-{toolName}`).
 
-**TypeScript:**
+| Language | Model Invocation | Tool Execution | Dynamic Naming |
+|---|---|---|---|
+| TypeScript | `context.step('invoke-model', fn)` | `context.step(\`execute-tool-${name}\`, fn)` | Template literals |
+| Python | `context.step(fn)` | `context.step(func=fn, name=f"execute-tool-{name}")` | f-strings |
+| Java | `ctx.step("invoke-model", Type.class, fn)` | `ctx.step("execute-tool-" + name, Type.class, fn)` | String concatenation |
 
-```typescript
-export const handler = withDurableExecution(async (event, context: DurableContext) => {
-  context.logger.info('Starting AI agent', { prompt: event.prompt });
-  const messages = [{ role: 'user', content: event.prompt }];
+## Step Semantics
 
-  while (true) {
-    // Invoke AI model with reasoning
-    const { response, reasoning, tool } = await context.step(
-      'invoke-model',
-      async (stepCtx) => {
-        stepCtx.logger.info('Invoking AI model', {
-          messageCount: messages.length
-        });
-        return await invokeAIModel(messages);
-      }
-    );
+Controls whether a step may re-execute during replay:
 
-    // Log AI's reasoning
-    if (reasoning) {
-      context.logger.debug('AI reasoning', { reasoning });
-    }
+| Semantic | Behavior | Use When |
+|---|---|---|
+| **AtMostOncePerRetry** | Step executes at most once per retry attempt | Operation is idempotent (DB updates, API calls with idempotency keys) |
+| **AtLeastOncePerRetry** | Step may execute multiple times per retry | External deduplication exists (queuing systems, event streams) |
 
-    // If no tool needed, return response
-    if (tool == null) {
-      context.logger.info('AI agent completed - no tool needed');
-      return response;
-    }
+- TypeScript: `{ semantics: StepSemantics.AtMostOncePerRetry }`
+- Python: `StepSemantics.AT_MOST_ONCE_PER_RETRY`
+- Java: `StepConfig.builder().stepSemantics(StepSemantics.AT_MOST_ONCE_PER_RETRY).build()`
 
-    // Execute tool with dynamic step naming
-    const toolResult = await context.step(
-      `execute-tool-${tool.name}`,  // Dynamic step name
-      async (stepCtx) => {
-        stepCtx.logger.info('Executing tool', {
-          toolName: tool.name,
-          toolParams: tool.parameters
-        });
-        return await executeTool(tool, response);
-      }
-    );
+## Completion Policies — Interaction and Combination
 
-    // Add result to conversation
-    messages.push({
-      role: 'assistant',
-      content: toolResult,
-    });
+Completion policies can be combined. Execution **stops when the first constraint is met**:
 
-    context.logger.debug('Tool result added', {
-      toolName: tool.name,
-      resultLength: toolResult.length
-    });
-  }
-});
-```
+1. `minSuccessful` — require at least N successes
+2. `toleratedFailureCount` — allow up to N failures
+3. `toleratedFailurePercentage` — allow up to N% failures
 
-**Python:**
+**Example with 10 items, minSuccessful=7, toleratedFailureCount=3:**
 
-```python
-# Note: invoke_ai_model and execute_tool are decorated with @durable_step
-@durable_execution
-def handler(event: dict, context: DurableContext) -> str:
-    context.logger.info('Starting AI agent', extra={'prompt': event['prompt']})
-    messages = [{'role': 'user', 'content': event['prompt']}]
+- 7 successes, 0 failures → stops (minSuccessful reached), 3 items skipped
+- 5 successes, 3 failures → stops (toleratedFailureCount reached), 2 items skipped
+- 7 successes, 2 failures → stops (minSuccessful reached), 1 item skipped
 
-    while True:
-        # Invoke AI model
-        result = context.step(invoke_ai_model(messages))
+Use `minSuccessful: 1` for early termination search patterns (stop after first match).
 
-        response = result['response']
-        reasoning = result.get('reasoning')
-        tool = result.get('tool')
+## Custom Serialization
 
-        if reasoning:
-            context.logger.debug('AI reasoning', extra={'reasoning': reasoning})
+| Language | Approach |
+|---|---|
+| TypeScript | `createClassSerdes(Class)`, `createClassSerdesWithDates(Class, ['field'])` |
+| Python | Default JSON serialization, custom via `json_serializer`/`json_deserializer` |
+| Java | Implement `SerDes<T>` interface with `serialize`/`deserialize` methods |
 
-        if tool is None:
-            context.logger.info('AI agent completed')
-            return response
-
-        # Execute tool with dynamic step naming
-        tool_result = context.step(
-            func=execute_tool(tool, response),
-            name=f"execute-tool-{tool['name']}"
-        )
-
-        messages.append({'role': 'assistant', 'content': tool_result})
-        context.logger.debug('Tool result added', extra={'tool': tool['name']})
-```
-
-## Step Semantics Deep Dive
-
-### AtMostOncePerRetry vs AtLeastOncePerRetry
-
-**TypeScript:**
-
-```typescript
-import { StepSemantics } from '@aws/durable-execution-sdk-js';
-
-// AtMostOncePerRetry (DEFAULT) - For idempotent operations
-// Step executes at most once per retry attempt
-// If step fails partway through, it won't re-execute the same attempt
-await context.step(
-  'update-database',
-  async () => {
-    // This is idempotent - safe to retry
-    return await updateUserRecord(userId, data);
-  },
-  { semantics: StepSemantics.AtMostOncePerRetry }
-);
-
-// AtLeastOncePerRetry - For operations that can execute multiple times
-// Step may execute multiple times per retry attempt
-// Use when idempotency is handled externally
-await context.step(
-  'send-notification',
-  async () => {
-    // External system handles deduplication
-    return await sendEmail(email, message);
-  },
-  { semantics: StepSemantics.AtLeastOncePerRetry }
-);
-```
-
-**When to use each:**
-
-| Semantic                | Use When                      | Example Operations                                |
-| ----------------------- | ----------------------------- | ------------------------------------------------- |
-| **AtMostOncePerRetry**  | Operation is idempotent       | Database updates, API calls with idempotency keys |
-| **AtLeastOncePerRetry** | External deduplication exists | Queuing systems, event streams                    |
-
-## Completion Policies - Interaction and Combination
-
-### Combining Multiple Constraints
-
-Completion policies can be combined, and execution **stops when the first constraint is met**:
-
-**TypeScript:**
-
-```typescript
-const results = await context.map(
-  'process-items',
-  items,
-  processFunc,
-  {
-    completionConfig: {
-      minSuccessful: 8,              // Need at least 8 successes
-      toleratedFailureCount: 2,       // OR can tolerate 2 failures
-      toleratedFailurePercentage: 20, // OR can tolerate 20% failures
-    }
-  }
-);
-
-// Execution stops when ANY of these conditions is met:
-// 1. 8 successful items (minSuccessful reached)
-// 2. 2 failures occur (toleratedFailureCount reached)
-// 3. 20% of items fail (toleratedFailurePercentage reached)
-```
-
-### Understanding Stop Conditions
-
-**Example with 10 items:**
-
-```typescript
-const items = Array.from({ length: 10 }, (_, i) => i);
-
-const results = await context.map(
-  'process',
-  items,
-  processFunc,
-  {
-    maxConcurrency: 3,
-    completionConfig: {
-      minSuccessful: 7,
-      toleratedFailureCount: 3
-    }
-  }
-);
-
-// Scenario 1: 7 successes, 0 failures
-// ✅ Stops after 7th success (minSuccessful reached)
-// Remaining 3 items are not processed
-
-// Scenario 2: 5 successes, 3 failures
-// ❌ Stops after 3rd failure (toleratedFailureCount reached)
-// Remaining 2 items are not processed
-// results.throwIfError() will throw because minSuccessful not met
-
-// Scenario 3: 7 successes, 2 failures
-// ✅ Stops after 7th success (minSuccessful reached)
-// 1 item not processed, but completion policy satisfied
-```
-
-### Early Termination Pattern
-
-Use completion policies for early termination when searching:
-
-**TypeScript:**
-
-```typescript
-// Stop after finding first match
-const results = await context.map(
-  'find-match',
-  candidates,
-  async (ctx, candidate) => {
-    return await ctx.step(async () => checkMatch(candidate));
-  },
-  {
-    completionConfig: {
-      minSuccessful: 1  // Stop after first success
-    }
-  }
-);
-
-// Only one item processed (assuming first succeeds)
-if (results.successCount > 0) {
-  const match = results.getSucceeded()[0];
-  context.logger.info('Found match', { match });
-}
-```
-
-## Advanced Error Handling
-
-For timeout handling (waitForCallback, Promise.race), conditional retries, and circuit breaker patterns, see [advanced-error-handling.md](advanced-error-handling.md).
-
-## Advanced and Retry Strategies
-
-For conditional retry strategies and circuit breaker patterns, see [advanced-error-handling.md](advanced-error-handling.md).
-
-## Custom Serialization Patterns
-
-### Class with Date Fields
-
-**TypeScript:**
-
-```typescript
-import {
-  createClassSerdesWithDates
-} from '@aws/durable-execution-sdk-js';
-
-class User {
-  constructor(
-    public name: string,
-    public email: string,
-    public createdAt: Date,
-    public updatedAt: Date
-  ) {}
-}
-
-const result = await context.step(
-  'create-user',
-  async () => new User('Alice', 'alice@example.com', new Date(), new Date()),
-  {
-    serdes: createClassSerdesWithDates(User, ['createdAt', 'updatedAt'])
-  }
-);
-
-// result is properly deserialized User instance with Date objects
-console.log(result.createdAt instanceof Date); // true
-```
-
-### Complex Object Graphs
-
-**TypeScript:**
-
-```typescript
-import { createClassSerdes } from '@aws/durable-execution-sdk-js';
-
-class Order {
-  constructor(
-    public id: string,
-    public items: OrderItem[],
-    public customer: Customer
-  ) {}
-}
-
-class OrderItem {
-  constructor(public sku: string, public quantity: number) {}
-}
-
-class Customer {
-  constructor(public id: string, public name: string) {}
-}
-
-// Create serdes for each class
-const orderSerdes = createClassSerdes(Order);
-const itemSerdes = createClassSerdes(OrderItem);
-const customerSerdes = createClassSerdes(Customer);
-
-const result = await context.step(
-  'process-order',
-  async () => {
-    const customer = new Customer('CUST-123', 'Alice');
-    const items = [
-      new OrderItem('SKU-001', 2),
-      new OrderItem('SKU-002', 1)
-    ];
-    return new Order('ORD-456', items, customer);
-  },
-  { serdes: orderSerdes }
-);
-```
+Use custom serialization for Date fields, complex object graphs, or domain-specific types.
 
 ## Nested Workflows
 
-### Parent-Child Workflow Pattern
+Use `invoke` to call child Lambda functions as separate durable executions. Parent orchestrators dispatch work to child workers, enabling modular and composable architectures.
 
-**TypeScript:**
+- **TypeScript**: `ctx.invoke('name', functionArn, payload)`
+- **Java**: `ctx.invoke("name", functionArn, payload, Type.class)`
 
-```typescript
-// Parent orchestrator
-export const orchestrator = withDurableExecution(
-  async (event, context: DurableContext) => {
-    const childFunctionArn = process.env.CHILD_FUNCTION_ARN!;
+## Advanced Error Handling
 
-    // Invoke child workflows in parallel
-    const results = await context.parallel(
-      'process-batches',
-      [
-        {
-          name: 'batch-1',
-          func: async (ctx) => ctx.invoke(
-            'process-batch-1',
-            childFunctionArn,
-            { batch: event.batches[0] }
-          )
-        },
-        {
-          name: 'batch-2',
-          func: async (ctx) => ctx.invoke(
-            'process-batch-2',
-            childFunctionArn,
-            { batch: event.batches[1] }
-          )
-        }
-      ]
-    );
+For timeout handling, conditional retries, and circuit breaker patterns, see [advanced-error-handling.md](advanced-error-handling.md).
 
-    return results.getResults();
-  }
-);
+## Best Practices
 
-// Child worker
-export const worker = withDurableExecution(
-  async (event, context: DurableContext) => {
-    const items = event.batch.items;
+1. **Dynamic step naming** — use template literals/f-strings for unique operation names
+2. **Structured logging** — log reasoning and context with each operation
+3. **Completion policies** — understand how combined constraints interact
+4. **Custom serialization** — use proper serdes for complex objects
+5. **Nested workflows** — use invoke for modular, composable architectures
 
-    const results = await context.map(
-      'process-items',
-      items,
-      async (ctx, item) => {
-        return await ctx.step(async () => processItem(item));
-      }
-    );
+## Code Examples
 
-    return results.getResults();
-  }
-);
-```
-
-## Best Practices Summary
-
-1. **Dynamic Step Naming**: Use template literals for dynamic operation names
-2. **Structured Logging**: Log reasoning and context with each operation
-3. **Error Handling**: See [advanced-error-handling.md](advanced-error-handling.md) for timeout, retry, and circuit breaker patterns
-4. **Completion Policies**: Understand how combined constraints interact
-5. **Custom Serialization**: Use proper serdes for complex objects
-6. **Nested Workflows**: Use invoke for modular, composable architectures
+- [TypeScript](snippets/advanced-patterns-typescript.md)
+- [Python](snippets/advanced-patterns-python.md)
+- [Java](snippets/advanced-patterns-java.md)

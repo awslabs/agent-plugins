@@ -51,7 +51,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: myDurableFunction
-      Runtime: nodejs24.x  # or python3.14
+      Runtime: nodejs24.x  # or python3.14 or java21
       Handler: index.handler
       Role: !GetAtt DurableFunctionRole.Arn
       Code:
@@ -106,7 +106,7 @@ export class DurableFunctionStack extends cdk.Stack {
     super(scope, id, props);
 
     const durableFunction = new lambda.Function(this, 'DurableFunction', {
-      runtime: lambda.Runtime.NODEJS_24_X,  // or PYTHON_3_14
+      runtime: lambda.Runtime.NODEJS_24_X,  // or PYTHON_3_14 or JAVA_21
       handler: 'index.handler',
       code: lambda.Code.fromAsset('lambda'),
       durableConfig: {
@@ -158,7 +158,7 @@ const functionLogGroup = new logs.LogGroup(this, 'DurableFunctionLogGroup', {
 
 // 2. Link to function
 const durableFunction = new lambda.Function(this, 'DurableFunction', {
-  runtime: lambda.Runtime.NODEJS_24_X,
+  runtime: lambda.Runtime.NODEJS_24_X,  // or PYTHON_3_14 or JAVA_21
   handler: 'index.handler',
   code: lambda.Code.fromAsset('lambda'),
   logGroup: functionLogGroup,  // Link to managed log group
@@ -209,7 +209,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: myDurableFunction
-      Runtime: nodejs24.x  # or python3.14
+      Runtime: nodejs24.x  # or python3.14 or java21
       Handler: index.handler
       CodeUri: ./src
       DurableConfig:
