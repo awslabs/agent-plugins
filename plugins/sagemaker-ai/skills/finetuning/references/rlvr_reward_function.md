@@ -9,7 +9,12 @@ numerical rewards. SageMaker calls this Lambda in the training loop to provide l
 
 ### Step 1: Copy Template to Project
 
-Copy the template file `templates/rlvr_reward_function_source_template.py` as `lambda_function.py` into the project's scripts directory.
+Select the reward function template based on the base model:
+
+- **Nova 2.0 Lite** → `templates/nova_rlvr_reward_function_source_template.py`
+- **All other models** → `templates/rlvr_reward_function_source_template.py`
+
+Copy the selected template as `lambda_function.py` into the project's scripts directory.
 
 - Read the `directory-management` skill to determine the correct directory for storing scripts.
 

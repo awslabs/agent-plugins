@@ -167,7 +167,7 @@ The format is the same as SFT for the first N-1 turns. The final assistant turn 
     }
   ],
   "reference_answer": {
-    "solution": "49"
+    "answer": "49"
   }
 }
 ```

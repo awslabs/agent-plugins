@@ -124,7 +124,8 @@ Read the example notebook matching the finetuning strategy:
 # References
 
 - `rlvr_reward_function.md` - Lambda reward function creation guide (RLVR only)
-- `templates/rlvr_reward_function_source_template.py` - Lambda reward function source template (RLVR only)
+- `templates/rlvr_reward_function_source_template.py` - Lambda reward function source template for open-weights models (RLVR only)
+- `templates/nova_rlvr_reward_function_source_template.py` - Lambda reward function source template for Nova 2.0 Lite (RLVR only)
 - `sft_example.md` - Complete notebook template for Supervised Fine-Tuning
 - `dpo_example.md` - Complete notebook template for Direct Preference Optimization
 - `rlvr_example.md` - Complete notebook template for Reinforcement Learning from Verifiable Rewards
