@@ -67,7 +67,7 @@ cat > /tmp/cmd.json << 'EOF'
 EOF
 
 aws ssm start-session \
-  --target sagemaker-cluster:CLUSTERID_GROUPNAME-INSTANCEID \
+  --target sagemaker-cluster:{CLUSTER_ID}_{GROUP_NAME}-{INSTANCE_ID} \
   --region REGION \
   --document-name AWS-StartNonInteractiveCommand \
   --parameters file:///tmp/cmd.json

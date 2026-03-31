@@ -22,9 +22,10 @@ import json
 import os
 import platform
 import pexpect
+import shlex
 import shutil
 import signal
-import subprocess  # nosec B404 - required for kubectl CLI commands
+import subprocess  # nosec B404 - required for kubectl CLI commands  # nosemgrep: gitlab.bandit.B404
 import sys
 import tarfile
 import tempfile
@@ -60,7 +61,7 @@ class HyperPodIssueReportCollector:
     def __init__(self, cluster_name: str, s3_path: str, region: Optional[str] = None, debug: bool = False):
         self.cluster_name = cluster_name
         self.debug = debug
-        
+
         # Parse S3 path
         self.s3_bucket, self.s3_prefix = self.parse_s3_path(s3_path)
         
@@ -120,8 +121,7 @@ class HyperPodIssueReportCollector:
             elif ':cluster/' in cluster_arn:
                 return cluster_arn.split(':cluster/')[-1]
             parts = cluster_arn.split(':')
-            if len(parts) > 0:
-                return parts[-1]
+            return parts[-1]
         return None
     
     def get_slurm_node_name(self, instance_id: str) -> Optional[str]:
@@ -146,8 +146,9 @@ class HyperPodIssueReportCollector:
             return None
             
         except Exception as e:
+            print(f"Warning: Could not get Slurm node name for {instance_id}: {e}")
             if self.debug:
-                print(f"Warning: Could not get private IP for {instance_id}: {e}")
+                traceback.print_exc()
             return None
     
     def get_cluster_nodes(self) -> List[Dict]:
@@ -227,7 +228,7 @@ class HyperPodIssueReportCollector:
             
         except Exception as e:
             print(f"Error getting cluster nodes: {e}")
-            return []
+            raise
     
     def resolve_node_identifiers(self, node_identifiers: List[str]) -> List[str]:
         """Resolve node identifiers to instance IDs.
@@ -388,8 +389,26 @@ class HyperPodIssueReportCollector:
                 "systemctl status kubelet > \"${OUTPUT_DIR}/kubelet_status.txt\" 2>&1 || echo \"kubelet service not found or not running\"",
                 "",
                 "echo \"Running EKS log collector...\"",
-                "EKS_LOG_COLLECTOR_URL=\"https://raw.githubusercontent.com/awslabs/amazon-eks-ami/main/log-collector-script/linux/eks-log-collector.sh\"",
-                "curl -o /tmp/eks-log-collector.sh \"${EKS_LOG_COLLECTOR_URL}\"",  # nosec B108 - remote node shell script, not local Python
+                "# Pinned to specific commit for reproducibility; update hash when bumping",
+                "EKS_LOG_COLLECTOR_URL=\"https://raw.githubusercontent.com/awslabs/amazon-eks-ami/2ac5fc03a8030bb8bc3c1fc1e810209118a10656/log-collector-script/linux/eks-log-collector.sh\"",
+                "EKS_LOG_COLLECTOR_SHA256=\"61c8940e9391330a9c67d8cd6720de3de3a1a90021546835f7f54f1fed2efb3f\"",
+                "curl -f -o /tmp/eks-log-collector.sh \"${EKS_LOG_COLLECTOR_URL}\"",  # nosec B108 - remote node shell script, not local Python
+                "if [ $? -ne 0 ]; then",
+                "    echo \"ERROR: Failed to download EKS log collector script\"",
+                "    exit 1",
+                "fi",
+                "",
+                "# Verify integrity with embedded SHA256 checksum",
+                "ACTUAL_SHA=$(sha256sum /tmp/eks-log-collector.sh | awk '{print $1}')",
+                "if [ \"${ACTUAL_SHA}\" != \"${EKS_LOG_COLLECTOR_SHA256}\" ]; then",
+                "    echo \"ERROR: SHA256 checksum verification failed for EKS log collector\"",
+                "    echo \"Expected: ${EKS_LOG_COLLECTOR_SHA256}\"",
+                "    echo \"Actual:   ${ACTUAL_SHA}\"",
+                "    rm -f /tmp/eks-log-collector.sh",
+                "    exit 1",
+                "fi",
+                "echo \"SHA256 checksum verified for EKS log collector\"",
+                "",
                 "chmod +x /tmp/eks-log-collector.sh",
                 "",
                 "# Run the collector and capture its output",
@@ -458,13 +477,15 @@ class HyperPodIssueReportCollector:
             # Sanitize command for filename - replace problematic characters
             safe_name = cmd.replace(' ', '_').replace('/', '_').replace('|', '_').replace('>', '_').replace('<', '_').replace('&', '_').replace(';', '_').replace('(', '_').replace(')', '_').replace('$', '_').replace('`', '_').replace('"', '_').replace("'", '_')[:50]
             output_file = f"command_{i:02d}_{safe_name}.txt"
-            
-            # Use regular string (not f-string) to avoid any escaping issues with bash variables
+
+            # Use shlex.quote() to safely escape the command for display in echo
+            quoted_cmd = shlex.quote(cmd)
+
             cmd_line = f"{cmd} > \"${{OUTPUT_DIR}}/{output_file}\" 2>&1 || echo \"Command failed with exit code $?\" >> \"${{OUTPUT_DIR}}/{output_file}\""
-            
+
             script_lines.extend([
-                f"# Command {i}: {cmd}",
-                f"echo \"Running: {cmd}\"",
+                f"# Command {i}",
+                f"echo 'Running: '{quoted_cmd}",
                 cmd_line,
                 "",
             ])
@@ -472,8 +493,8 @@ class HyperPodIssueReportCollector:
         # Add S3 upload logic with new filename format
         script_lines.extend([
             "# Upload results to S3",
-            f"S3_BUCKET=\"{self.s3_bucket}\"",
-            f"S3_PREFIX=\"{self.report_s3_key}/instances\"",
+            f"S3_BUCKET={shlex.quote(self.s3_bucket)}",
+            f"S3_PREFIX={shlex.quote(self.report_s3_key + '/instances')}",
             "",
             "echo \"Creating tarball...\"",
             "TARBALL=\"/tmp/${INSTANCE_GROUP}_${INSTANCE_ID}.tar.gz\"",
@@ -526,9 +547,9 @@ class HyperPodIssueReportCollector:
         
         # Build the command to download and execute the script with environment variables
         commands_to_run = [
-            f"aws s3 cp {script_s3_uri} /tmp/collector_script.sh",
+            f"aws s3 cp {shlex.quote(script_s3_uri)} /tmp/collector_script.sh",
             "chmod +x /tmp/collector_script.sh",
-            f"INSTANCE_GROUP={instance_group} INSTANCE_ID={instance_id} CLUSTER_TYPE={self.cluster_type} /tmp/collector_script.sh"
+            f"INSTANCE_GROUP={shlex.quote(instance_group)} INSTANCE_ID={shlex.quote(instance_id)} CLUSTER_TYPE={shlex.quote(self.cluster_type)} /tmp/collector_script.sh"
         ]
         
         full_command = " && ".join(commands_to_run)
@@ -539,15 +560,17 @@ class HyperPodIssueReportCollector:
         custom_prompt = "PEXPECT_READY# "
         
         try:
-            ssm_command = f"aws ssm start-session --target {ssm_target}"
-            
+            ssm_command = ['aws', 'ssm', 'start-session', '--target', ssm_target]
+            if self.region:
+                ssm_command.extend(['--region', self.region])
+
             if self.debug:
                 print(f"[DEBUG] {instance_id}: SSM command: {ssm_command}")
                 print(f"[DEBUG] {instance_id}: Full command: {full_command}")
-            
+
             # Use pexpect to handle the interactive session
             # Note: No default timeout set - each expect() call has explicit timeout
-            child = pexpect.spawn(ssm_command, encoding='utf-8')
+            child = pexpect.spawn(ssm_command[0], ssm_command[1:], encoding='utf-8')
             child.logfile_read = None
             
             # Wait for initial prompt (60 seconds to handle slow SSM session initialization)
@@ -883,12 +906,15 @@ class HyperPodIssueReportCollector:
                     })
         
         # Save summary
-        self.save_summary(results)
-        
+        summary_saved = self.save_summary(results)
+
         print("-" * 60)
         print(f"\nReport collection completed!")
         print(f"Instance reports uploaded to: s3://{self.s3_bucket}/{self.report_s3_key}/instances/")
-        print(f"Summary: s3://{self.s3_bucket}/{self.report_s3_key}/summary.json")
+        if summary_saved:
+            print(f"Summary: s3://{self.s3_bucket}/{self.report_s3_key}/summary.json")
+        else:
+            print("Warning: Summary upload failed — see error above")
         
         # Print statistics
         successful = sum(1 for r in results if r['Success'])
@@ -1050,8 +1076,8 @@ class HyperPodIssueReportCollector:
             if self.debug:
                 traceback.print_exc()
     
-    def save_summary(self, results: List[Dict]):
-        """Save collection summary to S3."""
+    def save_summary(self, results: List[Dict]) -> bool:
+        """Save collection summary to S3. Returns True on success."""
         summary = {
             'cluster_name': self.cluster_name,
             'cluster_id': self.cluster_id,
@@ -1062,9 +1088,9 @@ class HyperPodIssueReportCollector:
             'failed': sum(1 for r in results if not r['Success']),
             'results': results
         }
-        
+
         summary_key = f"{self.report_s3_key}/summary.json"
-        
+
         try:
             self.s3_client.put_object(
                 Bucket=self.s3_bucket,
@@ -1073,8 +1099,10 @@ class HyperPodIssueReportCollector:
                 ContentType='application/json'
             )
             print(f"Summary saved to: s3://{self.s3_bucket}/{summary_key}")
+            return True
         except Exception as e:
             print(f"Error saving summary: {e}")
+            return False
     
     def verify_kubectl_config(self) -> bool:
         """Verify kubectl is configured for the EKS cluster."""
@@ -1109,7 +1137,11 @@ class HyperPodIssueReportCollector:
                     return True
                 else:
                     # Extract region from EKS cluster ARN
-                    region = self.eks_cluster_arn.split(':')[3] if self.eks_cluster_arn else 'REGION'
+                    arn_parts = self.eks_cluster_arn.split(':') if self.eks_cluster_arn else []
+                    if len(arn_parts) <= 3:
+                        print(f"Error: Malformed EKS cluster ARN: {self.eks_cluster_arn}")
+                        return False
+                    region = arn_parts[3]
                     
                     print("\n" + "!" * 60)
                     print(f"ERROR: kubectl context does not match EKS cluster")
@@ -1172,15 +1204,15 @@ class HyperPodIssueReportCollector:
         if self.cluster_type != 'eks':
             print("Skipping kubectl collection - not an EKS cluster")
             return
-        
+
         if not self.eks_cluster_name:
             print("Skipping kubectl collection - EKS cluster name not available")
             return
-        
+
         print("\n" + "=" * 60)
         print("Collecting kubectl node information...")
         print("=" * 60)
-        
+
         # Verify kubectl configuration - exit if not configured
         if not self.verify_kubectl_config():
             print("\n" + "!" * 60)
@@ -1188,7 +1220,9 @@ class HyperPodIssueReportCollector:
             print("!" * 60)
             print("\nPlease configure kubectl and re-run the tool.\n")
             sys.exit(1)
-        
+
+        kubectl_output_dir = None
+        tarball_path = None
         try:
             # Create output directory
             kubectl_output_dir = tempfile.mkdtemp(prefix='kubectl_output_')
@@ -1311,7 +1345,8 @@ class HyperPodIssueReportCollector:
             
             # Create tarball with files at root level (no wrapper directory)
             print("\nCreating kubectl output tarball...")
-            tarball_path = os.path.join(tempfile.gettempdir(), 'kubectl_resources.tar.gz')
+            tarball_fd, tarball_path = tempfile.mkstemp(suffix='_kubectl_resources.tar.gz')
+            os.close(tarball_fd)
             
             with tarfile.open(tarball_path, 'w:gz') as tar:
                 # Add each file directly to the tarball root (no parent directory)
@@ -1329,15 +1364,18 @@ class HyperPodIssueReportCollector:
             
             print(f"✓ Successfully uploaded kubectl resource information to S3")
             print(f"  Location: s3://{self.s3_bucket}/{s3_key}")
-            
-            # Cleanup
-            shutil.rmtree(kubectl_output_dir, ignore_errors=True)
-            os.remove(tarball_path)
-            
+
         except Exception as e:
             print(f"Error collecting kubectl information: {e}")
             if self.debug:
                 traceback.print_exc()
+            raise
+        finally:
+            # Cleanup temp files regardless of success or failure
+            if kubectl_output_dir and os.path.isdir(kubectl_output_dir):
+                shutil.rmtree(kubectl_output_dir, ignore_errors=True)
+            if tarball_path and os.path.exists(tarball_path):
+                os.remove(tarball_path)
 
 
 def main():

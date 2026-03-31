@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # HyperPod Version Checker - Detect software component versions on HyperPod cluster nodes
 #
 # Checks: NVIDIA driver, CUDA, cuDNN, NCCL, EFA, AWS OFI NCCL, GDRCopy, MPI,
@@ -6,6 +6,8 @@
 # Works on both EKS and Slurm HyperPod clusters.
 #
 # Usage: bash hyperpod_check_versions.sh [--json] [--no-color] [--output FILE]
+
+command -v jq >/dev/null 2>&1 || { echo "Error: jq is required but not installed" >&2; exit 1; }
 
 # --- Defaults ---
 JSON_OUTPUT=false
@@ -44,7 +46,7 @@ fi
 # In JSON mode: text goes only to file. Otherwise: both console and file.
 log() {
     local stripped
-    stripped=$(echo -e "$@" | sed 's/\x1b\[[0-9;]*m//g')
+    stripped=$(printf '%b\n' "$@" | sed 's/\x1b\[[0-9;]*m//g')
     echo "$stripped" >> "$OUTPUT_FILE"
     if [[ "$JSON_OUTPUT" != "true" ]]; then
         echo -e "$@"
@@ -61,15 +63,23 @@ cmd_exists() { command -v "$1" >/dev/null 2>&1; }
 cmd_or_path() { command -v "$1" 2>/dev/null || echo "$2"; }
 
 # Detect instance type via IMDS
-IMDS_TOKEN=$(curl -s -m 2 -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 60" 2>/dev/null)
-INSTANCE_TYPE=$(curl -s -m 2 -H "X-aws-ec2-metadata-token: $IMDS_TOKEN" http://169.254.169.254/latest/meta-data/instance-type 2>/dev/null)
+IMDS_TOKEN=$(curl -s -m 2 -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 60" 2>/dev/null) || true
+if [[ -z "$IMDS_TOKEN" ]]; then
+    echo "Error: Failed to retrieve IMDS token (IMDSv2 endpoint unreachable)" >&2
+    INSTANCE_TYPE=""
+else
+    INSTANCE_TYPE=$(curl -s -m 2 -H "X-aws-ec2-metadata-token: $IMDS_TOKEN" http://169.254.169.254/latest/meta-data/instance-type 2>/dev/null) || true
+    if [[ -z "$INSTANCE_TYPE" ]]; then
+        echo "Error: Failed to retrieve instance type from IMDS" >&2
+    fi
+fi
 IS_NEURON=false
 IS_GPU=false
-[[ "$INSTANCE_TYPE" =~ ^ml\.(trn|inf) ]] && IS_NEURON=true
-[[ "$INSTANCE_TYPE" =~ ^ml\.(p[0-9]|g[0-9]) ]] && IS_GPU=true
+[[ "$INSTANCE_TYPE" =~ (^|\.)(trn|inf) ]] && IS_NEURON=true
+[[ "$INSTANCE_TYPE" =~ (^|\.)(p[0-9]|g[0-9]) ]] && IS_GPU=true
 
-# JSON-safe string escape
-json_escape() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g'; }
+# JSON-safe string escape via jq (handles all special/unicode characters correctly)
+json_escape() { jq -rn --arg v "$1" '$v | @json | .[1:-1]'; }
 
 declare -A VERSIONS
 
@@ -139,9 +149,9 @@ section "cuDNN Information"
 
 CUDNN_VER=""
 # Check header file
-CUDNN_HEADER=$(find /usr/local/cuda/include /usr/include 2>/dev/null -maxdepth 2 -name "cudnn_version.h" 2>/dev/null | head -1)
+CUDNN_HEADER=$(find /usr/local/cuda/include /usr/include -maxdepth 2 -name "cudnn_version.h" 2>/dev/null | head -1)
 if [ -z "$CUDNN_HEADER" ]; then
-    CUDNN_HEADER=$(find /usr/local/cuda/include /usr/include 2>/dev/null -maxdepth 2 -name "cudnn.h" 2>/dev/null | head -1)
+    CUDNN_HEADER=$(find /usr/local/cuda/include /usr/include -maxdepth 2 -name "cudnn.h" 2>/dev/null | head -1)
 fi
 if [ -n "$CUDNN_HEADER" ]; then
     MAJOR=$(grep "#define CUDNN_MAJOR" "$CUDNN_HEADER" 2>/dev/null | awk '{print $3}')
@@ -164,7 +174,7 @@ if [ -n "$CUDNN_VER" ]; then
     log "cuDNN: v${CUDNN_VER}"
 else
     # Check if library exists at all
-    CUDNN_LIB=$(find /usr/local/cuda/lib64 /usr/lib 2>/dev/null -maxdepth 2 -name "libcudnn.so*" 2>/dev/null | head -1)
+    CUDNN_LIB=$(find /usr/local/cuda/lib64 /usr/lib -maxdepth 2 -name "libcudnn.so*" 2>/dev/null | head -1)
     if [ -n "$CUDNN_LIB" ]; then
         log "cuDNN library found: $CUDNN_LIB (version unknown)"
     else
@@ -177,21 +187,21 @@ log ""
 section "NCCL Information"
 
 NCCL_VER=""
-NCCL_LIBS=$(find /usr/local/cuda*/lib* /usr/lib* /usr/local/lib* /opt/nccl/lib 2>/dev/null -maxdepth 2 -name "libnccl.so*" 2>/dev/null | head -10)
+NCCL_LIBS=$(find /usr/local/cuda*/lib* /usr/lib* /usr/local/lib* /opt/nccl/lib -maxdepth 2 -name "libnccl.so*" 2>/dev/null | head -10)
 if [ -n "$NCCL_LIBS" ]; then
     log "Libraries found:"
     echo "$NCCL_LIBS" | while read -r lib; do log "  $lib"; done
-    for lib in $NCCL_LIBS; do
+    while IFS= read -r lib; do
         if [[ $lib =~ libnccl\.so\.([0-9]+\.[0-9]+\.[0-9]+) ]]; then
             NCCL_VER="${BASH_REMATCH[1]}"
             break
         fi
-    done
+    done <<< "$NCCL_LIBS"
 fi
 
 # Fallback to header
 if [ -z "$NCCL_VER" ]; then
-    NCCL_HEADER=$(find /usr/local/cuda*/include /usr/include /usr/local/include /opt/nccl/include 2>/dev/null -maxdepth 2 -name "nccl.h" 2>/dev/null | head -1)
+    NCCL_HEADER=$(find /usr/local/cuda*/include /usr/include /usr/local/include /opt/nccl/include -maxdepth 2 -name "nccl.h" 2>/dev/null | head -1)
     if [ -n "$NCCL_HEADER" ]; then
         MAJOR=$(grep "NCCL_MAJOR" "$NCCL_HEADER" 2>/dev/null | head -1 | awk '{print $3}')
         MINOR=$(grep "NCCL_MINOR" "$NCCL_HEADER" 2>/dev/null | head -1 | awk '{print $3}')
@@ -219,7 +229,7 @@ if cmd_exists rpm; then
 fi
 
 # nccl-tests
-NCCL_TESTS=$(find /opt /usr/local 2>/dev/null -maxdepth 4 -name "all_reduce_perf" 2>/dev/null | head -1)
+NCCL_TESTS=$(find /opt /usr/local -maxdepth 4 -name "all_reduce_perf" 2>/dev/null | head -1)
 [ -n "$NCCL_TESTS" ] && log "nccl-tests found: $(dirname "$NCCL_TESTS")"
 log ""
 
@@ -277,7 +287,7 @@ if [ -n "$OFI_NCCL_VER" ]; then
     VERSIONS[AWS_OFI_NCCL]="$OFI_NCCL_VER"
     log "AWS OFI NCCL: v${OFI_NCCL_VER}"
 else
-    OFI_LIB=$(find /opt/amazon/ofi-nccl /usr/lib* 2>/dev/null -maxdepth 3 -name "libnccl-net.so" 2>/dev/null | head -1)
+    OFI_LIB=$(find /opt/amazon/ofi-nccl /usr/lib* -maxdepth 3 -name "libnccl-net.so" 2>/dev/null | head -1)
     if [ -n "$OFI_LIB" ]; then
         log "AWS OFI NCCL library found: $OFI_LIB (version unknown)"
     else
@@ -301,7 +311,7 @@ if [ -n "$GDRCOPY_VER" ]; then
     VERSIONS[GDRCOPY]="$GDRCOPY_VER"
     log "GDRCopy: v${GDRCOPY_VER}"
 else
-    GDRCOPY_LIB=$(find /usr /opt 2>/dev/null -maxdepth 4 -name "libgdrapi.so*" 2>/dev/null | head -1)
+    GDRCOPY_LIB=$(find /usr /opt -maxdepth 4 -name "libgdrapi.so*" 2>/dev/null | head -1)
     [ -n "$GDRCOPY_LIB" ] && log "GDRCopy library found: $GDRCOPY_LIB (version unknown)" || log "${YELLOW}GDRCopy not found${NC}"
 fi
 
@@ -320,7 +330,6 @@ if cmd_exists mpirun; then
     MPI_VER=$(mpirun --version 2>&1 | head -1)
 elif [ -f /opt/amazon/openmpi/bin/mpirun ]; then
     MPI_VER=$(/opt/amazon/openmpi/bin/mpirun --version 2>&1 | head -1)
-    log "MPI (/opt/amazon/openmpi): $MPI_VER"
 fi
 if [ -n "$MPI_VER" ]; then
     VERSIONS[MPI]="$MPI_VER"
@@ -442,7 +451,7 @@ log ""
 section "Container Runtime"
 cmd_exists docker && log "Docker: $(docker --version 2>&1)"
 cmd_exists containerd && log "Containerd: $(containerd --version 2>&1)"
-cmd_exists kubectl && log "kubectl: $(kubectl version --client --short 2>&1 || kubectl version --client 2>&1 | head -1)"
+cmd_exists kubectl && log "kubectl: $(kubectl version --client 2>&1 | head -1)"
 # NVIDIA Container Toolkit
 if cmd_exists nvidia-ctk; then
     NCTK_VER=$(nvidia-ctk --version 2>&1 | head -1)

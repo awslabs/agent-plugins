@@ -45,15 +45,7 @@ Output file: `component_versions_<hostname>_<timestamp>.txt` (default)
 
 ## Multi-Node Comparison
 
-Run on each node and compare. With `--json`, stdout is clean JSON for easy diffing:
-
-```bash
-# Via hyperpod_run_on_multi_nodes.py (from hyperpod-diagnostics skill)
-python hyperpod_run_on_multi_nodes.py --cluster <name> \
-  --command "bash hyperpod_check_versions.sh --json"
-```
-
-Or run individually via SSM on each node and diff the JSON outputs.
+Run on each node individually via the `hyperpod-ssm` skill. With `--json`, stdout is clean JSON for easy diffing.
 
 ## Compatibility Reference
 

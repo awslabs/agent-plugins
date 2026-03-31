@@ -24,7 +24,9 @@ while [[ $# -gt 0 ]]; do
     --upload)      MODE="upload"; LOCAL_PATH="$2"; REMOTE_PATH="$3"; shift 3 ;;
     --read)        MODE="read"; REMOTE_PATH="$2"; shift 2 ;;
     --region)      REGION="$2"; shift 2 ;;
-    *)             CMD="$1"; shift ;;
+    -*)            echo "Unknown option: $1" >&2; exit 1 ;;
+    *)             [[ -n "$CMD" ]] && { echo "Error: Unexpected argument: $1 (command already set)" >&2; exit 1; }
+                   CMD="$1"; shift ;;
   esac
 done
 
@@ -35,8 +37,9 @@ if [[ -z "$TARGET" ]]; then
   TARGET="sagemaker-cluster:${CLUSTER_ID}_${GROUP}-${INSTANCE_ID}"
 fi
 
-TMPFILE=$(mktemp /tmp/ssm-cmd-XXXXXX.json)
-trap "rm -f '$TMPFILE'" EXIT
+TMPFILE=$(mktemp "${TMPDIR:-/tmp}/ssm-cmd-XXXXXXXXXX.json")
+chmod 600 "$TMPFILE"
+trap 'rm -f "$TMPFILE"' EXIT
 
 # Cross-platform base64 encode with no line wrapping (GNU: -w0, macOS: -b0)
 # Usage: b64_encode FILE  or  cmd | b64_encode
@@ -53,24 +56,33 @@ json_cmd() {
   jq -n --arg c "$cmd" '{"command":[$c]}'
 }
 
+safe_quote() {
+  # Shell-safe quoting via jq @sh (handles all special characters)
+  jq -n --arg s "$1" '$s | @sh' -r
+}
+
 case "$MODE" in
   exec)
     [[ -z "$CMD" ]] && echo "Error: No command specified" >&2 && exit 1
-    INNER=$(printf '%s' "$CMD" | sed "s/'/'\\\\''/g")
-    json_cmd "bash -c '${INNER}'" > "$TMPFILE"
+    json_cmd "$CMD" > "$TMPFILE"
     ;;
   upload)
+    [[ ! -f "$LOCAL_PATH" ]] && echo "Error: Local file not found: $LOCAL_PATH" >&2 && exit 1
+    SAFE_REMOTE=$(safe_quote "$REMOTE_PATH")
     ENCODED=$(b64_encode "$LOCAL_PATH")
     # Compress large files to stay within SSM command limits (~64KB)
     if [[ ${#ENCODED} -gt 8000 ]]; then
       ENCODED=$(gzip -c "$LOCAL_PATH" | b64_encode)
-      json_cmd "bash -c 'echo ${ENCODED} | base64 -d | gunzip > ${REMOTE_PATH}'" > "$TMPFILE"
+      # ENCODED is base64 (only A-Za-z0-9+/=), safe inside single quotes
+      json_cmd "echo '${ENCODED}' | base64 -d | gunzip > ${SAFE_REMOTE}" > "$TMPFILE"
     else
-      json_cmd "bash -c 'echo ${ENCODED} | base64 -d > ${REMOTE_PATH}'" > "$TMPFILE"
+      # ENCODED is base64 (only A-Za-z0-9+/=), safe inside single quotes
+      json_cmd "echo '${ENCODED}' | base64 -d > ${SAFE_REMOTE}" > "$TMPFILE"
     fi
     ;;
   read)
-    json_cmd "cat '${REMOTE_PATH}'" > "$TMPFILE"
+    SAFE_REMOTE=$(safe_quote "$REMOTE_PATH")
+    json_cmd "cat ${SAFE_REMOTE}" > "$TMPFILE"
     ;;
 esac
 

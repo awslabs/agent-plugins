@@ -12,7 +12,7 @@ Collect diagnostic logs from HyperPod cluster nodes via SSM, store results in S3
 ## Prerequisites
 
 - AWS CLI configured with permissions: `sagemaker:DescribeCluster`, `sagemaker:ListClusterNodes`, `ssm:StartSession`, `s3:PutObject`, `s3:GetObject`, `eks:DescribeCluster`
-- Python 3.8+ and [uv](https://docs.astral.sh/uv/) (`pip install uv`)
+- Python 3.8+ and [uv](https://docs.astral.sh/uv/) (see [uv installation docs](https://docs.astral.sh/uv/getting-started/installation/) for install options)
 - SSM Agent running on target nodes; node IAM roles need `s3:GetObject`/`s3:PutObject` on the report bucket
 - For EKS clusters: kubectl installed and configured (see Workflow step 2)
 
