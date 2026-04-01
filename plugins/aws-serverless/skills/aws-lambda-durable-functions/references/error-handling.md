@@ -24,29 +24,29 @@ Filter retries to specific error types only (e.g., `NetworkError`, `TimeoutError
 
 ### Retryable Errors
 
-| Language | Exception Type | Description |
-|---|---|---|
-| TypeScript | `StepError` | Step failed, may be retried |
-| Python | `InvocationError` | Transient infrastructure issue |
-| Java | `StepInterruptedException` | Transient/interrupted, may retry at invocation level |
+| Language   | Exception Type             | Description                                          |
+| ---------- | -------------------------- | ---------------------------------------------------- |
+| TypeScript | `StepError`                | Step failed, may be retried                          |
+| Python     | `InvocationError`          | Transient infrastructure issue                       |
+| Java       | `StepInterruptedException` | Transient/interrupted, may retry at invocation level |
 
 ### Non-Retryable Errors
 
-| Language | Exception Type | Description |
-|---|---|---|
-| TypeScript | `UnrecoverableInvocationError` | Stops execution immediately |
-| Python | `ExecutionError` | Permanent business logic failure |
-| Java | `StepFailedException` | All retries exhausted, permanent failure |
-| Java | `CallbackFailedException` | Callback reported failure |
-| Java | `CallbackTimeoutException` | Callback timed out |
+| Language   | Exception Type                 | Description                              |
+| ---------- | ------------------------------ | ---------------------------------------- |
+| TypeScript | `UnrecoverableInvocationError` | Stops execution immediately              |
+| Python     | `ExecutionError`               | Permanent business logic failure         |
+| Java       | `StepFailedException`          | All retries exhausted, permanent failure |
+| Java       | `CallbackFailedException`      | Callback reported failure                |
+| Java       | `CallbackTimeoutException`     | Callback timed out                       |
 
 ### Preventing Retry
 
-| Language | Mechanism |
-|---|---|
-| TypeScript | Throw `UnrecoverableInvocationError` |
-| Python | Raise `ExecutionError` |
-| Java | Throw any unchecked exception from step |
+| Language   | Mechanism                               |
+| ---------- | --------------------------------------- |
+| TypeScript | Throw `UnrecoverableInvocationError`    |
+| Python     | Raise `ExecutionError`                  |
+| Java       | Throw any unchecked exception from step |
 
 ## Saga Pattern
 

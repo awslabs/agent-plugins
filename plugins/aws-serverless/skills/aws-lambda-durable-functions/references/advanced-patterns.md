@@ -6,20 +6,20 @@ Advanced techniques and patterns for sophisticated durable function workflows.
 
 Build agentic loops with durable step-backed tool execution and dynamic step naming. Each AI model invocation and tool execution is a separate durable step, ensuring replay safety. Use template literals or string formatting for dynamic step names (e.g., `execute-tool-{toolName}`).
 
-| Language | Model Invocation | Tool Execution | Dynamic Naming |
-|---|---|---|---|
-| TypeScript | `context.step('invoke-model', fn)` | `context.step(\`execute-tool-${name}\`, fn)` | Template literals |
-| Python | `context.step(fn)` | `context.step(func=fn, name=f"execute-tool-{name}")` | f-strings |
-| Java | `ctx.step("invoke-model", Type.class, fn)` | `ctx.step("execute-tool-" + name, Type.class, fn)` | String concatenation |
+| Language   | Model Invocation                           | Tool Execution                                       | Dynamic Naming       |
+| ---------- | ------------------------------------------ | ---------------------------------------------------- | -------------------- |
+| TypeScript | `context.step('invoke-model', fn)`         | `context.step(\`execute-tool-${name}\`, fn)`         | Template literals    |
+| Python     | `context.step(fn)`                         | `context.step(func=fn, name=f"execute-tool-{name}")` | f-strings            |
+| Java       | `ctx.step("invoke-model", Type.class, fn)` | `ctx.step("execute-tool-" + name, Type.class, fn)`   | String concatenation |
 
 ## Step Semantics
 
 Controls whether a step may re-execute during replay:
 
-| Semantic | Behavior | Use When |
-|---|---|---|
-| **AtMostOncePerRetry** | Step executes at most once per retry attempt | Operation is idempotent (DB updates, API calls with idempotency keys) |
-| **AtLeastOncePerRetry** | Step may execute multiple times per retry | External deduplication exists (queuing systems, event streams) |
+| Semantic                | Behavior                                     | Use When                                                              |
+| ----------------------- | -------------------------------------------- | --------------------------------------------------------------------- |
+| **AtMostOncePerRetry**  | Step executes at most once per retry attempt | Operation is idempotent (DB updates, API calls with idempotency keys) |
+| **AtLeastOncePerRetry** | Step may execute multiple times per retry    | External deduplication exists (queuing systems, event streams)        |
 
 - TypeScript: `{ semantics: StepSemantics.AtMostOncePerRetry }`
 - Python: `StepSemantics.AT_MOST_ONCE_PER_RETRY`
@@ -43,11 +43,11 @@ Use `minSuccessful: 1` for early termination search patterns (stop after first m
 
 ## Custom Serialization
 
-| Language | Approach |
-|---|---|
-| TypeScript | `createClassSerdes(Class)`, `createClassSerdesWithDates(Class, ['field'])` |
-| Python | Default JSON serialization, custom via `json_serializer`/`json_deserializer` |
-| Java | Implement `SerDes<T>` interface with `serialize`/`deserialize` methods |
+| Language   | Approach                                                                     |
+| ---------- | ---------------------------------------------------------------------------- |
+| TypeScript | `createClassSerdes(Class)`, `createClassSerdesWithDates(Class, ['field'])`   |
+| Python     | Default JSON serialization, custom via `json_serializer`/`json_deserializer` |
+| Java       | Implement `SerDes<T>` interface with `serialize`/`deserialize` methods       |
 
 Use custom serialization for Date fields, complex object graphs, or domain-specific types.
 

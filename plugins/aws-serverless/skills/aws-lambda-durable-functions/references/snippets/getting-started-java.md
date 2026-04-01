@@ -15,6 +15,7 @@
   <scope>test</scope>
 </dependency>
 ```
+
 ## Basic Handler
 
 ```java
@@ -43,6 +44,7 @@ public class WorkflowHandler extends DurableHandler<WorkflowInput, WorkflowOutpu
   }
 }
 ```
+
 ## GenAI Agent (Agentic Loop)
 
 ```java
@@ -60,6 +62,7 @@ public class AgentHandler extends DurableHandler<AgentInput, String> {
   }
 }
 ```
+
 ## Human-in-the-Loop Approval
 
 ```java
@@ -77,6 +80,7 @@ public class ApprovalHandler extends DurableHandler<ApprovalInput, ApprovalOutpu
   }
 }
 ```
+
 ## Saga Pattern
 
 ```java

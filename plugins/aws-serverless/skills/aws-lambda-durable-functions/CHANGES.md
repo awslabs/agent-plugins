@@ -16,38 +16,38 @@ updated to recognize Java as a first-class language.
 
 24 snippet files were created (8 topics × 3 languages):
 
-| Topic | TypeScript | Python | Java |
-|---|---|---|---|
-| getting-started | 100 lines | 64 lines | 100 lines |
-| step-operations | 93 lines | 94 lines | 88 lines |
-| wait-operations | 99 lines | 98 lines | 92 lines |
-| concurrent-operations | 99 lines | 62 lines | 89 lines |
-| error-handling | 99 lines | 91 lines | 100 lines |
-| advanced-patterns | 100 lines | 32 lines | 100 lines |
-| testing-patterns | 100 lines | 84 lines | 98 lines |
-| replay-model-rules | 100 lines | 80 lines | 95 lines |
+| Topic                 | TypeScript | Python   | Java      |
+| --------------------- | ---------- | -------- | --------- |
+| getting-started       | 100 lines  | 64 lines | 100 lines |
+| step-operations       | 93 lines   | 94 lines | 88 lines  |
+| wait-operations       | 99 lines   | 98 lines | 92 lines  |
+| concurrent-operations | 99 lines   | 62 lines | 89 lines  |
+| error-handling        | 99 lines   | 91 lines | 100 lines |
+| advanced-patterns     | 100 lines  | 32 lines | 100 lines |
+| testing-patterns      | 100 lines  | 84 lines | 98 lines  |
+| replay-model-rules    | 100 lines  | 80 lines | 95 lines  |
 
 ### Rewritten reference files (code blocks removed, conceptual guides retained)
 
-| File | Lines | What was kept |
-|---|---|---|
-| getting-started.md | 100 | Language selection, project structures (TS/Python/Java), setup checklists, dev workflow, key concepts |
-| step-operations.md | 82 | When-to-use guidance, step vs child context decision table, retry strategies, best practices |
-| wait-operations.md | 91 | Simple wait/callback/condition tables, CLI callback commands, max wait duration note, best practices |
-| concurrent-operations.md | 88 | Map/parallel API tables, completion policies, error isolation, performance optimization |
-| error-handling.md | 88 | Error classification tables (retryable/non-retryable), saga pattern steps, circuit breaker, best practices |
-| advanced-patterns.md | 77 | Step semantics table, completion policy interaction, custom serialization, nested workflows |
-| testing-patterns.md | 73 | DO/DON'T lists, test runner API summary, common testing errors table, best practices |
-| replay-model-rules.md | 60 | 4 rules explanations, "must be in steps" list, child context API table, debugging checklist |
+| File                     | Lines | What was kept                                                                                              |
+| ------------------------ | ----- | ---------------------------------------------------------------------------------------------------------- |
+| getting-started.md       | 100   | Language selection, project structures (TS/Python/Java), setup checklists, dev workflow, key concepts      |
+| step-operations.md       | 82    | When-to-use guidance, step vs child context decision table, retry strategies, best practices               |
+| wait-operations.md       | 91    | Simple wait/callback/condition tables, CLI callback commands, max wait duration note, best practices       |
+| concurrent-operations.md | 88    | Map/parallel API tables, completion policies, error isolation, performance optimization                    |
+| error-handling.md        | 88    | Error classification tables (retryable/non-retryable), saga pattern steps, circuit breaker, best practices |
+| advanced-patterns.md     | 77    | Step semantics table, completion policy interaction, custom serialization, nested workflows                |
+| testing-patterns.md      | 73    | DO/DON'T lists, test runner API summary, common testing errors table, best practices                       |
+| replay-model-rules.md    | 60    | 4 rules explanations, "must be in steps" list, child context API table, debugging checklist                |
 
 Each rewritten file ends with a `## Code Examples` section linking to the three language snippet files.
 
 ### Updated files
 
-| File | Lines | Changes |
-|---|---|---|
-| SKILL.md | 246 (≤300 limit) | Java prerequisites, language selection, Maven dependencies, handler pattern, API differences section, SDK repo link |
-| deployment-iac.md | 559 | Added `java21` / `JAVA_21` runtime in CloudFormation, SAM, and CDK examples |
+| File              | Lines            | Changes                                                                                                             |
+| ----------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------- |
+| SKILL.md          | 246 (≤300 limit) | Java prerequisites, language selection, Maven dependencies, handler pattern, API differences section, SDK repo link |
+| deployment-iac.md | 559              | Added `java21` / `JAVA_21` runtime in CloudFormation, SAM, and CDK examples                                         |
 
 ---
 
@@ -74,18 +74,18 @@ public class MyHandler extends DurableHandler<MyInput, MyOutput> {
 
 ### Core API
 
-| Operation | API |
-|---|---|
-| Step (sync) | `ctx.step("name", Type.class, stepCtx -> ...)` |
-| Step (async) | `ctx.stepAsync("name", Type.class, stepCtx -> ...)` → `DurableFuture<T>` |
-| Wait | `ctx.wait("name", Duration.ofSeconds(N))` |
-| Wait (async) | `ctx.waitAsync("name", Duration.ofSeconds(N))` → `DurableFuture<Void>` |
-| Callback | `ctx.waitForCallback("name", Type.class, (callbackId, stepCtx) -> ...)` |
-| Map | `ctx.map("name", items, Type.class, (item, index, childCtx) -> ...)` |
-| Map (async) | `ctx.mapAsync(...)` → `DurableFuture<MapResult<T>>` |
-| Child context | `ctx.runInChildContext("name", Type.class, child -> ...)` |
-| Logger | `ctx.getLogger().info(...)` (replay-aware) |
-| Invoke | `ctx.invoke("name", functionArn, payload, Type.class)` |
+| Operation     | API                                                                      |
+| ------------- | ------------------------------------------------------------------------ |
+| Step (sync)   | `ctx.step("name", Type.class, stepCtx -> ...)`                           |
+| Step (async)  | `ctx.stepAsync("name", Type.class, stepCtx -> ...)` → `DurableFuture<T>` |
+| Wait          | `ctx.wait("name", Duration.ofSeconds(N))`                                |
+| Wait (async)  | `ctx.waitAsync("name", Duration.ofSeconds(N))` → `DurableFuture<Void>`   |
+| Callback      | `ctx.waitForCallback("name", Type.class, (callbackId, stepCtx) -> ...)`  |
+| Map           | `ctx.map("name", items, Type.class, (item, index, childCtx) -> ...)`     |
+| Map (async)   | `ctx.mapAsync(...)` → `DurableFuture<MapResult<T>>`                      |
+| Child context | `ctx.runInChildContext("name", Type.class, child -> ...)`                |
+| Logger        | `ctx.getLogger().info(...)` (replay-aware)                               |
+| Invoke        | `ctx.invoke("name", functionArn, payload, Type.class)`                   |
 
 ### Key Java-Specific Patterns
 
@@ -97,13 +97,13 @@ public class MyHandler extends DurableHandler<MyInput, MyOutput> {
 
 ### Exception Hierarchy
 
-| Exception | Meaning |
-|---|---|
-| `StepFailedException` | Permanent failure — all retries exhausted |
-| `StepInterruptedException` | Transient/interrupted — may retry at invocation level |
-| `CallbackFailedException` | External system reported callback failure |
-| `CallbackTimeoutException` | Callback timed out |
-| `WaitForConditionFailedException` | Condition polling failed |
+| Exception                         | Meaning                                               |
+| --------------------------------- | ----------------------------------------------------- |
+| `StepFailedException`             | Permanent failure — all retries exhausted             |
+| `StepInterruptedException`        | Transient/interrupted — may retry at invocation level |
+| `CallbackFailedException`         | External system reported callback failure             |
+| `CallbackTimeoutException`        | Callback timed out                                    |
+| `WaitForConditionFailedException` | Condition polling failed                              |
 
 To prevent retry, throw any unchecked exception from within a step.
 

@@ -10,11 +10,11 @@ Steps are atomic operations with automatic retry and state persistence.
 
 ## Step Definition Patterns
 
-| Language | Recommended Pattern | Alternative |
-|---|---|---|
-| TypeScript | Named async step: `context.step('name', async () => ...)` | — |
-| Python | `@durable_step` decorator for reusable functions | Inline lambda for one-off operations |
-| Java | `ctx.step("name", Type.class, stepCtx -> ...)` | `TypeToken<T>` for generic return types |
+| Language   | Recommended Pattern                                       | Alternative                             |
+| ---------- | --------------------------------------------------------- | --------------------------------------- |
+| TypeScript | Named async step: `context.step('name', async () => ...)` | —                                       |
+| Python     | `@durable_step` decorator for reusable functions          | Inline lambda for one-off operations    |
+| Java       | `ctx.step("name", Type.class, stepCtx -> ...)`            | `TypeToken<T>` for generic return types |
 
 Always name steps for easier debugging and testing.
 
@@ -34,10 +34,10 @@ Filter retries to specific error types only (e.g., `NetworkError`, `TimeoutError
 
 ## Step Semantics
 
-| Semantic | Behavior | Use For |
-|---|---|---|
-| `AT_LEAST_ONCE` (default) | May execute multiple times on failure/retry | Idempotent operations |
-| `AT_MOST_ONCE` | Never retries after first execution | Non-idempotent operations (payments, emails) |
+| Semantic                  | Behavior                                    | Use For                                      |
+| ------------------------- | ------------------------------------------- | -------------------------------------------- |
+| `AT_LEAST_ONCE` (default) | May execute multiple times on failure/retry | Idempotent operations                        |
+| `AT_MOST_ONCE`            | Never retries after first execution         | Non-idempotent operations (payments, emails) |
 
 ## Custom Serialization
 
@@ -47,13 +47,13 @@ Filter retries to specific error types only (e.g., `NetworkError`, `TimeoutError
 
 ## Steps vs Child Contexts
 
-| Scenario | Use |
-|---|---|
-| Single atomic operation | Step |
-| API call, DB query, transformation | Step |
-| Group of multiple durable operations | Child context |
+| Scenario                              | Use           |
+| ------------------------------------- | ------------- |
+| Single atomic operation               | Step          |
+| API call, DB query, transformation    | Step          |
+| Group of multiple durable operations  | Child context |
 | Workflow with steps + waits + invokes | Child context |
-| Isolating state tracking | Child context |
+| Isolating state tracking              | Child context |
 
 **Key rule**: You cannot nest durable operations (waits, other steps) inside a step. Use `runInChildContext` instead.
 

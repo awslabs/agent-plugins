@@ -25,11 +25,11 @@ Test durable functions locally and in the cloud with comprehensive test runners.
 
 ## Test Runner API Summary
 
-| Language | Local Runner | Cloud Runner |
-|---|---|---|
-| TypeScript | `new LocalDurableTestRunner({ handlerFunction })` | `new CloudDurableTestRunner({ functionName, client })` |
-| Python | `DurableFunctionTestRunner(handler=handler)` | `DurableFunctionCloudTestRunner(function_name, region)` |
-| Java | `LocalDurableTestRunner.create(Type.class, handler)` | `CloudDurableTestRunner.create(functionArn, region)` |
+| Language   | Local Runner                                         | Cloud Runner                                            |
+| ---------- | ---------------------------------------------------- | ------------------------------------------------------- |
+| TypeScript | `new LocalDurableTestRunner({ handlerFunction })`    | `new CloudDurableTestRunner({ functionName, client })`  |
+| Python     | `DurableFunctionTestRunner(handler=handler)`         | `DurableFunctionCloudTestRunner(function_name, region)` |
+| Java       | `LocalDurableTestRunner.create(Type.class, handler)` | `CloudDurableTestRunner.create(functionArn, region)`    |
 
 ## Key Testing Patterns
 
@@ -44,14 +44,14 @@ Test durable functions locally and in the cloud with comprehensive test runners.
 
 ## Common Testing Errors
 
-| Error | Cause | Solution |
-|---|---|---|
-| `'result' is of type 'unknown'` | Missing type casting | Cast result: `as Type` or use typed runner |
-| `'payload' does not exist` | Wrong API (TypeScript) | Wrap event in `payload: {}` object |
-| `Cannot find operation at index` | Using index lookup | Use `getOperation("name")` instead |
-| Flaky callback tests | Race condition | Wait for `STARTED` status before sending |
-| `Unexpected token` in callback | Forgot to stringify | Always `JSON.stringify(data)` |
-| Operation not found by name | Missing name in handler | Always name operations in handler code |
+| Error                            | Cause                   | Solution                                   |
+| -------------------------------- | ----------------------- | ------------------------------------------ |
+| `'result' is of type 'unknown'`  | Missing type casting    | Cast result: `as Type` or use typed runner |
+| `'payload' does not exist`       | Wrong API (TypeScript)  | Wrap event in `payload: {}` object         |
+| `Cannot find operation at index` | Using index lookup      | Use `getOperation("name")` instead         |
+| Flaky callback tests             | Race condition          | Wait for `STARTED` status before sending   |
+| `Unexpected token` in callback   | Forgot to stringify     | Always `JSON.stringify(data)`              |
+| Operation not found by name      | Missing name in handler | Always name operations in handler code     |
 
 ## Best Practices
 

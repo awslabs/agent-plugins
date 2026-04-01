@@ -8,11 +8,11 @@ Pause execution for a duration with no compute charges. Always name waits for de
 
 **Max wait duration:** Up to 1 year.
 
-| Language | Sync Wait | Async Wait |
-|---|---|---|
-| TypeScript | `context.wait('name', { seconds: N })` | N/A (all waits are async) |
-| Python | `context.wait(duration=Duration.from_seconds(N))` | N/A |
-| Java | `ctx.wait("name", Duration.ofSeconds(N))` | `ctx.waitAsync("name", Duration.ofSeconds(N))` |
+| Language   | Sync Wait                                         | Async Wait                                     |
+| ---------- | ------------------------------------------------- | ---------------------------------------------- |
+| TypeScript | `context.wait('name', { seconds: N })`            | N/A (all waits are async)                      |
+| Python     | `context.wait(duration=Duration.from_seconds(N))` | N/A                                            |
+| Java       | `ctx.wait("name", Duration.ofSeconds(N))`         | `ctx.waitAsync("name", Duration.ofSeconds(N))` |
 
 ## Wait for Callback
 
@@ -78,11 +78,11 @@ Common patterns using callbacks:
 
 ## Error Handling
 
-| Language | Timeout Exception | Failure Exception | Condition Exception |
-|---|---|---|---|
-| TypeScript | `CallbackError` (errorType: 'Timeout') | `CallbackError` | N/A |
-| Python | `CallbackError` (error_type: 'Timeout') | `CallbackError` | N/A |
-| Java | `CallbackTimeoutException` | `CallbackFailedException` | `WaitForConditionFailedException` |
+| Language   | Timeout Exception                       | Failure Exception         | Condition Exception               |
+| ---------- | --------------------------------------- | ------------------------- | --------------------------------- |
+| TypeScript | `CallbackError` (errorType: 'Timeout')  | `CallbackError`           | N/A                               |
+| Python     | `CallbackError` (error_type: 'Timeout') | `CallbackError`           | N/A                               |
+| Java       | `CallbackTimeoutException`              | `CallbackFailedException` | `WaitForConditionFailedException` |
 
 ## Code Examples
 

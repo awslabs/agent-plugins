@@ -6,33 +6,33 @@ Process arrays and run operations in parallel with concurrency control.
 
 Process arrays with automatic concurrency control and completion policies. Each item runs in its own child context with error isolation.
 
-| Language | Sync Map | Async Map |
-|---|---|---|
-| TypeScript | `context.map('name', items, func, opts)` | N/A (all maps are async) |
-| Python | `context.map(inputs=items, func=fn, config=MapConfig(...))` | N/A |
-| Java | `ctx.map("name", items, Type.class, (item, i, childCtx) -> ...)` | `ctx.mapAsync(...)` returns `DurableFuture` |
+| Language   | Sync Map                                                         | Async Map                                   |
+| ---------- | ---------------------------------------------------------------- | ------------------------------------------- |
+| TypeScript | `context.map('name', items, func, opts)`                         | N/A (all maps are async)                    |
+| Python     | `context.map(inputs=items, func=fn, config=MapConfig(...))`      | N/A                                         |
+| Java       | `ctx.map("name", items, Type.class, (item, i, childCtx) -> ...)` | `ctx.mapAsync(...)` returns `DurableFuture` |
 
 ## Parallel Operations
 
 Run heterogeneous operations concurrently (different functions, not array processing).
 
-| Language | API |
-|---|---|
-| TypeScript | `context.parallel('name', [{ name, func }], opts)` |
-| Python | `context.parallel([func1, func2], config=ParallelConfig(...))` |
-| Java | Use `ctx.mapAsync()` or `ctx.stepAsync()` with `DurableFuture.allOf()` |
+| Language   | API                                                                    |
+| ---------- | ---------------------------------------------------------------------- |
+| TypeScript | `context.parallel('name', [{ name, func }], opts)`                     |
+| Python     | `context.parallel([func1, func2], config=ParallelConfig(...))`         |
+| Java       | Use `ctx.mapAsync()` or `ctx.stepAsync()` with `DurableFuture.allOf()` |
 
 ## Completion Policies
 
 Control when a map operation completes:
 
-| Policy | Behavior | Use Case |
-|---|---|---|
-| All (default) | All items must succeed | Strict processing |
-| Minimum successful | Require N successes | Quorum-based decisions |
-| Tolerated failure count | Allow up to N failures | Graceful degradation |
-| Tolerated failure percentage | Allow up to N% failures | Large batch tolerance |
-| Any (first success) | Stop after first success | Search/match patterns |
+| Policy                       | Behavior                 | Use Case               |
+| ---------------------------- | ------------------------ | ---------------------- |
+| All (default)                | All items must succeed   | Strict processing      |
+| Minimum successful           | Require N successes      | Quorum-based decisions |
+| Tolerated failure count      | Allow up to N failures   | Graceful degradation   |
+| Tolerated failure percentage | Allow up to N% failures  | Large batch tolerance  |
+| Any (first success)          | Stop after first success | Search/match patterns  |
 
 ### Language-Specific Config
 
