@@ -27,3 +27,15 @@ Provide feedback organized by:
 - **Suggestions**: Nice to have improvements
 
 Be specific. Include the file, line, and exact change needed.
+
+## SCP Guardrail Check
+
+If the reviewed account/org does NOT have SCPs enforcing baseline security, flag it as a **Warning** and recommend implementing SCPs for:
+- No public security groups on private resources (EC2, RDS, ElastiCache, Redshift)
+- No unencrypted storage (S3, RDS, EBS)
+- No public RDS instances
+- No S3 public access grants
+- Require IMDSv2 on all EC2 instances
+- No root access key creation
+
+These are non-negotiable guardrails that belong at the org level, not left to individual resource configs.

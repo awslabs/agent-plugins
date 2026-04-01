@@ -1,42 +1,24 @@
 {
   "mcpServers": {
-    "aws-iac": {
+    "awsiac": {
       "command": "uvx",
       "args": ["awslabs.aws-iac-mcp-server@latest"],
       "env": {
         "FASTMCP_LOG_LEVEL": "ERROR"
       }
     },
-    "aws-docs": {
+    "awsknowledge": {
+      "type": "http",
+      "url": "https://knowledge-mcp.global.api.aws"
+    },
+    "awspricing": {
       "command": "uvx",
-      "args": ["awslabs.aws-documentation-mcp-server@latest"],
+      "args": ["awslabs.aws-pricing-mcp-server@latest"],
       "env": {
         "FASTMCP_LOG_LEVEL": "ERROR"
-      }
-    },
-    "aws-core": {
-      "command": "uvx",
-      "args": ["awslabs.core-mcp-server@latest"],
-      "env": {
-        "FASTMCP_LOG_LEVEL": "ERROR",
-        "AWS_PROFILE": "${AWS_PROFILE:-default}"
-      }
-    },
-    "aws-cost": {
-      "command": "uvx",
-      "args": ["awslabs.cost-analysis-mcp-server@latest"],
-      "env": {
-        "FASTMCP_LOG_LEVEL": "ERROR",
-        "AWS_PROFILE": "${AWS_PROFILE:-default}"
-      }
-    },
-    "aws-well-architected": {
-      "command": "uvx",
-      "args": ["awslabs.well-architected-mcp-server@latest"],
-      "env": {
-        "FASTMCP_LOG_LEVEL": "ERROR",
-        "AWS_PROFILE": "${AWS_PROFILE:-default}"
-      }
+      },
+      "timeout": 120000,
+      "type": "stdio"
     }
   }
 }

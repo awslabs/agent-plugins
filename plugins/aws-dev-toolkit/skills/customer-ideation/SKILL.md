@@ -19,28 +19,55 @@ REFINE    → Iterate based on feedback
 
 ## Phase 1: Discovery Questions
 
-Ask these in order. Don't skip any category.
+These questions are critical for producing a well-scoped architecture. However, **do NOT dump all questions at once** — that overwhelms the user.
+
+### How to Ask
+1. **Start with 3-5 high-signal questions** from Problem Statement and Constraints — enough to understand the shape of the workload
+2. **Let the user's answers guide which follow-ups matter** — if they say "small internal tool, 10 users," skip the availability/geographic/traffic-pattern deep dive
+3. **Batch follow-ups in groups of 2-3** — never more than 5 questions in a single response
+4. **Infer what you can** from context (repo code, existing IaC, conversation history) instead of asking
+5. **Only go deep on categories that matter** — a static site doesn't need Operations & Day 2 questions
+6. **After the initial round, ask**: "I have enough to start on an architecture. Want me to go deeper on discovery, or should I move to design?" — let the user control the depth
 
 ### Problem Statement
-- What business problem are you solving?
-- Who are the users? (internal team, customers, partners, public)
-- How many users? (10, 1K, 100K, 1M+)
-- What does success look like? (specific metrics)
-- What happens if this doesn't work? (risk tolerance)
+- What business problem are you solving? What's the pain today?
+- Who are the users? (internal team, customers, partners, public, other systems/APIs)
+- How many users? (10, 1K, 100K, 1M+) — current and projected in 12 months
+- What does success look like? (specific metrics: revenue, latency, adoption, cost savings)
+- What happens if this doesn't work? (risk tolerance — is this critical path or experimental?)
+- Is there an existing solution being replaced? If so, what's wrong with it?
 
 ### Constraints
-- **Budget**: Monthly/annual cloud spend target?
-- **Timeline**: When does this need to be live?
-- **Team skills**: What does the team know today? (Languages, frameworks, AWS experience)
-- **Compliance**: HIPAA, PCI, SOC2, FedRAMP, GDPR?
-- **Existing tech**: What's already in place? (CI/CD, monitoring, identity provider)
+- **Budget**: Monthly/annual cloud spend target? Hard cap or flexible?
+- **Timeline**: When does this need to be live? MVP date vs full launch?
+- **Team size & skills**: How many engineers? What do they know today? (Languages, frameworks, AWS experience level 1-5)
+- **Compliance**: HIPAA, PCI-DSS, SOC2, FedRAMP, GDPR, CCPA, data residency requirements?
+- **Existing tech**: What's already in place? (CI/CD, monitoring, identity provider, DNS, CDN)
+- **Organizational constraints**: Approval processes? Change advisory boards? Deployment windows?
+- **Vendor preferences**: Any AWS services already committed (EDP, Reserved Instances, Savings Plans)?
 
 ### Workload Characteristics
-- **Request patterns**: Synchronous API? Batch processing? Streaming? Event-driven?
-- **Data volumes**: GB? TB? PB? Growth rate?
-- **Latency requirements**: < 100ms (real-time)? < 1s (interactive)? Best effort?
-- **Availability**: 99.9% (8.7h downtime/yr)? 99.99% (52min/yr)?
-- **Geographic**: Single region? Multi-region? Global?
+- **Request patterns**: Synchronous API? Batch processing? Streaming? Event-driven? Scheduled jobs?
+- **Data volumes**: GB? TB? PB? Growth rate per month?
+- **Data sensitivity**: PII? PHI? Financial data? Public data? Classification level?
+- **Latency requirements**: < 50ms (real-time)? < 200ms (interactive)? < 1s (standard)? Best effort?
+- **Availability**: 99.9% (8.7h downtime/yr)? 99.99% (52min/yr)? 99.999% (5min/yr)?
+- **Geographic**: Single region? Multi-region? Global? Where are the users?
+- **Traffic patterns**: Steady state? Spiky (time of day, events)? Seasonal? Unpredictable?
+- **Stateful or stateless**: Does the app maintain session state? Where?
+
+### Integration & Dependencies
+- What external systems does this need to talk to? (third-party APIs, on-prem systems, partner feeds)
+- What authentication/authorization model? (OAuth, SAML, API keys, mTLS, IAM)
+- Will other teams or services depend on this? (API consumers, event subscribers)
+- Any hard dependencies on specific protocols? (REST, gRPC, GraphQL, WebSocket, MQTT)
+
+### Operations & Day 2
+- Who operates this after launch? (same team, SRE, managed service provider)
+- What's the on-call model? (24/7, business hours, best effort)
+- How will you deploy updates? (blue/green, canary, rolling, all-at-once)
+- What's the disaster recovery expectation? (RTO and RPO targets)
+- How do you want to be alerted? (PagerDuty, Slack, email, SNS)
 
 ## Phase 2: Qualify
 
