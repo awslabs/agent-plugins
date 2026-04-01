@@ -226,5 +226,14 @@ Each diagram gets a **descriptive filename** in kebab-case, placed in `./docs/` 
 - Add italic sub-labels to service icons to clarify their role in the architecture
 - Only include services the user explicitly mentions or that are core to the data flow. Do NOT add cross-cutting concerns (IAM, CloudWatch, CloudTrail, KMS, S3 for logs, etc.) unless the user asks for them
 - Include a title/label on the diagram describing the architecture
-- NEVER set `background="#FFFFFF"` on mxGraphModel — it breaks dark mode adaptive contrast
-- Do NOT read existing `.drawio` files as reference when generating diagrams — use only the templates and rules in this skill and its references
+- NEVER set a `background` attribute on mxGraphModel — any hardcoded background breaks dark mode adaptive contrast
+
+## Reference Priority
+
+When generating diagrams, follow this priority order:
+
+1. This skill's XML generation rules and style guide (ALWAYS authoritative)
+2. This skill's example `.drawio` files in `references/` (Step 3 selection table)
+3. The user's existing `.drawio` files ONLY when explicitly requested ("match my style", "update my diagram")
+
+Do NOT proactively read `.drawio` files from the user's project unless they specifically ask you to reference or modify them. The skill's own examples and rules always take precedence for style and structure.

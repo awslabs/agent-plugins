@@ -92,7 +92,7 @@ Container `value` = functional category label (e.g., "DNS", "Compute", "Database
 ## Line Styles Box
 
 ```xml
-<mxCell id="legend-line-styles-group" style="group;fontFamily=Helvetica;fillColor=light-dark(#F5F5F5,#29393B);strokeColor=#666666;" value="" vertex="1" parent="legend-panel">
+<mxCell id="legend-line-styles-group" style="group;fontFamily=Helvetica;fillColor=light-dark(#F5F5F5,#29393B);strokeColor=#666666;" value="" vertex="1" parent="legend-container">
   <mxGeometry height="133" width="456" as="geometry" />
 </mxCell>
 ```

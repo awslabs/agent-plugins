@@ -122,7 +122,7 @@ def fix_placement(tree: ET.ElementTree, verbose: bool = False) -> int:
             continue
 
         # Skip step badges
-        if "step-" in cid.lower() and "fillColor=#007CBD" in style.upper():
+        if "step-" in cid.lower() and "fillColor=#007CBD" in style:
             continue
 
         # Skip service containers (svc-group-*) — these are AWS services, not external actors

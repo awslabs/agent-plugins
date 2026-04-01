@@ -546,10 +546,6 @@
         "iot_twinmaker"
       ]
     },
-    "developer_tools": {
-      "fillColor": "#8C4FFF",
-      "shapes": []
-    },
     "media_services": {
       "fillColor": "#ED7100",
       "shapes": [

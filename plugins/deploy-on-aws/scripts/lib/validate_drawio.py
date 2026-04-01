@@ -46,7 +46,7 @@ def validate(file_path):
         errors.append(f"XML parse error: {e}")
         return errors, warnings
 
-    # 2. Validate structure - accept both <mxfile> wrapped and bare <mxGraphModel>
+    # 2. Validate structure - require <mxfile> wrapper per SKILL.md contract
     tag = root.tag
     if tag == "mxfile":
         diagrams = root.findall("diagram")
@@ -73,10 +73,14 @@ def validate(file_path):
         diagram_count = len(diagrams)
 
     elif tag == "mxGraphModel":
-        diagram_count = 1
+        errors.append(
+            "Missing <mxfile> wrapper. Output must use "
+            "<mxfile><diagram><mxGraphModel> structure."
+        )
+        return errors, warnings
     else:
         errors.append(
-            "Missing root element. draw.io files must start with <mxfile> or <mxGraphModel>."
+            "Missing root element. draw.io files must start with <mxfile>."
         )
         return errors, warnings
 
@@ -150,45 +154,32 @@ def validate(file_path):
             "Check the aws4-shapes.json registry for valid shape names."
         )
 
-    # --- AWS Diagram Guideline Compliance Checks (warnings only) ---
+    # --- AWS Diagram Guideline Compliance Checks ---
 
-    # 1. Background color check
+    # 1. Background color check — no hardcoded background allowed (breaks dark mode)
     graph_models = [root] if tag == "mxGraphModel" else root.findall(".//mxGraphModel")
     for model in graph_models:
         bg = model.get("background")
-        if bg != "#FFFFFF":
-            warnings.append(
-                'No white background set on mxGraphModel. '
-                'AWS guidelines require background="#FFFFFF" (not transparent).'
+        if bg is not None:
+            errors.append(
+                f'mxGraphModel has background="{bg}". '
+                "Do not set a background attribute — it breaks dark mode adaptive contrast."
             )
             break
 
-    # 2. Font color check
-    has_old_font_color = False
-    for cell in cells:
-        style = cell.get("style", "")
-        if cell.get("vertex") == "1" and "fontColor=#232F3E" in style:
-            has_old_font_color = True
-            break
-    if has_old_font_color:
-        warnings.append(
-            "Some shapes use fontColor=#232F3E. "
-            "AWS guidelines recommend #16191F or #000000 for label text."
-        )
-
-    # 4. Font size check
+    # 2. Font size check — minimum 10px per style guide (service labels use 10px)
     has_small_font = False
     for cell in cells:
         style = cell.get("style", "")
         if cell.get("vertex") == "1":
             fs_match = re.search(r"fontSize=(\d+)", style)
-            if fs_match and int(fs_match.group(1)) < 11:
+            if fs_match and int(fs_match.group(1)) < 10:
                 has_small_font = True
                 break
     if has_small_font:
         warnings.append(
-            "Some shapes use fontSize below 11px. "
-            "AWS guidelines require 12px minimum (11px acceptable for dense layouts)."
+            "Some shapes use fontSize below 10px. "
+            "Minimum per style guide: 10px for service labels."
         )
 
     # Summary info
