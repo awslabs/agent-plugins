@@ -30,33 +30,29 @@ This plugin brings deep AWS AI/ML expertise directly into your coding assistant,
 
 ## Installation
 
-### Claude Code
+Before installing the above skills, install `uv` for your platform: [UV: Installing UV](https://docs.astral.sh/uv/getting-started/installation/)
 
-```
-claude plugin install awslabs/agent-plugins --plugin sagemaker-ai
-```
+### Add the MCP Server
 
-### Cursor
+Add the contents of `.mcp.json` file to your platform's MCP configuration file:
 
-Install the `sagemaker-ai` plugin from the AWS Agent Plugins Marketplace via the MCP configuration panel in Cursor's AI assistant settings.
+- Claude code: Run `claude mcp add --transport stdio aws-mcp -- uvx mcp-proxy-for-aws@latest https://aws-mcp.us-east-1.api.aws/mcp` or manually add to `User/Project/Local` location as needed ([Claude Code Docs: What uses scopes](https://code.claude.com/docs/en/settings#what-uses-scopes)).
+- Cursor: `.cursor/mcp.json`
+- Kiro: `.kiro/settings/mcp.json`
 
-### Other Platforms
-
-For coding assistants that don't support agent plugins directly (for example, Kiro CLI or IDE as of Mar 2026), install the MCP server and Skills separately as shown below.
-
-#### Step 1: Configure the MCP server
-
-Add the contents from the `.mcp.json` file to your platform's MCP configuration file (e.g., `.kiro/settings/mcp.json` for Kiro, `.vscode/mcp.json` for VS Code).
-
-#### Step 2: Install Skills
+### Install Skills with `npx skills`
 
 You may use the [Skills CLI](https://github.com/vercel-labs/skills) (from Vercel Labs) to install the skills into your platform:
+
+- Claude code: `npx skills add https://github.com/awslabs/agent-plugins/tree/main/plugins/sagemaker-ai/skills --all --agent claude-code --copy`
+- Cursor: `npx skills add https://github.com/awslabs/agent-plugins/tree/main/plugins/sagemaker-ai/skills --all --agent cursor --copy`
+- Kiro: `npx skills add https://github.com/awslabs/agent-plugins/tree/main/plugins/sagemaker-ai/skills --all --agent kiro-cli --copy`
+
+If you have configured other agents use:
 
 ```
 npx skills add https://github.com/awslabs/agent-plugins/tree/main/plugins/sagemaker-ai/skills --all --agent <agents...>
 ```
-
-This copies the skill files into your agent platform's skills directory (e.g., `.kiro/skills/` for Kiro), making them available to your coding assistant.
 
 ## Model Customization
 
