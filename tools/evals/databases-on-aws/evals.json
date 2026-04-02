@@ -1,0 +1,65 @@
+{
+  "skill_name": "dsql",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "How many rows can I modify in a single DSQL transaction? I'm planning a data migration of about 10k rows and need to know how to batch it.",
+      "expected_output": "Explains the 3,000 row limit, recommends batching strategy with 500-1000 row batches, and verifies the limit via awsknowledge MCP",
+      "files": [],
+      "expectations": [
+        "Calls awsknowledge search_documentation with a transaction-related query",
+        "Mentions the 3,000 row per transaction limit",
+        "Recommends a batching strategy for the 10k row migration",
+        "Mentions the 10 MiB data size limit per transaction"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Create a multi-tenant e-commerce schema in DSQL with customers, orders, and products tables. Include proper indexes.",
+      "expected_output": "Creates tables with tenant_id in primary keys, uses CREATE INDEX ASYNC, does not use foreign keys, issues each DDL in its own transaction",
+      "files": [],
+      "expectations": [
+        "Includes tenant_id column in all tables",
+        "Uses CREATE INDEX ASYNC (not synchronous CREATE INDEX)",
+        "Does NOT use FOREIGN KEY constraints",
+        "Issues each DDL statement in its own separate transaction"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I need to add 30 indexes to my DSQL table for different query patterns. Is that possible?",
+      "expected_output": "Explains the 24 index per table limit, verifies via awsknowledge, suggests alternatives like composite indexes or query redesign",
+      "files": [],
+      "expectations": [
+        "Calls awsknowledge search_documentation with an index-related query",
+        "Mentions the 24 indexes per table limit",
+        "Mentions the 8 columns per index limit",
+        "Suggests alternatives such as composite indexes or reducing index count"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Help me set up a Python app to connect to Aurora DSQL with proper authentication",
+      "expected_output": "Recommends the DSQL Python Connector (aurora_dsql_psycopg/psycopg2/asyncpg), explains IAM token generation, mentions 15-min token expiry, mentions SSL requirement",
+      "files": [],
+      "expectations": [
+        "Recommends the DSQL Python Connector (aurora_dsql_psycopg, aurora_dsql_psycopg2, or aurora_dsql_asyncpg)",
+        "Mentions IAM-based token generation for authentication",
+        "Mentions the 15-minute token expiry default",
+        "Mentions SSL/TLS is required for connections"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "I need to change a column from INTEGER to BIGINT in my DSQL users table that has 50k rows",
+      "expected_output": "Describes the Table Recreation Pattern, warns about destructive DROP TABLE, requires user confirmation at checkpoints, recommends batching for >3000 rows",
+      "files": [],
+      "expectations": [
+        "Describes the Table Recreation Pattern (create new table, copy data, drop old, rename)",
+        "Warns that this involves a destructive DROP TABLE operation",
+        "Mentions batching the data copy for tables exceeding 3,000 rows",
+        "Requires or recommends user confirmation before destructive steps"
+      ]
+    }
+  ]
+}

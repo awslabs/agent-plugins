@@ -1,0 +1,30 @@
+import boto3
+import json
+import sys
+
+if len(sys.argv) < 3:
+    print("Usage: python get_recipes.py <model-name> <hub-name>")
+    sys.exit(1)
+
+model_name = sys.argv[1]
+hub_name = sys.argv[2]
+sm_client = boto3.client("sagemaker")
+
+detail = sm_client.describe_hub_content(
+    HubName=hub_name,
+    HubContentType="Model",
+    HubContentName=model_name
+)
+
+keywords = detail.get("HubContentSearchKeywords", [])
+
+# Only include SFT, DPO, and RLVR techniques
+supported = {"sft", "dpo", "rlvr"}
+techniques = sorted(
+    t.replace("@recipe:finetuning_", "").split("_")[0]
+    for t in keywords
+    if t.startswith("@recipe:finetuning_")
+)
+techniques = [t for t in dict.fromkeys(techniques) if t in supported]
+
+print(json.dumps(techniques))

@@ -4,7 +4,7 @@
 
 ## TL;DR Pitch
 
-This repository supports **plugins** - bundles of skills, MCP servers, and agent configurations that extend capabilities. The `awslabs/agent-plugins` marketplace includes plugins like `deploy-on-aws` (architecture recommendations, cost estimates, and working IaC), `amazon-location-service` (maps, geocoding, routing, and geospatial features), and `migration-to-aws` (GCP-to-AWS migration with resource discovery, architecture mapping, and cost analysis).
+This repository supports **plugins** - bundles of skills, MCP servers, and agent configurations that extend capabilities. The `awslabs/agent-plugins` marketplace includes plugins like `deploy-on-aws` (architecture recommendations, cost estimates, and working IaC), `amazon-location-service` (maps, geocoding, routing, and geospatial features), `databases-on-aws` (database guidance for the AWS portfolio, starting with Aurora DSQL), and `migration-to-aws` (GCP-to-AWS migration with resource discovery, architecture mapping, and cost analysis).
 
 ## Core Concepts
 
@@ -49,13 +49,25 @@ agent-plugins/
 │   │               ├── cost-estimation.md
 │   │               └── security.md
 │   ├── amazon-location-service/
-│       ├── .claude-plugin/
-│       │   └── plugin.json
-│       ├── .mcp.json
-│       └── skills/
-│           └── amazon-location-service/
-│               ├── SKILL.md
-│               └── references/
+│   │   ├── .claude-plugin/
+│   │   │   └── plugin.json
+│   │   ├── .mcp.json
+│   │   └── skills/
+│   │       └── amazon-location-service/
+│   │           ├── SKILL.md
+│   │           └── references/
+│   ├── databases-on-aws/
+│   │   ├── .claude-plugin/
+│   │   │   └── plugin.json
+│   │   ├── .mcp.json
+│   │   ├── hooks/
+│   │   │   └── hooks.json
+│   │   ├── scripts/
+│   │   └── skills/
+│   │       └── dsql/
+│   │           ├── SKILL.md
+│   │           ├── mcp/
+│   │           └── references/
 │   └── migration-to-aws/
 │       ├── .claude-plugin/
 │       │   └── plugin.json
@@ -69,7 +81,14 @@ agent-plugins/
 │   ├── plugin.schema.json
 │   ├── mcp.schema.json
 │   └── skill-frontmatter.schema.json
-├── tools/                        # Lint/validation scripts
+├── tools/                        # Lint, validation, and eval scripts
+│   ├── evals/                    # Eval suites for plugins, kept separate from plugin clients
+│   │   └── databases-on-aws/
+│   │       ├── README.md
+│   │       ├── evals.json
+│   │       ├── trigger_evals.json
+│   │       └── scripts/
+│   │           └── run_functional_evals.py
 │   ├── validate-cross-refs.cjs
 │   └── ...
 ├── mise.toml                     # Tool versions and tasks
@@ -94,6 +113,13 @@ agent-plugins/
 | Server    | Type  | Purpose                                |
 | --------- | ----- | -------------------------------------- |
 | `aws-mcp` | stdio | AWS documentation and service guidance |
+
+### databases-on-aws
+
+| Server         | Type  | Purpose                                                                          |
+| -------------- | ----- | -------------------------------------------------------------------------------- |
+| `awsknowledge` | HTTP  | AWS documentation, architecture guidance, and best practices                     |
+| `aurora-dsql`  | stdio | Direct database operations — queries, schema, transactions (disabled by default) |
 
 ### migration-to-aws
 

@@ -1,0 +1,22 @@
+{
+  "author": {
+    "name": "Amazon Web Services"
+  },
+  "description": "Build, train, and deploy AI models with deep AWS AI/ML expertise brought directly into your coding assistants, covering the surface area of Amazon SageMaker AI.",
+  "homepage": "https://github.com/awslabs/agent-plugins",
+  "keywords": [
+    "sagemaker",
+    "machine-learning",
+    "generative-ai",
+    "fine-tuning",
+    "training",
+    "deployment",
+    "inference",
+    "mlops",
+    "aws"
+  ],
+  "license": "Apache-2.0",
+  "name": "sagemaker-ai",
+  "repository": "https://github.com/awslabs/agent-plugins",
+  "version": "1.0.0"
+}
