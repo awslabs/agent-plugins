@@ -14,7 +14,7 @@ This plugin brings deep AWS AI/ML expertise directly into your coding assistant,
 | 3  | `use-case-specification`   | Guided, conversational process to define your model customization use case goals, key stakeholders, and success criteria | [SKILL.md](skills/use-case-specification/SKILL.md)   |
 | 4  | `dataset-evaluation`       | Dataset quality validation, format detection, and data requirements analysis                                             | [SKILL.md](skills/dataset-evaluation/SKILL.md)       |
 | 5  | `dataset-transformation`   | Dataset format conversion and preparation for SageMaker-compatible training formats                                      | [SKILL.md](skills/dataset-transformation/SKILL.md)   |
-| 6  | `finetuning-setup`         | Fine-tuning technique selection (SFT, DPO, RVLR, etc.) and base model selection                                          | [SKILL.md](skills/finetuning-setup/SKILL.md)         |
+| 6  | `finetuning-setup`         | Fine-tuning technique selection (SFT, DPO, RLVR, etc.) and base model selection                                          | [SKILL.md](skills/finetuning-setup/SKILL.md)         |
 | 7  | `finetuning`               | Hyperparameter configuration and training job execution                                                                  | [SKILL.md](skills/finetuning/SKILL.md)               |
 | 8  | `model-evaluation`         | Evaluation design, benchmark selection, LLM-as-a-judge, and model comparison                                             | [SKILL.md](skills/model-evaluation/SKILL.md)         |
 | 9  | `model-deployment`         | Deployment configuration and endpoint setup (SageMaker or Bedrock)                                                       | [SKILL.md](skills/model-deployment/SKILL.md)         |
@@ -77,6 +77,10 @@ For Kiro IDE users who use the chat interface, SageMaker AI model customization 
 - "I want to fine-tune a model for customer support classification"
 - "Evaluate my dataset for finetuning a base model"
 - "Deploy my fine-tuned model"
+
+### Getting Started
+
+You can try it out with the sample datasets [here](https://docs.aws.amazon.com/sagemaker/latest/dg/model-customize-open-weight-samples.html).
 
 ## HyperPod Cluster Operations
 
@@ -154,12 +158,14 @@ Learn more about AWS Identity and Access Management for Amazon SageMaker AI [her
 #### Configuration
 
 - Set `AWS_DEFAULT_REGION` to your preferred AWS region (e.g., `us-east-1`) for your customization workflow. See [Configuring environment variables](https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-envvars.html) for details. If you're using isolated environments such as conda or venv, make sure to set your environment variables within your environment.
+
+#### Callouts
+
 - SageMaker LLM as a Judge: This feature is powered by Amazon Bedrock Evaluations. Your use of this feature is subject to pricing of Amazon Bedrock Evaluations, see the [Service Terms](https://aws.amazon.com/service-terms/) applicable to Amazon Bedrock, and the terms that apply to your usage of third-party models. Amazon Bedrock Evaluations may securely transmit data across AWS Regions within your geography for processing. For more information, access [Amazon Bedrock Evaluations documentation](https://docs.aws.amazon.com/bedrock/latest/userguide/evaluation-judge.html).
 - When deploying a customized model to Bedrock for inference, set your region inference policy to control scale of inference geographically or globally. See [Bedrock documentation](https://docs.aws.amazon.com/bedrock/latest/userguide/cross-region-inference.html).
-- Callouts:
-  - Nova models are subject to the following restrictions:
-    - Only available for customization in us-east-1
-    - Not supported for model evaluation with LLMaaJ.
+- Nova models are subject to the following restrictions:
+  - Only available for customization in us-east-1
+  - Not supported for model evaluation with LLMaaJ.
 
 ## Customizing Skills for Your Organization
 
