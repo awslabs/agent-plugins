@@ -5,7 +5,8 @@
       "args": ["awslabs.aws-iac-mcp-server@latest"],
       "env": {
         "FASTMCP_LOG_LEVEL": "ERROR"
-      }
+      },
+      "type": "stdio"
     },
     "awsknowledge": {
       "type": "http",
