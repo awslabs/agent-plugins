@@ -140,6 +140,25 @@
       "source": "./plugins/migration-to-aws",
       "tags": ["aws", "gcp", "migration", "infrastructure"],
       "version": "1.0.0"
+    },
+    {
+      "category": "ai",
+      "description": "Build, train, and deploy AI models with deep AWS AI/ML expertise brought directly into your coding assistants, covering the surface area of Amazon SageMaker AI.",
+      "keywords": [
+        "aws",
+        "sagemaker",
+        "machine-learning",
+        "generative-ai",
+        "fine-tuning",
+        "training",
+        "deployment",
+        "inference",
+        "mlops"
+      ],
+      "name": "sagemaker-ai",
+      "source": "./plugins/sagemaker-ai",
+      "tags": ["aws", "sagemaker", "machine-learning", "generative-ai"],
+      "version": "1.0.0"
     }
   ]
 }

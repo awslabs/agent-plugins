@@ -28,14 +28,15 @@ To maximize the benefits of plugin-assisted development while maintaining securi
 
 ## Plugins
 
-| Plugin                      | Description                                                                                                            | Status                                |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| **amazon-location-service** | Add maps, geocoding, routing, places search, and geospatial features to applications with Amazon Location Service      | Available                             |
-| **aws-amplify**             | Build full-stack apps with AWS Amplify Gen 2 using guided workflows for auth, data, storage, and functions             | Available                             |
-| **aws-serverless**          | Build serverless applications with Lambda, API Gateway, EventBridge, Step Functions, and durable functions             | Available                             |
-| **databases-on-aws**        | Database guidance for the AWS database portfolio — schema design, queries, migrations, and multi-tenant patterns       | Some Services Available (Aurora DSQL) |
-| **deploy-on-aws**           | Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment                       | Available                             |
-| **migration-to-aws**        | Migrate GCP infrastructure to AWS with resource discovery, architecture mapping, cost analysis, and execution planning | Available                             |
+| Plugin                      | Description                                                                                                                                                                                             | Status                                |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| **amazon-location-service** | Add maps, geocoding, routing, places search, and geospatial features to applications with Amazon Location Service                                                                                       | Available                             |
+| **aws-amplify**             | Build full-stack apps with AWS Amplify Gen 2 using guided workflows for auth, data, storage, and functions                                                                                              | Available                             |
+| **aws-serverless**          | Build serverless applications with Lambda, API Gateway, EventBridge, Step Functions, and durable functions                                                                                              | Available                             |
+| **databases-on-aws**        | Database guidance for the AWS database portfolio — schema design, queries, migrations, and multi-tenant patterns                                                                                        | Some Services Available (Aurora DSQL) |
+| **deploy-on-aws**           | Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment                                                                                                        | Available                             |
+| **migration-to-aws**        | Migrate GCP infrastructure to AWS with resource discovery, architecture mapping, cost analysis, and execution planning                                                                                  | Available                             |
+| **sagemaker-ai**            | Build, train, and deploy AI models with deep AWS AI/ML expertise brought directly into your coding assistants, covering the surface area of [Amazon SageMaker AI](https://aws.amazon.com/sagemaker/ai/) | Available                             |
 
 ## Installation
 
@@ -81,6 +82,12 @@ or
 
 ```bash
 /plugin install migration-to-aws@agent-plugins-for-aws
+```
+
+or
+
+```bash
+/plugin install sagemaker-ai@agent-plugins-for-aws
 ```
 
 ### Cursor
@@ -271,6 +278,10 @@ Helps you systematically migrate GCP infrastructure to AWS through Terraform res
 | **awsknowledge** | AWS documentation, architecture guidance         |
 | **awspricing**   | Real-time AWS service pricing for cost estimates |
 
+## sagemaker-ai
+
+Build, train, and deploy AI models with deep AWS AI/ML expertise brought directly into your coding assistants, covering the surface area of [Amazon SageMaker AI](https://aws.amazon.com/sagemaker/ai/). [Learn more](./plugins/sagemaker-ai/README.md).
+
 ## Requirements
 
 - Claude Code >=2.1.29 or [Cursor >= 2.5](https://cursor.com/changelog/2-5)
@@ -293,6 +304,10 @@ If you want to add a new plugin to the library, check out our [design guidelines
 ## Maintainers
 
 Repository reviewers, maintainers, and admins can find PR review workflows, merge rules, and CI/CD documentation in the [maintainers guide](./docs/MAINTAINERS_GUIDE.md).
+
+## Administrators
+
+GitHub environment and AWS account configuration are documented in the [administrators guide](./docs/ADMINISTRATORS_GUIDE.md).
 
 ## Additional Resources
 

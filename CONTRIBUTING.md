@@ -8,6 +8,7 @@ Depending on your role, please review the appropriate guide for repository-speci
 
 - [Development Guide](./docs/DEVELOPMENT_GUIDE.md) - For contributors and developers
 - [Maintainers Guide](./docs/MAINTAINERS_GUIDE.md) - For reviewers, maintainers, and admins
+- [Administrators Guide](./docs/ADMINISTRATORS_GUIDE.md) - For GitHub repository and AWS account setup
 
 **Using Claude Code?** See the [Claude Code Setup](./docs/DEVELOPMENT_GUIDE.md#claude-code-setup) section in the Development Guide for project-specific configuration.
 

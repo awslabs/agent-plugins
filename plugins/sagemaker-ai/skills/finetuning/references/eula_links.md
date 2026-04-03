@@ -1,0 +1,19 @@
+# Model License Information
+
+| SageMaker Hub Model ID                       | Model Name                   | License URL(s)                                                                                                                    |
+| -------------------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `huggingface-reasoning-qwen3-8b`             | Qwen3-8B                     | https://huggingface.co/Qwen/Qwen3-8B/blob/main/LICENSE                                                                            |
+| `huggingface-reasoning-qwen3-32b`            | Qwen3-32B                    | https://huggingface.co/Qwen/Qwen3-32B/blob/main/LICENSE                                                                           |
+| `huggingface-reasoning-qwen3-06b`            | Qwen3-0.6B                   | https://huggingface.co/Qwen/Qwen3-0.6B/blob/main/LICENSE                                                                          |
+| `huggingface-llm-qwen2-5-7b-instruct`        | Qwen2.5-7B-Instruct          | https://huggingface.co/Qwen/Qwen2.5-7B-Instruct/blob/main/LICENSE                                                                 |
+| `huggingface-llm-qwen2-5-32b-instruct`       | Qwen2.5-32B-Instruct         | https://huggingface.co/Qwen/Qwen2.5-32B-Instruct/blob/main/LICENSE                                                                |
+| `deepseek-llm-r1-distill-qwen-32b`           | DeepSeek-R1-Distill-Qwen-32B | https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-32B/blob/main/LICENSE                                                 |
+| `openai-reasoning-gpt-oss-20b`               | GPT-OSS-20B                  | https://huggingface.co/openai/gpt-oss-20b/blob/main/LICENSE<br>https://huggingface.co/openai/gpt-oss-20b/blob/main/USAGE_POLICY   |
+| `openai-reasoning-gpt-oss-120b`              | GPT-OSS-120B                 | https://huggingface.co/openai/gpt-oss-120b/blob/main/LICENSE<br>https://huggingface.co/openai/gpt-oss-120b/blob/main/USAGE_POLICY |
+| `nova-textgeneration-pro`                    | Amazon Nova Pro              | https://aws.amazon.com/service-terms/                                                                                             |
+| `nova-textgeneration-micro`                  | Amazon Nova Micro            | https://aws.amazon.com/service-terms/                                                                                             |
+| `nova-textgeneration-lite`                   | Amazon Nova Lite             | https://aws.amazon.com/service-terms/                                                                                             |
+| `nova-textgeneration-lite-v2`                | Amazon Nova Lite v2          | https://aws.amazon.com/service-terms/                                                                                             |
+| `meta-textgeneration-llama-3-3-70b-instruct` | Llama 3.3 70B Instruct       | https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct/blob/main/LICENSE                                                        |
+| `meta-textgeneration-llama-3-2-1b-instruct`  | Llama 3.2 1B Instruct        | https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct/blob/main/LICENSE.txt                                                     |
+| `meta-textgeneration-llama-3-1-8b-instruct`  | Llama 3.1 8B Instruct        | https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct/blob/main/LICENSE                                                         |
