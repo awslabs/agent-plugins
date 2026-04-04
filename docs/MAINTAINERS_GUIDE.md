@@ -112,16 +112,17 @@ Triage incoming issues by applying appropriate labels and assigning to the relev
 
 All workflows are in [`.github/workflows/`](../.github/workflows/):
 
-| Workflow                 | Trigger                    | Purpose                                                           |
-| ------------------------ | -------------------------- | ----------------------------------------------------------------- |
-| `build.yml`              | PR, push to main           | Full build (`mise run build`: lint + format check + security)     |
-| `pull-request-lint.yml`  | PR                         | Conventional commit title validation, contributor statement check |
-| `merge-prevention.yml`   | PR, merge queue            | `do-not-merge` label and `HALT_MERGES` enforcement                |
-| `security-scanners.yml`  | PR, push to main           | Bandit, SemGrep, Gitleaks, Checkov, Grype                         |
-| `codeql.yml`             | PR, push to main, schedule | GitHub CodeQL analysis                                            |
-| `dependency-review.yml`  | PR                         | Dependency vulnerability review                                   |
-| `scorecard-analysis.yml` | Push to main, schedule     | OpenSSF Scorecard                                                 |
-| `stale.yml`              | Daily cron                 | Stale PR/issue management                                         |
+| Workflow                 | Trigger                    | Purpose                                                                                                   |
+| ------------------------ | -------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `build.yml`              | PR, push to main           | Full build (`mise run build`: lint + format check + security)                                             |
+| `build-codebuild.yml`    | `workflow_dispatch`        | Full build on AWS CodeBuild (see [Administrators Guide](./ADMINISTRATORS_GUIDE.md#codebuild-integration)) |
+| `pull-request-lint.yml`  | PR                         | Conventional commit title validation, contributor statement check                                         |
+| `merge-prevention.yml`   | PR, merge queue            | `do-not-merge` label and `HALT_MERGES` enforcement                                                        |
+| `security-scanners.yml`  | PR, push to main           | Bandit, SemGrep, Gitleaks, Checkov, Grype                                                                 |
+| `codeql.yml`             | PR, push to main, schedule | GitHub CodeQL analysis                                                                                    |
+| `dependency-review.yml`  | PR                         | Dependency vulnerability review                                                                           |
+| `scorecard-analysis.yml` | Push to main, schedule     | OpenSSF Scorecard                                                                                         |
+| `stale.yml`              | Daily cron                 | Stale PR/issue management                                                                                 |
 
 ## Release Process
 
