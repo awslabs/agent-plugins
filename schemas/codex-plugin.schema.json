@@ -1,0 +1,125 @@
+{
+  "$id": "https://awslabs.github.io/agent-plugins/schemas/codex-plugin.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Schema for Codex plugin manifests",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "name",
+    "version",
+    "description",
+    "author",
+    "interface"
+  ],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "version": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "author": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      }
+    },
+    "homepage": {
+      "type": "string"
+    },
+    "repository": {
+      "type": "string"
+    },
+    "license": {
+      "type": "string"
+    },
+    "keywords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "skills": {
+      "type": "string"
+    },
+    "hooks": {
+      "type": "string"
+    },
+    "mcpServers": {
+      "type": "string"
+    },
+    "apps": {
+      "type": "string"
+    },
+    "interface": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "displayName",
+        "shortDescription",
+        "longDescription",
+        "developerName",
+        "category",
+        "capabilities"
+      ],
+      "properties": {
+        "displayName": {
+          "type": "string"
+        },
+        "shortDescription": {
+          "type": "string"
+        },
+        "longDescription": {
+          "type": "string"
+        },
+        "developerName": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "websiteURL": {
+          "type": "string"
+        },
+        "privacyPolicyURL": {
+          "type": "string"
+        },
+        "termsOfServiceURL": {
+          "type": "string"
+        },
+        "defaultPrompt": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "type": "string"
+          }
+        },
+        "brandColor": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

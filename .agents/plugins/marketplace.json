@@ -1,0 +1,92 @@
+{
+  "name": "agent-plugins-for-aws",
+  "interface": {
+    "displayName": "Agent Plugins for AWS"
+  },
+  "plugins": [
+    {
+      "name": "amazon-location-service",
+      "source": {
+        "source": "local",
+        "path": "./plugins/amazon-location-service"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Location"
+    },
+    {
+      "name": "aws-amplify",
+      "source": {
+        "source": "local",
+        "path": "./plugins/aws-amplify"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Full Stack"
+    },
+    {
+      "name": "aws-serverless",
+      "source": {
+        "source": "local",
+        "path": "./plugins/aws-serverless"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Development"
+    },
+    {
+      "name": "databases-on-aws",
+      "source": {
+        "source": "local",
+        "path": "./plugins/databases-on-aws"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Database"
+    },
+    {
+      "name": "deploy-on-aws",
+      "source": {
+        "source": "local",
+        "path": "./plugins/deploy-on-aws"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Deployment"
+    },
+    {
+      "name": "migration-to-aws",
+      "source": {
+        "source": "local",
+        "path": "./plugins/migration-to-aws"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Migration"
+    },
+    {
+      "name": "sagemaker-ai",
+      "source": {
+        "source": "local",
+        "path": "./plugins/sagemaker-ai"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "AI"
+    }
+  ]
+}

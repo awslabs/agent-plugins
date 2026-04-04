@@ -51,6 +51,8 @@ description = "Validate JSON manifests"
 run = [
   "ajv validate -s schemas/marketplace.schema.json -d '.claude-plugin/marketplace.json' --all-errors --errors=text",
   "ajv validate -s schemas/plugin.schema.json -d 'plugins/**/.claude-plugin/plugin.json' --all-errors --errors=text",
+  "ajv validate -s schemas/codex-marketplace.schema.json -d '.agents/plugins/marketplace.json' --all-errors --errors=text",
+  "ajv validate -s schemas/codex-plugin.schema.json -d 'plugins/**/.codex-plugin/plugin.json' --all-errors --errors=text",
   "ajv validate -s schemas/mcp.schema.json -d 'plugins/**/.mcp.json' --all-errors --errors=text",
 ]
 

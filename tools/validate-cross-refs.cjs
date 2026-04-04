@@ -13,7 +13,8 @@
 const fs = require("fs");
 const path = require("path");
 
-const MARKETPLACE_PATH = ".claude-plugin/marketplace.json";
+const CLAUDE_MARKETPLACE_PATH = ".claude-plugin/marketplace.json";
+const CODEX_MARKETPLACE_PATH = ".agents/plugins/marketplace.json";
 const PLUGINS_ROOT = "plugins";
 
 const BASE_DIR = path.resolve(process.cwd(), PLUGINS_ROOT);
@@ -48,54 +49,57 @@ function info(message) {
   console.log(`INFO: ${message}`);
 }
 
-function validateMarketplace() {
+function validateMarketplace(marketplacePath, manifestPathParts) {
   // Check marketplace.json exists
-  if (!fs.existsSync(MARKETPLACE_PATH)) {
-    error(`Marketplace file not found: ${MARKETPLACE_PATH}`);
+  if (!fs.existsSync(marketplacePath)) {
+    error(`Marketplace file not found: ${marketplacePath}`);
     return;
   }
 
   let marketplace;
   try {
-    marketplace = JSON.parse(fs.readFileSync(MARKETPLACE_PATH, "utf8"));
+    marketplace = JSON.parse(fs.readFileSync(marketplacePath, "utf8"));
   } catch (e) {
-    error(`Failed to parse ${MARKETPLACE_PATH}: ${e.message}`);
+    error(`Failed to parse ${marketplacePath}: ${e.message}`);
     return;
   }
 
   // Check plugins array exists
   if (!marketplace.plugins || !Array.isArray(marketplace.plugins)) {
-    error(`${MARKETPLACE_PATH} must have a "plugins" array`);
+    error(`${marketplacePath} must have a "plugins" array`);
     return;
   }
 
   // Empty plugins array is valid
   if (marketplace.plugins.length === 0) {
-    info("No plugins defined in marketplace.json");
+    info(`No plugins defined in ${marketplacePath}`);
     return;
   }
 
   // Validate each plugin
   for (const plugin of marketplace.plugins) {
-    validatePlugin(plugin);
+    validatePlugin(plugin, marketplacePath, manifestPathParts);
   }
 }
 
-function validatePlugin(plugin) {
+function validatePlugin(plugin, marketplacePath, manifestPathParts) {
   if (!plugin || typeof plugin !== "object" || Array.isArray(plugin)) {
-    error(`Invalid plugin entry in marketplace.json: expected an object but got ${JSON.stringify(plugin)}`);
+    error(`Invalid plugin entry in ${marketplacePath}: expected an object but got ${JSON.stringify(plugin)}`);
     return;
   }
 
   const pluginName = plugin.name;
   if (!pluginName) {
-    error(`Plugin entry missing "name" field`);
+    error(`Plugin entry missing "name" field in ${marketplacePath}`);
     return;
   }
 
-  info(`Validating plugin: ${pluginName}`);
+  info(`Validating plugin: ${pluginName} (${marketplacePath})`);
 
-  const source = plugin.source || `${PLUGINS_ROOT}/${pluginName}`;
+  const source =
+    typeof plugin.source === "string"
+      ? plugin.source
+      : plugin.source?.path || `${PLUGINS_ROOT}/${pluginName}`;
   const pluginDir = resolvePathUnderBase(source);
   if (pluginDir === null) {
     error(`Invalid or disallowed plugin path (path traversal): ${source}`);
@@ -104,7 +108,7 @@ function validatePlugin(plugin) {
 
   // Check 1: Plugin directory exists
   if (!fs.existsSync(pluginDir)) { // nosemgrep: gitlab.eslint.detect-non-literal-fs-filename, javascript.lang.security.audit.detect-non-literal-fs-filename.detect-non-literal-fs-filename
-    error(`Plugin directory not found: ${pluginDir} (referenced by "${pluginName}" in marketplace.json)`);
+    error(`Plugin directory not found: ${pluginDir} (referenced by "${pluginName}" in ${marketplacePath})`);
     return;
   }
 
@@ -123,7 +127,7 @@ function validatePlugin(plugin) {
 
   // Check 4: plugin.json exists
   // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal.path-join-resolve-traversal
-  const pluginJsonPath = path.join(pluginDir, ".claude-plugin", "plugin.json");
+  const pluginJsonPath = path.join(pluginDir, ...manifestPathParts);
   if (!fs.existsSync(pluginJsonPath)) { // nosemgrep: gitlab.eslint.detect-non-literal-fs-filename, javascript.lang.security.audit.detect-non-literal-fs-filename.detect-non-literal-fs-filename
     error(`plugin.json not found: ${pluginJsonPath}`);
     return;
@@ -139,7 +143,7 @@ function validatePlugin(plugin) {
   }
 
   if (pluginJson.name !== pluginName) {
-    error(`Name mismatch: marketplace.json says "${pluginName}", but ${pluginJsonPath} says "${pluginJson.name}"`);
+    error(`Name mismatch: ${marketplacePath} says "${pluginName}", but ${pluginJsonPath} says "${pluginJson.name}"`);
   }
 
   // Check 6: skills/ directory exists (warning only)
@@ -154,7 +158,8 @@ function validatePlugin(plugin) {
 
 // Run validation
 console.log("=== Cross-Reference Validation ===\n");
-validateMarketplace();
+validateMarketplace(CLAUDE_MARKETPLACE_PATH, [".claude-plugin", "plugin.json"]);
+validateMarketplace(CODEX_MARKETPLACE_PATH, [".codex-plugin", "plugin.json"]);
 
 // Summary
 console.log("\n=== Summary ===");
