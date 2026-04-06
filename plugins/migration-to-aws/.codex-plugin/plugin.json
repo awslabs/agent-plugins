@@ -1,0 +1,44 @@
+{
+  "name": "migration-to-aws",
+  "version": "1.0.0",
+  "description": "This no-cost tool assesses your current cloud provider's usage, geography, and billing data to estimate and compare AWS services and pricing, and recommends migration or continued use of your current provider. AWS pricing is based on current published pricing and may vary over time. The tool may generate a .migration folder containing comparison and migration execution data, which you may delete upon completion or use to migrate to AWS.",
+  "author": {
+    "name": "Amazon Web Services",
+    "email": "aws-agent-plugins@amazon.com",
+    "url": "https://github.com/awslabs/agent-plugins"
+  },
+  "homepage": "https://github.com/awslabs/agent-plugins",
+  "repository": "https://github.com/awslabs/agent-plugins",
+  "license": "Apache-2.0",
+  "keywords": [
+    "aws",
+    "gcp",
+    "google-cloud",
+    "migration",
+    "cloud-migration",
+    "terraform",
+    "fargate"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Migration to AWS",
+    "shortDescription": "Discover GCP workloads and plan a migration path to AWS.",
+    "longDescription": "Migration guidance for discovering GCP infrastructure, comparing AWS services and pricing, and planning an execution path.",
+    "defaultPrompt": [
+      "Assess this GCP repo for migration to AWS.",
+      "Compare AWS pricing for this workload.",
+      "Draft a migration execution plan to AWS."
+    ],
+    "developerName": "Amazon Web Services",
+    "category": "Migration",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/awslabs/agent-plugins",
+    "privacyPolicyURL": "https://aws.amazon.com/privacy/",
+    "termsOfServiceURL": "https://aws.amazon.com/service-terms/",
+    "brandColor": "#FF9900"
+  }
+}

@@ -35,6 +35,33 @@ After adding the marketplace, the plugins listed in `.claude/settings.json` will
 
 The project-level `attribution.pr` setting automatically appends the required contributor statement to pull request descriptions created by Claude Code, so the `contributorStatement` CI check passes without manual copy-paste.
 
+## Codex Setup
+
+This project also includes Codex plugin packaging for local marketplace-based
+testing. The repository provides a Codex marketplace at
+`.agents/plugins/marketplace.json` and Codex plugin manifests at
+`plugins/*/.codex-plugin/plugin.json`.
+
+### One-time marketplace setup
+
+Open the repository in Codex so it can discover the repo-local marketplace, then
+restart Codex if the marketplace does not appear immediately.
+
+After restart, the `Agent Plugins for AWS` marketplace should appear in the
+plugin picker and you can install any of the local AWS plugins from there.
+
+### Regenerating Codex manifests
+
+If you update Claude plugin manifests or marketplace metadata, regenerate the
+Codex files with:
+
+```bash
+python3 tools/generate_codex_manifests.py
+```
+
+This keeps the Codex marketplace and per-plugin Codex manifests aligned with the
+Claude source manifests.
+
 ## Working on Your Contribution
 
 | Action                                            | Explanation                                                                                                                                                                                                                                                                                     |

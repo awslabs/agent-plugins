@@ -1,0 +1,45 @@
+{
+  "name": "aws-amplify",
+  "version": "1.0.0",
+  "description": "Build full-stack apps with AWS Amplify Gen 2 using guided workflows for authentication, data models, storage, GraphQL APIs, and Lambda functions.",
+  "author": {
+    "name": "Amazon Web Services",
+    "email": "aws-agent-plugins@amazon.com",
+    "url": "https://github.com/awslabs/agent-plugins"
+  },
+  "homepage": "https://github.com/awslabs/agent-plugins",
+  "repository": "https://github.com/awslabs/agent-plugins",
+  "license": "Apache-2.0",
+  "keywords": [
+    "aws",
+    "amplify",
+    "fullstack",
+    "authentication",
+    "data",
+    "storage",
+    "graphql",
+    "functions"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "AWS Amplify",
+    "shortDescription": "Build and deploy Amplify Gen 2 applications with guided workflows.",
+    "longDescription": "Amplify Gen 2 guidance for authentication, data, storage, functions, and deployment workflows.",
+    "defaultPrompt": [
+      "Plan an Amplify Gen 2 architecture for this app.",
+      "Add Amplify auth and data to this project.",
+      "Set up an Amplify deployment workflow."
+    ],
+    "developerName": "Amazon Web Services",
+    "category": "Full Stack",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/awslabs/agent-plugins",
+    "privacyPolicyURL": "https://aws.amazon.com/privacy/",
+    "termsOfServiceURL": "https://aws.amazon.com/service-terms/",
+    "brandColor": "#FF9900"
+  }
+}
