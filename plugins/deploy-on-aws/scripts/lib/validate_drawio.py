@@ -24,6 +24,23 @@ for category in shapes_data["categories"].values():
         valid_shapes.add(shape)
 
 
+def _sanitize_attr(value: str, max_len: int = 80) -> str:
+    """Sanitize an XML attribute value for safe inclusion in error messages.
+
+    Strips non-printable characters, collapses whitespace, truncates, and
+    restricts to safe characters to prevent prompt injection through crafted
+    draw.io attributes that flow into agent systemMessage context.
+    """
+    if not value:
+        return "(empty)"
+    sanitized = re.sub(r"[\x00-\x1f\x7f-\x9f]", "", value)
+    sanitized = re.sub(r"\s+", " ", sanitized).strip()
+    sanitized = re.sub(r"[^\w\-.:# ]", "_", sanitized)
+    if len(sanitized) > max_len:
+        sanitized = sanitized[:max_len] + "...(truncated)"
+    return sanitized
+
+
 def validate(file_path):
     errors = []
     warnings = []
@@ -125,7 +142,7 @@ def validate(file_path):
         if is_vertex:
             geometries = cell.findall("mxGeometry")
             if not geometries:
-                warnings.append(f'Vertex cell id="{cell_id}" is missing <mxGeometry>.')
+                warnings.append(f'Vertex cell id="{_sanitize_attr(cell_id)}" is missing <mxGeometry>.')
 
     if not has_root_cell:
         errors.append('Missing root cell (mxCell id="0").')
@@ -139,11 +156,13 @@ def validate(file_path):
             target = cell.get("target")
             if source and source not in cell_ids:
                 errors.append(
-                    f'Edge id="{cell.get("id")}" references non-existent source="{source}".'
+                    f'Edge id="{_sanitize_attr(cell.get("id"))}" references '
+                    f'non-existent source="{_sanitize_attr(source)}".'
                 )
             if target and target not in cell_ids:
                 errors.append(
-                    f'Edge id="{cell.get("id")}" references non-existent target="{target}".'
+                    f'Edge id="{_sanitize_attr(cell.get("id"))}" references '
+                    f'non-existent target="{_sanitize_attr(target)}".'
                 )
 
     # Report invalid AWS shapes
@@ -162,7 +181,7 @@ def validate(file_path):
         bg = model.get("background")
         if bg is not None:
             errors.append(
-                f'mxGraphModel has background="{bg}". '
+                f'mxGraphModel has background="{_sanitize_attr(bg)}". '
                 "Do not set a background attribute — it breaks dark mode adaptive contrast."
             )
             break
