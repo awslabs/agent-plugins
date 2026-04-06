@@ -101,6 +101,46 @@ You can install the **deploy-on-aws** plugin from the [Cursor Marketplace](https
 - Select the scope for the installed plugin
 - The plugin should appear under `Plugins -> Installed`
 
+### Kiro (experimental)
+
+You can convert Claude Code plugins into Kiro format using the third-party [`@every-env/compound-plugin`](https://www.npmjs.com/package/@every-env/compound-plugin) CLI. This converts skills (SKILL.md workflow instructions and reference documents) and MCP server configs into Kiro's `.kiro/` format.
+
+Requires [Bun](https://bun.sh) (latest version recommended).
+
+> [!NOTE]
+> Hook conversion is a work in progress — hooks are currently dropped entirely during conversion because the Claude Code and Kiro hook models are not 1:1. Skills and MCP servers are fully supported.
+
+#### Project scope
+
+Writes to `.kiro/` in the current working directory:
+
+```bash
+COMPOUND_PLUGIN_GITHUB_SOURCE=https://github.com/awslabs/agent-plugins \
+  bunx @every-env/compound-plugin install deploy-on-aws --to kiro
+```
+
+#### Global scope
+
+Writes to `~/.kiro/` so skills are available across all projects:
+
+```bash
+COMPOUND_PLUGIN_GITHUB_SOURCE=https://github.com/awslabs/agent-plugins \
+  bunx @every-env/compound-plugin install deploy-on-aws --to kiro --output ~/.kiro
+```
+
+Replace `deploy-on-aws` with any plugin name from the table above (e.g., `aws-serverless`, `amazon-location-service`, `migration-to-aws`, `aws-amplify`).
+
+> [!TIP]
+> If a skill isn't activated automatically, you can explicitly invoke it by saying "Use the deploy skill to ..." in your prompt. Kiro's intent matching may not always auto-trigger skills.
+>
+> If `bunx` fails with a "Cannot find package" error, clear the bun cache and retry:
+>
+> ```bash
+> rm -rf ~/.bun/install/cache/@every-env
+> ```
+
+For issues with the conversion tool, please report them at [EveryInc/compound-engineering-plugin](https://github.com/EveryInc/compound-engineering-plugin/issues).
+
 ## amazon-location-service
 
 Guides developers through adding maps, places search, geocoding, routing, and other geospatial features with Amazon Location Service, including authentication setup, SDK integration, and best practices.
