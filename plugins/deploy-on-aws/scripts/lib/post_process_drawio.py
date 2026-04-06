@@ -11,18 +11,32 @@ Reads JSON from stdin (PostToolUse hook format) or accepts file path as argument
 """
 
 import argparse
+import importlib.util
 import json
 import sys
+import xml.etree.ElementTree as StdET
 import defusedxml.ElementTree as ET
 from pathlib import Path
 
-# Import sibling modules
+# Import sibling modules by explicit file path (avoids sys.path manipulation
+# that could allow module shadowing — see CWE-426)
 SCRIPT_DIR = Path(__file__).parent
-sys.path.insert(0, str(SCRIPT_DIR))
 
-from fix_icon_colors import fix_icon_colors
-from fix_nesting import fix_nesting
-from fix_step_badges import fix_badges
+
+def _import_from(module_name: str, file_name: str):
+    spec = importlib.util.spec_from_file_location(module_name, SCRIPT_DIR / file_name)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+_fix_icon_colors = _import_from("fix_icon_colors", "fix_icon_colors.py")
+_fix_nesting = _import_from("fix_nesting", "fix_nesting.py")
+_fix_step_badges = _import_from("fix_step_badges", "fix_step_badges.py")
+
+fix_icon_colors = _fix_icon_colors.fix_icon_colors
+fix_nesting = _fix_nesting.fix_nesting
+fix_badges = _fix_step_badges.fix_badges
 
 
 def get_style_dict(style_str: str) -> dict[str, str]:
@@ -324,7 +338,7 @@ def main() -> None:
         summary = "; ".join(changes)
         print(f"Post-processing: {summary}")
         if not args.dry_run:
-            ET.indent(tree, space="  ")
+            StdET.indent(tree, space="  ")
             tree.write(file_path, encoding="unicode", xml_declaration=False)
             print(f"Written: {file_path}")
         else:

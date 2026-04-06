@@ -25,7 +25,7 @@ try:
     data = json.load(sys.stdin)
     path = data.get('tool_input', {}).get('file_path', '')
     print(path)
-except:
+except (json.JSONDecodeError, KeyError, TypeError, ValueError):
     print('')
 " 2>/dev/null || echo "")
 
@@ -72,7 +72,10 @@ PREVIEW URL: ${URL_RESULT}"
 fi
 
 if [[ -n "$FULL_RESULT" ]]; then
-    ESCAPED=$(echo "$FULL_RESULT" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read().strip()))" 2>/dev/null || echo "\"$FULL_RESULT\"")
+    ESCAPED=$(echo "$FULL_RESULT" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read().strip()))" 2>/dev/null)
+    if [[ -z "$ESCAPED" ]]; then
+        ESCAPED='"draw.io validation completed but output encoding failed. Run validator manually for details."'
+    fi
     echo "{\"systemMessage\": $ESCAPED}"
 else
     echo '{"systemMessage": "draw.io XML validation passed. All AWS shapes are valid."}'

@@ -19,8 +19,20 @@ from platform import system
 from urllib.parse import quote
 
 
+MAX_FILE_SIZE = 2 * 1024 * 1024  # 2 MB
+
+
 def generate_url(file_path):
-    xml = Path(file_path).read_text(encoding="utf-8").strip()
+    path = Path(file_path)
+    file_size = path.stat().st_size
+    if file_size > MAX_FILE_SIZE:
+        print(
+            f"Error: File too large ({file_size // 1024}KB > {MAX_FILE_SIZE // 1024 // 1024}MB limit)",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    xml = path.read_text(encoding="utf-8").strip()
 
     if not xml:
         print("Error: File is empty", file=sys.stderr)
