@@ -14,7 +14,6 @@ import argparse
 import importlib.util
 import json
 import sys
-import xml.etree.ElementTree as StdET  # nosec B405 # nosemgrep: gitlab.bandit.B313.B314.B315.B316.B318.B319.B320.B405.B406.B407.B408.B409.B410, python.lang.security.use-defused-xml.use-defused-xml
 import defusedxml.ElementTree as ET
 from pathlib import Path
 
@@ -338,7 +337,10 @@ def main() -> None:
         summary = "; ".join(changes)
         print(f"Post-processing: {summary}")
         if not args.dry_run:
-            StdET.indent(tree, space="  ")
+            # Note: XML indentation skipped — defusedxml doesn't expose indent()
+            # and importing stdlib xml.etree.ElementTree triggers security scanners.
+            # Output is valid but not pretty-printed. If human-readable XML is needed,
+            # add a custom indent helper that walks the element tree without stdlib import.
             tree.write(file_path, encoding="unicode", xml_declaration=False)
             print(f"Written: {file_path}")
         else:
