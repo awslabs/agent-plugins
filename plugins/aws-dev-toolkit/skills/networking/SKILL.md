@@ -50,7 +50,7 @@ Always design with three tiers:
 ### Gateway Endpoints (free)
 - **S3** and **DynamoDB** only
 - Added to route tables — no ENI, no security group
-- Always create these. There is no reason not to.
+- Always create these — they are free (no hourly charge, no per-GB data processing fee), they keep S3/DynamoDB traffic on the AWS backbone instead of traversing NAT Gateways (which charge $0.045/GB processed), and they reduce latency by avoiding the extra hop through NAT. The only cost is a route table entry.
 
 ### Interface Endpoints (cost per hour + data)
 - All other AWS services (STS, Secrets Manager, ECR, CloudWatch, KMS, etc.)
@@ -137,6 +137,33 @@ aws route53 list-hosted-zones --query 'HostedZones[*].{Name:Name,ID:Id,Private:C
 # Route53 — list records
 aws route53 list-resource-record-sets --hosted-zone-id /hostedzone/ZXXXXX
 ```
+
+## Output Format
+
+| Field | Details |
+|-------|---------|
+| **VPC CIDR** | Primary CIDR block and any secondary CIDRs |
+| **Subnet layout** | Public, private, and isolated subnets per AZ with CIDR ranges |
+| **NAT strategy** | NAT Gateway per AZ (production) or single NAT (dev/staging) |
+| **VPC endpoints** | Gateway endpoints (S3, DynamoDB) and interface endpoints by service |
+| **Security groups summary** | SG names, purpose, and key ingress/egress rules |
+| **Transit Gateway** | TGW ID, attachments, route table segmentation (if applicable) |
+| **DNS** | Route53 hosted zones (public/private), routing policies, health checks |
+
+## Reference Files
+
+- `references/cidr-planning.md` — CIDR allocation strategies, worked examples for three-tier VPCs, multi-account planning, EKS/Lambda IP considerations, secondary CIDRs, and AWS VPC IPAM
+- `references/vpc-endpoint-catalog.md` — Catalog of commonly used VPC endpoints organized by priority, with configuration guidance, security groups, cost analysis, and endpoint policies
+
+## Related Skills
+
+- `security-review` — Network security posture, security group audits, NACLs
+- `iam` — VPC endpoint policies, resource-based access control
+- `ec2` — Instance placement, security groups, and subnet selection
+- `ecs` — awsvpc networking, task-level security groups, service discovery, ECR endpoint requirements
+- `eks` — Pod networking, secondary CIDRs, CNI configuration, IP address planning
+- `lambda` — Lambda VPC configuration, ENI usage, endpoint requirements
+- `rds-aurora` — Database subnet groups, isolated subnet placement
 
 ## Anti-Patterns
 

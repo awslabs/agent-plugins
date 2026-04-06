@@ -41,18 +41,7 @@ The effective permission is the **intersection** of all applicable policy types 
 - Human access: Identity Center (SSO) or federated roles
 
 ### Trust Policies
-Every role has a trust policy that defines **who can assume it**:
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [{
-    "Effect": "Allow",
-    "Principal": {"Service": "lambda.amazonaws.com"},
-    "Action": "sts:AssumeRole"
-  }]
-}
-```
+Every role has a trust policy that defines **who can assume it**. See `references/policy-patterns.md` for trust policy examples (Lambda, EC2, ECS, cross-account, SAML, GitHub Actions OIDC).
 
 **Opinionated guidance:**
 - Always specify the most restrictive principal possible
@@ -75,27 +64,7 @@ Every role has a trust policy that defines **who can assume it**:
 
 ### Policy Structure for Least Privilege
 
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "AllowSpecificS3Actions",
-      "Effect": "Allow",
-      "Action": [
-        "s3:GetObject",
-        "s3:PutObject"
-      ],
-      "Resource": "arn:aws:s3:::my-bucket/prefix/*",
-      "Condition": {
-        "StringEquals": {
-          "aws:RequestedRegion": "us-east-1"
-        }
-      }
-    }
-  ]
-}
-```
+Scope each statement to specific actions, resources (by ARN), and conditions. Separate read and write into distinct statements. See `references/policy-patterns.md` for a full least-privilege S3 example.
 
 **Rules:**
 - Never use `"Action": "*"` or `"Resource": "*"` without conditions in production
@@ -111,30 +80,9 @@ Permission boundaries set a **ceiling** on what an identity-based policy can gra
 - Delegating IAM admin: Allow developers to create roles, but only up to the boundary
 - Limiting scope of auto-created roles (e.g., CDK bootstrap roles)
 
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": "*",
-      "Resource": "*"
-    },
-    {
-      "Effect": "Deny",
-      "Action": [
-        "iam:CreateUser",
-        "iam:CreateAccessKey",
-        "organizations:*",
-        "account:*"
-      ],
-      "Resource": "*"
-    }
-  ]
-}
-```
+A typical boundary allows all actions then explicitly denies escalation paths (user creation, access key creation, organizations, account management). See `references/policy-patterns.md` for the full JSON example.
 
-**Key**: A permission boundary Deny is absolute — it cannot be overridden by identity policies.
+**Key**: A permission boundary Deny is absolute -- it cannot be overridden by identity policies.
 
 ## Service Control Policies (SCPs)
 
@@ -142,44 +90,7 @@ SCPs are guardrails for an AWS Organization. They restrict what **member account
 
 ### Common SCP Patterns
 
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "DenyRegionsOutsideAllowed",
-      "Effect": "Deny",
-      "Action": "*",
-      "Resource": "*",
-      "Condition": {
-        "StringNotEquals": {
-          "aws:RequestedRegion": ["us-east-1", "us-west-2", "eu-west-1"]
-        },
-        "ArnNotLike": {
-          "aws:PrincipalARN": "arn:aws:iam::*:role/OrganizationAdmin"
-        }
-      }
-    },
-    {
-      "Sid": "DenyLeavingOrg",
-      "Effect": "Deny",
-      "Action": "organizations:LeaveOrganization",
-      "Resource": "*"
-    },
-    {
-      "Sid": "RequireIMDSv2",
-      "Effect": "Deny",
-      "Action": "ec2:RunInstances",
-      "Resource": "arn:aws:ec2:*:*:instance/*",
-      "Condition": {
-        "StringNotEquals": {
-          "ec2:MetadataHttpTokens": "required"
-        }
-      }
-    }
-  ]
-}
-```
+Common SCP deny statements: region restriction, deny leaving org, require IMDSv2, deny public RDS, deny unencrypted EBS, deny root access keys. See `references/policy-patterns.md` for individual JSON examples of each.
 
 **SCP principles:**
 - SCPs are deny-only in practice. Start with `FullAWSAccess` and add deny statements.
@@ -293,3 +204,19 @@ aws organizations list-policies --filter SERVICE_CONTROL_POLICY --query 'Policie
 - **Not using `aws:PrincipalOrgID`**: When granting cross-account access within an org, use this condition instead of listing individual account IDs. Easier to maintain and automatically includes new accounts.
 - **Ignoring Access Analyzer findings**: External access findings tell you what's shared outside your account. Unreviewed findings are unmanaged risk.
 - **MFA not enforced for console access**: All human users must have MFA. Enforce it via Identity Center or with an IAM policy condition `aws:MultiFactorAuthPresent`.
+
+## Reference Files
+
+| File | Contents |
+|---|---|
+| `references/policy-patterns.md` | Identity-based policies, trust policies (Lambda, EC2, ECS, cross-account, SAML, GitHub Actions OIDC), resource-based policies (S3, KMS, SQS), permission boundaries, SCP examples, condition keys reference |
+| `references/role-templates.md` | Persona-based role templates with trust and identity policies: Developer, Data Engineer, On-Call/Operations, CI/CD Pipeline, Read-Only Auditor, plus a shared permission boundary |
+
+## Related Skills
+
+- `security-review` -- comprehensive security audit and IaC review
+- `aws-architect` -- well-architected design guidance
+- `networking` -- VPC, subnets, security groups, NACLs
+- `lambda` -- Lambda execution roles and resource policies
+- `ecs` -- ECS task roles vs task execution roles
+- `eks` -- Kubernetes RBAC and IRSA (IAM Roles for Service Accounts)

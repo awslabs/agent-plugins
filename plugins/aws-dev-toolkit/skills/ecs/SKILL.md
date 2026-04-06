@@ -15,14 +15,14 @@ You are an AWS ECS specialist. When advising on ECS workloads:
 
 ## Launch Type Selection
 
-**Default to Fargate** unless you have a specific reason not to.
+**Default to Fargate** unless you have a specific reason to manage instances yourself. Fargate eliminates the operational overhead of patching, scaling, and right-sizing EC2 instances — for most teams, the engineering time saved on instance management exceeds the ~20-30% price premium over equivalent EC2 capacity.
 
-- **Fargate**: No instance management, per-vCPU/memory billing, best for most workloads. Use Fargate Spot for fault-tolerant batch/worker tasks (up to 70% savings).
-- **EC2**: Choose only when you need GPU instances, high sustained CPU at scale (cheaper at >80% utilization), specific instance types, or workloads that need host-level access (e.g., Docker-in-Docker, EBS volume mounts).
+- **Fargate**: No instance management, per-vCPU/memory billing, automatic security patching of the underlying host. Use Fargate Spot for fault-tolerant batch/worker tasks (up to 70% savings).
+- **EC2**: Choose when you need GPU instances, sustained CPU at >80% utilization where the price premium matters (Fargate costs ~$0.04/vCPU-hour vs ~$0.03 for EC2 at steady state), specific instance types (Graviton3, high-memory), or host-level access (Docker-in-Docker, EBS volume mounts, custom AMIs).
 
 ## Task Definitions
 
-- One application container per task definition. Sidecars (log routers, envoy proxies, datadog agents) go in the same task definition.
+- One application container per task definition, with sidecars (log routers, envoy proxies, datadog agents) in the same task definition. Reason: ECS scales, deploys, and health-checks at the task level. If you put two unrelated application containers in one task, they scale together (wasting resources when only one needs more capacity), deploy together (risking both when only one changes), and if one crashes the entire task is marked unhealthy. Sidecars are fine because they share the lifecycle of the application container by design.
 - Always set `cpu` and `memory` at the task level for Fargate. For EC2 launch type, set container-level limits.
 - Use `secrets` to pull from Secrets Manager or Parameter Store -- never bake credentials into images or environment variables.
 - Use `dependsOn` with `condition: HEALTHY` for sidecar ordering.
@@ -94,6 +94,28 @@ aws ecs execute-command --cluster my-cluster --task <task-id> --container my-con
 # Tail logs
 aws logs tail /ecs/my-task --follow
 ```
+
+## Output Format
+
+| Field | Details |
+|-------|---------|
+| **Service name** | ECS service name and cluster |
+| **Launch type** | Fargate, Fargate Spot, EC2, or External |
+| **Task CPU/Memory** | vCPU and memory allocation (e.g., 0.5 vCPU / 1 GB) |
+| **Desired count** | Number of tasks, min/max for auto-scaling |
+| **Deployment strategy** | Rolling update, Blue/Green (CodeDeploy), or Canary |
+| **Load balancer** | ALB or NLB, target group health check config |
+| **Auto-scaling** | Scaling metric, target value, min/max capacity |
+| **Logging** | Log driver, log group, retention period |
+
+## Related Skills
+
+- `eks` — Kubernetes-based alternative to ECS for container orchestration
+- `ec2` — EC2 launch type compute, instance selection, and Spot strategy
+- `networking` — VPC, subnet, and security group design for ECS tasks
+- `iam` — Task execution roles and task roles for least-privilege access
+- `cloudfront` — CDN in front of ECS-backed services
+- `observability` — CloudWatch Container Insights, alarms, and dashboards
 
 ## Anti-Patterns
 

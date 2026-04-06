@@ -31,51 +31,18 @@ You are an API Gateway specialist. Help teams design, build, and operate product
 
 ## Authorizer Patterns
 
-### JWT Authorizer (HTTP API) -- Recommended for Cognito/OIDC
-```bash
-aws apigatewayv2 create-authorizer \
-  --api-id abc123 \
-  --authorizer-type JWT \
-  --identity-source '$request.header.Authorization' \
-  --name cognito-auth \
-  --jwt-configuration '{"Audience":["your-app-client-id"],"Issuer":"https://cognito-idp.us-east-1.amazonaws.com/us-east-1_XXXXX"}'
-```
+Choose the right authorizer based on your use case:
 
-### Cognito Authorizer (REST API)
-```bash
-aws apigateway create-authorizer \
-  --rest-api-id abc123 \
-  --name cognito-auth \
-  --type COGNITO_USER_POOLS \
-  --provider-arns arn:aws:cognito-idp:us-east-1:123456789:userpool/us-east-1_XXXXX \
-  --identity-source 'method.request.header.Authorization'
-```
+| Scenario | Recommended Authorizer |
+|---|---|
+| Web/mobile app with Cognito | JWT authorizer (HTTP API) or Cognito authorizer (REST API) |
+| Third-party OIDC (Auth0, Okta) | JWT authorizer (HTTP API) |
+| Custom token format or multi-header auth | Lambda authorizer (REQUEST type) |
+| Service-to-service (internal) | IAM authorization with SigV4 |
 
-### Lambda Authorizer (when you need custom logic)
-```bash
-# REST API - REQUEST type (access full request context)
-aws apigateway create-authorizer \
-  --rest-api-id abc123 \
-  --name custom-auth \
-  --type REQUEST \
-  --authorizer-uri arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:123456789:function:my-authorizer/invocations \
-  --authorizer-result-ttl-in-seconds 300 \
-  --identity-source 'method.request.header.Authorization,context.httpMethod'
-```
+**Opinionated**: Cache authorizer results (300s is a reasonable default) — without caching, every API call invokes your authorizer Lambda, which adds latency (50-200ms) and cost (you pay per invocation). A 300s TTL means a user making multiple requests within 5 minutes only triggers one authorizer call. Adjust down for sensitive operations. Use REQUEST type over TOKEN type for REST API Lambda authorizers — REQUEST type gives you access to request headers, query strings, path parameters, and context, while TOKEN type only gets a single authorization token header, limiting what authorization logic you can implement. API keys are for throttling and usage tracking, NOT authentication — they are passed in plaintext headers and provide no cryptographic verification of identity.
 
-**Opinionated**: Always cache authorizer results (300s default is good). Use REQUEST type over TOKEN type for REST API Lambda authorizers -- it provides more context and is more flexible.
-
-### IAM Authorization
-Best for service-to-service communication. Use SigV4 signing. No custom authorizer needed.
-
-```bash
-# REST API: set authorizationType on method
-aws apigateway put-method \
-  --rest-api-id abc123 \
-  --resource-id xyz789 \
-  --http-method GET \
-  --authorization-type AWS_IAM
-```
+See `references/authorizer-patterns.md` for detailed CLI commands, CDK examples, Lambda authorizer response formats, trust policies, and SigV4 signing examples.
 
 ## Throttling and Rate Limiting
 
@@ -197,16 +164,12 @@ aws apigatewaymanagementapi post-to-connection \
 
 ## CORS Configuration
 
-### HTTP API (simple)
-```bash
-aws apigatewayv2 update-api \
-  --api-id abc123 \
-  --cors-configuration \
-    AllowOrigins="https://example.com",AllowMethods="GET,POST,OPTIONS",AllowHeaders="Authorization,Content-Type",MaxAge=3600
-```
+- **HTTP API**: Built-in CORS support via `cors-configuration`. One command configures everything.
+- **REST API**: Requires manual OPTIONS method with mock integration on each resource, plus CORS headers on all integration responses. Use SAM/CDK to automate this -- doing it manually via CLI is error-prone.
 
-### REST API (manual)
-Must add OPTIONS method with mock integration to each resource, plus add CORS headers in integration responses. Use SAM/CDK to automate this -- doing it manually via CLI is error-prone.
+**Key rules**: Never use wildcard origins in production. If using credentials, you must specify exact origins. For REST API with Lambda proxy integration, return CORS headers from your Lambda function, not from API Gateway.
+
+See `references/cors-recipes.md` for complete configuration examples (CLI, CDK, SAM, CloudFormation), common CORS issues and fixes, and a production checklist.
 
 ## Common CLI Commands
 
@@ -259,3 +222,16 @@ aws apigateway get-export \
 - Use Lambda authorizer caching to avoid re-executing authorizer on every request
 - For high-traffic APIs, consider CloudFront in front of API Gateway for additional caching
 - Monitor 4xx errors -- wasted invocations from bad clients still cost money
+
+## Reference Files
+
+- `references/authorizer-patterns.md` -- Detailed authorizer configurations (JWT, Cognito, Lambda, IAM), trust policies, response formats, CDK examples, and SigV4 signing
+- `references/cors-recipes.md` -- Complete CORS setup for REST and HTTP APIs (CLI, CDK, SAM, CloudFormation), common issues and fixes, production checklist
+
+## Related Skills
+
+- `lambda` -- Backend integration functions, authorizer implementation
+- `iam` -- IAM policies for API Gateway access, SigV4 authorization
+- `cloudfront` -- CDN caching in front of API Gateway, custom domain routing
+- `networking` -- VPC links, private API configuration, DNS
+- `security-review` -- Review API Gateway security posture, authorizer configuration, and WAF rules

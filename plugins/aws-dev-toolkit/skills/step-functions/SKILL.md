@@ -25,56 +25,12 @@ You are a Step Functions specialist. Help teams design reliable, cost-effective 
 ## State Types
 
 ### Task State (does work)
-```json
-{
-  "ProcessPayment": {
-    "Type": "Task",
-    "Resource": "arn:aws:lambda:us-east-1:123456789:function:process-payment",
-    "Retry": [
-      {
-        "ErrorEquals": ["States.TaskFailed"],
-        "IntervalSeconds": 2,
-        "MaxAttempts": 3,
-        "BackoffRate": 2.0
-      }
-    ],
-    "Catch": [
-      {
-        "ErrorEquals": ["States.ALL"],
-        "Next": "HandlePaymentFailure",
-        "ResultPath": "$.error"
-      }
-    ],
-    "Next": "ShipOrder"
-  }
-}
-```
 
-**Opinionated**: Always add Retry and Catch to every Task state. The Retry handles transient failures automatically. The Catch handles permanent failures gracefully. There is no excuse for a Task without error handling.
+**Opinionated**: Always add Retry and Catch to every Task state. Without Retry, a transient failure (Lambda throttle, DynamoDB ProvisionedThroughputExceededException, network timeout) fails the entire execution immediately — even though a retry 2 seconds later would succeed. Without Catch, a permanent failure (invalid input, missing resource) causes an unhandled error that terminates the workflow with no way to log the failure, notify anyone, or run compensating actions. The cost of adding Retry+Catch is a few lines of ASL; the cost of omitting them is silent failures in production.
 
 ### Direct Service Integrations (prefer over Lambda wrappers)
 
-Step Functions can call 200+ AWS services directly. Do NOT wrap simple API calls in Lambda:
-
-```json
-{
-  "PutItem": {
-    "Type": "Task",
-    "Resource": "arn:aws:states:::dynamodb:putItem",
-    "Parameters": {
-      "TableName": "Orders",
-      "Item": {
-        "orderId": {"S.$": "$.orderId"},
-        "status": {"S": "PENDING"},
-        "createdAt": {"S.$": "$$.State.EnteredTime"}
-      }
-    },
-    "Next": "NotifyCustomer"
-  }
-}
-```
-
-Common direct integrations to use instead of Lambda:
+Step Functions can call 200+ AWS services directly. Do NOT wrap simple API calls in Lambda. Common direct integrations to use instead of Lambda:
 - **DynamoDB**: GetItem, PutItem, UpdateItem, DeleteItem, Query
 - **SQS**: SendMessage
 - **SNS**: Publish
@@ -84,127 +40,15 @@ Common direct integrations to use instead of Lambda:
 - **SageMaker**: CreateTransformJob, CreateTrainingJob
 - **Bedrock**: InvokeModel
 
-### Choice State (branching)
-```json
-{
-  "CheckOrderType": {
-    "Type": "Choice",
-    "Choices": [
-      {
-        "Variable": "$.orderType",
-        "StringEquals": "express",
-        "Next": "ExpressShipping"
-      },
-      {
-        "Variable": "$.amount",
-        "NumericGreaterThan": 1000,
-        "Next": "RequireApproval"
-      }
-    ],
-    "Default": "StandardShipping"
-  }
-}
-```
+See `references/integrations.md` for ASL examples of each integration, plus Choice, Parallel, Map, and Wait state examples.
 
-### Parallel State (concurrent branches)
-```json
-{
-  "ProcessInParallel": {
-    "Type": "Parallel",
-    "Branches": [
-      {
-        "StartAt": "ChargeCard",
-        "States": {
-          "ChargeCard": { "Type": "Task", "Resource": "...", "End": true }
-        }
-      },
-      {
-        "StartAt": "ReserveInventory",
-        "States": {
-          "ReserveInventory": { "Type": "Task", "Resource": "...", "End": true }
-        }
-      }
-    ],
-    "Catch": [{"ErrorEquals": ["States.ALL"], "Next": "RollbackAll"}],
-    "Next": "ConfirmOrder"
-  }
-}
-```
+### Other State Types
 
-### Map State (iterate over collections)
-```json
-{
-  "ProcessItems": {
-    "Type": "Map",
-    "ItemsPath": "$.items",
-    "MaxConcurrency": 10,
-    "ItemProcessor": {
-      "ProcessorConfig": {
-        "Mode": "INLINE"
-      },
-      "StartAt": "ProcessItem",
-      "States": {
-        "ProcessItem": { "Type": "Task", "Resource": "...", "End": true }
-      }
-    },
-    "Next": "Done"
-  }
-}
-```
-
-**Distributed Map** for large-scale processing (millions of items from S3):
-```json
-{
-  "ProcessLargeDataset": {
-    "Type": "Map",
-    "ItemProcessor": {
-      "ProcessorConfig": {
-        "Mode": "DISTRIBUTED",
-        "ExecutionType": "EXPRESS"
-      },
-      "StartAt": "ProcessBatch",
-      "States": {
-        "ProcessBatch": { "Type": "Task", "Resource": "...", "End": true }
-      }
-    },
-    "ItemReader": {
-      "Resource": "arn:aws:states:::s3:getObject",
-      "ReaderConfig": {
-        "InputType": "CSV",
-        "CSVHeaderLocation": "FIRST_ROW"
-      },
-      "Parameters": {
-        "Bucket": "my-bucket",
-        "Key": "data.csv"
-      }
-    },
-    "MaxConcurrency": 1000,
-    "Next": "Done"
-  }
-}
-```
-
-### Wait State
-```json
-{
-  "WaitForApproval": {
-    "Type": "Wait",
-    "Seconds": 3600,
-    "Next": "CheckApproval"
-  }
-}
-```
-
-Or wait until a specific timestamp:
-```json
-{
-  "WaitUntilDelivery": {
-    "Type": "Wait",
-    "TimestampPath": "$.deliveryTime",
-    "Next": "Deliver"
-  }
-}
-```
+- **Choice**: Branch based on input values (string, numeric, boolean comparisons)
+- **Parallel**: Run multiple branches concurrently, Catch on any branch failure
+- **Map (Inline)**: Iterate over a collection with configurable MaxConcurrency
+- **Map (Distributed)**: Process millions of items from S3 with Express child executions
+- **Wait**: Pause for a duration or until a timestamp
 
 ## Error Handling: Retry and Catch
 
@@ -253,58 +97,15 @@ Or wait until a specific timestamp:
 
 ## Pattern: Saga (Compensating Transactions)
 
-For distributed transactions across services where you need to undo completed steps on failure:
-
-```
-StartOrder -> ChargeCard -> ReserveInventory -> ShipOrder -> Done
-                |               |                  |
-                v               v                  v
-           RefundCard    ReleaseInventory     CancelShipment
-                |               |                  |
-                +--------> OrderFailed <-----------+
-```
-
-Key principles:
-1. Each step has a compensating action
-2. Compensations run in reverse order
-3. Compensations must be idempotent
-4. Store step results for compensation context
+For distributed transactions across services where you need to undo completed steps on failure. Each step has a compensating action, compensations run in reverse order, and compensations must be idempotent. See `references/patterns.md` for the full ASL example with compensating transaction flow.
 
 ## Pattern: Human Approval (Callback)
 
-```json
-{
-  "WaitForApproval": {
-    "Type": "Task",
-    "Resource": "arn:aws:states:::sqs:sendMessage.waitForTaskToken",
-    "Parameters": {
-      "QueueUrl": "https://sqs.us-east-1.amazonaws.com/123456789/approval-queue",
-      "MessageBody": {
-        "taskToken.$": "$$.Task.Token",
-        "orderId.$": "$.orderId",
-        "amount.$": "$.amount"
-      }
-    },
-    "TimeoutSeconds": 86400,
-    "Next": "ProcessApproval"
-  }
-}
-```
+Use `.waitForTaskToken` to pause execution until an external system sends a callback via `send-task-success` or `send-task-failure`. **Always set `TimeoutSeconds` on callback tasks.** Without it, the execution waits forever (up to 1 year for Standard). See `references/patterns.md` for the full ASL and CLI examples.
 
-The external system calls back with:
-```bash
-aws stepfunctions send-task-success \
-  --task-token "TOKEN" \
-  --task-output '{"approved": true}'
+## Pattern: Distributed Map
 
-# Or on rejection:
-aws stepfunctions send-task-failure \
-  --task-token "TOKEN" \
-  --error "Rejected" \
-  --cause "Manager declined the order"
-```
-
-**Always set `TimeoutSeconds` on callback tasks.** Without it, the execution waits forever (up to 1 year for Standard).
+Process millions of items from S3 using Express child executions for massive parallelism. See `references/patterns.md` for the ASL example with S3 CSV reader configuration.
 
 ## Common CLI Commands
 
@@ -357,20 +158,9 @@ Use Workflow Studio in the AWS Console for:
 
 ## Input/Output Processing
 
-Step Functions has a powerful but confusing data flow model:
+Data flows through each state as: `InputPath -> Parameters -> Task -> ResultSelector -> ResultPath -> OutputPath`
 
-```
-InputPath -> Parameters -> Task -> ResultSelector -> ResultPath -> OutputPath
-```
-
-Key rules:
-- **InputPath**: Filters what the state sees from the input. Default: `$` (everything).
-- **Parameters**: Constructs the payload sent to the task. Use `.$` suffix for JSONPath references.
-- **ResultSelector**: Reshapes the task result before merging back.
-- **ResultPath**: Where to place the result in the original input. Use `$.taskResult` to preserve original input.
-- **OutputPath**: Filters what gets passed to the next state.
-
-**Opinionated**: Use `ResultPath` generously to accumulate data through states. Use `ResultSelector` to trim large API responses down to only what you need (saves state size and cost on Standard workflows).
+**Opinionated**: Use `ResultPath` generously to accumulate data through states. Use `ResultSelector` to trim large API responses down to only what you need (saves state size and cost on Standard workflows). See `references/integrations.md` for detailed examples of each processing stage.
 
 ## Anti-Patterns
 
@@ -392,3 +182,16 @@ Key rules:
 - **Pass states are not free** in Standard (they count as transitions). Eliminate unnecessary Pass states.
 - **Combine simple sequential tasks** where possible to reduce transition count.
 - Use `ResultSelector` to trim response payloads -- smaller payloads mean faster processing.
+
+## Reference Files
+
+- **references/patterns.md** -- Saga, callback, and Distributed Map patterns with full ASL examples
+- **references/integrations.md** -- Direct service integration examples (DynamoDB, SQS, SNS, EventBridge, ECS, Bedrock), state type ASL, and input/output processing pipeline details
+
+## Related Skills
+
+- `aws-plan` -- Architecture planning that may include Step Functions workflows
+- `lambda` -- Lambda functions used as Task state targets
+- `api-gateway` -- API Gateway to Step Functions direct integrations (StartExecution, StartSyncExecution)
+- `observability` -- CloudWatch Logs, X-Ray tracing, and monitoring for Step Functions
+- `aws-debug` -- Debugging failed Step Functions executions

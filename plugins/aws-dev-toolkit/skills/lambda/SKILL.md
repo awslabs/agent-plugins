@@ -17,11 +17,11 @@ You are an AWS Lambda specialist. Help teams build production-grade Lambda funct
 | .NET 8 (AOT) | ~200-400ms | Enterprise, C# ecosystem | .NET shops, AOT compilation helps |
 | Go (custom runtime) | ~20-50ms | Simple deployment, fast | CLI tools, high-perf event processing |
 
-**Opinionated recommendation**: Default to Python or Node.js. Use Rust/Go for performance-critical paths. Use Java only with SnapStart enabled. Avoid Ruby and .NET (non-AOT) for new projects.
+**Opinionated recommendation**: Default to Python or Node.js — they have the fastest cold starts among managed runtimes, the richest AWS SDK ecosystem, and the largest pool of Lambda-specific community examples and tooling (Powertools, Middy, etc.). Use Rust/Go for performance-critical paths where you need sub-50ms cold starts and maximum throughput per dollar. Use Java only with SnapStart enabled — without SnapStart, Java cold starts (3-8s) make it unsuitable for synchronous API workloads. Avoid Ruby and .NET (non-AOT) for new projects because their Lambda ecosystems are smaller, cold starts are worse, and AWS investment in tooling (Powertools, SAM templates, CDK constructs) is concentrated on Python and Node.js.
 
 ## SnapStart (Java Only)
 
-SnapStart eliminates Java cold starts by snapshotting the initialized execution environment. Enable it for ALL Java Lambda functions:
+SnapStart eliminates Java cold starts by snapshotting the initialized execution environment after the init phase completes. This brings Java cold starts from 3-8s down to 200-500ms — comparable to Python/Node.js. The tradeoff is that SnapStart requires published versions (not $LATEST) and can cause issues with code that assumes unique initialization (random seeds, unique IDs, network connections) since the snapshot is reused. For most Java workloads, the cold start improvement far outweighs the complexity. Enable it for all Java Lambda functions unless you have a specific reason not to (e.g., functions that open database connections during init that can't be restored from snapshot):
 
 ```bash
 aws lambda update-function-configuration \
@@ -54,42 +54,11 @@ aws lambda put-provisioned-concurrency-config \
 
 ## Powertools for AWS Lambda
 
-Always use Powertools. It provides structured logging, tracing, and metrics with minimal boilerplate.
+Use Powertools for any Lambda that runs in production. Without it, you end up hand-rolling structured logging, manual X-Ray segment creation, and custom CloudWatch metric publishing — all of which Powertools handles in a few decorators. The alternative is raw `print()` statements and unstructured logs, which make debugging production issues significantly harder because CloudWatch Logs Insights can't query unstructured text efficiently. Powertools also injects Lambda context (request ID, function name, cold start flag) into every log line automatically, which is critical for correlating logs across concurrent invocations. Available for Python and Node.js/TypeScript.
 
-**Python**:
-```python
-from aws_lambda_powertools import Logger, Tracer, Metrics
-from aws_lambda_powertools.event_handler import APIGatewayRestResolver
+Core capabilities: structured logging with Lambda context injection, X-Ray tracing with annotations/metadata, CloudWatch metrics, and cached parameter/secret retrieval.
 
-logger = Logger()
-tracer = Tracer()
-metrics = Metrics()
-app = APIGatewayRestResolver()
-
-@app.get("/items")
-@tracer.capture_method
-def get_items():
-    logger.info("Fetching items")
-    metrics.add_metric(name="ItemsFetched", unit="Count", value=1)
-    return {"items": []}
-
-@logger.inject_lambda_context
-@tracer.capture_lambda_handler
-@metrics.log_metrics
-def handler(event, context):
-    return app.resolve(event, context)
-```
-
-**Node.js**:
-```typescript
-import { Logger } from '@aws-lambda-powertools/logger';
-import { Tracer } from '@aws-lambda-powertools/tracer';
-import { Metrics } from '@aws-lambda-powertools/metrics';
-
-const logger = new Logger();
-const tracer = new Tracer();
-const metrics = new Metrics();
-```
+See `references/powertools-patterns.md` for full code examples (Python and TypeScript), decorator usage, SAM/CDK setup, and parameters/secrets patterns.
 
 ## Concurrency Model
 
@@ -115,42 +84,12 @@ aws lambda get-account-settings --query 'AccountLimit'
 
 ## Event Source Mapping Patterns
 
-### SQS
-```bash
-aws lambda create-event-source-mapping \
-  --function-name my-function \
-  --event-source-arn arn:aws:sqs:us-east-1:123456789:my-queue \
-  --batch-size 10 \
-  --maximum-batching-window-in-seconds 5 \
-  --function-response-types ReportBatchItemFailures
-```
-**Always enable `ReportBatchItemFailures`** to avoid reprocessing the entire batch on partial failures.
+Key principles for all poll-based event sources (SQS, DynamoDB Streams, Kinesis):
+- **SQS**: Always enable `ReportBatchItemFailures` to avoid reprocessing entire batches on partial failures.
+- **DynamoDB Streams**: Always configure `bisect-batch-on-function-error`, `maximum-retry-attempts`, and a DLQ destination.
+- **Kinesis**: Use `parallelization-factor` (1-10) for concurrent batch processing per shard. Configure bisect and DLQ as with DynamoDB Streams.
 
-### DynamoDB Streams
-```bash
-aws lambda create-event-source-mapping \
-  --function-name my-function \
-  --event-source-arn arn:aws:dynamodb:us-east-1:123456789:table/my-table/stream/... \
-  --starting-position LATEST \
-  --batch-size 100 \
-  --maximum-retry-attempts 3 \
-  --bisect-batch-on-function-error \
-  --destination-config '{"OnFailure":{"Destination":"arn:aws:sqs:us-east-1:123456789:dlq"}}'
-```
-**Always configure**: `bisect-batch-on-function-error`, `maximum-retry-attempts`, and a DLQ destination.
-
-### Kinesis
-```bash
-aws lambda create-event-source-mapping \
-  --function-name my-function \
-  --event-source-arn arn:aws:kinesis:us-east-1:123456789:stream/my-stream \
-  --starting-position LATEST \
-  --batch-size 100 \
-  --parallelization-factor 10 \
-  --maximum-retry-attempts 3 \
-  --bisect-batch-on-function-error \
-  --destination-config '{"OnFailure":{"Destination":"arn:aws:sqs:us-east-1:123456789:dlq"}}'
-```
+See `references/event-sources.md` for full CLI commands, SAM/CDK templates, and patterns for SQS, DynamoDB Streams, Kinesis, API Gateway, S3, and EventBridge.
 
 ## Lambda Layers
 
@@ -169,39 +108,15 @@ aws lambda update-function-configuration \
   --layers arn:aws:lambda:us-east-1:123456789:layer:my-dependencies:1
 ```
 
-**Opinionated**: Prefer bundling dependencies into the deployment package over layers. Layers add deployment complexity and version management overhead. Use layers only for: (1) shared binary dependencies, (2) Powertools/common utilities across many functions, (3) Lambda Extensions.
+**Opinionated**: Prefer bundling dependencies into the deployment package over layers. Layers seem convenient for sharing code, but they create hidden version coupling — when you update a layer, every function using it gets the new version on next deploy, which can break functions that weren't tested against the update. Layers also make local testing harder (you need to download/mount them) and make deployment packages non-self-contained (the function ZIP alone doesn't tell you what it depends on). Use layers only for: (1) shared binary dependencies that are large and rarely change (e.g., FFmpeg, Pandoc), (2) Powertools/common utilities used across 10+ functions where the version coupling is intentional, (3) Lambda Extensions.
 
 ## Deployment Patterns
 
-### SAM (recommended for Lambda-centric projects)
-```bash
-sam build
-sam deploy --guided  # first time
-sam deploy            # subsequent
-sam local invoke       # local testing
-sam logs --name MyFunction --tail  # tail logs
-```
+- **SAM**: Recommended for Lambda-centric projects. Supports `sam local invoke` for local testing.
+- **CDK**: Recommended for complex infrastructure with multiple service integrations.
+- **Direct CLI**: For quick iterations during development.
 
-### CDK (recommended for complex infrastructure)
-```bash
-cdk deploy
-cdk diff    # preview changes
-cdk synth   # generate CloudFormation
-```
-
-### Direct CLI (for quick iterations)
-```bash
-# Update function code
-zip -r function.zip .
-aws lambda update-function-code \
-  --function-name my-function \
-  --zip-file fileb://function.zip
-
-# Update environment variables
-aws lambda update-function-configuration \
-  --function-name my-function \
-  --environment 'Variables={DB_HOST=mydb.example.com,STAGE=prod}'
-```
+See `references/event-sources.md` for deployment commands and SAM/CDK template examples.
 
 ## Common CLI Commands
 
@@ -262,3 +177,17 @@ Lambda CPU scales proportionally with memory. At 1,769 MB you get 1 full vCPU.
 ```
 
 **Always benchmark**. Increasing memory often REDUCES cost because the function finishes faster (you pay for GB-seconds).
+
+## Reference Files
+
+- `references/powertools-patterns.md` -- Full Powertools code examples (Python and TypeScript), structured logging, tracing, parameters/secrets, and SAM/CDK setup.
+- `references/event-sources.md` -- Event source mapping CLI commands, SAM/CDK templates for SQS, DynamoDB Streams, Kinesis, API Gateway, S3, EventBridge, and deployment patterns.
+
+## Related Skills
+
+- `api-gateway` -- API Gateway configuration, routing, authorization, and Lambda integration patterns.
+- `dynamodb` -- Table design, access patterns, streams, and DynamoDB-Lambda integration.
+- `step-functions` -- Orchestrating Lambda functions with state machines instead of direct invocation chains.
+- `messaging` -- SQS, SNS, and EventBridge patterns for async Lambda triggers.
+- `observability` -- CloudWatch metrics, alarms, dashboards, and X-Ray tracing beyond Powertools.
+- `iam` -- Least-privilege execution roles, resource policies, and cross-account access for Lambda.

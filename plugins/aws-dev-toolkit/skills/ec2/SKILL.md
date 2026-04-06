@@ -54,7 +54,7 @@ Follow this decision tree:
 Use Spot for fault-tolerant, stateless, or flexible-schedule workloads. Up to 90% savings.
 
 - **Spot Fleet / Mixed Instances Policy**: Diversify across at least 6-10 instance types and all AZs. The broader the pool, the lower the interruption rate.
-- **Allocation strategy**: `capacity-optimized` (default, best for reducing interruptions) or `price-capacity-optimized` (balances price and capacity). Never use `lowest-price`.
+- **Allocation strategy**: `capacity-optimized` (default, best for reducing interruptions) or `price-capacity-optimized` (balances price and capacity). Avoid `lowest-price` — it concentrates instances on the cheapest instance type in a single pool, which means higher interruption rates (AWS reclaims the cheapest capacity first) and lower fleet diversity. The few cents saved per hour are wiped out by the disruption cost of frequent interruptions.
 - **Spot interruption handling**: Use EC2 metadata service or EventBridge to catch the 2-minute warning. Drain connections and save state.
 - **Spot placement score**: Use `aws ec2 get-spot-placement-scores` to find regions/AZs with best capacity before launching.
 - **Spot with ASG**: Use mixed instances policy with `OnDemandBaseCapacity: 1` or `2` and `SpotAllocationStrategy: capacity-optimized` for a baseline of on-demand with Spot overflow.
@@ -117,6 +117,27 @@ aws compute-optimizer get-ec2-instance-recommendations --instance-arns arn:aws:e
 # Connect via SSM (no SSH keys needed)
 aws ssm start-session --target i-xxx
 ```
+
+## Output Format
+
+| Field | Details |
+|-------|---------|
+| **Instance type** | Family, size, and architecture (e.g., m7g.large / arm64) |
+| **AMI** | AMI source (AL2023, custom), resolution method (SSM parameter) |
+| **Storage (EBS type/size)** | Volume type (gp3, io2), size, IOPS, throughput |
+| **ASG config** | Min/max/desired, health check type, instance warmup |
+| **Spot strategy** | On-demand base capacity, Spot allocation strategy, instance diversity |
+| **Key pair / SSM** | SSM Session Manager (preferred) or key pair for access |
+| **Security group** | Inbound/outbound rules, referenced SG IDs |
+| **Monitoring** | CloudWatch agent config, detailed monitoring, custom metrics |
+
+## Related Skills
+
+- `networking` — VPC, subnets, security groups, and NAT strategy for EC2 instances
+- `iam` — Instance profiles, least-privilege policies, and SSM permissions
+- `s3` — Storage integration, instance backups, and bootstrap scripts
+- `observability` — CloudWatch agent, alarms, dashboards, and Compute Optimizer
+- `cloudfront` — CDN in front of EC2-backed web applications
 
 ## Anti-Patterns
 

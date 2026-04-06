@@ -165,3 +165,15 @@ Include:
 - All access patterns mapped to the key schema or index that serves them
 - Capacity mode recommendation with rationale
 - Estimated item sizes and read/write patterns
+
+## Reference Files
+
+- `references/access-patterns.md` — Key design examples (e-commerce, multi-tenant SaaS), GSI overloading, hierarchical sort keys, adjacency list, sparse index, write sharding, and single-table design patterns
+
+## Related Skills
+
+- `lambda` — Lambda with DynamoDB Streams event source mapping
+- `api-gateway` — API Gateway direct integration with DynamoDB
+- `messaging` — DynamoDB Streams feeding event-driven architectures
+- `cost-check` — DynamoDB capacity mode cost analysis, reserved capacity
+- `iam` — Fine-grained access control with DynamoDB condition keys

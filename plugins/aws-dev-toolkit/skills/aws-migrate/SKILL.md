@@ -140,3 +140,22 @@ Use the `cost-check` skill or `aws-pricing` MCP tools to estimate:
 1. [Immediate action]
 2. [...]
 ```
+
+## Anti-Patterns
+
+- **Big-bang migration instead of waves**: Moving everything at once maximizes risk and minimizes learning. Use waves to build confidence, refine processes, and catch issues early.
+- **Not running parallel environments**: Cutting over without a parallel-run period means there is no fallback. Run source and target in parallel for critical workloads until you have validated correctness.
+- **Skipping data validation between waves**: Assuming data migrated correctly without checksums, row counts, or application-level validation leads to silent data loss or corruption.
+- **Underestimating licensing constraints**: Oracle, SQL Server, and SAP licenses have complex transfer rules. Validate license portability before committing to an instance type or migration strategy.
+- **Ignoring team skill gaps**: A migration plan that assumes deep AWS expertise the team does not have will stall. Include training, pairing, or managed services to bridge the gap.
+- **Not planning rollback procedures**: Every wave needs a documented rollback plan with a clear decision point (time-boxed or metric-based). Without one, a failed migration becomes a crisis.
+- **Treating lift-and-shift as the end state**: Rehosting gets workloads onto AWS, but it does not capture cloud-native benefits. Plan a post-migration optimization phase to replatform or refactor where it matters.
+- **Migrating without a landing zone**: Skipping foundational setup (account structure, networking, IAM, logging) and going straight to workload migration creates technical debt that compounds with every wave.
+
+## Related Skills
+
+- `gcp-to-aws` — GCP-to-AWS service mapping and migration patterns
+- `azure-to-aws` — Azure-to-AWS service mapping and migration patterns
+- `networking` — VPC design, Transit Gateway, VPN, and Direct Connect for landing zones
+- `security-review` — Security validation for the target AWS environment
+- `cost-check` — Cost comparison between source cloud and projected AWS spend

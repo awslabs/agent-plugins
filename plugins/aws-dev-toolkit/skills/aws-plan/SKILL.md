@@ -61,7 +61,7 @@ Use the `cost-check` skill or `aws-pricing` MCP tools to produce a rough monthly
 - Scale cost (at projected peak)
 - Cost optimization opportunities (Savings Plans, Spot, right-sizing)
 
-For AI/ML workloads, also invoke the `bedrock-cost` skill.
+For AI/ML workloads, also invoke the `bedrock` skill.
 
 ### Phase 5: Deliver
 
@@ -110,3 +110,22 @@ Present the final plan as:
 2. [Set up CI/CD]
 3. [Configure monitoring]
 ```
+
+## Anti-Patterns
+
+- **Skipping discovery and jumping to design**: Proposing services before understanding the business problem leads to solutions that don't fit. Always complete Phase 1 before drawing architecture diagrams.
+- **Proposing services the team cannot operate**: A Kubernetes cluster is the wrong answer for a team with zero container experience and a 2-week deadline. Match complexity to team capability.
+- **Ignoring cost until the end**: Cost is a constraint, not an afterthought. Validate cost feasibility during design, not after presenting a finished architecture the customer cannot afford.
+- **Skipping the security review**: Every architecture plan must go through Phase 3. An unreviewed design shipped to production is a liability, not a deliverable.
+- **Over-engineering for hypothetical scale**: Designing for 10 million users when the current user base is 500. Start simple, design for 10x current load, and document the path to 100x.
+- **Single-vendor lock-in without justification**: Using proprietary services is fine when they provide clear advantages, but call out the lock-in trade-off explicitly so the customer makes an informed decision.
+- **Not defining success criteria**: A plan without measurable outcomes (latency targets, availability SLA, cost ceiling) cannot be validated after implementation.
+- **Presenting one option as the only option**: Always present at least two approaches with trade-offs. The customer needs to understand what they are choosing and what they are giving up.
+
+## Related Skills
+
+- `aws-architect` — Well-Architected design evaluation and service selection
+- `customer-ideation` — Discovery questions and requirements gathering
+- `security-review` — Mandatory security validation for proposed architectures
+- `cost-check` — Cost estimation and optimization analysis
+- `challenger` — Pushback and alternative perspective on proposed designs

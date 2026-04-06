@@ -58,7 +58,7 @@ You are an AWS messaging specialist. Help teams design reliable, scalable event-
 - Use DLQ redrive to move messages back to the source queue after fixing the bug.
 
 ### Polling Best Practices
-- **Always use long polling** (`WaitTimeSeconds=20`). Short polling wastes money and returns empty responses.
+- **Always use long polling** (`WaitTimeSeconds=20`). Short polling queries a subset of SQS servers and returns immediately — most responses are empty. At 4 polls/second that is ~345,600 empty API calls/day per consumer, each billed at the standard SQS rate. Long polling holds the connection open for up to 20 seconds and queries all servers, reducing empty responses by ~90% and cutting SQS API costs proportionally.
 - Use batch operations: `ReceiveMessage` with `MaxNumberOfMessages=10` and `SendMessageBatch` for up to 10 messages.
 - Delete messages immediately after successful processing.
 
@@ -226,7 +226,7 @@ aws events list-rules --event-bus-name default
 ## Anti-Patterns
 
 - **No DLQ on SQS queues.** Failed messages retry silently until they expire. You lose visibility into failures and potentially lose data.
-- **Short polling SQS.** Short polling returns empty responses most of the time, wasting API calls and money. Always set `WaitTimeSeconds=20`.
+- **Short polling SQS.** Short polling queries a subset of SQS servers and returns immediately — at 4 polls/second, that is ~345,600 empty API calls/day per consumer, each billed at standard SQS rate. Long polling (`WaitTimeSeconds=20`) queries all servers and holds the connection, reducing empty responses by ~90%.
 - **Using SNS for point-to-point.** If there's only one subscriber, use SQS directly. SNS adds latency and cost for no benefit.
 - **Giant messages in SQS/SNS.** Don't push large payloads through messaging. Store in S3, send a reference. The 256 KB limit exists for a reason.
 - **Not designing for idempotency.** SQS Standard delivers at-least-once. SNS retries. EventBridge can replay. Every consumer must handle duplicate messages safely.
@@ -234,3 +234,15 @@ aws events list-rules --event-bus-name default
 - **Using EventBridge for high-throughput streaming.** EventBridge is for event routing, not high-volume data streaming. Use Kinesis or MSK for >10K events/sec sustained.
 - **Polling SQS from multiple consumers without proper visibility timeout.** If visibility timeout is too short, multiple consumers process the same message. Set timeout to 6x processing time.
 - **No monitoring on DLQs.** A DLQ without an alarm is just a message graveyard. Alert on `ApproximateNumberOfMessagesVisible > 0`.
+
+## Reference Files
+
+- `references/integration-patterns.md` — Architectural patterns (fan-out, saga choreography/orchestration, CQRS, queue-based load leveling, event sourcing, claim-check, competing consumers) with diagrams and service mappings
+
+## Related Skills
+
+- `lambda` — Lambda as SQS/SNS/EventBridge consumer, event source mappings
+- `step-functions` — Orchestrated saga pattern, workflow coordination
+- `dynamodb` — DynamoDB Streams as event source, event sourcing store
+- `observability` — Queue depth alarms, DLQ monitoring, message age alerts
+- `api-gateway` — API Gateway to SQS/SNS integration for async APIs

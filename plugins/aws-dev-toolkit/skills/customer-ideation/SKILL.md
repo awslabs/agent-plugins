@@ -200,7 +200,7 @@ Client → API Gateway → Lambda → Bedrock (inference)
                               → S3 (knowledge base)
                               → DynamoDB (session state)
 ```
-**Best for**: AI-powered features, chatbots, document processing. **Cost**: Per Bedrock invocation (token-based). Use `bedrock-cost` skill for detailed estimates.
+**Best for**: AI-powered features, chatbots, document processing. **Cost**: Per Bedrock invocation (token-based). Use `bedrock` skill for detailed estimates.
 
 ## AWS Reference Resources
 
@@ -228,7 +228,7 @@ Present architecture recommendations as:
 
 1. **Over-architecting for day 1**: Start with the simplest thing that works. You can add complexity later. A Lambda + DynamoDB API is better than an EKS cluster for 100 users.
 2. **Choosing Kubernetes when serverless works**: EKS is complex. If your workload fits Lambda or Fargate, use those. Choose K8s only if the team already knows it or the workload requires it.
-3. **Ignoring cost from the start**: Model costs before building. Use `bedrock-cost` for AI workloads. Set up AWS Budgets immediately.
+3. **Ignoring cost from the start**: Model costs before building. Use `bedrock` for AI workloads. Set up AWS Budgets immediately.
 4. **Defaulting to the most complex solution**: EC2 is not the default compute. Lambda is. RDS is not the default database. DynamoDB is. Start managed, go custom only when needed.
 5. **Ignoring team skills**: The best architecture is one the team can operate. If they know Python and PostgreSQL, don't recommend Go and DynamoDB.
 6. **No observability from day 1**: Set up CloudWatch dashboards, X-Ray tracing, and alarms before launching. Retrofitting observability is painful.

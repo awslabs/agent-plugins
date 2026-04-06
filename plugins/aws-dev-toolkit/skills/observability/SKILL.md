@@ -199,6 +199,31 @@ aws xray get-service-graph --start-time $(date -d '1 hour ago' +%s) --end-time $
 aws cloudwatch list-dashboards
 ```
 
+## Output Format
+
+| Field | Details |
+|-------|---------|
+| **Metrics** | Critical alarms with thresholds, evaluation periods, and actions |
+| **Logs** | Log groups, retention policy, structured format (JSON), subscription filters |
+| **Traces** | X-Ray or OpenTelemetry, sampling rules, annotations for filtering |
+| **Dashboards** | Dashboard names, key widgets, layout (business/infra/dependencies) |
+| **Anomaly detection** | Metrics with anomaly detection bands, standard deviation config |
+| **Cost** | Estimated monthly cost for logs ingestion, metrics, dashboards, and traces |
+
+## Reference Files
+
+- `references/logs-insights-queries.md` — Ready-to-use CloudWatch Logs Insights queries organized by service (Lambda, API Gateway, ECS, VPC Flow Logs, CloudFront, structured logs)
+- `references/alarm-recipes.md` — Production alarm configurations with thresholds, metric math examples, composite alarm and anomaly detection recipes
+
+## Related Skills
+
+- `lambda` — Lambda metrics, Embedded Metric Format, and X-Ray active tracing
+- `ecs` — Container Insights, task-level metrics, and ECS service alarms
+- `eks` — Control plane logging, Prometheus, and Container Insights for Kubernetes
+- `cloudfront` — CloudFront access logs and cache metrics
+- `api-gateway` — API Gateway latency and error monitoring
+- `networking` — VPC Flow Logs, Route53 health checks, and Transit Gateway metrics
+
 ## Anti-Patterns
 
 - **No log retention policy**: CloudWatch Logs default to never expire. Costs grow silently. Set retention on every log group.

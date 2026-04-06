@@ -145,6 +145,27 @@ aws cloudfront list-functions
 aws cloudfront describe-function --name my-function
 ```
 
+## Output Format
+
+| Field | Details |
+|-------|---------|
+| **Distribution type** | Web distribution, streaming, or multi-origin |
+| **Origins** | Origin domains, types (S3/ALB/API GW/custom), access control (OAC) |
+| **Cache behaviors** | Path patterns, cache policies, and origin request policies per behavior |
+| **SSL/TLS** | ACM certificate ARN, minimum protocol version, SNI config |
+| **WAF** | WebACL ID, managed rule groups, custom rate-limiting rules |
+| **Functions (Edge/CF)** | CloudFront Functions or Lambda@Edge, trigger points, purpose |
+| **Headers** | Response headers policy (HSTS, CSP, X-Frame-Options) |
+| **Logging** | Standard logging (S3 bucket) or real-time logging (Kinesis) |
+
+## Related Skills
+
+- `s3` — S3 origins, bucket policies, and Origin Access Control
+- `api-gateway` — API Gateway origins, regional endpoints, and cache behavior config
+- `lambda` — Lambda@Edge functions and CloudFront Function alternatives
+- `networking` — ALB origins, VPC connectivity, and DNS with Route53
+- `security-review` — WAF rules, signed URLs, and public exposure review
+
 ## Anti-Patterns
 
 - **Using OAI instead of OAC**: OAI is legacy and doesn't support SSE-KMS. Always use Origin Access Control.

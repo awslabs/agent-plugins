@@ -106,6 +106,28 @@ kubectl logs <pod-name> -n <namespace> --previous
 - Test upgrades in a non-prod cluster first. Check the [EKS version changelog](https://docs.aws.amazon.com/eks/latest/userguide/kubernetes-versions.html) for deprecations.
 - Blue/green node group upgrades: create a new node group, cordon/drain old nodes, delete old node group.
 
+## Output Format
+
+| Field | Details |
+|-------|---------|
+| **Cluster version** | Kubernetes version (e.g., 1.31) |
+| **Compute strategy** | Managed node groups, Fargate profiles, or self-managed |
+| **Node groups / Karpenter config** | Instance families, NodePool limits, consolidation policy |
+| **Add-ons** | Managed add-ons and versions (vpc-cni, CoreDNS, kube-proxy, CSI drivers) |
+| **Autoscaling approach** | Karpenter or Cluster Autoscaler, NodePool/ASG config |
+| **Ingress** | AWS Load Balancer Controller, ALB Ingress, or NLB |
+| **IAM (IRSA / Pod Identity)** | Pod Identity associations or IRSA OIDC setup per workload |
+| **Monitoring** | Container Insights, Prometheus, control plane logging, X-Ray |
+
+## Related Skills
+
+- `ecs` — Simpler container orchestration alternative when Kubernetes is not required
+- `ec2` — Instance types, Spot strategy, and ASG config for self-managed nodes
+- `networking` — VPC design, pod networking (secondary CIDRs), and security groups
+- `iam` — IRSA, Pod Identity, and node role configuration
+- `observability` — CloudWatch Container Insights, Prometheus, and control plane logging
+- `lambda` — Serverless alternative for event-driven or low-traffic workloads
+
 ## Anti-Patterns
 
 - **Over-privileged node IAM roles**: Node roles should not have S3, DynamoDB, or other application permissions. Use Pod Identity or IRSA for least-privilege per workload.
