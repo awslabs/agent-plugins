@@ -14,7 +14,7 @@ import argparse
 import importlib.util
 import json
 import sys
-import xml.etree.ElementTree as StdET  # nosec B405 # nosemgrep - only used for indent(), not XML parsing
+import xml.etree.ElementTree as StdET  # nosec B405 # nosemgrep: gitlab.bandit.B313.B314.B315.B316.B318.B319.B320.B405.B406.B407.B408.B409.B410, python.lang.security.use-defused-xml.use-defused-xml
 import defusedxml.ElementTree as ET
 from pathlib import Path
 
