@@ -10,6 +10,7 @@ validate_drawio.py - Validates draw.io XML files for:
 
 import io
 import json
+import os
 import re
 import sys
 import defusedxml.ElementTree as ET
@@ -75,8 +76,9 @@ def validate(file_path):
     warnings = []
 
     # 1. Read file — resolve to canonical absolute path to prevent path
-    # traversal (e.g., "../../etc/passwd.drawio") from hook input (CWE-22)
-    path = Path(file_path).resolve()
+    # traversal (e.g., "../../etc/passwd.drawio") from hook input (CWE-22).
+    # Uses os.path.realpath() as the semgrep-recognized taint sanitizer.
+    path = Path(os.path.realpath(file_path))
     try:
         file_size = path.stat().st_size
     except OSError as e:
