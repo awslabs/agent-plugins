@@ -302,18 +302,28 @@ def main() -> None:
         # Not a drawio file, exit silently (hook compatibility)
         sys.exit(0)
 
-    path = Path(file_path)
+    # Reject symlinks BEFORE resolve() — resolve follows symlinks, so
+    # is_symlink() would always be False on the resolved path.
+    # nosemgrep: ai.ai-best-practices.hooks-path-traversal.hooks-path-traversal-python.hooks-path-traversal-python
+    if Path(file_path).is_symlink():
+        print(f"Refusing to process symlink: {file_path}", file=sys.stderr)
+        sys.exit(1)
 
-    # Reject symlinks to prevent symlink-follow write attacks
-    if path.is_symlink():
-        print(f"Skipping symlink: {file_path}", file=sys.stderr)
+    # Resolve path to canonical absolute form to prevent path traversal
+    # (e.g., "../../etc/passwd.drawio") from hook input — see CWE-22.
+    # All file operations below use only the resolved `path` object.
+    # nosemgrep: ai.ai-best-practices.hooks-path-traversal.hooks-path-traversal-python.hooks-path-traversal-python
+    path = Path(file_path).resolve()
+
+    # Re-validate extension after resolution (traversal could change it)
+    if not path.suffix == ".drawio" and not str(path).endswith(".drawio.xml"):
         sys.exit(0)
 
     # Reject files exceeding size limit before parsing
     try:
         file_size = path.stat().st_size
     except OSError as e:
-        print(f"Cannot stat {file_path}: {e}", file=sys.stderr)
+        print(f"Cannot stat file: {e}", file=sys.stderr)
         sys.exit(1)
     if file_size > MAX_FILE_SIZE:
         print(
@@ -324,9 +334,9 @@ def main() -> None:
         sys.exit(0)
 
     try:
-        tree = ET.parse(file_path)
+        tree = ET.parse(path)
     except (ET.ParseError, FileNotFoundError) as e:
-        print(f"Error parsing {file_path}: {e}", file=sys.stderr)
+        print(f"Error parsing file: {e}", file=sys.stderr)
         sys.exit(1)
 
     # Top-level try/except prevents unhandled exception tracebacks from
@@ -368,8 +378,8 @@ def main() -> None:
                 # and importing stdlib xml.etree.ElementTree triggers security scanners.
                 # Output is valid but not pretty-printed. If human-readable XML is needed,
                 # add a custom indent helper that walks the element tree without stdlib import.
-                tree.write(file_path, encoding="unicode", xml_declaration=False)
-                print(f"Written: {file_path}")
+                tree.write(path, encoding="unicode", xml_declaration=False)
+                print(f"Written: {path}")
             else:
                 print("(dry run, no changes written)")
         else:
