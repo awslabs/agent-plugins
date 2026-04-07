@@ -51,6 +51,7 @@ function info(message) {
 
 function validateMarketplace(marketplacePath, manifestPathParts) {
   // Check marketplace.json exists
+  // nosemgrep: gitlab.eslint.detect-non-literal-fs-filename, javascript.lang.security.audit.detect-non-literal-fs-filename.detect-non-literal-fs-filename -- callers pass hardcoded constants, not user input
   if (!fs.existsSync(marketplacePath)) {
     error(`Marketplace file not found: ${marketplacePath}`);
     return;
@@ -58,6 +59,7 @@ function validateMarketplace(marketplacePath, manifestPathParts) {
 
   let marketplace;
   try {
+    // nosemgrep: gitlab.eslint.detect-non-literal-fs-filename, javascript.lang.security.audit.detect-non-literal-fs-filename.detect-non-literal-fs-filename -- callers pass hardcoded constants, not user input
     marketplace = JSON.parse(fs.readFileSync(marketplacePath, "utf8"));
   } catch (e) {
     error(`Failed to parse ${marketplacePath}: ${e.message}`);
