@@ -306,8 +306,8 @@ def main() -> None:
     # is_symlink() would always be False on the resolved path.
     # nosemgrep: ai.ai-best-practices.hooks-path-traversal.hooks-path-traversal-python.hooks-path-traversal-python
     if Path(file_path).is_symlink():
-        print(f"Skipping symlink: {file_path}", file=sys.stderr)
-        sys.exit(0)
+        print(f"Refusing to process symlink: {file_path}", file=sys.stderr)
+        sys.exit(1)
 
     # Resolve path to canonical absolute form to prevent path traversal
     # (e.g., "../../etc/passwd.drawio") from hook input — see CWE-22.
