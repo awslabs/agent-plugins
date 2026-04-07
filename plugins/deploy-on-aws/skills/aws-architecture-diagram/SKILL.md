@@ -43,7 +43,7 @@ These are independent of Mode and apply after mode selection:
 2. Read `references/style-guide.md` for colors, fonts, and dark mode
 3. Read `references/xml-templates-structure.md` for XML code blocks
 4. Read `references/layout-guidelines.md` for spacing and edge routing
-5. Select 1-2 example `.drawio` files from the table below and study them for edge routing and layout patterns
+5. Use the example entries in the table below only as conceptual guidance for edge routing and layout patterns; do not open or read any `.drawio` files as reference.
 
 **Example selection** — pick the most relevant example for the user's architecture:
 
