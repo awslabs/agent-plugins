@@ -8,11 +8,16 @@ validate_drawio.py - Validates draw.io XML files for:
 5. Geometry validation (vertices have mxGeometry)
 """
 
+import io
 import json
 import re
 import sys
 import defusedxml.ElementTree as ET
 from pathlib import Path
+
+MAX_FILE_SIZE = 2 * 1024 * 1024  # 2 MB
+MAX_XML_DEPTH = 50
+MAX_XML_ELEMENTS = 50_000
 
 # Load valid AWS4 shapes
 SCRIPT_DIR = Path(__file__).parent
@@ -41,19 +46,63 @@ def _sanitize_attr(value: str, max_len: int = 80) -> str:
     return sanitized
 
 
+def _check_xml_limits(xml_text: str) -> str | None:
+    """Pre-flight check for element depth and count using streaming parse.
+
+    Uses iterparse to process elements one at a time without building the
+    full tree in memory, avoiding C-stack overflow on deeply nested files.
+    Returns an error message string, or None if within limits.
+    """
+    depth = 0
+    count = 0
+    for event, _ in ET.iterparse(
+        io.BytesIO(xml_text.encode("utf-8")), events=("start", "end")
+    ):
+        if event == "start":
+            depth += 1
+            count += 1
+            if depth > MAX_XML_DEPTH:
+                return f"XML nesting depth exceeds {MAX_XML_DEPTH} levels"
+            if count > MAX_XML_ELEMENTS:
+                return f"XML element count exceeds {MAX_XML_ELEMENTS:,}"
+        else:
+            depth -= 1
+    return None
+
+
 def validate(file_path):
     errors = []
     warnings = []
 
     # 1. Read file
+    path = Path(file_path)
     try:
-        xml_text = Path(file_path).read_text(encoding="utf-8")
+        file_size = path.stat().st_size
+    except OSError as e:
+        errors.append(f"Cannot stat file: {e}")
+        return errors, warnings
+
+    if file_size > MAX_FILE_SIZE:
+        errors.append(
+            f"File too large ({file_size // 1024}KB > "
+            f"{MAX_FILE_SIZE // 1024 // 1024}MB limit)"
+        )
+        return errors, warnings
+
+    try:
+        xml_text = path.read_text(encoding="utf-8")
     except Exception as e:
         errors.append(f"Cannot read file: {e}")
         return errors, warnings
 
     if not xml_text.strip():
         errors.append("File is empty")
+        return errors, warnings
+
+    # Pre-flight: check depth and element count before full parse
+    limit_error = _check_xml_limits(xml_text)
+    if limit_error:
+        errors.append(limit_error)
         return errors, warnings
 
     # Parse XML
@@ -217,7 +266,15 @@ def main():
         sys.exit(1)
 
     file_path = sys.argv[1]
-    errors, warnings = validate(file_path)
+
+    # Top-level try/except prevents unhandled exception tracebacks from
+    # leaking file paths and source code lines into the hook systemMessage
+    # (stderr is captured via 2>&1 in validate-drawio.sh).
+    try:
+        errors, warnings = validate(file_path)
+    except Exception:
+        print("VALIDATION FAILED: internal error during validation. Run manually for details.")
+        sys.exit(1)
 
     if errors:
         print(f"VALIDATION FAILED for {file_path}:")
