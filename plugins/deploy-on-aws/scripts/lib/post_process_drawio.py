@@ -304,14 +304,16 @@ def main() -> None:
 
     # Reject symlinks BEFORE resolve() — resolve follows symlinks, so
     # is_symlink() would always be False on the resolved path.
-    if Path(file_path).is_symlink():  # noqa: ai.hooks-path-traversal — checked before file ops
+    # nosemgrep: ai.ai-best-practices.hooks-path-traversal.hooks-path-traversal-python.hooks-path-traversal-python
+    if Path(file_path).is_symlink():
         print(f"Skipping symlink: {file_path}", file=sys.stderr)
         sys.exit(0)
 
     # Resolve path to canonical absolute form to prevent path traversal
     # (e.g., "../../etc/passwd.drawio") from hook input — see CWE-22.
     # All file operations below use only the resolved `path` object.
-    path = Path(file_path).resolve()  # nosemgrep: ai.ai-best-practices.hooks-path-traversal
+    # nosemgrep: ai.ai-best-practices.hooks-path-traversal.hooks-path-traversal-python.hooks-path-traversal-python
+    path = Path(file_path).resolve()
 
     # Re-validate extension after resolution (traversal could change it)
     if not path.suffix == ".drawio" and not str(path).endswith(".drawio.xml"):
