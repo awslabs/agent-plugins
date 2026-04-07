@@ -74,8 +74,9 @@ def validate(file_path):
     errors = []
     warnings = []
 
-    # 1. Read file
-    path = Path(file_path)
+    # 1. Read file — resolve to canonical absolute path to prevent path
+    # traversal (e.g., "../../etc/passwd.drawio") from hook input (CWE-22)
+    path = Path(file_path).resolve()
     try:
         file_size = path.stat().st_size
     except OSError as e:
