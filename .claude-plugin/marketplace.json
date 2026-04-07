@@ -106,7 +106,7 @@
     },
     {
       "category": "deployment",
-      "description": "Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment.",
+      "description": "Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment. Generate validated AWS architecture diagrams as draw.io XML.",
       "keywords": [
         "aws",
         "aws agent skills",
@@ -115,12 +115,15 @@
         "cdk",
         "cloudformation",
         "infrastructure",
-        "pricing"
+        "pricing",
+        "diagrams",
+        "draw.io",
+        "architecture"
       ],
       "name": "deploy-on-aws",
       "source": "./plugins/deploy-on-aws",
-      "tags": ["aws", "deploy", "infrastructure", "cdk"],
-      "version": "1.1.0"
+      "tags": ["aws", "deploy", "infrastructure", "cdk", "diagrams"],
+      "version": "1.2.0"
     },
     {
       "category": "migration",
