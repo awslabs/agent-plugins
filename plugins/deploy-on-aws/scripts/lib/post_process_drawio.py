@@ -17,6 +17,8 @@ import sys
 import defusedxml.ElementTree as ET
 from pathlib import Path
 
+MAX_FILE_SIZE = 2 * 1024 * 1024  # 2 MB
+
 # Import sibling modules by explicit file path (avoids sys.path manipulation
 # that could allow module shadowing — see CWE-426)
 SCRIPT_DIR = Path(__file__).parent
@@ -300,53 +302,84 @@ def main() -> None:
         # Not a drawio file, exit silently (hook compatibility)
         sys.exit(0)
 
+    path = Path(file_path)
+
+    # Reject symlinks to prevent symlink-follow write attacks
+    if path.is_symlink():
+        print(f"Skipping symlink: {file_path}", file=sys.stderr)
+        sys.exit(0)
+
+    # Reject files exceeding size limit before parsing
+    try:
+        file_size = path.stat().st_size
+    except OSError as e:
+        print(f"Cannot stat {file_path}: {e}", file=sys.stderr)
+        sys.exit(1)
+    if file_size > MAX_FILE_SIZE:
+        print(
+            f"Skipping: file too large ({file_size // 1024}KB > "
+            f"{MAX_FILE_SIZE // 1024 // 1024}MB limit)",
+            file=sys.stderr,
+        )
+        sys.exit(0)
+
     try:
         tree = ET.parse(file_path)
     except (ET.ParseError, FileNotFoundError) as e:
         print(f"Error parsing {file_path}: {e}", file=sys.stderr)
         sys.exit(1)
 
-    changes = []
+    # Top-level try/except prevents unhandled exception tracebacks from
+    # leaking file paths and source code lines into the hook systemMessage
+    # (stderr is captured via 2>&1 in validate-drawio.sh).
+    try:
+        changes = []
 
-    # 0. Fix Region container nesting (MUST run first — changes coordinates)
-    regions_fixed = fix_nesting(tree, verbose=args.verbose)
-    if regions_fixed > 0:
-        changes.append(f"nesting: {regions_fixed} regions flattened")
+        # 0. Fix Region container nesting (MUST run first — changes coordinates)
+        regions_fixed = fix_nesting(tree, verbose=args.verbose)
+        if regions_fixed > 0:
+            changes.append(f"nesting: {regions_fixed} regions flattened")
 
-    # 1. Fix icon fill colors (before badge/layout fixes)
-    icons_fixed = fix_icon_colors(tree, verbose=args.verbose)
-    if icons_fixed > 0:
-        changes.append(f"icons: {icons_fixed} colors corrected")
+        # 1. Fix icon fill colors (before badge/layout fixes)
+        icons_fixed = fix_icon_colors(tree, verbose=args.verbose)
+        if icons_fixed > 0:
+            changes.append(f"icons: {icons_fixed} colors corrected")
 
-    # 2. Fix step badge overlaps (15px clearance for visual breathing room)
-    badges_moved = fix_badges(tree, clearance=15.0, verbose=args.verbose)
-    if badges_moved > 0:
-        changes.append(f"badges: {badges_moved} moved")
+        # 2. Fix step badge overlaps (15px clearance for visual breathing room)
+        badges_moved = fix_badges(tree, clearance=15.0, verbose=args.verbose)
+        if badges_moved > 0:
+            changes.append(f"badges: {badges_moved} moved")
 
-    # 3. Fix external actor placement (below title + outside AWS Cloud)
-    actors_moved = fix_placement(tree, verbose=args.verbose)
-    if actors_moved > 0:
-        changes.append(f"placement: {actors_moved} actors repositioned")
+        # 3. Fix external actor placement (below title + outside AWS Cloud)
+        actors_moved = fix_placement(tree, verbose=args.verbose)
+        if actors_moved > 0:
+            changes.append(f"placement: {actors_moved} actors repositioned")
 
-    # 4. Fix legend panel sizing (match diagram height)
-    legend_resized = fix_legend_size(tree, verbose=args.verbose)
-    if legend_resized > 0:
-        changes.append("legend: resized to match diagram height")
+        # 4. Fix legend panel sizing (match diagram height)
+        legend_resized = fix_legend_size(tree, verbose=args.verbose)
+        if legend_resized > 0:
+            changes.append("legend: resized to match diagram height")
 
-    if changes:
-        summary = "; ".join(changes)
-        print(f"Post-processing: {summary}")
-        if not args.dry_run:
-            # Note: XML indentation skipped — defusedxml doesn't expose indent()
-            # and importing stdlib xml.etree.ElementTree triggers security scanners.
-            # Output is valid but not pretty-printed. If human-readable XML is needed,
-            # add a custom indent helper that walks the element tree without stdlib import.
-            tree.write(file_path, encoding="unicode", xml_declaration=False)
-            print(f"Written: {file_path}")
+        if changes:
+            summary = "; ".join(changes)
+            print(f"Post-processing: {summary}")
+            if not args.dry_run:
+                # Note: XML indentation skipped — defusedxml doesn't expose indent()
+                # and importing stdlib xml.etree.ElementTree triggers security scanners.
+                # Output is valid but not pretty-printed. If human-readable XML is needed,
+                # add a custom indent helper that walks the element tree without stdlib import.
+                tree.write(file_path, encoding="unicode", xml_declaration=False)
+                print(f"Written: {file_path}")
+            else:
+                print("(dry run, no changes written)")
         else:
-            print("(dry run, no changes written)")
-    else:
-        print("Post-processing: no changes needed")
+            print("Post-processing: no changes needed")
+    except Exception:
+        # Generic message only — do not include exception details or tracebacks,
+        # as they would leak internal file paths and source lines into the agent
+        # context via the hook's systemMessage.
+        print("Post-processing: internal error during fixers. Run manually for details.")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

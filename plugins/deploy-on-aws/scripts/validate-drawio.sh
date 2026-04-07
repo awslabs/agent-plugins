@@ -44,10 +44,11 @@ fi
 
 # Step 0: Run post-processing fixers BEFORE validation
 # This fixes badge overlaps, external actor placement, and legend sizing
-POST_RESULT=$(python3 "$SCRIPT_DIR/lib/post_process_drawio.py" "$FILE_PATH" 2>&1) || true
+# timeout prevents runaway processes from blocking the hook indefinitely
+POST_RESULT=$(timeout 10 python3 "$SCRIPT_DIR/lib/post_process_drawio.py" "$FILE_PATH" 2>&1) || true
 
 # Step 1: Run the Python validator on the post-processed file
-VALIDATE_RESULT=$(python3 "$SCRIPT_DIR/lib/validate_drawio.py" "$FILE_PATH" 2>&1) || true
+VALIDATE_RESULT=$(timeout 10 python3 "$SCRIPT_DIR/lib/validate_drawio.py" "$FILE_PATH" 2>&1) || true
 VALIDATION_PASSED=false
 if echo "$VALIDATE_RESULT" | grep -q "VALIDATION PASSED"; then
     VALIDATION_PASSED=true
@@ -56,7 +57,7 @@ fi
 # Step 2: Only generate draw.io preview URL AFTER validation passes
 URL_RESULT=""
 if [[ "$VALIDATION_PASSED" == "true" ]]; then
-    URL_RESULT=$(python3 "$SCRIPT_DIR/lib/drawio_url.py" "$FILE_PATH" 2>/dev/null) || true
+    URL_RESULT=$(timeout 5 python3 "$SCRIPT_DIR/lib/drawio_url.py" "$FILE_PATH" 2>/dev/null) || true
 fi
 
 # Build the response message
