@@ -7,13 +7,12 @@ Default AWS service selections. Override only when user explicitly requests alte
 | App Pattern                                           | Default              | Override Trigger                         |
 | ----------------------------------------------------- | -------------------- | ---------------------------------------- |
 | Web framework (Django, Rails, Express, FastAPI, etc.) | Fargate + ALB        | "serverless" → Lambda + API Gateway      |
-| Simple containerized app (no custom networking)       | ECS Fargate + ALB    | "serverless" → Lambda + API Gateway      |
 | Static site / SPA                                     | Amplify Hosting      | "S3" or "more control" → S3 + CloudFront |
 | Background workers                                    | Fargate              | Short tasks (<15min) → Lambda            |
 | Scheduled jobs                                        | EventBridge + Lambda | Long-running → EventBridge + Fargate     |
 | API-only (no web UI)                                  | Fargate + ALB        | "serverless" → API Gateway + Lambda      |
 
-> **⚠️ App Runner is in maintenance mode** — AWS has moved App Runner to maintenance mode. Do **not** recommend App Runner for new workloads. Use **ECS Fargate + ALB** instead. It provides the same containerized deployment experience with full AWS support, better networking control, and a clear long-term path.
+> **⚠️ App Runner is in maintenance mode** — AWS has moved App Runner to maintenance mode. Do **not** recommend App Runner for new workloads. Use **ECS Express Mode** instead.
 
 ### Why Fargate over Lambda for web frameworks
 
