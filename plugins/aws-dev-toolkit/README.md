@@ -1,6 +1,6 @@
 # aws-dev-toolkit
 
-A Claude Code plugin for AWS development. Ships 30 skills, 11 sub-agents, 3 MCP servers, and hooks that help you build well-architected applications on AWS.
+A Claude Code plugin for AWS development. Ships 34 skills, 11 sub-agents, 3 MCP servers, and hooks that help you build well-architected applications on AWS.
 
 ## Quick Start
 
@@ -33,7 +33,7 @@ Skills activate automatically based on context — no special commands needed. J
 "Why is my CloudFormation stack failing?"                       → aws-debug
 "How much is this infrastructure costing me?"                   → cost-check
 "Are there security issues in my Terraform?"                    → security-review
-"Estimate Bedrock costs for 50k daily invocations"              → bedrock-cost
+"Estimate Bedrock costs for 50k daily invocations"              → bedrock
 "I want to build a serverless API for processing images"        → aws-plan
 "Compare ECS vs EKS for my workload"                            → aws-compare
 "Show me a diagram of this architecture"                        → aws-diagram
@@ -183,7 +183,7 @@ Hooks run automatically on events. Currently configured:
 
 #### `aws-dev-toolkit`
 
-**Skills (30):**
+**Skills (34):**
 | Skill | Trigger | Description |
 |---|---|---|
 | **Workflows & Planning** | | |
@@ -202,7 +202,7 @@ Hooks run automatically on events. Currently configured:
 | `aws-debug` | Auto | Debug AWS deployment failures, Lambda errors, permission issues |
 | `security-review` | Auto | Audit IaC and AWS configs for security issues (mandatory for all IaC changes) |
 | `cost-check` | Auto | Analyze and optimize AWS costs |
-| `bedrock-cost` | Auto | Bedrock pricing, token economics, and cost modeling |
+| `bedrock` | Auto | Bedrock model selection, agents, knowledge bases, guardrails, and cost modeling |
 | `challenger` | Auto | Adversarial reviewer that stress-tests architecture recommendations |
 | **AWS Services** | | |
 | `lambda` | Auto | Design, build, and optimize Lambda functions — runtimes, cold starts, concurrency |
@@ -218,6 +218,10 @@ Hooks run automatically on events. Currently configured:
 | `messaging` | Auto | SQS, SNS, and EventBridge — queue design, fan-out, event routing |
 | `observability` | Auto | CloudWatch, X-Ray, and OpenTelemetry — dashboards, alarms, tracing |
 | `step-functions` | Auto | Step Functions workflows — state machines, error handling, service integrations |
+| `rds-aurora` | Auto | RDS and Aurora database design, engine selection, HA, and operations |
+| `iot` | Auto | AWS IoT architecture — device connectivity, Greengrass, fleet management |
+| `mlops` | Auto | End-to-end MLOps — SageMaker, training, inference, pipelines, monitoring |
+| `agentcore` | Auto | Amazon Bedrock AgentCore platform design, deployment, and production ops |
 | **Migration** | | |
 | `gcp-to-aws` | Auto | GCP to AWS migration service mapping, gotchas, and environment assessment |
 | `azure-to-aws` | Auto | Azure to AWS migration service mapping, gotchas, and environment assessment |
@@ -265,7 +269,7 @@ aws-dev-toolkit/
 │       ├── .claude-plugin/
 │       │   └── plugin.json           # Plugin manifest
 │       ├── .mcp.json                 # MCP server configs (3 servers)
-│       ├── skills/                   # 30 skills
+│       ├── skills/                   # 34 skills
 │       │   ├── aws-plan/             # End-to-end architecture planning
 │       │   ├── aws-architect/        # Architecture design & review
 │       │   ├── aws-compare/          # Side-by-side architecture comparison
@@ -294,6 +298,10 @@ aws-dev-toolkit/
 │       │   ├── messaging/            # SQS, SNS, EventBridge
 │       │   ├── observability/        # CloudWatch, X-Ray
 │       │   ├── step-functions/       # Step Functions workflows
+│       │   ├── rds-aurora/           # RDS and Aurora databases
+│       │   ├── iot/                  # AWS IoT architecture
+│       │   ├── mlops/               # MLOps on AWS (SageMaker)
+│       │   ├── agentcore/           # Bedrock AgentCore platform
 │       │   ├── gcp-to-aws/           # GCP migration mapping
 │       │   └── azure-to-aws/         # Azure migration mapping
 │       ├── agents/                   # 11 sub-agents
