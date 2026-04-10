@@ -32,6 +32,7 @@ To maximize the benefits of plugin-assisted development while maintaining securi
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
 | **amazon-location-service** | Add maps, geocoding, routing, places search, and geospatial features to applications with Amazon Location Service                                                                                       | Available                             |
 | **aws-amplify**             | Build full-stack apps with AWS Amplify Gen 2 using guided workflows for auth, data, storage, and functions                                                                                              | Available                             |
+| **bedrock**                 | Guided Amazon Bedrock setup: IAM configuration, model access, prompt caching, observability, and cost analysis                                                                                          | Available                             |
 | **aws-serverless**          | Build serverless applications with Lambda, API Gateway, EventBridge, Step Functions, and durable functions                                                                                              | Available                             |
 | **databases-on-aws**        | Database guidance for the AWS database portfolio — schema design, queries, migrations, and multi-tenant patterns                                                                                        | Some Services Available (Aurora DSQL) |
 | **deploy-on-aws**           | Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment                                                                                                        | Available                             |
@@ -58,6 +59,12 @@ or
 
 ```bash
 /plugin install aws-amplify@agent-plugins-for-aws
+```
+
+or
+
+```bash
+/plugin install bedrock@agent-plugins-for-aws
 ```
 
 or
@@ -226,6 +233,35 @@ Design, build, deploy, test, and debug serverless applications with AWS Lambda, 
 | Hook                        | Trigger                                       | Action                                        |
 | --------------------------- | --------------------------------------------- | --------------------------------------------- |
 | **SAM template validation** | After edits to `template.yaml`/`template.yml` | Runs `sam validate` and reports errors inline |
+
+## bedrock
+
+Guided Amazon Bedrock setup — IAM configuration, model access, prompt caching, observability, quota optimization, and cost analysis.
+
+### Agent Skill Triggers
+
+| Agent Skill | Triggers                                                                                                                   |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------- |
+| **bedrock** | "set up bedrock", "bedrock onboarding", "prompt caching", "bedrock IAM", "bedrock costs", "bedrock quota", "bedrock usage" |
+
+### Commands
+
+| Command                          | Description                                                    |
+| -------------------------------- | -------------------------------------------------------------- |
+| `/bedrock`                       | Unified entry point — routes to the right capability           |
+| `/bedrock-setup`                 | Interactive onboarding: IAM, model access, caching, validation |
+| `/bedrock-cache`                 | Set up and validate prompt caching                             |
+| `/bedrock-cache-debug`           | Diagnose prompt caching issues                                 |
+| `/bedrock-quota`                 | Check quota health and detect max_tokens waste                 |
+| `/bedrock-usage`                 | Analyze token consumption from CloudWatch                      |
+| `/bedrock-costs`                 | Analyze actual Bedrock spend from AWS Cost Explorer            |
+| `/bedrock-validate-model-access` | Validate IAM permissions and model access                      |
+
+### MCP Servers
+
+| Server                | Purpose                        |
+| --------------------- | ------------------------------ |
+| **aws-documentation** | AWS documentation and guidance |
 
 ## databases-on-aws
 

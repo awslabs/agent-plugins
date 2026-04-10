@@ -29,6 +29,18 @@
       "category": "Full Stack"
     },
     {
+      "name": "bedrock",
+      "source": {
+        "source": "local",
+        "path": "./plugins/bedrock"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "AI"
+    },
+    {
       "name": "aws-serverless",
       "source": {
         "source": "local",

@@ -1,0 +1,20 @@
+{
+  "author": {
+    "name": "Amazon Web Services"
+  },
+  "description": "Guided Amazon Bedrock setup: IAM configuration, model access, prompt caching, observability, and cost analysis.",
+  "homepage": "https://github.com/awslabs/agent-plugins",
+  "keywords": [
+    "aws",
+    "bedrock",
+    "prompt-caching",
+    "onboarding",
+    "setup",
+    "generative-ai",
+    "foundation-models"
+  ],
+  "license": "Apache-2.0",
+  "name": "bedrock",
+  "repository": "https://github.com/awslabs/agent-plugins",
+  "version": "0.4.1"
+}

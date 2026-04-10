@@ -23,6 +23,16 @@ CATEGORY_LABELS = {
 }
 
 INTERFACE_METADATA = {
+    "bedrock": {
+        "displayName": "Amazon Bedrock",
+        "shortDescription": "Set up Bedrock with IAM, model access, prompt caching, and cost analysis.",
+        "longDescription": "Guided Amazon Bedrock setup — IAM configuration, model access, prompt caching, observability, quota optimization, and cost analysis.",
+        "defaultPrompt": [
+            "Set up Amazon Bedrock for my AWS account.",
+            "How much have I spent on Bedrock this month?",
+            "Am I getting throttled on any Bedrock models?",
+        ],
+    },
     "amazon-location-service": {
         "displayName": "Amazon Location Service",
         "shortDescription": "Build maps, routing, geocoding, and places workflows on AWS.",

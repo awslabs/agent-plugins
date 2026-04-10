@@ -49,6 +49,24 @@
       "version": "1.0.0"
     },
     {
+      "category": "ai",
+      "description": "Guided Amazon Bedrock setup: IAM configuration, model access, prompt caching, observability, and cost analysis.",
+      "keywords": [
+        "aws",
+        "bedrock",
+        "prompt-caching",
+        "setup",
+        "generative-ai",
+        "foundation-models",
+        "observability",
+        "cost-analysis"
+      ],
+      "name": "bedrock",
+      "source": "./plugins/bedrock",
+      "tags": ["aws", "bedrock", "generative-ai", "prompt-caching"],
+      "version": "0.4.1"
+    },
+    {
       "category": "development",
       "description": "Design, build, deploy, test, and debug serverless applications with AWS Serverless services.",
       "keywords": [
