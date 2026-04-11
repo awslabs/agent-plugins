@@ -96,7 +96,6 @@ Generates `aws-summary-YYYY-MM-DD-HHMMSS.md` with:
 
 ## Requirements
 
-- Claude Code, Cursor, Kiro, or any AI tool supporting Agent Skills specification
 - WebFetch capability (for retrieving RSS feeds and web content)
 
 ## License

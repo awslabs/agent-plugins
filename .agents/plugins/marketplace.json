@@ -29,6 +29,18 @@
       "category": "Full Stack"
     },
     {
+      "name": "aws-summary",
+      "source": {
+        "source": "local",
+        "path": "./plugins/aws-summary"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "News"
+    },
+    {
       "name": "aws-serverless",
       "source": {
         "source": "local",
