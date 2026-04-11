@@ -1,0 +1,20 @@
+{
+  "author": {
+    "name": "AWS Labs"
+  },
+  "description": "Generate business-ready summaries of latest AWS announcements, blogs, and press releases",
+  "homepage": "https://github.com/awslabs/agent-plugins",
+  "keywords": [
+    "aws",
+    "announcements",
+    "blogs",
+    "news",
+    "updates",
+    "summaries",
+    "whats-new"
+  ],
+  "license": "MIT",
+  "name": "aws-summary",
+  "repository": "https://github.com/awslabs/agent-plugins",
+  "version": "1.0.0"
+}

@@ -49,6 +49,24 @@
       "version": "1.0.0"
     },
     {
+      "category": "news",
+      "description": "Generate business-ready summaries of latest AWS announcements, blogs, and press releases with category filtering and time ranges.",
+      "keywords": [
+        "aws",
+        "announcements",
+        "blogs",
+        "news",
+        "updates",
+        "summaries",
+        "whats-new",
+        "press-releases"
+      ],
+      "name": "aws-summary",
+      "source": "./plugins/aws-summary",
+      "tags": ["aws", "announcements", "news", "summaries"],
+      "version": "1.0.0"
+    },
+    {
       "category": "development",
       "description": "Design, build, deploy, test, and debug serverless applications with AWS Serverless services.",
       "keywords": [
