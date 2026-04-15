@@ -1,16 +1,16 @@
 {
   "mcpServers": {
-    "awsiac": {
+    "iac": {
       "args": [
         "awslabs.aws-iac-mcp-server@latest"
       ],
       "command": "uvx"
     },
-    "awsknowledge": {
+    "knowledge": {
       "type": "http",
       "url": "https://knowledge-mcp.global.api.aws"
     },
-    "awspricing": {
+    "pricing": {
       "args": [
         "awslabs.aws-pricing-mcp-server@latest"
       ],

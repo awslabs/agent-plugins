@@ -1,6 +1,6 @@
 # Cost Estimation Patterns
 
-Use the **awspricing** MCP server to get accurate cost estimates before generating IaC.
+Use the **pricing** MCP server to get accurate cost estimates before generating IaC.
 
 ## Workflow
 

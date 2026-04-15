@@ -28,7 +28,7 @@ Core principle: Default to **dev-sized** (cost-conscious: small instance sizes, 
 
 ## MCP Servers
 
-### awsknowledge
+### knowledge
 
 Consult for architecture decisions. Use when choosing between AWS services
 or validating that a service fits the use case. Helps answer "what's the
@@ -37,13 +37,13 @@ right AWS service for X?"
 Key topics: `general` for architecture, `amplify_docs` for static sites/SPAs,
 `cdk_docs` and `cdk_constructs` for IaC patterns.
 
-### awspricing
+### pricing
 
 Get cost estimates. **Always present costs before generating IaC** so user
 can adjust before committing. See [cost-estimation.md](references/cost-estimation.md)
 for query patterns.
 
-### awsiac
+### iac
 
 Consult for IaC best practices. Use when writing CDK/CloudFormation/Terraform
 to ensure patterns follow AWS recommendations.

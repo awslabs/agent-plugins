@@ -27,7 +27,7 @@ Less configuration than S3 + CloudFront. Git-based deployments work out of the b
 Use S3 + CloudFront when user needs fine-grained control over caching, edge functions,
 or has existing CloudFront infrastructure.
 
-Use `amplify_docs` topic in awsknowledge MCP for framework-specific guidance
+Use `amplify_docs` topic in knowledge MCP for framework-specific guidance
 (React, Next.js, Vue, Angular, etc.).
 
 ## Database

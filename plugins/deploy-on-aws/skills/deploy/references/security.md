@@ -72,7 +72,7 @@ through NAT Gateway. ALB is the only public-facing component.
 ### Dev simplification
 
 For dev, a single-AZ VPC with 1 public + 1 private subnet is sufficient.
-Use `awsknowledge` topic `vpc_patterns` for multi-AZ production layouts.
+Use `knowledge` topic `vpc_patterns` for multi-AZ production layouts.
 
 ## IAM
 
@@ -89,7 +89,7 @@ Never use `*` for resources or actions unless unavoidable (e.g., S3 bucket
 contents require `s3:GetObject` on `bucket/*`). Enumerate specific ARNs.
 Use conditions where possible.
 
-Consult `awsiac` MCP for IAM policy patterns by service.
+Consult `iac` MCP for IAM policy patterns by service.
 
 ## Security Groups
 
@@ -187,5 +187,5 @@ When user requests "production" or "prod", additionally enable:
 
 ## MCP References
 
-- `awsknowledge` topics: `vpc_patterns`, `iam_best_practices`, `security`
-- `awsiac` for CDK security constructs (L2 constructs apply many defaults)
+- `knowledge` topics: `vpc_patterns`, `iam_best_practices`, `security`
+- `iac` for CDK security constructs (L2 constructs apply many defaults)

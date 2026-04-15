@@ -17,9 +17,9 @@ This plugin provides two skills: infrastructure deployment with cost estimation,
 
 | Server         | Description                                       |
 | -------------- | ------------------------------------------------- |
-| `awsiac`       | AWS IaC best practices and patterns               |
-| `awsknowledge` | Architecture guidance and service recommendations |
-| `awspricing`   | Real-time AWS pricing data for cost estimation    |
+| `iac`       | AWS IaC best practices and patterns               |
+| `knowledge` | Architecture guidance and service recommendations |
+| `pricing`   | Real-time AWS pricing data for cost estimation    |
 
 ## Installation
 
