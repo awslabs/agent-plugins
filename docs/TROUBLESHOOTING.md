@@ -212,6 +212,42 @@ Replace `RUN_ID` with the workflow run ID from your pull request's **Checks** ta
 - **Repository collaborators** (write access) can re-run workflows directly.
 - **Fork contributors** cannot re-run workflows on the upstream repo. Ask a maintainer to re-run the failed jobs, or push an empty commit (`git commit --allow-empty -m "retry CI"`) to trigger a fresh run.
 
+## Codex
+
+### MCP Startup Failure: `awsknowledge`
+
+If Codex reports an `awsknowledge` startup error similar to:
+
+```text
+Transport channel closed, when send initialized notification
+```
+
+the plugin now uses a Codex-specific MCP configuration that proxies `awsknowledge` through local stdio using `uvx fastmcp run`.
+
+1. Verify Codex is using the Codex manifest and MCP file for your plugin:
+   - `.codex-plugin/plugin.json` points to `./.mcp.codex.json`
+2. Verify `uvx` is installed and available in `PATH`:
+
+   ```bash
+   uvx --version
+   ```
+
+3. Restart Codex and retry plugin startup.
+
+If the issue persists, collect the full startup error and open or comment on:
+
+- https://github.com/awslabs/agent-plugins/issues/130
+
+### Codex Debug Override: direct HTTP transport
+
+For diagnostics only, you can force the previous direct HTTP transport path:
+
+1. Edit the plugin's `.codex-plugin/plugin.json`
+2. Change `mcpServers` from `./.mcp.codex.json` to `./.mcp.json`
+3. Restart Codex
+
+Use this only for debugging and rollback. The Codex default should remain `./.mcp.codex.json`.
+
 ## Other AI Assistants
 
 Support for additional AI assistants will be added here as the plugin system expands.

@@ -22,7 +22,7 @@
     "architecture"
   ],
   "skills": "./skills/",
-  "mcpServers": "./.mcp.json",
+  "mcpServers": "./.mcp.codex.json",
   "interface": {
     "displayName": "Deploy on AWS",
     "shortDescription": "Pick AWS services, estimate cost, and generate infrastructure.",

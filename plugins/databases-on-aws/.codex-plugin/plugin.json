@@ -26,7 +26,7 @@
     "sql"
   ],
   "skills": "./skills/",
-  "mcpServers": "./.mcp.json",
+  "mcpServers": "./.mcp.codex.json",
   "interface": {
     "displayName": "Databases on AWS",
     "shortDescription": "Design schemas, query data, and choose the right AWS database path.",

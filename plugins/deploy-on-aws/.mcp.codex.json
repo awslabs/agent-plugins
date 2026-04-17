@@ -1,0 +1,35 @@
+{
+  "mcpServers": {
+    "awsiac": {
+      "args": [
+        "awslabs.aws-iac-mcp-server@latest"
+      ],
+      "command": "uvx"
+    },
+    "awsknowledge": {
+      "args": [
+        "fastmcp",
+        "run",
+        "https://knowledge-mcp.global.api.aws"
+      ],
+      "command": "uvx",
+      "env": {
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      },
+      "timeout": 120000,
+      "type": "stdio"
+    },
+    "awspricing": {
+      "args": [
+        "awslabs.aws-pricing-mcp-server@latest"
+      ],
+      "command": "uvx",
+      "disabled": false,
+      "env": {
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      },
+      "timeout": 120000,
+      "type": "stdio"
+    }
+  }
+}

@@ -20,7 +20,7 @@
     "fargate"
   ],
   "skills": "./skills/",
-  "mcpServers": "./.mcp.json",
+  "mcpServers": "./.mcp.codex.json",
   "interface": {
     "displayName": "Migration to AWS",
     "shortDescription": "Discover GCP workloads and plan a migration path to AWS.",
