@@ -1,0 +1,24 @@
+{
+  "author": {
+    "name": "Amazon Web Services"
+  },
+  "description": "Analyze AWS-deployed services and codebases to generate structured technical documentation, architecture diagrams, and business documentation — all with source-of-truth citations linking every finding back to code. Delegates diagram generation to the aws-architecture-diagram skill (deploy-on-aws plugin) for professional draw.io output. Supports CDK, CloudFormation, and Terraform.",
+  "homepage": "https://github.com/awslabs/agent-plugins",
+  "keywords": [
+    "aws",
+    "aws agent skills",
+    "documentation",
+    "architecture",
+    "diagram",
+    "draw.io",
+    "codebase-analysis",
+    "cdk",
+    "cloudformation",
+    "terraform",
+    "onboarding"
+  ],
+  "license": "Apache-2.0",
+  "name": "codebase-documentor",
+  "repository": "https://github.com/awslabs/agent-plugins",
+  "version": "0.1.0"
+}

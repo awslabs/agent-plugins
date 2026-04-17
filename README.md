@@ -33,6 +33,7 @@ To maximize the benefits of plugin-assisted development while maintaining securi
 | **amazon-location-service** | Add maps, geocoding, routing, places search, and geospatial features to applications with Amazon Location Service                                                                                       | Available                             |
 | **aws-amplify**             | Build full-stack apps with AWS Amplify Gen 2 using guided workflows for auth, data, storage, and functions                                                                                              | Available                             |
 | **aws-serverless**          | Build serverless applications with Lambda, API Gateway, EventBridge, Step Functions, and durable functions                                                                                              | Available                             |
+| **codebase-documentor**     | Analyze AWS-deployed services and codebases to generate structured technical documentation with source-of-truth citations                                                                               | Available                             |
 | **databases-on-aws**        | Database guidance for the AWS database portfolio — schema design, queries, migrations, and multi-tenant patterns                                                                                        | Some Services Available (Aurora DSQL) |
 | **deploy-on-aws**           | Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment                                                                                                        | Available                             |
 | **sagemaker-ai**            | Build, train, and deploy AI models with deep AWS AI/ML expertise brought directly into your coding assistants, covering the surface area of [Amazon SageMaker AI](https://aws.amazon.com/sagemaker/ai/) | Available                             |
@@ -81,6 +82,12 @@ or
 
 ```bash
 /plugin install sagemaker-ai@agent-plugins-for-aws
+```
+
+or
+
+```bash
+/plugin install codebase-documentor@agent-plugins-for-aws
 ```
 
 ### Codex
@@ -219,6 +226,23 @@ Design, build, deploy, test, and debug serverless applications with AWS Lambda, 
 | Hook                        | Trigger                                       | Action                                        |
 | --------------------------- | --------------------------------------------- | --------------------------------------------- |
 | **SAM template validation** | After edits to `template.yaml`/`template.yml` | Runs `sam validate` and reports errors inline |
+
+## codebase-documentor
+
+Analyzes codebases to generate structured technical documentation with source-of-truth citations linking every finding back to the exact code that produced it. Uses an outline-driven pipeline to systematically analyze codebases of any size with a persistent task board for resumability.
+
+### Agent Skill Triggers
+
+| Agent Skill          | Triggers                                                                                                                                                                                          |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **document-service** | "analyze this codebase", "generate documentation", "document this service", "I inherited this code", "help me understand this system", "draw the architecture", "what does this system look like" |
+
+### MCP Servers
+
+| Server           | Purpose                                                              |
+| ---------------- | -------------------------------------------------------------------- |
+| **awsknowledge** | AWS service descriptions, architecture guidance, documentation links |
+| **awsiac**       | CDK/CloudFormation resource schema validation and IaC best practices |
 
 ## databases-on-aws
 

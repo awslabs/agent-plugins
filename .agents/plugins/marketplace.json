@@ -41,6 +41,18 @@
       "category": "Development"
     },
     {
+      "name": "codebase-documentor",
+      "source": {
+        "source": "local",
+        "path": "./plugins/codebase-documentor"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Documentation"
+    },
+    {
       "name": "databases-on-aws",
       "source": {
         "source": "local",

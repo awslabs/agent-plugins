@@ -80,6 +80,27 @@
       "version": "1.0.0"
     },
     {
+      "category": "documentation",
+      "description": "Analyze AWS-deployed services and codebases to generate structured technical documentation, architecture diagrams, and business documentation — all with source-of-truth citations linking every finding back to code. Delegates diagram generation to the aws-architecture-diagram skill (deploy-on-aws plugin) for professional draw.io output. Supports CDK, CloudFormation, and Terraform.",
+      "keywords": [
+        "aws",
+        "aws agent skills",
+        "documentation",
+        "architecture",
+        "diagram",
+        "draw.io",
+        "codebase-analysis",
+        "cdk",
+        "cloudformation",
+        "terraform",
+        "onboarding"
+      ],
+      "name": "codebase-documentor",
+      "source": "./plugins/codebase-documentor",
+      "tags": ["aws", "documentation", "architecture", "diagram"],
+      "version": "0.1.0"
+    },
+    {
       "category": "database",
       "description": "Expert database guidance for the AWS database portfolio. Design schemas, execute queries, handle migrations, and choose the right database for your workload.",
       "keywords": [
