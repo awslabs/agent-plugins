@@ -32,7 +32,7 @@ To maximize the benefits of plugin-assisted development while maintaining securi
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
 | **amazon-location-service** | Add maps, geocoding, routing, places search, and geospatial features to applications with Amazon Location Service                                                                                       | Available                             |
 | **aws-amplify**             | Build full-stack apps with AWS Amplify Gen 2 using guided workflows for auth, data, storage, and functions                                                                                              | Available                             |
-| **aws-serverless**          | Build serverless applications with Lambda, API Gateway, EventBridge, Step Functions, and durable functions                                                                                              | Available                             |
+| **aws-serverless**          | Build serverless applications with Lambda, API Gateway, EventBridge, Step Functions, durable functions, and Lambda Managed Instances                                                                    | Available                             |
 | **databases-on-aws**        | Database guidance for the AWS database portfolio — schema design, queries, migrations, and multi-tenant patterns                                                                                        | Some Services Available (Aurora DSQL) |
 | **deploy-on-aws**           | Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment                                                                                                        | Available                             |
 | **migration-to-aws**        | Migrate GCP infrastructure to AWS with resource discovery, architecture mapping, cost analysis, and execution planning                                                                                  | Available                             |
@@ -205,7 +205,7 @@ Build full-stack apps with AWS Amplify Gen 2 using TypeScript code-first develop
 
 ## aws-serverless
 
-Design, build, deploy, test, and debug serverless applications with AWS Lambda, API Gateway, EventBridge, Step Functions, and durable functions. Includes SAM and CDK deployment workflows, a SAM template validation hook, and the AWS Lambda durable functions skill for building resilient, long-running, multi-step applications.
+Design, build, deploy, test, and debug serverless applications with AWS Lambda, API Gateway, EventBridge, Step Functions, and durable functions. Includes SAM and CDK deployment workflows, a SAM template validation hook, the AWS Lambda durable functions skill for building resilient, long-running, multi-step applications, and the Lambda Managed Instances skill for evaluating, configuring, and migrating workloads to EC2-backed Lambda.
 
 ### Agent Skill Triggers
 
@@ -214,6 +214,7 @@ Design, build, deploy, test, and debug serverless applications with AWS Lambda, 
 | **aws-lambda**                   | "Lambda function", "event source", "serverless application", "API Gateway", "EventBridge", "Step Functions", "serverless API", "event-driven architecture", "Lambda trigger" |
 | **aws-serverless-deployment**    | "use SAM", "SAM template", "SAM init", "SAM deploy", "CDK serverless", "CDK Lambda construct", "NodejsFunction", "PythonFunction", "serverless CI/CD pipeline"               |
 | **aws-lambda-durable-functions** | "lambda durable functions", "workflow orchestration", "state machines", "retry/checkpoint patterns", "long-running stateful Lambda", "saga pattern", "human-in-the-loop"     |
+| **aws-lambda-managed-instances** | "Lambda Managed Instances", "LMI", "capacity provider", "multi-concurrency Lambda", "EC2-backed Lambda", "cold start elimination", "Graviton Lambda", "Lambda cost optimization with Reserved Instances" |
 
 ### MCP Servers
 

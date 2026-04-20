@@ -16,6 +16,7 @@ Use SAM CLI for project initialization and deployment, Lambda Web Adapter for we
 - **Web Application Deployment**: Deploy full-stack applications with Lambda Web Adapter
 - **Event Source Mappings**: Configure Lambda triggers for DynamoDB, Kinesis, SQS, Kafka
 - **Lambda durable functions**: Resilient multi-step applications with checkpointing — see the [durable-functions skill](../aws-lambda-durable-functions/) for guidance
+- **Lambda Managed Instances**: Run Lambda on dedicated EC2 instances with managed lifecycle — see the [managed-instances skill](../aws-lambda-managed-instances/) for evaluation, configuration, and migration guidance
 - **Schema Management**: Type-safe EventBridge integration with schema registry
 - **Observability**: CloudWatch logs, metrics, and X-Ray tracing
 - **Performance Optimization**: Right-sizing, cost optimization, and troubleshooting
@@ -30,6 +31,7 @@ Load the appropriate reference file based on what the user is working on:
 - **Event sources**, **DynamoDB Streams**, **Kinesis**, **SQS**, **Kafka**, **S3 notifications**, or **SNS** -> see [references/event-sources.md](references/event-sources.md)
 - **EventBridge**, **event bus**, **event patterns**, **event design**, **Pipes**, or **schema registry** -> see [references/event-driven-architecture.md](references/event-driven-architecture.md)
 - **Durable functions**, **checkpointing**, **replay model**, **saga pattern**, or **long-running Lambda workflows** -> see the [durable-functions skill](../aws-lambda-durable-functions/) (separate skill in this plugin with full SDK reference, testing, and deployment guides)
+- **Lambda Managed Instances**, **LMI**, **capacity providers**, **multi-concurrency**, **EC2-backed Lambda**, **cold start elimination**, or **Lambda cost optimization with Reserved Instances** -> see the [managed-instances skill](../aws-lambda-managed-instances/) (separate skill in this plugin for evaluation, configuration, and migration)
 - **Orchestration**, **workflows**, or **Durable Functions vs Step Functions** -> see [references/orchestration-and-workflows.md](references/orchestration-and-workflows.md)
 - **Step Functions**, **ASL**, **state machines**, **JSONata**, **Distributed Map**, or **SDK integrations** -> see [references/step-functions.md](references/step-functions.md)
 - **Step Functions testing**, **TestState API**, **mocking service integrations**, or **state machine unit tests** -> see [references/step-functions-testing.md](references/step-functions-testing.md)

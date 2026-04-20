@@ -8,6 +8,8 @@
     "aws",
     "lambda",
     "durable functions",
+    "managed-instances",
+    "lmi",
     "serverless",
     "development",
     "sam",
