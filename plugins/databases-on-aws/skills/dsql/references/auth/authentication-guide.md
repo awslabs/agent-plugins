@@ -147,3 +147,7 @@ For production applications:
 
 For complete role setup instructions, schema separation patterns, and IAM configuration,
 see [access-control.md](../access-control.md).
+
+## Additional Resources
+
+- [IAM Authentication Guide (AWS documentation)](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/using-database-and-iam-roles.html)
