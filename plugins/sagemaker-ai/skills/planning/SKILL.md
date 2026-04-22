@@ -1,6 +1,6 @@
 ---
 name: planning
-description: Discovers user intent and generates a structured, step-by-step customization plan that orchestrates other skills. Always activate at the start of every conversation, when all tasks in a plan are completed, or when the user asks to modify the current plan. Handles intent discovery, plan generation, plan iteration, and mid-execution plan alterations. When in doubt, use this skill.
+description: Discovers user intent and generates a structured, step-by-step plan for SageMaker AI model customization workflows (fine-tuning, data preparation, evaluation, deployment). Activate when the user's request relates to these areas or when the user asks to modify the current plan. Handles intent discovery, plan generation, plan iteration, and mid-execution plan alterations.
 metadata:
   version: "1.0.0"
 ---
@@ -26,6 +26,7 @@ Implements dynamic planning for flexible user journeys. Instead of forcing a rig
 - The goal of this phase is to determine which skills and tools to use to fulfill the user's intent. Every question you ask should help you decide whether a specific skill or tool belongs in the plan.
 - Before asking questions, review the name, description, and details of each skill in your context (do not actually load the full SKILL.md files yet), as well as the available MCP tools. Identify what information you'd need from the user to decide if each skill/tool is relevant.
 - Ask only questions whose answers would include or exclude a skill or tool from the plan. Do not ask generic or open-ended questions. Each question should map to a planning and skill-selection decision.
+- Do NOT ask the user about base model selection or preferences. Model selection is handled exclusively by the finetuning-setup skill.
 - When evaluating whether to include a skill, check if ALL of the skill's responsibilities are satisfied, not just the primary one. If a skill handles multiple decisions (e.g., technique selection AND model selection), include it if any of those decisions remain unresolved.
 - Move to Phase 2 as soon as you can determine which skills and tools the plan needs. Don't over-ask — 1 to 3 targeted questions should be sufficient in most cases.
 

@@ -7,7 +7,7 @@ This template provides the complete cell structure for an RLVR finetuning notebo
 ## Cell 1: Install Dependencies
 
 ```python
-!pip install 'sagemaker>=3.7.0,<4.0' boto3 -q
+!pip install --upgrade 'sagemaker>=3.7.1,<4.0' boto3 -q
 ```
 
 ---
@@ -15,9 +15,7 @@ This template provides the complete cell structure for an RLVR finetuning notebo
 ## Cell 2: Setup & Credentials
 
 ```python
-import os
 import boto3
-from sagemaker.ai_registry.dataset_utils import CustomizationTechnique
 from botocore.exceptions import ClientError
 from sagemaker.ai_registry.dataset import DataSet
 from sagemaker.core.resources import ModelPackageGroup
@@ -39,12 +37,29 @@ S3_OUTPUT_PATH = f"s3://{bucket}/finetuning-output/"
 ROLE_ARN = get_execution_role() # You can change this to a specific role.
 ACCEPT_EULA = False  # Set to True to accept the base model's End-User License Agreement
 MODEL_PACKAGE_GROUP_NAME = ""  # Auto-generated based on use case
-CUSTOM_REWARD_FUNCTION = "" # Reward Function ARN
 ```
 
 ---
 
-## Cell 3: Create Dataset and Model Package Group
+## Cell 3: Register Reward Function
+
+```python
+from sagemaker.ai_registry.evaluator import Evaluator
+
+reward_function_path = "" # Insert path to the local reward function (usually ../scripts/lambda_function.py) 
+
+evaluator = Evaluator.create(
+    name="[GENERATE A NAME FOR THE EVALUATOR HERE]",
+    type="RewardFunction",
+    source=reward_function_path,
+)
+CUSTOM_REWARD_FUNCTION = evaluator.arn
+print(f"Reward Function ARN: {CUSTOM_REWARD_FUNCTION}")
+```
+
+---
+
+## Cell 4: Create Dataset and Model Package Group
 
 ```python
 # Create Model Package Group
@@ -76,7 +91,7 @@ print(f"Here is your training dataset ARN: {dataset.arn}")
 
 ---
 
-## Cell 4: Configure Trainer
+## Cell 5: Configure Trainer
 
 ```python
 from sagemaker.train.rlvr_trainer import RLVRTrainer
@@ -89,18 +104,24 @@ trainer = RLVRTrainer(
     training_dataset=TRAINING_DATASET_ARN,
     s3_output_path=S3_OUTPUT_PATH,
     sagemaker_session=sagemaker_session,
-    accept_eula=ACCEPT_EULA,
+    #accept_eula=ACCEPT_EULA, # Uncomment for Meta models
     role=ROLE_ARN,
     custom_reward_function=CUSTOM_REWARD_FUNCTION
 )
 print ("Here are the recommended hyperparameters for the current training job:")
 print(f"Batch size: {trainer.hyperparameters.global_batch_size}")
-print(f"Number of epochs: {trainer.hyperparameters.max_epochs}")
+print(f"Number of epochs: {trainer.hyperparameters.max_epochs}") # Not available for Nova models
 print(f"Learning rate: {trainer.hyperparameters.learning_rate}")
+```
 
-# To change a hyperparameter, uncomment its corresponding line and set the value you want.
-# Note: You might get an error if the value you choose is not supported for your model. 
-# If that happens, simply choose from the allowed range that's indicated in the error.
+---
+
+## Cell 6: Hyperprameter Overrides
+
+```python
+# To change a hyperparameter, uncomment its corresponding line, and set the value you want.
+
+# Note: If the value you choose is not supported for your model, you will get an error indicating the allowed range.
 
 # Uncomment the following line to change the learning rate
 # trainer.hyperparameters.learning_rate = 0.0002
@@ -108,16 +129,13 @@ print(f"Learning rate: {trainer.hyperparameters.learning_rate}")
 # Uncomment the following line to change the batch size
 # trainer.hyperparameters.global_batch_size = 16
 
-# Uncomment the following line to change the number of epochs
+# Uncomment the following line to change the number of epochs - Not available for Nova models
 # trainer.hyperparameters.max_epochs = 5
-
-# Uncomment the following line to change Adam Beta 
-# trainer.hyperparameters.adam_beta = 0.01
 ```
 
 ---
 
-## Cell 5: Start Training
+## Cell 7: Start Training
 
 ```python
 # Start training
@@ -129,7 +147,7 @@ print(f"Training Status: {training_job.training_job_status}")
 
 ---
 
-## Cell 6: Plot and Display Metrics
+## Cell 8: Plot and Display Metrics
 
 ```python
 import matplotlib.pyplot as plt

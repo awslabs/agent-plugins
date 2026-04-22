@@ -7,7 +7,7 @@ This template provides the complete cell structure for an SFT finetuning noteboo
 ## Cell 1: Install Dependencies
 
 ```python
-!pip install 'sagemaker>=3.7.0,<4.0' boto3 -q
+!pip install --upgrade 'sagemaker>=3.7.1,<4.0' boto3 -q
 ```
 
 ---
@@ -15,9 +15,7 @@ This template provides the complete cell structure for an SFT finetuning noteboo
 ## Cell 2: Setup & Credentials
 
 ```python
-import os
 import boto3
-from sagemaker.ai_registry.dataset_utils import CustomizationTechnique
 from botocore.exceptions import ClientError
 from sagemaker.ai_registry.dataset import DataSet
 from sagemaker.core.resources import ModelPackageGroup
@@ -89,7 +87,7 @@ trainer = SFTTrainer(
     training_dataset=TRAINING_DATASET_ARN,
     s3_output_path=S3_OUTPUT_PATH,
     sagemaker_session=sagemaker_session,
-    accept_eula=ACCEPT_EULA,
+    #accept_eula=ACCEPT_EULA, # Uncomment for Meta models
     role=ROLE_ARN
 )
 
@@ -98,10 +96,16 @@ print(f"Batch size: {trainer.hyperparameters.global_batch_size}")
 print(f"Number of epochs: {trainer.hyperparameters.max_epochs}")
 print(f"Learning rate: {trainer.hyperparameters.learning_rate}")
 print(f"Learning rate warmup ratio: {trainer.hyperparameters.lr_warmup_ratio}")
+```
 
-# To change a hyperparameter, uncomment its corresponding line and set the value you want.
-# Note: You might get an error if the value you choose is not supported for your model. 
-# If that happens, simply choose from the allowed range that's indicated in the error.
+---
+
+## Cell 5: Hyperparameter Overrides
+
+```python
+# To change a hyperparameter, uncomment its corresponding line, and set the value you want.
+
+# Note: If the value you choose is not supported for your model, you will get an error indicating the allowed range. 
 
 # Uncomment the following line to change the learning rate
 # trainer.hyperparameters.learning_rate = 0.0002
@@ -112,16 +116,13 @@ print(f"Learning rate warmup ratio: {trainer.hyperparameters.lr_warmup_ratio}")
 # Uncomment the following line to change the number of epochs
 # trainer.hyperparameters.max_epochs = 5
 
-# Uncomment the following line to change the learning rate warmup ratio
+# Uncomment the following line to change the learning rate warmup ratio - Not available for Nova models
 # trainer.hyperparameters.lr_warmup_ratio = 0.05
-
-# Uncomment the following line to change Adam Beta 
-# trainer.hyperparameters.adam_beta = 0.01
 ```
 
 ---
 
-## Cell 5: Start Training
+## Cell 6: Start Training
 
 ```python
 # Start training
@@ -133,7 +134,7 @@ print(f"Training Status: {training_job.training_job_status}")
 
 ---
 
-## Cell 6: Plot and Display Metrics
+## Cell 7: Plot and Display Metrics
 
 ```python
 import matplotlib.pyplot as plt

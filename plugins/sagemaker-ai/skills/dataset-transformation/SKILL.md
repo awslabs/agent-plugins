@@ -22,11 +22,9 @@ Transforms a data set provided by the user into their desired format. All transf
 3. **Don't read files until you need them.** Only read reference files when you've reached the workflow step that requires them and the user has confirmed the direction. Never read ahead.
 4. **No narration.** Don't explain what you're about to do or what you just did. Share outcomes and ask questions. Keep responses short and focused.
 5. **No repetition.** If you said something before a tool call, don't repeat it after. Only share new information.
-6. **Do not deviate from the Workflow.** The steps listed in the workflow should be followed exactly as described. Progress from Step 1 to Step 10 to complete the task. Do not deviate from the workflow!
+6. **Do not deviate from the Workflow.** The steps listed in the workflow should be followed exactly as described. Progress from Step 1 to Step 11 to complete the task. Do not deviate from the workflow!
 7. **Always end with a question.** Whenever you pause for user input, acknowledgment, or feedback, your response must end with a question. Never leave the user with a statement and expect them to know they need to respond.
-8. **Never overwrite existing files — append instead.** If a target notebook already exists, do NOT overwrite it. Append new cells to the existing file. Notify the user that the file already exists and that you will be appending to it.
-9. **Avoid filename collisions.** When creating a new file, check if a file with the same name already exists. If it does, rename the new file by appending a numeric suffix (e.g., `transform_dataset_2.ipynb`) before writing.
-10. **Default output format is JSONL.** Unless the user explicitly requests a different file format, the transformed dataset should be written as `.jsonl` (JSON Lines — one JSON object per line).
+8. **Default output format is JSONL.** Unless the user explicitly requests a different file format, the transformed dataset should be written as `.jsonl` (JSON Lines — one JSON object per line).
 
 ## Known Dataset Formats Reference
 
@@ -142,7 +140,18 @@ Continue iterating with the user's feedback — update the notebook cell in plac
 
 ⏸ Wait for user.
 
-### Step 8: Generate the execution cells in the notebook
+### Step 8: Determine notebook target
+
+Check if the project notebook already exists at `<project-dir>/notebooks/<project-name>.ipynb`.
+
+- If it exists → ask: _"Would you like me to append the transformation cells to the existing notebook, or create a new one?"_
+- If it doesn't exist → create it
+
+When appending, add a markdown header cell `## Dataset Transformation` as a section divider before the new cells.
+
+⏸ Wait for user.
+
+### Step 9: Generate the execution cells in the notebook
 
 **Before writing the notebook, read:**
 
@@ -168,7 +177,7 @@ Read the reference guide at `references/dataset_transformation_code.md` and foll
 
 ⏸ Wait for user.
 
-### Step 9: Determine and confirm execution mode
+### Step 10: Determine and confirm execution mode
 
 Check the size of the input dataset:
 
@@ -198,20 +207,20 @@ Do not execute until the user approves. If the user rejects the recommendation, 
 
 If local execution:
 
-- Add a cell that runs the transformation by importing from the `.py` files already on disk (written by the agent during Steps 7–8): import `transform_dataset` from `transform_fn`, load the dataset, transform, and save output. Scripts are located in `<project-dir>/scripts/`.
+- Add a cell that runs the transformation by importing from the `.py` files already on disk (written by the agent during Steps 7 and 9): import `transform_dataset` from `transform_fn`, load the dataset, transform, and save output. Scripts are located in `<project-dir>/scripts/`.
 
 If SageMaker Processing Job:
 
 - Add a cell that submits and monitors the Processing Job inline using the V3 SageMaker SDK directly (FrameworkProcessor, ProcessingInput, ProcessingOutput, etc.). Create a FrameworkProcessor with the SKLearn 1.2-1 image, configure inputs/outputs, and call `processor.run(wait=True, logs=True)` to block the cell and stream logs until the job completes. See `scripts/transformation_tools.py` for reference implementation details.
 - Inform the user they can run this cell to kick off and monitor the job.
 
-**Important:** The agent must NOT execute the full dataset transformation itself. The notebook cells are generated for the user to review and run. Only sample data (from Steps 7–8) should be transformed by the agent for validation purposes.
+**Important:** The agent must NOT execute the full dataset transformation itself. The notebook cells are generated for the user to review and run. Only sample data (from Steps 7 and 9) should be transformed by the agent for validation purposes.
 
 > "I've added the execution cell to the notebook. You can run it to transform the full dataset. Would you like to review the notebook before running it?"
 
 ⏸ Wait for user.
 
-### Step 10: Verify and confirm with the user
+### Step 11: Verify and confirm with the user
 
 For this step, you need: **to verify the output looks correct and confirm with the user.**
 

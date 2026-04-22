@@ -1,244 +1,104 @@
 ---
 name: model-evaluation
-description: Generates a Jupyter notebook that evaluates a fine-tuned SageMaker model using LLM-as-a-Judge. Use when the user says "evaluate my model", "how did my model perform", "compare models", or after a training job completes. Supports built-in and custom evaluation metrics, evaluation dataset setup, and judge model selection.
+description: Generates python code that evaluates SageMaker models. Supports two evaluation types: LLM-as-Judge and Custom Scorer. Use when the user says "evaluate my model", "test model performance", "how did my model perform", "compare models", or other similar requests.
 metadata:
-  version: "1.0.0"
+  version: "2.0.0"
 ---
 
-# Model Evaluation Code Generator
+# Model Evaluation
 
-Generate a Jupyter notebook that evaluates a SageMaker fine-tuned model using LLM-as-Judge via sagemaker-python-sdk v3.
+Generate code that evaluates a SageMaker model.
 
 ## Principles
 
-1. **One thing at a time.** Each response advances exactly one decision. Never combine multiple questions or recommendations in a single turn.
-2. **Confirm before proceeding.** Wait for the user to agree before moving to the next step. You are a guide, not a runaway train.
-3. **Don't read files until you need them.** Only read reference files when you've reached the workflow step that requires them and the user has confirmed the direction. Never read ahead.
-4. **No narration.** Don't explain what you're about to do or what you just did. Share outcomes and ask questions. Keep responses short and focused.
-5. **No repetition.** If you said something before a tool call, don't repeat it after. Only share new information.
+1. **One thing at a time.** Each response advances exactly one decision. Never combine multiple questions in a single turn.
+2. **Confirm before proceeding.** Wait for the user to agree before moving to the next step.
+3. **Don't read files until you need them.** Only read reference files when you've reached the step that requires them.
+4. **Don't ask what you already know.** If the answer is in conversation history, workflow_state.json, plan.md, or any file you've already read — use it. Confirm if unsure, but don't re-ask.
+5. **No narration.** Share outcomes and ask questions. Keep responses short.
+6. **Notebook writing.** Write notebooks using your standard file write tool to create the `.ipynb` file with the complete notebook JSON, OR use notebook MCP tools (e.g., `create_notebook`, `add_cell`) if available. Do NOT use bash commands, shell scripts, or `echo`/`cat` piping to generate notebooks.
+
+## Limitations
+
+This skill supports the evaluation feature for Sagemaker Serverless Model Customization. Thus it can help evaluate any Sagemaker Jumpstart models that are supported by sagemaker serverless model customization. Tell this to the user when the skill is activated:
+
+> "This skill can help us evaluate any base or finetuned model that is supported by sagemaker serverless model customization"
+
+If the user requests help evaluating a different type of model, explain to them that this is not supported by the skill.
+
+## Evaluation Types
+
+There are two evaluation types that can be used to evaluate a model:
+
+- **LLM-as-Judge** — an LLM grades your model's responses.
+- **Custom Scorer** — programmatic evaluation via Lambda function (includes built-in math and code scorers).
 
 ## Workflow
 
-### Step 0: Check for prior context
+### Step 1: Determine evaluation type
 
-Before starting the conversation, silently check for `workflow_state.json` in the project directory.
-If it exists, read it and remember any useful information (such as model package ARN, model package group name, training job name, dataset paths).
+**Do you already know which evaluation type to use?**
 
-### Step 1: Understand the task
+Check conversation history, plan.md, workflow_state.json, or anything else you've already read.
 
-For this step, you need: **what task the model is trained to do.**
-If you know this already, skip this step. If not, ask the user:
+**If yes:** confirm with the user.
 
-> "What task is this model trained to do?"
+> "It sounds like you want to run [evaluation type]. Is that right?"
+
+⏸ Wait for confirmation. If confirmed → go to Step 2.
+
+**If no:** ask.
+
+> "What kind of evaluation would you like to run? I support:
+>
+> 1. **LLM-as-Judge** — an LLM grades your model's responses
+> 2. **Custom Scorer** — programmatic scoring (math, code, or your own logic)
+>
+> Pick one, or say 'help me decide' if you're not sure."
 
 ⏸ Wait for user.
 
-### Step 2: Get evaluation dataset
+- If user picks one → go to Step 2.
+- If user indicates uncertainty, by saying something like "help me decide," "whatever you think," "I'm not sure" → read `references/evaluation-type-guide.md` and follow its instructions. It will guide the user to a choice and then return here.
+  You MUST NEVER make a recommendation to the user on eval type without reading `references/evaluation-type-guide.md`.
 
-For this step, you need: **the evaluation dataset S3 path.**
-If you know this already, skip this step. If not, ask the user:
+### Step 2: Validate and hand off to evaluation workflow
 
-> "Where's your evaluation dataset stored in S3?"
+Before reading the reference file, validate that the chosen evaluation type is compatible with the user's situation. You may already know these answers from conversation context — don't ask if you don't need to.
 
-⏸ Wait for user.
+#### LLM-as-Judge validation
 
-### Step 3: Understand the data
+1. **What model type are we evaluating?** LLM-as-Judge is not supported for Nova models. To determine model type (if you don't already know it):
+   - If you have the **training job name or ARN**, use the AWS MCP tool `list-tags` on the training job ARN and look for the `sagemaker-studio:jumpstart-model-id` tag. Contains "nova" → Nova. Anything else → OSS.
+   - If you have a **Model Package ARN**, use the AWS MCP tool `describe-model-package` and check the model description or source tags.
+   - If neither is available, ask the user.
+2. **Does the user have an evaluation dataset?** LLM-as-Judge requires one.
 
-For this step, you need: **to understand what the data looks like to inform metric recommendations.**
-If you already know what the data looks like, skip this step. If not, ask the user:
+#### Custom Scorer validation
 
-> "Can you tell me a bit about your evaluation dataset — what format is it in, and what do the input/output fields look like?"
+1. **Does the user have an evaluation dataset?** Custom Scorer requires one. (No model type restriction — works with Nova.)
 
-If the user isn't sure, offer to peek at the data:
+---
 
-> "May I read a few records of your dataset to help inform my recommendations?"
+If validation fails, tell the user which requirement(s) aren't met and offer alternatives:
 
-If they say yes, use the AWS tool to call `s3api get-object` with a `Range` header to read the first few KB.
-If you fail to get a sample, move on and rely on the user's description.
+> "[Evaluation type] won't work because [reason]."
 
-### Step 4: Validate dataset format
+If the failure reason was lack of an eval dataset, there's nothing we can do. Inform the user:
 
-If the evaluation dataset was already validated via the **dataset-evaluation** skill earlier in the conversation, skip this step.
+> "Unfortunately all of the supported eval types require an eval dataset. I can't help you with model evaluation."
 
-Otherwise, activate the **dataset-evaluation** skill to validate it. If it fails, offer to activate the **dataset-transformation** skill to convert it. Do not proceed until the dataset is valid.
-
-### Step 5: Check for custom metrics
-
-For this step, you need: **whether the user has predefined custom metrics.**
-
-> "Do you have predefined custom metrics you'd like to use? If so, they must follow the Bedrock custom metrics format: https://docs.aws.amazon.com/bedrock/latest/userguide/model-evaluation-custom-metrics-prompt-formats.html
->
-> If not, no worries — I can recommend built-in metrics for your task."
+If the failure reason is something else, offer to help them pick a different evaluation type.
 
 ⏸ Wait for user.
 
-- If the user has custom metrics → Read `references/llmaaj-custom-evaluation.md` and follow its instructions to collect and validate the metrics JSON.
-- If the user does not have custom metrics → Move to Step 6.
+If they say they do want help choosing a different eval type → read `references/evaluation-type-guide.md`.
 
-### Step 6: Select built-in metrics
+If validation passes, read the corresponding reference file:
 
-For this step, you need: **user agreement on which built-in metrics to use (if any).**
+| User chose    | Read                                     |
+| ------------- | ---------------------------------------- |
+| LLM-as-Judge  | `references/llmaaj-evaluation.md`        |
+| Custom Scorer | `references/custom-scorer-evaluation.md` |
 
-If the user provided custom metrics in Step 5, ask whether they also want built-in metrics:
-
-> "Would you also like to include any built-in metrics alongside your custom ones?"
-
-If they say no, skip to Step 7.
-
-For built-in metric selection, read `references/llmaaj-builtin-evaluation.md` and follow its instructions.
-
-⏸ Wait for user to confirm metrics.
-
-### Step 7: Resolve Model Package ARN
-
-For this step, you need: **the Model Package ARN of the fine-tuned model.**
-
-**Use this priority order:**
-
-1. **Model Package ARN from workflow state or conversation**: If you already have a model package ARN from Step 0 (workflow state) or from earlier in the conversation, confirm it with the user and move on.
-2. **Ask the user**: If you don't have the ARN, ask:
-   > "What's the Model Package ARN (or group name) of your fine-tuned model?"
-   > If they provide a group name, resolve the ARN by calling `list-model-packages` via the AWS tool with the group name.
-   > Use the latest version's `ModelPackageArn` from the response.
-
-**Validate the resolved ARN** (whether from API lookup, workflow state, or user input):
-
-- A valid versioned model package ARN looks like: `arn:aws:sagemaker:REGION:ACCOUNT:model-package/NAME/VERSION`
-- If the ARN contains `:model-package-group/`, the user provided a group ARN, not a package ARN. Resolve it using the lookup in #2.
-- If the ARN contains `:model-package/` but does NOT end with a version number (e.g., `/1`), resolve it: extract the group name from the ARN and use the lookup in #2.
-- If it contains `/DataSet/`, `/TrainingJob/`, or other non-model-package resource types, flag it: "That looks like a [Dataset/TrainingJob] ARN, not a model package ARN. Could you double-check?"
-- **Verify the ARN exists** before proceeding by calling `describe-model-package` via the AWS tool.
-  If this fails, tell the user the ARN wasn't found and ask them to double-check.
-
-⏸ Wait for confirmation before proceeding.
-
-### Step 8: Select judge model
-
-For this step, you need: **which judge model to use for evaluation.**
-This step always runs — both built-in and custom metrics require a judge model.
-
-Read `references/supported-judge-models.md` for the canonical list, selection guidance, and validation steps.
-
-Before presenting options, run the validation checks from the reference doc against the user's account and region. Only include models that pass all checks.
-
-Present the available models as a numbered list:
-
-> "Here are the judge models available in your region:
->
-> 1. [model A]
-> 2. [model B]
->    ...
->
-> Which model would you like to use? Please type the exact model name from the above list."
-
-**EXTREMELY IMPORTANT: NEVER recommend or suggest any particular model based on the context you have. YOU ARE ALLOWED ONLY to display the list of models. DO NOT add your own recommendation or suggestion after displaying the list.**
-
-⏸ Wait for user to confirm.
-
-### Step 9: Collect remaining parameters
-
-For this step, you need: **AWS Region and S3 output path.**
-For each value you don't already have, ask one at a time.
-
-⏸ Wait for each answer before asking the next.
-
-### Step 10: Confirm configuration
-
-Summarize everything and ask for approval:
-
-> "Here's the evaluation setup:
->
-> - Task: [task]
-> - Dataset: [path]
-> - Custom metrics: [Yes — N metrics / No]
-> - Built-in metrics: [list, or None]
-> - Judge: [model]
-> - Model Package ARN: [arn]
-> - Region: [region]
-> - S3 output: [path]
->
-> Your fine-tuned model will automatically be compared against its base model.
->
-> Does this look right?"
-
-⏸ Wait for user approval.
-
-### Step 11: Bedrock Evaluations agreement
-
-**This step is mandatory. Do not skip it. Do not proceed without explicit user confirmation.**
-
-Before generating the notebook, present the following agreement language:
-
-> **Important: Amazon Bedrock Evaluations Terms**
->
-> This feature is powered by Amazon Bedrock Evaluations. Your use of this feature is subject to pricing of Amazon Bedrock Evaluations, the [Service Terms](https://aws.amazon.com/service-terms/) applicable to Amazon Bedrock, and the terms that apply to your usage of third-party models. Amazon Bedrock Evaluations may securely transmit data across AWS Regions within your geography for processing. For more information, access [Amazon Bedrock Evaluations documentation](https://docs.aws.amazon.com/bedrock/latest/userguide/evaluation-judge.html).
->
-> Do you acknowledge and agree to proceed?
-
-⏸ **Hard stop.** Wait for the user to explicitly confirm. Acceptable responses include "yes", "I agree", "proceed", "ok", or similar affirmative statements. If the user asks questions about the terms, answer them, then re-ask for confirmation. Do NOT generate the notebook until the user has confirmed.
-
-### Step 12: Generate notebook
-
-If a project directory already exists (from earlier in the workflow), use it. Otherwise, activate the **directory-management** skill to set one up.
-
-Check for existing notebooks in `<project-name>/notebooks/`. Then ask:
-
-> "Would you like to append to an existing notebook, or create a new one: `<project-name>/notebooks/<project-name>_model-evaluation.ipynb`?"
-
-⏸ Wait for user.
-
-**Before writing the notebook, read:**
-
-- `references/notebook_structure.md` (cell order, placeholders, JSON formatting)
-- `scripts/notebook_cells.py` (all cell code templates)
-
-### Step 13: Provide run instructions
-
-```
-To run:
-1. Cell 1 — configuration and SDK install
-2. Cell 2 — start evaluation
-3. Cell 3 — polls status automatically (~25-60 min)
-4. Cell 4 — show base vs custom model comparison
-```
-
-## Notes
-
-- Not all models support serverless evaluation. If job fails with "DownstreamServiceUnavailable", the model doesn't have evaluation recipes.
-- Jobs stuck in "Executing" is normal — inference takes 15-30+ minutes.
-- For faster iteration, use a small dataset (5-10 examples).
-- Known working models: DeepSeek R1 Distilled Qwen 32B
-- Expected duration: small model (<10B) 25-40 min, large model (>30B) 40-60 min, with base comparison 2x.
-
-## FAQ
-
-**Q: Can I use benchmarks or custom scorer evaluations?**
-A: Not yet — this skill currently supports LLM-as-Judge evaluations only (built-in and custom metrics). Benchmark and custom scorer support will be added in a future version. In the meantime, you can set these up through the SageMaker console or refer to the [SageMaker evaluation documentation](https://docs.aws.amazon.com/sagemaker/latest/dg/model-evaluation.html).
-
-**Q: Can I combine custom and built-in metrics in the same evaluation?**
-A: Yes. You can use up to 10 custom metrics alongside any number of built-in metrics in a single evaluation job.
-
-## Troubleshooting
-
-### Evaluation job fails with "access denied when attempting to assume role"
-
-The Bedrock evaluation job needs to assume your IAM role, which requires `bedrock.amazonaws.com` in the role's trust policy. This is common when running from a local IDE with temporary or SSO credentials.
-
-To check, inspect your current role's trust policy using the AWS MCP tool:
-
-1. Use the AWS MCP tool `get-caller-identity` (STS service) to get your current role ARN.
-2. Extract the role name from the ARN (the part after `role/` or `assumed-role/`).
-3. Use the AWS MCP tool `get-role` (IAM service) with the role name, and extract `Role.AssumeRolePolicyDocument` from the response.
-
-Look for `bedrock.amazonaws.com` in `Principal.Service`. If it's missing, either add it to the trust policy or switch to a role that already trusts Bedrock (e.g., your SageMaker execution role).
-
-### Helping a user find their Model Package ARN
-
-If the user doesn't know their model package ARN and can only provide partial info (dataset ARN, training job name, etc.), guide them through these steps:
-
-1. **Ask for keywords** from the model or training job name (e.g., "medication-simplification").
-2. **Search model package groups** via the AWS tool: `list-model-package-groups` with `name-contains <keyword>`.
-3. **List packages in the group** via the AWS tool: `list-model-packages` with the group name.
-4. **Verify the match** via the AWS tool: `describe-model-package` with the ARN. Check that the `S3Uri` in `InferenceSpecification.Containers` matches the expected training output path.
-
-Always confirm the resolved ARN with the user before proceeding.
+Follow the reference file's instructions from the beginning.

@@ -41,6 +41,7 @@ Each line of code is a separate string in `source`, ending with `\n` (except the
 - Escape quotes inside strings: `\"`
 - No trailing commas in arrays or objects
 - 2-space indentation
-- Use `fs_write` with `command: create` to write the complete notebook JSON
+- Write notebooks using your standard file write tool to create the `.ipynb` file with the complete notebook JSON, OR use notebook MCP tools (e.g., `create_notebook`, `add_cell`) if available in the current environment
+- **DON'T** use bash commands, shell scripts, or `echo`/`cat` piping to generate notebooks
 - Markdown cell 0: `"cell_type": "markdown"`, no `execution_count` or `outputs`
 - Wrap all cells in `{"cells": [...], "metadata": {...}, "nbformat": 4, "nbformat_minor": 4}`

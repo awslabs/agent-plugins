@@ -25,6 +25,7 @@ This skill supports deploying Nova and OSS models that were fine-tuned through *
 2. **Confirm before proceeding.** Wait for the user to agree before moving on. But don't re-ask questions already answered in the conversation — use what you know.
 3. **Don't read files until you need them.** Only read pathway references after the pathway is confirmed.
 4. **Use what you know.** If conversation history or artifacts already answer a question, confirm your understanding instead of asking again.
+5. **Notebook writing.** Write notebooks using your standard file write tool to create the `.ipynb` file with the complete notebook JSON, OR use notebook MCP tools (e.g., `create_notebook`, `add_cell`) if available. Do NOT use bash commands, shell scripts, or `echo`/`cat` piping to generate notebooks.
 
 ## Workflow
 
