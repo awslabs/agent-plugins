@@ -14,6 +14,7 @@ Every report **MUST** contain all of these. Missing any one of them is a regress
 - [ ] `## Findings` section with numbered findings ordered by Node Duration (most expensive first)
 - [ ] Each finding uses `#### What we observed`, `#### Why it happened`, `#### Recommendation` as H4 subheadings, verbatim
 - [ ] Final `## Summary` table with columns `# | Finding | Severity | Recommendation | Expected Impact`
+- [ ] Closing `## Next Steps` block inviting the user to say "reassess" (or equivalent) after applying any recommendation, so the skill can measure the actual impact against the predicted Expected Impact
 
 ### Conditional requirements
 
@@ -219,3 +220,42 @@ results are correct but diagnostic output appears affected.}
 - **MUST** include Query ID, full plan output, optimizer statistics, actual cardinalities, index definitions, DPU estimate
 - **MUST NOT** include actual customer data values from tables
 - Include only metadata, statistics, cardinalities, and plan output
+
+## Next Steps (closing block of every report)
+
+End the report with this block so the user knows to come back for a reassessment:
+
+```markdown
+## Next Steps
+
+1. Apply the recommendations in order — Finding 1 first, then re-measure before deciding whether the subsequent findings still matter.
+2. When any recommendation is in place, say **"reassess"** (or "I added the index" / "re-run the analysis"). I'll re-capture the plan, compare against the numbers above, and append an "Addendum: After-Change Performance" section to this report — so you can see the actual impact against the Expected Impact column.
+3. If the observed change diverges significantly from the Expected Impact, I'll investigate the gap as a new finding rather than closing it out.
+```
+
+## Addendum: After-Change Performance (Phase 5)
+
+When the user signals a reassessment, append a new H2 section to the **same** report — do not produce a separate report. The addendum has:
+
+```markdown
+## Addendum: After-Change Performance
+
+**Change applied:** {one-line description of what the user did, e.g., "Added composite index (clientid, _transactionstartdatetime) on associate"}
+
+**Re-captured plan:** Query Identifier {new_query_id}, Execution Time {new_ms} ms, DPU {new_total}
+
+| Metric                 | Before        | After        | Improvement      |
+| ---------------------- | ------------- | ------------ | ---------------- |
+| Total Query Cost       | {before_cost} | {after_cost} | {pct}% ↓         |
+| Scan Type (main node)  | {before_scan} | {after_scan} | {status}         |
+| Estimated Rows Scanned | {before_est}  | {after_est}  | {pct}% ↓         |
+| Execution Time         | {before_ms}   | {after_ms}   | {pct}% ↓         |
+| DPU (Total)            | {before_dpu}  | {after_dpu}  | {pct}% ↓         |
+| Result Set             | {before_rows} | {after_rows} | Unchanged / Diff |
+
+**Match against Expected Impact:** {Yes — matches the N% latency reduction predicted in Finding 1 / No — only X% observed, investigating}.
+
+**Remaining findings status:** {Finding 2 still applies / Findings 2–3 now trivial given this change}.
+```
+
+If the Result Set row count changed, flag that prominently — the change should be performance-neutral semantically, and any row-count drift means the recommendation altered query correctness (which should never happen for an index addition, and indicates something else is wrong).
