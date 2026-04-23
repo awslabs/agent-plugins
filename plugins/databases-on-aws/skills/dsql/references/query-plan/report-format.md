@@ -106,8 +106,15 @@ Show the optimizer's calculation when relevant (selectivity math, independence a
 {recommended_sql}
 \`\`\`
 
-**Expected impact:** {What improvement the customer should expect. Be specific about which
-metrics will change and by how much, based on the evidence gathered.}
+**Expected impact:** {What improvement the customer should expect. Ground the prediction in the
+evidence you gathered — actual-vs-estimated row counts, Node Duration math, filter selectivity,
+DPU breakdown. When the evidence supports a concrete prediction, state it that way (e.g.,
+"Storage Lookup drops from 50 rows per loop × 2000 loops to 1 per loop ≈ 50× less read DPU;
+execution should go from ~4s to ~80ms"). When the evidence is insufficient for a numeric
+prediction, **do not fabricate one** — name the missing evidence explicitly (e.g., "Cannot
+predict magnitude without `most_common_freqs` on this column; expected qualitative direction
+is a reduction in Node Duration"). Honesty about what you don't know is always preferable to
+a plausible-sounding number with no data behind it.}
 ```
 
 ### Query Variant Tags

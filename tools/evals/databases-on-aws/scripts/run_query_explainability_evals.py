@@ -612,10 +612,147 @@ def grade_eval(eval_item: dict, run_result: dict) -> dict:
             else:
                 evidence = "No explanation of unused index found"
 
-        # --- Grader (b): Expected Impact column contains concrete numbers ---
-        # Failure mode: "should improve performance" / "significant reduction" —
-        # hedging without a testable prediction. Extract the Summary section and
-        # require at least one x-factor, percentage, or ms/s value.
+        # --- Eval 6 assertion: before/after comparison table with numeric duration delta ---
+        elif "before/after" in exp_lower and ("comparison" in exp_lower or "table" in exp_lower):
+            report = run_result.get("result_text", "") or ""
+            # Find a markdown table with Before / After columns and at least one row carrying ms or s values
+            header_re = re.compile(r"\|[^\n]*before[^\n]*after[^\n]*\|", re.IGNORECASE)
+            has_header = bool(header_re.search(report))
+            duration_re = re.compile(r"\d+(?:\.\d+)?\s*(?:ms|s|sec|seconds)\b", re.IGNORECASE)
+            numeric_delta = bool(duration_re.search(report))
+            if has_header and numeric_delta:
+                passed = True
+                evidence = "Before/after table present with numeric duration values"
+            elif has_header:
+                evidence = "Before/after table header present but no numeric duration values"
+            else:
+                evidence = "No before/after comparison table found"
+
+        # --- Eval 6 assertion: comments on match vs Expected Impact ---
+        elif ("observed improvement" in exp_lower or "expected impact" in exp_lower) \
+                and ("matches" in exp_lower or "exceeds" in exp_lower or "falls short" in exp_lower):
+            phrases = re.compile(
+                r"(matches? (the )?expected|exceed(s|ed) (the )?expected|"
+                r"fall(s|ing) short of expected|below expected|under expected|"
+                r"as predicted|in line with expected|close to expected)",
+                re.IGNORECASE,
+            )
+            if phrases.search(output_text):
+                passed = True
+                evidence = "Found explicit match-vs-expected commentary"
+            else:
+                evidence = "No explicit match-vs-expected commentary found"
+
+        # --- Eval 6 assertion: proposes a next hypothesis if shortfall ---
+        elif "next hypothesis" in exp_lower and ("falls short" in exp_lower or "does not declare success" in exp_lower):
+            # Vacuously pass if there's no shortfall language at all; only fail if
+            # the agent claimed success while results were below target.
+            short_signal = re.search(r"(fell short|below expected|less than expected|under-?performed)", output_text)
+            success_signal = re.search(r"(success(fully)?|as expected|matches|resolved)", output_text)
+            next_hypothesis = re.search(r"(next hypothesis|investigate (further|why)|another possible cause|additional investigation)", output_text)
+            if not short_signal:
+                passed = True
+                evidence = "No shortfall claimed; assertion vacuously satisfied"
+            elif next_hypothesis:
+                passed = True
+                evidence = "Shortfall + next-hypothesis proposal both present"
+            elif success_signal:
+                evidence = "Shortfall language present but agent also claimed success without investigating"
+            else:
+                evidence = "Shortfall acknowledged but no next hypothesis proposed"
+
+        # --- Eval 8 assertion: surfaces 'relation does not exist' verbatim ---
+        elif "relation" in exp_lower and "does not exist" in exp_lower and "verbatim" in exp_lower:
+            # Accept either the literal error text from PG, or the agent quoting it
+            # (in a code block or blockquote). Reject if the agent paraphrases
+            # without including the actual phrase.
+            literal_re = re.compile(
+                r"relation\s+[\"'`]?[a-z_][a-z0-9_]*[\"'`]?\s+does\s+not\s+exist",
+                re.IGNORECASE,
+            )
+            if literal_re.search(output_text):
+                passed = True
+                evidence = "Found 'relation ... does not exist' phrase in output"
+            else:
+                evidence = "Agent did not surface the PG error phrase verbatim"
+
+        # --- Eval 8 assertion: does NOT produce a fresh Diagnostic Report H1 for an un-EXPLAINable query ---
+        elif ("does not produce" in exp_lower or "does NOT produce" in exp_lower) \
+                and "diagnostic report" in exp_lower:
+            h1_re = re.compile(
+                r"^\s*#\s*SQL\s*Query\s*Explainability\s*—\s*Diagnostic\s*Report",
+                re.IGNORECASE | re.MULTILINE,
+            )
+            if not h1_re.search(output_text):
+                passed = True
+                evidence = "No fresh Diagnostic Report H1 produced (correct for un-EXPLAINable query)"
+            else:
+                evidence = "Agent produced a Diagnostic Report H1 for a query that could not be EXPLAINed"
+
+        # --- Eval 8 assertion: does NOT fabricate plan/findings/numbers ---
+        elif "does not fabricate" in exp_lower or "does NOT fabricate" in exp_lower:
+            # Look for signals the agent hallucinated numeric findings despite the failure
+            fabrication = re.search(
+                r"(actual (time|rows)\s*=?\s*\d+|rows\s*removed\s*by\s*filter\s*=?\s*\d+|"
+                r"node duration\s*:?\s*\d+|finding\s+\d+:.{0,80}\d+\s*(ms|s|rows))",
+                output_text,
+            )
+            if not fabrication:
+                passed = True
+                evidence = "No fabricated plan metrics / findings / row counts"
+            else:
+                evidence = f"Possible fabrication detected: {fabrication.group(0)[:80]}"
+
+        # --- Eval 8 assertion: asks user to confirm table/schema/cluster ---
+        elif "asks the user" in exp_lower and ("table" in exp_lower or "schema" in exp_lower or "cluster" in exp_lower):
+            ask_re = re.compile(
+                r"(confirm (the )?(table|schema|cluster)|which (table|schema)|did you mean|"
+                r"is this the right (table|schema)|share (the|your) (connection|cluster|endpoint)|"
+                r"provide (the|your) (table|schema))",
+                re.IGNORECASE,
+            )
+            if ask_re.search(output_text):
+                passed = True
+                evidence = "Agent asked the user to confirm the table/schema/cluster"
+            else:
+                evidence = "Agent did not explicitly ask for confirmation"
+
+        # --- Eval 9 assertion: names stale statistics as root cause ---
+        elif "stale statistics" in exp_lower and "root cause" in exp_lower:
+            stale_re = re.compile(
+                r"(stale (stat|reltuples)|out-?of-?date (stat|reltuples)|"
+                r"statistics (are )?(stale|out of date|outdated)|"
+                r"reltuples (lag|is (out of date|stale))|"
+                r"pg_class.*reltuples.*(stale|out of date))",
+                re.IGNORECASE,
+            )
+            if stale_re.search(output_text):
+                passed = True
+                evidence = "Stale statistics named as root cause"
+            else:
+                evidence = "Stale statistics not named as root cause"
+
+        # --- Eval 9 assertion: recommends ANALYZE or notes auto-analyze schedule ---
+        elif "recommends running analyze" in exp_lower or ("analyze" in exp_lower and "auto" in exp_lower):
+            analyze_re = re.compile(
+                r"(ANALYZE\s+\w+|run (an )?ANALYZE|auto-?analyz(e|ed|es)|"
+                r"DSQL (runs |auto-)analyze|analyze (schedule|on a schedule))",
+                re.IGNORECASE,
+            )
+            if analyze_re.search(output_text):
+                passed = True
+                evidence = "ANALYZE recommendation or auto-analyze note present"
+            else:
+                evidence = "No ANALYZE recommendation or auto-analyze note"
+
+        # --- Grader (b): Expected Impact is evidence-grounded ---
+        # Passes when the Expected Impact is either (1) a concrete numeric
+        # prediction grounded in evidence (e.g., "~50× less read DPU",
+        # "4s → ~80ms"), OR (2) an honest admission that the evidence is
+        # insufficient with a named missing piece ("cannot predict magnitude
+        # without most_common_freqs on this column"). Fails on pure hedging
+        # like "should improve performance" without either a number or a
+        # named evidence gap — that's the fabrication-inducing failure mode.
         elif (("expected impact" in exp_lower and "concrete numbers" in exp_lower)
               or "grader b" in exp_lower):
             report = run_result.get("result_text", "") or ""
@@ -627,20 +764,35 @@ def grade_eval(eval_item: dict, run_result: dict) -> dict:
                 r"\d+(?:\.\d+)?\s*(?:ms|s|sec|seconds|minutes?)\b|\d{3,}\s*(?:rows|row))",
                 re.IGNORECASE,
             )
+            honest_gap_re = re.compile(
+                r"(cannot predict|can't predict|unable to (predict|quantify|estimate)|"
+                r"insufficient (evidence|data|stats)|missing (evidence|stats)|"
+                r"requires? .{0,60} to (predict|estimate|quantify)|"
+                r"need (more )?(evidence|data|stats|samples)|"
+                r"qualitative (only|direction|prediction))",
+                re.IGNORECASE,
+            )
             hedges_re = re.compile(
                 r"(should improve|will be faster|significant(ly)? (reduc|improv|faster)|"
                 r"substantial(ly)? (reduc|improv)|expected to improve|performance gain)",
                 re.IGNORECASE,
             )
             numeric_hits = [ln for ln in impact_lines if numeric_re.search(ln)]
-            hedge_only = [ln for ln in impact_lines if hedges_re.search(ln) and not numeric_re.search(ln)]
+            honest_gap_hits = [ln for ln in impact_lines if honest_gap_re.search(ln)]
+            hedge_only = [
+                ln for ln in impact_lines
+                if hedges_re.search(ln) and not numeric_re.search(ln) and not honest_gap_re.search(ln)
+            ]
             if numeric_hits:
                 passed = True
                 evidence = f"Expected Impact has concrete numeric prediction(s): {numeric_hits[0][:80]}"
+            elif honest_gap_hits:
+                passed = True
+                evidence = f"Expected Impact honestly names evidence gap: {honest_gap_hits[0][:80]}"
             elif hedge_only:
-                evidence = f"Expected Impact is hedged without numbers: {hedge_only[0][:80]}"
+                evidence = f"Expected Impact hedges without number or named gap: {hedge_only[0][:80]}"
             elif impact_lines:
-                evidence = "Expected Impact column present but no numeric prediction found"
+                evidence = "Expected Impact column present but no numeric prediction or evidence-gap acknowledgment"
             else:
                 evidence = "No Expected Impact column / section found in the report"
 
