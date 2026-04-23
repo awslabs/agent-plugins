@@ -106,7 +106,7 @@ run = "uv run tools/init-skill.py"
 [tasks."security:bandit"]
 description = "Run Bandit"
 run = [
-  "bandit -r ."
+  "bandit -r . -x ./.tmp,./node_modules",
 ]
 
 [tasks."security:semgrep"]
