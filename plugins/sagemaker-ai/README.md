@@ -30,29 +30,43 @@ This plugin brings deep AWS AI/ML expertise directly into your coding assistant,
 
 ## Installation
 
-Before installing the above skills, install `uv` for your platform: [UV: Installing UV](https://docs.astral.sh/uv/getting-started/installation/)
+**Prerequisite:** [Install uv](https://docs.astral.sh/uv/getting-started/installation/)
 
-### Add the MCP Server
+### Claude Code
 
-Add the contents of `.mcp.json` file to your platform's MCP configuration file:
-
-- Claude code: Run `claude mcp add --transport stdio aws-mcp -- uvx mcp-proxy-for-aws@latest https://aws-mcp.us-east-1.api.aws/mcp` or manually add to `User/Project/Local` location as needed ([Claude Code Docs: What uses scopes](https://code.claude.com/docs/en/settings#what-uses-scopes)).
-- Cursor: `.cursor/mcp.json`
-- Kiro: `.kiro/settings/mcp.json`
-
-### Install Skills with `npx skills`
-
-You may use the [Skills CLI](https://github.com/vercel-labs/skills) (from Vercel Labs) to install the skills into your platform:
-
-- Claude code: `npx skills add https://github.com/awslabs/agent-plugins/tree/main/plugins/sagemaker-ai/skills --all --agent claude-code --copy`
-- Cursor: `npx skills add https://github.com/awslabs/agent-plugins/tree/main/plugins/sagemaker-ai/skills --all --agent cursor --copy`
-- Kiro: `npx skills add https://github.com/awslabs/agent-plugins/tree/main/plugins/sagemaker-ai/skills --all --agent kiro-cli --copy`
-
-If you have configured other agents use:
+Run in your terminal:
 
 ```
-npx skills add https://github.com/awslabs/agent-plugins/tree/main/plugins/sagemaker-ai/skills --all --agent <agents...>
+claude plugin install sagemaker-ai@claude-plugins-official
 ```
+
+Or if you're already inside Claude Code, run:
+
+```
+/plugin install sagemaker-ai@claude-plugins-official
+```
+
+### Cursor
+
+Install from the [Cursor Marketplace](https://cursor.com/marketplace/aws/sagemaker-ai) by selecting **Add to Cursor**, or run within Cursor:
+
+```
+/add-plugin sagemaker-ai
+```
+
+### Other Agents
+
+For other agents (Kiro, etc.), install the skills and MCP server manually.
+
+**Install skills** using the [Skills CLI](https://github.com/vercel-labs/skills). For example, to install for Kiro:
+
+```
+npx skills add https://github.com/awslabs/agent-plugins/tree/main/plugins/sagemaker-ai/skills --all --agent kiro-cli --copy
+```
+
+Replace `kiro-cli` with your agent if different. See [Skills supported agents](https://github.com/vercel-labs/skills#supported-agents).
+
+**Add the MCP server** by copying `.mcp.json` to your agent's configuration path (e.g., `.kiro/settings/mcp.json`).
 
 ## Model Customization
 
