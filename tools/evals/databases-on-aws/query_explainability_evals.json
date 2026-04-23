@@ -81,6 +81,67 @@
         "Support template does NOT include actual customer data values",
         "Includes table statistics (reltuples, actual COUNT) in the support template"
       ]
+    },
+    {
+      "id": 6,
+      "prompt": "Follow-up on your earlier analysis of my slow user_account query: I applied the composite index you recommended — CREATE INDEX ASYNC ON user_account(tenant_id, valid_from). The prior run was ~4s. Please reassess the same query now and tell me whether the fix landed as expected.\n\nSame query:\n\nSELECT * FROM public.user_account ua INNER JOIN public.user_profile up ON up.user_id = ua.user_id AND up.valid_from = '2000-01-01 00:00:00.000' JOIN public.work_assignment wa ON up.user_id = wa.user_id AND wa.valid_from = '2000-01-01 00:00:00.000' WHERE ua.tenant_id = '11111111-2222-3333-4444-555555555555' AND ua.valid_from = '2000-01-01 00:00:00.000';",
+      "expected_output": "Re-runs EXPLAIN ANALYZE VERBOSE, produces a Phase 5 Addendum appended to the original report (not a fresh report), includes a before/after comparison table, explicitly checks actual outcome against the originally stated Expected Impact",
+      "files": [],
+      "expectations": [
+        "Executes EXPLAIN ANALYZE VERBOSE via readonly_query tool",
+        "Identifies the composite index is now being used (Index Scan on tenant_id, valid_from)",
+        "Produces an Addendum appended to the prior report rather than a fresh top-level diagnostic report",
+        "Addendum contains a before/after comparison table with numeric duration delta",
+        "Expected Impact column contains concrete numbers (grader b)",
+        "Comments explicitly on whether the observed improvement matches, exceeds, or falls short of the originally stated Expected Impact",
+        "If observed improvement falls short of expected, proposes a next hypothesis (does NOT declare success by default)",
+        "Does NOT execute any DDL or DML statements"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "My DSQL query is slow — around 3 seconds. Can you diagnose it?\n\nSELECT * FROM UserAccount WHERE TenantId = '11111111-2222-3333-4444-555555555555' AND ValidFrom = '2000-01-01 00:00:00.000';\n\nI'm seeing weird behavior with the mixed-case table name. Is that the problem?",
+      "expected_output": "Executes EXPLAIN ANALYZE VERBOSE, produces a structured report grounded in the real plan, does NOT invent a case-sensitivity root cause",
+      "files": [],
+      "expectations": [
+        "Executes EXPLAIN ANALYZE VERBOSE via readonly_query tool",
+        "Does NOT claim DSQL is case-sensitive for identifiers (grader d)",
+        "Does NOT recommend lowercasing the table or column names as a fix (grader d)",
+        "Root cause in the report is grounded in the actual plan (e.g., missing composite index, cardinality estimation error), not in identifier casing",
+        "Produces a structured diagnostic report with problem-evidence-recommendation findings"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "I'm getting weird behavior from this DSQL query — can you look at the plan?\n\nSELECT * FROM completely_nonexistent_table WHERE x = 1;",
+      "expected_output": "Attempts EXPLAIN, surfaces the 'relation does not exist' error verbatim, stops the workflow, does NOT fabricate a diagnostic report",
+      "files": [],
+      "expectations": [
+        "Attempts to execute EXPLAIN ANALYZE VERBOSE via readonly_query tool",
+        "Surfaces the 'relation ... does not exist' error message from PostgreSQL verbatim in the agent output",
+        "Does NOT produce a full '# SQL Query Explainability — Diagnostic Report' header (the workflow should halt before report generation)",
+        "Does NOT fabricate a plan, findings, row counts, or expected-impact numbers for a table it could not EXPLAIN",
+        "Does NOT invent DSQL-specific quirks (e.g., case-sensitivity, schema visibility) as the root cause (grader d)",
+        "Asks the user to confirm the table name / schema / cluster, OR surfaces the error with a brief next-step prompt",
+        "Does NOT execute any DDL or DML statements"
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "My DSQL query on the orders table is much slower than it used to be — around 2 seconds. The plan looks reasonable but something feels off. Can you diagnose?\n\nSELECT order_id, total FROM orders WHERE customer_id = '12345' AND status = 'pending';",
+      "expected_output": "Executes EXPLAIN ANALYZE VERBOSE, queries pg_class.reltuples AND actual COUNT(*), detects divergence between the two, identifies stale statistics as the root cause, recommends ANALYZE (or notes DSQL auto-analyze schedule)",
+      "files": [],
+      "expectations": [
+        "Executes EXPLAIN ANALYZE VERBOSE via readonly_query tool",
+        "Queries pg_class for reltuples on the orders table",
+        "Retrieves actual row counts via COUNT(*) for comparison",
+        "Identifies that pg_class.reltuples diverges significantly from actual COUNT(*) (the stale-stats signature)",
+        "Names stale statistics as the root cause in the report, not an index or predicate issue",
+        "Recommends running ANALYZE orders OR explicitly notes that DSQL auto-analyzes on a managed schedule and this is a transient state",
+        "Expected Impact column contains concrete numbers (grader b)",
+        "Does NOT recommend adding indexes that the existing plan already uses correctly",
+        "Does NOT execute any DDL or DML statements"
+      ]
     }
   ]
 }

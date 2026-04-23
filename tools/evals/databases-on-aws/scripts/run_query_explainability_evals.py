@@ -612,6 +612,101 @@ def grade_eval(eval_item: dict, run_result: dict) -> dict:
             else:
                 evidence = "No explanation of unused index found"
 
+        # --- Grader (b): Expected Impact column contains concrete numbers ---
+        # Failure mode: "should improve performance" / "significant reduction" —
+        # hedging without a testable prediction. Extract the Summary section and
+        # require at least one x-factor, percentage, or ms/s value.
+        elif (("expected impact" in exp_lower and "concrete numbers" in exp_lower)
+              or "grader b" in exp_lower):
+            report = run_result.get("result_text", "") or ""
+            section_match = re.search(r"(?is)(#+\s*summary.*?)(?=\n#|\Z)", report)
+            section = section_match.group(1) if section_match else report
+            impact_lines = re.findall(r"(?i)(expected[\s_-]*impact[^\n]*)", section)
+            numeric_re = re.compile(
+                r"(\d+(?:\.\d+)?\s*x\b|\d+(?:\.\d+)?\s*%|"
+                r"\d+(?:\.\d+)?\s*(?:ms|s|sec|seconds|minutes?)\b|\d{3,}\s*(?:rows|row))",
+                re.IGNORECASE,
+            )
+            hedges_re = re.compile(
+                r"(should improve|will be faster|significant(ly)? (reduc|improv|faster)|"
+                r"substantial(ly)? (reduc|improv)|expected to improve|performance gain)",
+                re.IGNORECASE,
+            )
+            numeric_hits = [ln for ln in impact_lines if numeric_re.search(ln)]
+            hedge_only = [ln for ln in impact_lines if hedges_re.search(ln) and not numeric_re.search(ln)]
+            if numeric_hits:
+                passed = True
+                evidence = f"Expected Impact has concrete numeric prediction(s): {numeric_hits[0][:80]}"
+            elif hedge_only:
+                evidence = f"Expected Impact is hedged without numbers: {hedge_only[0][:80]}"
+            elif impact_lines:
+                evidence = "Expected Impact column present but no numeric prediction found"
+            else:
+                evidence = "No Expected Impact column / section found in the report"
+
+        # --- Grader (c): Addendum appended, not a fresh report ---
+        # Phase 5 reassessment MUST append an Addendum section, not restart with
+        # a fresh top-level Diagnostic Report H1. Single-turn-aware: checks the
+        # current turn's output has Addendum and does NOT open with a fresh H1.
+        elif ("addendum" in exp_lower
+              and ("appended" in exp_lower or "not a fresh" in exp_lower or "rather than" in exp_lower)):
+            report = run_result.get("result_text", "") or ""
+            h1_re = re.compile(
+                r"^\s*#\s*(?:SQL\s*Query\s*Explainability|Diagnostic\s*Report)",
+                re.IGNORECASE | re.MULTILINE,
+            )
+            addendum_re = re.compile(r"(?im)^\s*#{1,3}\s*addendum\b")
+            h1_count = len(h1_re.findall(report))
+            has_addendum = bool(addendum_re.search(report))
+            if has_addendum and h1_count == 0:
+                passed = True
+                evidence = "Addendum section present, no fresh report H1 (correct)"
+            elif has_addendum and h1_count >= 1:
+                evidence = (
+                    f"Addendum present but ALSO {h1_count} fresh Diagnostic Report "
+                    f"H1(s) — should be appended, not restarted"
+                )
+            elif not has_addendum:
+                evidence = "No Addendum section found — reassessment was not appended"
+            else:
+                evidence = f"Unexpected state: addendum={has_addendum}, h1_count={h1_count}"
+
+        # --- Grader (d): No hallucinated DSQL-specific semantics ---
+        # Guards against fabricated root causes like "DSQL is case-sensitive"
+        # when the agent saw get_schema return empty. PostgreSQL auto-lowercases
+        # unquoted identifiers; inventing a DSQL-specific quirk is a regression.
+        # Matches against output_text only (the prompt may legitimately mention
+        # "mixed-case" / "case-sensitive" / etc.).
+        elif (("case-sensitive" in exp_lower and "dsql" in exp_lower)
+              or "lowercasing" in exp_lower
+              or ("invent" in exp_lower and ("quirk" in exp_lower or "dsql-specific" in exp_lower))
+              or "grader d" in exp_lower):
+            bad_phrases = [
+                r"dsql is case[\s-]*sensitive",
+                r"case[\s-]*sensitive (for )?identifier",
+                r"dsql handles identifiers differently",
+                r"dsql does not (auto[\s-]*)?lowercase",
+                r"you (must|need to|should) lowercase (the )?(table|column|identifier)",
+                r"rename .{0,30}to lowercase",
+            ]
+            correction_re = re.compile(
+                r"(postgres(ql)? (auto[\s-]*)?lowercase|auto[\s-]*lowercased|folded to lowercase)",
+                re.IGNORECASE,
+            )
+            hits = []
+            for pat in bad_phrases:
+                m = re.search(pat, output_text, re.IGNORECASE)
+                if m:
+                    hits.append(m.group(0))
+            if not hits:
+                passed = True
+                evidence = "No hallucinated DSQL case-sensitivity claims found"
+            elif correction_re.search(output_text):
+                passed = True
+                evidence = f"Found {len(hits)} case-sensitivity phrase(s) but paired with auto-lowercase correction"
+            else:
+                evidence = f"Hallucinated DSQL case-sensitivity claim: {hits[0]!r}"
+
         # --- Fallback: keyword matching ---
         # Matches against result_text only (not the prompt-inclusive full_text), so
         # an agent can't pass by echoing the prompt. Threshold is high (0.8) because

@@ -110,15 +110,19 @@ python tools/evals/databases-on-aws/scripts/run_query_explainability_evals.py \
   --verbose
 ```
 
-**What it checks** (5 eval prompts, 42 assertions total):
+**What it checks** (9 eval prompts, 70 assertions total):
 
-| Eval                                    | Focus          | Key assertions                                                                                                  |
-| --------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------- |
-| 1. Correlated predicates (3-table join) | Full workflow  | EXPLAIN ANALYZE, pg_class/pg_stats queries, COUNT(*), correlated predicates, composite index, structured report |
-| 2. Full Scan with existing index        | Index analysis | Full Scan identification, pg_indexes query, composite index recommendation, CREATE INDEX ASYNC                  |
-| 3. Long-running query (>30s)            | Safety gates   | Skips GUC experiments, provides manual testing SQL, no re-run for redundant predicates                          |
-| 4. DML statement (UPDATE)               | DML safety     | Rewrites UPDATE as equivalent SELECT, runs EXPLAIN via readonly_query, does not modify data                     |
-| 5. Anomalous Storage Lookup             | Bug detection  | Detects impossible row count, flags DSQL bug, support request template, no customer data                        |
+| Eval                                         | Focus                      | Key assertions                                                                                                  |
+| -------------------------------------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 1. Correlated predicates (3-table join)      | Full workflow              | EXPLAIN ANALYZE, pg_class/pg_stats queries, COUNT(*), correlated predicates, composite index, structured report |
+| 2. Full Scan with existing index             | Index analysis             | Full Scan identification, pg_indexes query, composite index recommendation, CREATE INDEX ASYNC                  |
+| 3. Long-running query (>30s)                 | Safety gates               | Skips GUC experiments, provides manual testing SQL, no re-run for redundant predicates                          |
+| 4. DML statement (UPDATE)                    | DML safety                 | Rewrites UPDATE as equivalent SELECT, runs EXPLAIN via readonly_query, does not modify data                     |
+| 5. Anomalous Storage Lookup                  | Bug detection              | Detects impossible row count, flags DSQL bug, support request template, no customer data                        |
+| 6. Phase 5 reassessment                      | Outcome loop               | Appends Addendum (not fresh report), before/after table, compares actual vs Expected Impact                     |
+| 7. Mixed-case identifiers                    | Anti-hallucination         | Runs EXPLAIN on user's verbatim query, does NOT invent "DSQL is case-sensitive", root cause grounded in plan    |
+| 8. Unknown table (`relation does not exist`) | Anti-hallucination         | Surfaces PG error verbatim, does NOT fabricate a diagnostic report, does NOT invent DSQL quirks                 |
+| 9. Stale `pg_class.reltuples`                | Stats divergence diagnosis | Queries pg_class AND COUNT(*), identifies divergence, recommends ANALYZE / notes DSQL auto-analyze              |
 
 ### Cluster fixtures the evals expect
 
