@@ -1,6 +1,6 @@
 {
   "name": "sagemaker-ai",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Build, train, and deploy AI models with deep AWS AI/ML expertise brought directly into your coding assistants, covering the surface area of Amazon SageMaker AI.",
   "author": {
     "name": "Amazon Web Services",

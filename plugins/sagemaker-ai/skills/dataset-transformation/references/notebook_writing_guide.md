@@ -26,9 +26,7 @@ But in a Jupyter notebook, each line must be a separate string in a JSON array:
 }
 ```
 
-## The Solution: Use fs_write with JSON Structure
-
-**ALWAYS use the `fs_write` tool with `command: create` to write notebooks.**
+## The Solution: Write as JSON Structure
 
 ### Correct Notebook Structure (Pretty-Print Format)
 
@@ -82,7 +80,7 @@ Use **2-space indentation** (pretty-print format) for consistent, readable forma
 ❌ **DON'T** forget to escape quotes in strings
 ❌ **DON'T** add trailing commas to last array elements
 
-✅ **DO** use fs_write with the complete JSON structure
+✅ **DO** use your standard file write tool to write the complete notebook JSON, or notebook MCP tools (e.g., `create_notebook`, `add_cell`) if available
 ✅ **DO** add `\n` to end of each line in source arrays
 ✅ **DO** validate JSON structure before writing
 ✅ **DO** use proper escaping for special characters
