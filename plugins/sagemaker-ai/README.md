@@ -3,6 +3,7 @@
 This plugin brings deep AWS AI/ML expertise directly into your coding assistant, covering the surface area of [Amazon SageMaker AI](https://aws.amazon.com/sagemaker/ai/); currently, skills are provided to assist with the following capability areas:
 
 - **Model Customization** — End-to-end guided workflows for fine-tuning foundation models, from use case definition through data preparation, training, evaluation, and deployment on Amazon SageMaker AI.
+- **AI Optimization** — Benchmarking LLM inference performance and getting deployment recommendations for the best instance type, serving configuration, and optimizations.
 - **HyperPod Cluster Operations** — Remote command execution on nodes via SSM, version checking, and diagnostic reporting for SageMaker HyperPod training clusters.
 
 ## Agent Skills
@@ -21,6 +22,7 @@ This plugin brings deep AWS AI/ML expertise directly into your coding assistant,
 | 10 | `hyperpod-ssm`             | Remote command execution and file transfer on HyperPod cluster nodes via SSM                                             | [SKILL.md](skills/hyperpod-ssm/SKILL.md)             |
 | 11 | `hyperpod-version-checker` | Check and compare software component versions across HyperPod cluster nodes                                              | [SKILL.md](skills/hyperpod-version-checker/SKILL.md) |
 | 12 | `hyperpod-issue-report`    | Generate diagnostic reports for HyperPod troubleshooting and support cases                                               | [SKILL.md](skills/hyperpod-issue-report/SKILL.md)    |
+| 13 | `ai-optimization`          | Guided workflows for benchmarking LLM inference and getting deployment recommendations (best instance, optimizations)    | [SKILL.md](skills/ai-optimization/SKILL.md)          |
 
 ## MCP Servers
 
@@ -180,6 +182,29 @@ Learn more about AWS Identity and Access Management for Amazon SageMaker AI [her
 ## Customizing Skills for Your Organization
 
 The skills in this plugin encode AWS best practices, but they are fully customizable. You can fork the repository and modify any `SKILL.md` to reflect your organization's standards, approved techniques, required evaluation benchmarks, or internal tooling. Workspace-level skills take precedence over global skills, so teams can maintain their own versions without affecting other users.
+
+## AI Optimization
+
+The AI Optimization skill covers the SageMaker AI Optimization APIs for benchmarking and optimizing LLM inference performance. It guides users through:
+
+- **Workload configuration** — Define traffic patterns (request shape, concurrency, dataset) for benchmarking
+- **Benchmark jobs** — Measure inference performance (latency, throughput, cost) on existing SageMaker endpoints
+- **Recommendation jobs** — Automatically find the best instance type, serving configuration, and optimizations (kernel tuning, speculative decoding) for a model
+
+### How It Works
+
+- **Define your workload** — Describe your expected traffic pattern (input/output token lengths, concurrency). The skill creates an AIWorkloadConfig.
+- **Benchmark or recommend** — Either benchmark an existing endpoint, or provide a model S3 URI and let the service evaluate multiple instance types automatically.
+- **Review results** — The skill presents ranked recommendations with expected performance metrics, optimization details, and deployable ModelPackages.
+- **Deploy** — Each recommendation includes a ModelPackage that can be deployed directly to a SageMaker endpoint with one click.
+
+### Examples
+
+- "Benchmark my SageMaker endpoint"
+- "Find the best instance type for my Llama model"
+- "Optimize inference cost for my model in S3"
+- "Create a recommendation job for throughput optimization"
+- "What's the cheapest way to serve my model?"
 
 ## Related Resources
 
