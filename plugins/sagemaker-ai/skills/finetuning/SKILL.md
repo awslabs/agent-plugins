@@ -31,12 +31,14 @@ Before starting this workflow, verify:
 - 📋 Copy the code structure precisely - no improvisation
 - 🎯 Follow the minimal code principle strictly
 - ✅ When writing a notebook cell, make sure the indentation and f strings are correct
+- ✅ Write notebooks using your standard file write tool to create the `.ipynb` file with the complete notebook JSON, OR use notebook MCP tools (e.g., `create_notebook`, `add_cell`) if available
+- ❌ Do NOT use bash commands, shell scripts, or `echo`/`cat` piping to generate notebooks
 
 ## User Communication Rules
 
 - ❌ NEVER offer to run the notebook for the user (you don't have the tools)
 - ❌ NEVER offer to move on to a downstream skill while training is in progress (logically impossible)
-- ❌ NEVER set ACCEPT_EULA to True yourself (user must read and agree)
+- ❌ NEVER set ACCEPT_EULA to True yourself for Meta/Llama models (user must read and agree)
 - ✅ Always mention both the number AND title of cells you reference
 - ✅ If user asks how to run: Tell them to run cells one by one, mention ipykernel requirement
 
@@ -50,9 +52,13 @@ Before starting this workflow, verify:
 
 1. Identify project directory from conversation context
    - If unclear (multiple relevant directories exist) → Ask user which folder to use
-2. Create Jupyter notebook: `[title]_finetuning.ipynb`
-   - `[title]` = snake_case name derived from use case
-   - Save under the identified directory
+   - If no project directory exists → activate the **directory-management** skill to set one up
+2. Check if the project notebook already exists at `<project-dir>/notebooks/<project-name>.ipynb`
+   - If it exists → ask: _"Would you like me to append the fine-tuning cells to the existing notebook, or create a new one?"_
+   - If it doesn't exist → create it
+3. When appending, add a markdown header cell `## Fine-Tuning` as a section divider before the new cells
+
+⏸ Wait for user.
 
 ### 1.2 Select Reference Template
 
@@ -64,9 +70,13 @@ Read the example notebook matching the finetuning strategy:
 
 ### 1.3 Copy Notebook Structure
 
-1. Write the exact cells from the example to `[title]_finetuning.ipynb`
+1. Write the exact cells from the example to the project notebook
 2. Use same order, dependencies, and imports as the example
 3. DO NOT improvise or add extra code
+4. If the model is **NOT** a Meta/Llama model (model ID does NOT start with `meta-`):
+   - Omit the `ACCEPT_EULA = False` line from the config cell
+   - Omit the `accept_eula=ACCEPT_EULA,` line from the trainer call
+5. If the model is in the Nova family, exclude print and override statements for the following hyperparameters: `max_epochs` and `lr_warmup_ratio`
 
 ### 1.4 Auto-Generate Configuration Values
 
@@ -103,21 +113,27 @@ Read the example notebook matching the finetuning strategy:
 
 ## 3. EULA review and acceptance
 
-1. Look up the official EULA link for the selected base model from references/eula_links.md
-2. Display the EULA link(s) to the user in your message as clickable markdown links
-3. Tell the user they must read and agree to the EULA before using this model (one sentence)
-4. Ask them to manually change `ACCEPT_EULA` to `True` in the notebook after reviewing the license
-5. **NEVER set ACCEPT_EULA to True yourself**
+1. Look up the official license link for the selected base model from references/eula_links.md
+2. Display the license to the user following the phrasing in references/eula_links.md. For OSS models: "This model is licensed under **{License}**. Please review the license terms here: {URL}." For Nova models: "This model is subject to the AWS Service Terms: {URL}."
+3. Check if the selected base model is a Meta/Llama model (model ID starts with `meta-`)
+   - **If Meta/Llama**: Tell the user they must read and agree to the EULA before using this model. Ask them to manually change `ACCEPT_EULA` to `True` in the notebook after reviewing the license. **NEVER set ACCEPT_EULA to True yourself for Meta/Llama models.**
+   - **If non-Meta**: Inform the user of the license for their awareness. No code-level action needed — the `ACCEPT_EULA` variable and `accept_eula` parameter should already be omitted from the notebook (see Step 1.3).
 
 ## 4. Notebook Execution
 
-1. **Display the following to the user:**: `A Jupyter notebook has now been generated which will help you finetune your model. You are free to run it now. Please let me know once the training is complete.`
-2. Wait for user's confirmation about training completion. Once the user has confirmed this, you are free to move to the next step of the plan.
+1. **Display the following to the user:**: `I have updated your Jupyter Notebook with the finetuning code. If you run it cell by cell, you should be able to launch your SageMaker Training job. 
+Training takes a while. Please monitor the progress and let me know when it's complete so I can help you get to the next step in your plan.`
+
+2. Wait for user's confirmation about training completion. Once the user has confirmed, you are free to move to the next step of the plan.
 
 **CRITICAL:**
 
 - DON'T suggest moving to next steps before training completes
 - DON'T elaborate on the next steps unless the user specifically asks you about them.
+
+## 5. Continuous Customization
+
+If the user wants to finetune a model they had already customized, follow the instructions in references/continuous_customization.md
 
 ---
 
@@ -129,3 +145,4 @@ Read the example notebook matching the finetuning strategy:
 - `sft_example.md` - Complete notebook template for Supervised Fine-Tuning
 - `dpo_example.md` - Complete notebook template for Direct Preference Optimization
 - `rlvr_example.md` - Complete notebook template for Reinforcement Learning from Verifiable Rewards
+- `continuous_customization.md` - Instructions on fine-tuning an already fine-tuned model.

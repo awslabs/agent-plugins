@@ -12,6 +12,8 @@ Default AWS service selections. Override only when user explicitly requests alte
 | Scheduled jobs                                        | EventBridge + Lambda | Long-running → EventBridge + Fargate     |
 | API-only (no web UI)                                  | Fargate + ALB        | "serverless" → API Gateway + Lambda      |
 
+> **⚠️ App Runner is in maintenance mode** — AWS has moved App Runner to maintenance mode. Do **not** recommend App Runner for new workloads. Use **ECS Express Mode** instead.
+
 ### Why Fargate over Lambda for web frameworks
 
 Most web frameworks (Django, Rails, Flask with WSGI) expect long-running processes.

@@ -161,7 +161,7 @@
       "name": "sagemaker-ai",
       "source": "./plugins/sagemaker-ai",
       "tags": ["aws", "sagemaker", "machine-learning", "generative-ai"],
-      "version": "1.0.0"
+      "version": "1.1.0"
     }
   ]
 }
