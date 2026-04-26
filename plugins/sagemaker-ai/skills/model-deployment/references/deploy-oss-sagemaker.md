@@ -18,6 +18,7 @@ Uses the SageMaker PySdk `JumpStartModel` to resolve the base model S3 URI and c
 - Instance type
 - IAM execution role ARN
 - AWS region
+- EULA acceptance (from Step 4 of the main workflow)
 
 ## Prerequisites
 
@@ -78,7 +79,14 @@ The region was identified in Step 1 of the main workflow. Confirm it with the us
 
 ### Step 6: Generate Notebook
 
-Ask the user if they have an existing notebook to add the deployment cells to, or if they want a new one. If new, suggest a name like `deploy-[model]-[target].ipynb` and ask where to save it.
+If a project directory already exists (from earlier in the workflow), use it. Otherwise, activate the **directory-management** skill to set one up.
+
+Check if the project notebook already exists at `<project-dir>/notebooks/<project-name>.ipynb`.
+
+- If it exists → ask: _"Would you like me to append the deployment cells to the existing notebook, or create a new one?"_
+- If it doesn't exist → create it
+
+When appending, add a markdown header cell `## Model Deployment — SageMaker` as a section divider before the new cells.
 
 ⏸ Wait for user.
 
@@ -115,8 +123,13 @@ Cell 2:
 - `[TRAINING_JOB_NAME]` → Training job name (used to look up JumpStart model ID from tags)
 - `[ROLE_ARN]` → IAM execution role ARN
 - `[ENDPOINT_NAME]` → Name for the endpoint (agent should generate a reasonable default)
+- `[ACCEPT_EULA]` → `True` if the user accepted the license in Step 4 of the main workflow, `False` otherwise
 
-### Step 7: Provide Run Instructions
+### Step 7: Explicitly State EULA Acceptance
+
+Before the user runs the notebook, confirm the EULA acceptance from Step 4 of the main workflow. Tell the user: "Since you accepted the license agreement, I've set EULA acceptance to `True` in the deployment code." If the user did not accept the license, tell them deployment cannot continue without license acceptance.
+
+### Step 8: Provide Run Instructions
 
 ```
 To run:
@@ -129,7 +142,7 @@ To run:
 
 ## Common Issues
 
-- **"No module named 'sagemaker.jumpstart'"**: Upgrade SDK: `pip install --upgrade sagemaker>=3.7.0`
+- **"No module named 'sagemaker.jumpstart'"**: Upgrade SDK: `pip install --upgrade sagemaker>=3.7.1`
 - **"ModuleNotFoundError" for vllm_async_service**: Using LMI 0.31.0 container. Use `OPTION_ROLLING_BATCH=lmi-dist` instead of `OPTION_ENTRYPOINT`.
 - **Base IC fails health check**: Check `MinMemoryRequiredInMb` fits within instance memory. Reduce if needed.
 - **"Inference Component Name header is required"**: Must pass `InferenceComponentName` when invoking the endpoint.

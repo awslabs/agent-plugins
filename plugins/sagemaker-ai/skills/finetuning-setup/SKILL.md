@@ -40,16 +40,12 @@ Guides the user through selecting a base model and fine-tuning technique based o
 
 ### Step 2: Select Base Model
 
-1. Read `use_case_spec.md` to understand the use case and success criteria.
-2. Restate the use case in one sentence.
-3. Always retrieve the full list of available SageMaker Hub model names by running: `python finetuning-setup/scripts/get_model_names.py <hub-name>` — even if the user has already mentioned a model name or family. Do not skip this step or filter the results.
-4. Present all available models to the user, grouped by model family (e.g., Llama, Mistral, Gemma) for readability.
-5. Ask the user to pick the exact model ID from the list.
-6. Validate the selected model exists in the retrieved list before proceeding.
+First, retrieve all available SageMaker Hub model names by running: `python finetuning-setup/scripts/get_model_names.py <hub-name>`.
 
-EXTREMELY IMPORTANT: NEVER recommend or suggest any particular model based on the context you have. YOU ARE ALLOWED ONLY to display the list of models
-as given by the script. DO NOT add your own recommendation or suggestion after displaying the list of models to tell which model is correct. Present this
-statement to the user: "Which model would you like to use? Please type the exact model name from the above list." and allow the user to select the model.
+Present all available models to the user with their licenses before making any recommendations. Cross-reference the model list with `references/model-licenses.md` and display each as `<model name> - [<license>](<url>)`. For example: "Qwen3-4B - [Apache 2.0](https://huggingface.co/Qwen/Qwen3-4B/blob/main/LICENSE)"
+
+If you already know the model the user wants to use (from conversation context or planning files), confirm that it's in the list, display its license, and move on. Otherwise, help the user pick a model following the instructions in `references/model-selection.md`.
+**Important:** Make sure to remember this list of available models when helping with model selection. Don't recommend a model that's not available to the user.
 
 ### Step 3: Determine Finetuning Technique
 
@@ -72,4 +68,6 @@ Here's what we've selected:
 
 ## References
 
+- `references/model-selection.md` — Model selection instructions and benchmark descriptions
 - `references/finetune_technique_selection_guide.md` — Technique guidance
+- `references/model-licenses.md` — Model license information for display during model selection

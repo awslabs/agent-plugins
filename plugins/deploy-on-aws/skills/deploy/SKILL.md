@@ -56,6 +56,7 @@ to ensure patterns follow AWS recommendations.
 - Run IaC security scans (cfn-nag, checkov) before deployment
 - Don't ask "Lambda or Fargate?" - just pick the obvious one
 - If genuinely ambiguous, then ask
+- **Never recommend AWS App Runner** — it is in maintenance mode. Use ECS Express Mode instead.
 
 ## References
 
