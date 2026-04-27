@@ -6,33 +6,31 @@ Standard patterns for files and directories to skip during codebase analysis. Th
 
 Skip these directory names at any depth:
 
-| Directory        | Reason                                                        |
-| ---------------- | ------------------------------------------------------------- |
-| `.git`           | Version control internals                                     |
-| `node_modules`   | npm/yarn dependencies                                         |
-| `vendor`         | Go/PHP vendored dependencies                                  |
-| `__pycache__`    | Python bytecode cache                                         |
-| `.venv` / `venv` | Python virtual environments                                   |
-| `dist`           | Build output                                                  |
-| `build`          | Build output                                                  |
-| `out`            | Build output                                                  |
-| `.next`          | Next.js build cache                                           |
-| `.nuxt`          | Nuxt build cache                                              |
-| `target`         | Rust/Java/Scala build output                                  |
-| `bin`            | Compiled binaries                                             |
-| `obj`            | .NET intermediate build output                                |
-| `.idea`          | JetBrains IDE config                                          |
-| `.vs`            | Visual Studio config                                          |
-| `.vscode`        | VS Code config (usually)                                      |
-| `coverage`       | Test coverage reports                                         |
-| `.terraform`     | Terraform provider cache                                      |
-| `cdk.out`        | CDK synthesized output                                        |
-| `.serverless`    | Serverless Framework build output                             |
-| `.aws-sam`       | SAM build output                                              |
-| `logs`           | Application log files                                         |
-| `tmp` / `temp`   | Temporary files                                               |
-| `.cache`         | Various tool caches                                           |
-| `packages`       | Monorepo packages (scan each individually, not the container) |
+| Directory        | Reason                            |
+| ---------------- | --------------------------------- |
+| `.git`           | Version control internals         |
+| `node_modules`   | npm/yarn dependencies             |
+| `vendor`         | Go/PHP vendored dependencies      |
+| `__pycache__`    | Python bytecode cache             |
+| `.venv` / `venv` | Python virtual environments       |
+| `dist`           | Build output                      |
+| `build`          | Build output                      |
+| `out`            | Build output                      |
+| `.next`          | Next.js build cache               |
+| `.nuxt`          | Nuxt build cache                  |
+| `target`         | Rust/Java/Scala build output      |
+| `obj`            | .NET intermediate build output    |
+| `.idea`          | JetBrains IDE config              |
+| `.vs`            | Visual Studio config              |
+| `.vscode`        | VS Code config (usually)          |
+| `coverage`       | Test coverage reports             |
+| `.terraform`     | Terraform provider cache          |
+| `cdk.out`        | CDK synthesized output            |
+| `.serverless`    | Serverless Framework build output |
+| `.aws-sam`       | SAM build output                  |
+| `logs`           | Application log files             |
+| `tmp` / `temp`   | Temporary files                   |
+| `.cache`         | Various tool caches               |
 
 ## Excluded Files
 
@@ -51,7 +49,7 @@ Skip these file patterns:
 | `*.png`, `*.jpg`, `*.gif`, `*.ico`, `*.svg`                 | Image assets              |
 | `*.woff`, `*.woff2`, `*.ttf`, `*.eot`                       | Font files                |
 | `*.zip`, `*.tar.gz`, `*.jar`, `*.war`                       | Archives                  |
-| `*.pb`, `*.proto` (compiled)                                | Compiled protocol buffers |
+| `*.pb`                                                      | Compiled protocol buffers |
 | `.DS_Store`, `Thumbs.db`                                    | OS metadata               |
 | `.env` (actual, not `.env.example`)                         | Secrets — do not read     |
 

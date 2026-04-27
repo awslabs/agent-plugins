@@ -69,6 +69,12 @@ or
 or
 
 ```bash
+/plugin install codebase-documentor@agent-plugins-for-aws
+```
+
+or
+
+```bash
 /plugin install databases-on-aws@agent-plugins-for-aws
 ```
 
@@ -82,12 +88,6 @@ or
 
 ```bash
 /plugin install sagemaker-ai@agent-plugins-for-aws
-```
-
-or
-
-```bash
-/plugin install codebase-documentor@agent-plugins-for-aws
 ```
 
 ### Codex

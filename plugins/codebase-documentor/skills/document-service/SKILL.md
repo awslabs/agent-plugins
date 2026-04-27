@@ -1,9 +1,10 @@
 ---
 name: document-service
 description: "This skill should be used when the user asks to \"analyze this codebase\", \"document this service\", \"generate technical docs\", \"I inherited this code\", \"help me understand this system\", \"create docs for this project\", \"what does this system look like\", \"onboard me to this codebase\", \"this codebase has no docs\", \"visualize the architecture from code\", or any explicit request to produce structured documentation or architecture diagrams from an existing codebase. Specifically optimized for AWS workloads (CDK, CloudFormation, Terraform) with source-of-truth citations. Do NOT activate for code reviews, single-function explanations, generating new code, or general coding tasks."
+license: Apache-2.0
 ---
 
-# Codebase Analyzer
+# Document Service
 
 Analyze codebases to produce structured technical documentation and architecture diagrams with source-of-truth citations. Every finding links back to the exact file and line it was derived from. Optimized for AWS workloads but works with any codebase.
 
@@ -55,17 +56,17 @@ Produce a hierarchical outline mapping each documentation section to specific so
 4. Shared Utilities → [shared/common source files]
 5. Request Lifecycle → [trace end-to-end flows through the system]
 6. Domain Logic Deep-Dive → [core services at implementation level: algorithms, parameters, edge cases]
-7. Startup & Initialization → [boot sequence, model loading, cache warmup, dependency checks]
+7. Startup and Initialization → [boot sequence, model loading, cache warmup, dependency checks]
 8. API Contracts → [route definitions, OpenAPI specs]
 9. Data Models → [schema files, ORM models]
-10. Deployment & IaC → [IaC files, Dockerfiles]
-11. Configuration & Secrets → [config files, .env.example, prompt templates, YAML configs]
-12. Monitoring & Observability → [log groups, metrics, tracing, alarms, dashboards]
+10. Deployment → [IaC files, Dockerfiles]
+11. Configuration → [config files, .env.example, prompt templates, YAML configs, secrets refs]
+12. Monitoring and Observability → [log groups, metrics, tracing, alarms, dashboards]
 13. Security → [auth, encryption, IAM, network isolation]
 14. Local Development → [how to run/test locally, CPU fallback, dev environment setup]
 15. Discrepancies → (cross-reference README/metadata vs actual code)
 16. Failure Modes → (cross-cutting — include detection + recovery)
-17. Timeout/Dependency Chain → (map cascading timeouts across layers)
+17. Timeout and Dependency Chain → (map cascading timeouts across layers)
 ```
 
 Follow the section structure in [technical-doc-template.md](references/technical-doc-template.md) but adapt to the actual codebase — add sections for significant modules, skip sections that don't apply. Aim for balance: each section should map to a meaningful subset of files. If a module maps to more than ~30 files, consider splitting it into sub-sections.
@@ -143,7 +144,7 @@ Two types of diagrams serve different purposes:
 
 **Architecture diagram — always attempt the `aws-architecture-diagram` skill first.** For the system-level architecture diagram (services, infrastructure, boundaries): invoke the `aws-architecture-diagram` skill (part of the `deploy-on-aws` plugin) with "analyze [target-directory]" to trigger Mode A. It produces a validated draw.io diagram (`docs/*.drawio`) with official AWS4 icons and professional styling. **Only if** the skill is genuinely unavailable (not installed, invocation fails), fall back to a Mermaid `flowchart TD` architecture overview directly in the Architecture Overview section. Include all major services, data stores, external dependencies, and infrastructure boundaries (VPC/subnets as subgraphs when IaC is present).
 
-After diagram generation, try to export to PNG for embedding in the report. Run `drawio -x -f png -e -b 10 -o docs/<name>.drawio.png docs/<name>.drawio`. If `drawio` is not on PATH, skip the PNG export — the report will link to the `.drawio` file directly instead of embedding an image.
+After diagram generation, try to export to PNG for embedding in the report. Run `drawio -x -f png -b 10 -o docs/<name>.drawio.png docs/<name>.drawio`. If `drawio` is not on PATH, skip the PNG export — the report will link to the `.drawio` file directly instead of embedding an image.
 
 Cross-reference the diagram against the Architecture Overview text. Update documentation or diagram if they diverge.
 
@@ -197,9 +198,9 @@ Example queries: search for "Amazon ECS on EC2 GPU instances" to confirm GPU sup
 
 ### awsiac
 
-Consult when CDK, CloudFormation, or Terraform files are detected. Use primarily for validation — confirm that the interpretation of a construct or resource type matches its actual behavior. Particularly useful for complex constructs with non-obvious defaults.
+Consult when CDK or CloudFormation files are detected. Use primarily for validation — confirm that the interpretation of a construct or resource type matches its actual behavior. Particularly useful for complex constructs with non-obvious defaults.
 
-Example queries: confirm properties of `ecs.FargateService` vs `ecs.Ec2Service`, look up Terraform resource attributes for unfamiliar providers, or verify CloudFormation resource relationships.
+Example queries: confirm properties of `ecs.FargateService` vs `ecs.Ec2Service` or verify CloudFormation resource relationships. Terraform files are still analyzed by the skill itself (see [discovery-patterns.md](references/discovery-patterns.md) IaC Detection), just without this MCP server's schema validation.
 
 ## References
 

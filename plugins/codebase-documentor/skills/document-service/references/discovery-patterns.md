@@ -1,6 +1,6 @@
 # Discovery Patterns
 
-Framework-specific patterns for extracting information during codebase analysis.
+Patterns for detecting project type, entry points, frameworks, IaC, API surface, data models, and external dependencies during codebase analysis.
 
 ## Project Type Detection
 
@@ -37,6 +37,7 @@ When multiple indicators are present (e.g., `package.json` + `requirements.txt`)
 | .NET         | `Program.cs`, `Startup.cs`                                 |
 | Ruby         | `config.ru`, `app.rb`, `bin/rails`                         |
 | PHP          | `index.php`, `public/index.php`, `artisan`                 |
+| Elixir       | `mix.exs`, `lib/<app>/application.ex`, `lib/<app>.ex`      |
 | CDK          | `bin/*.ts`, `bin/*.py`, `app.py`                           |
 
 ## General Discovery Order

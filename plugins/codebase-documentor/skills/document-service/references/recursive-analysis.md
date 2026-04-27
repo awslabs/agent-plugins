@@ -1,6 +1,6 @@
 # Large Codebase Strategy
 
-For codebases too large to analyze in a single pass, use parallel decomposition or tracked sequential analysis.
+For codebases too large to analyze in a single pass, use parallel decomposition or tracked sequential analysis. "Step 3" below refers to Step 3 ("Generate Documentation Outline") of the main workflow in [SKILL.md](../SKILL.md).
 
 ## When to Use
 
@@ -9,7 +9,7 @@ Apply this strategy when **any** of these conditions is true:
 - Multiple top-level modules or packages exist (e.g., monorepo with `packages/`, `apps/`, `services/`)
 - Deep directory structure (3+ levels of nesting with source files)
 - Hundreds of source files after applying exclusion patterns
-- The documentation outline from Step 3 produces 6+ sections mapped to distinct file sets
+- The documentation outline from Step 3 (see [SKILL.md](../SKILL.md)) produces 6+ sections mapped to distinct file sets
 
 For single-module codebases with a flat structure, process outline sections directly without this strategy.
 
