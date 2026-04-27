@@ -41,10 +41,10 @@
       "category": "Development"
     },
     {
-      "name": "codebase-documentor",
+      "name": "codebase-documentor-for-aws",
       "source": {
         "source": "local",
-        "path": "./plugins/codebase-documentor"
+        "path": "./plugins/codebase-documentor-for-aws"
       },
       "policy": {
         "installation": "AVAILABLE",

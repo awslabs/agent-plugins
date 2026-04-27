@@ -1,10 +1,10 @@
-# Codebase Documentor
+# Codebase Documentor for AWS
 
 Analyze codebases — especially legacy and AWS-deployed services — to produce structured technical documentation and architecture diagrams with source-of-truth citations linking every finding back to the code. Understands CDK, CloudFormation, Terraform, and enriches output with AWS service context. Delegates architecture diagram generation to the `aws-architecture-diagram` skill (from the `deploy-on-aws` plugin) for professional draw.io output with official AWS4 icons, or falls back to inline Mermaid.
 
 ## How It Works
 
-Unlike ad-hoc "explain this code" prompts, codebase-documentor uses an **outline-driven pipeline** to systematically analyze codebases of any size — from small microservices to large legacy monoliths. The entire process runs autonomously after initial context gathering.
+Unlike ad-hoc "explain this code" prompts, codebase-documentor-for-aws uses an **outline-driven pipeline** to systematically analyze codebases of any size — from small microservices to large legacy monoliths. The entire process runs autonomously after initial context gathering.
 
 **The pipeline:**
 
@@ -14,7 +14,7 @@ Unlike ad-hoc "explain this code" prompts, codebase-documentor uses an **outline
 4. **Generate diagram** — Delegate to the `aws-architecture-diagram` skill (deploy-on-aws plugin) for draw.io output, or fall back to inline Mermaid
 5. **Assemble** — Combine all sections into `CODEBASE_ANALYSIS.md` (single file with business context included)
 
-**For large codebases**, the outline sections are tracked on a persistent `.codebase-documentor-progress.md` task board, making the process **resumable** — if a session is interrupted, a new session reads the progress file and continues from where it left off.
+**For large codebases**, the outline sections are tracked on a persistent `.codebase-documentor-progress.md` task board in the target project, making the process **resumable** — if a session is interrupted, a new session reads the progress file and continues from where it left off.
 
 ## Skills
 
@@ -32,13 +32,13 @@ Unlike ad-hoc "explain this code" prompts, codebase-documentor uses an **outline
 ## Installation
 
 ```bash
-/plugin install codebase-documentor@agent-plugins-for-aws
+/plugin install codebase-documentor-for-aws@agent-plugins-for-aws
 ```
 
 Or test locally:
 
 ```bash
-claude --plugin-dir ./plugins/codebase-documentor
+claude --plugin-dir ./plugins/codebase-documentor-for-aws
 ```
 
 ## Examples

@@ -1,5 +1,5 @@
 {
-  "name": "codebase-documentor",
+  "name": "codebase-documentor-for-aws",
   "version": "0.1.0",
   "description": "Analyze AWS-deployed services and codebases to generate structured technical documentation, architecture diagrams, and business documentation — all with source-of-truth citations linking every finding back to code. Delegates diagram generation to the aws-architecture-diagram skill (deploy-on-aws plugin) for professional draw.io output. Supports CDK, CloudFormation, and Terraform.",
   "author": {
@@ -26,7 +26,7 @@
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",
   "interface": {
-    "displayName": "Codebase Documentor",
+    "displayName": "Codebase Documentor for AWS",
     "shortDescription": "Analyze codebases and generate structured technical documentation with citations.",
     "longDescription": "Analyze AWS-deployed services and codebases to generate structured technical documentation with source-of-truth citations linking every finding back to code.",
     "defaultPrompt": [

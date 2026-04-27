@@ -28,15 +28,15 @@ To maximize the benefits of plugin-assisted development while maintaining securi
 
 ## Plugins
 
-| Plugin                      | Description                                                                                                                                                                                             | Status                                |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| **amazon-location-service** | Add maps, geocoding, routing, places search, and geospatial features to applications with Amazon Location Service                                                                                       | Available                             |
-| **aws-amplify**             | Build full-stack apps with AWS Amplify Gen 2 using guided workflows for auth, data, storage, and functions                                                                                              | Available                             |
-| **aws-serverless**          | Build serverless applications with Lambda, API Gateway, EventBridge, Step Functions, and durable functions                                                                                              | Available                             |
-| **codebase-documentor**     | Analyze AWS-deployed services and codebases to generate structured technical documentation with source-of-truth citations                                                                               | Available                             |
-| **databases-on-aws**        | Database guidance for the AWS database portfolio — schema design, queries, migrations, and multi-tenant patterns                                                                                        | Some Services Available (Aurora DSQL) |
-| **deploy-on-aws**           | Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment                                                                                                        | Available                             |
-| **sagemaker-ai**            | Build, train, and deploy AI models with deep AWS AI/ML expertise brought directly into your coding assistants, covering the surface area of [Amazon SageMaker AI](https://aws.amazon.com/sagemaker/ai/) | Available                             |
+| Plugin                          | Description                                                                                                                                                                                             | Status                                |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| **amazon-location-service**     | Add maps, geocoding, routing, places search, and geospatial features to applications with Amazon Location Service                                                                                       | Available                             |
+| **aws-amplify**                 | Build full-stack apps with AWS Amplify Gen 2 using guided workflows for auth, data, storage, and functions                                                                                              | Available                             |
+| **aws-serverless**              | Build serverless applications with Lambda, API Gateway, EventBridge, Step Functions, and durable functions                                                                                              | Available                             |
+| **codebase-documentor-for-aws** | Analyze AWS-deployed services and codebases to generate structured technical documentation with source-of-truth citations                                                                               | Available                             |
+| **databases-on-aws**            | Database guidance for the AWS database portfolio — schema design, queries, migrations, and multi-tenant patterns                                                                                        | Some Services Available (Aurora DSQL) |
+| **deploy-on-aws**               | Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment                                                                                                        | Available                             |
+| **sagemaker-ai**                | Build, train, and deploy AI models with deep AWS AI/ML expertise brought directly into your coding assistants, covering the surface area of [Amazon SageMaker AI](https://aws.amazon.com/sagemaker/ai/) | Available                             |
 
 ## Installation
 
@@ -69,7 +69,7 @@ or
 or
 
 ```bash
-/plugin install codebase-documentor@agent-plugins-for-aws
+/plugin install codebase-documentor-for-aws@agent-plugins-for-aws
 ```
 
 or
@@ -227,7 +227,7 @@ Design, build, deploy, test, and debug serverless applications with AWS Lambda, 
 | --------------------------- | --------------------------------------------- | --------------------------------------------- |
 | **SAM template validation** | After edits to `template.yaml`/`template.yml` | Runs `sam validate` and reports errors inline |
 
-## codebase-documentor
+## codebase-documentor-for-aws
 
 Analyzes codebases to generate structured technical documentation with source-of-truth citations linking every finding back to the exact code that produced it. Uses an outline-driven pipeline to systematically analyze codebases of any size with a persistent task board for resumability.
 
