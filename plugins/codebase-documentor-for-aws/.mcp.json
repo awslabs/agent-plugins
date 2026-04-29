@@ -8,8 +8,7 @@
       "args": [
         "awslabs.aws-iac-mcp-server@latest"
       ],
-      "command": "uvx",
-      "type": "stdio"
+      "command": "uvx"
     }
   }
 }

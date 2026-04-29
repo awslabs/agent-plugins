@@ -163,7 +163,8 @@ Cross-reference the diagram against the Architecture Overview text. Update docum
 3. When the codebase reveals clear business capabilities (API contracts, domain models, data flows, SLA configs), include a **Business Context** section at the end of `CODEBASE_ANALYSIS.md` following [business-context.md](references/business-context.md). Skip only for pure libraries or infrastructure-only code. Do NOT include speculative content — but a README describing the product IS sufficient business context.
 4. Tag items not inferable from code with `[UNKNOWN]`
 5. Write `CODEBASE_ANALYSIS.md` to the target directory
-6. Present summary: components documented, APIs found, unknowns tagged, citations included
+6. Remove `.codebase-documentor-progress.md` if it was created during analysis
+7. Present summary: components documented, APIs found, unknowns tagged, citations included
 
 ## Output Files
 

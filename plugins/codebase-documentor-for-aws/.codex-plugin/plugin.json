@@ -1,7 +1,7 @@
 {
   "name": "codebase-documentor-for-aws",
   "version": "0.1.0",
-  "description": "Analyze AWS-deployed services and codebases to generate structured technical documentation, architecture diagrams, and business documentation — all with source-of-truth citations linking every finding back to code. Delegates diagram generation to the aws-architecture-diagram skill (deploy-on-aws plugin) for professional draw.io output. Supports CDK, CloudFormation, and Terraform.",
+  "description": "Analyze codebases to generate structured technical documentation with source-of-truth citations. Optimized for AWS workloads using CDK, CloudFormation, and Terraform.",
   "author": {
     "name": "Amazon Web Services",
     "email": "aws-agent-plugins@amazon.com",
@@ -35,9 +35,10 @@
       "Document the architecture and components of this service."
     ],
     "developerName": "Amazon Web Services",
-    "category": "Documentation",
+    "category": "Development",
     "capabilities": [
-      "Read"
+      "Read",
+      "Write"
     ],
     "websiteURL": "https://github.com/awslabs/agent-plugins",
     "privacyPolicyURL": "https://aws.amazon.com/privacy/",
