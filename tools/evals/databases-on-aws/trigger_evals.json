@@ -40,7 +40,31 @@
     "should_trigger": true
   },
   {
+    "query": "my dsql query is running slow — about 4 seconds when I expect under 500ms. can you run explain analyze and tell me why?",
+    "should_trigger": true
+  },
+  {
+    "query": "why is my aurora dsql query doing a full scan on btree-table when I have a composite index on (tenant_id, created_at)? the filter is on status='active' which isn't in the index",
+    "should_trigger": true
+  },
+  {
+    "query": "I think there's a bug in DSQL's EXPLAIN ANALYZE output — my Storage Lookup is reporting trillions of actual rows on a table that only has 300k rows. Can you diagnose this?",
+    "should_trigger": true
+  },
+  {
     "query": "I need to set up an Aurora Serverless v2 PostgreSQL cluster with read replicas for my analytics workload",
+    "should_trigger": false
+  },
+  {
+    "query": "my Aurora PostgreSQL query is slow — can you run EXPLAIN ANALYZE and tell me why?",
+    "should_trigger": false
+  },
+  {
+    "query": "EXPLAIN ANALYZE on my RDS Postgres database shows a Seq Scan when I expected an index scan",
+    "should_trigger": false
+  },
+  {
+    "query": "why is my Redshift query slow? can you run EXPLAIN?",
     "should_trigger": false
   },
   {

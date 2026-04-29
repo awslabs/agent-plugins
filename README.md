@@ -35,7 +35,6 @@ To maximize the benefits of plugin-assisted development while maintaining securi
 | **aws-serverless**          | Build serverless applications with Lambda, API Gateway, EventBridge, Step Functions, and durable functions                                                                                              | Available                             |
 | **databases-on-aws**        | Database guidance for the AWS database portfolio — schema design, queries, migrations, and multi-tenant patterns                                                                                        | Some Services Available (Aurora DSQL) |
 | **deploy-on-aws**           | Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment                                                                                                        | Available                             |
-| **migration-to-aws**        | Migrate GCP infrastructure to AWS with resource discovery, architecture mapping, cost analysis, and execution planning                                                                                  | Available                             |
 | **sagemaker-ai**            | Build, train, and deploy AI models with deep AWS AI/ML expertise brought directly into your coding assistants, covering the surface area of [Amazon SageMaker AI](https://aws.amazon.com/sagemaker/ai/) | Available                             |
 
 ## Installation
@@ -76,12 +75,6 @@ or
 
 ```bash
 /plugin install deploy-on-aws@agent-plugins-for-aws
-```
-
-or
-
-```bash
-/plugin install migration-to-aws@agent-plugins-for-aws
 ```
 
 or
@@ -275,31 +268,6 @@ Equips agents with the skills to accelerate AWS deployment - recommending AWS ar
 | **awsknowledge** | AWS documentation, architecture guidance, and best practices |
 | **awspricing**   | Real-time AWS service pricing for cost estimates             |
 | **aws-iac-mcp**  | IaC best practices for CDK/CloudFormation                    |
-
-## migration-to-aws
-
-Helps you systematically migrate GCP infrastructure to AWS through Terraform resource discovery, architecture mapping, cost estimation, and execution planning.
-
-### Workflow
-
-1. **Discover** - Scan Terraform files for GCP resources and extract infrastructure
-2. **Clarify** - Understand compute workloads and architecture patterns
-3. **Design** - Map GCP services to AWS equivalents with rationale
-4. **Estimate** - Calculate monthly AWS costs and compare to GCP
-5. **Execute** - Plan migration timeline and identify deployment risks
-
-### Agent Skill Triggers
-
-| Agent Skill    | Triggers                                                                                                           |
-| -------------- | ------------------------------------------------------------------------------------------------------------------ |
-| **gcp-to-aws** | "migrate GCP to AWS", "move from GCP", "GCP migration plan", "estimate AWS costs", "GCP infrastructure assessment" |
-
-### MCP Servers
-
-| Server           | Purpose                                          |
-| ---------------- | ------------------------------------------------ |
-| **awsknowledge** | AWS documentation, architecture guidance         |
-| **awspricing**   | Real-time AWS service pricing for cost estimates |
 
 ## sagemaker-ai
 

@@ -70,7 +70,14 @@ The region was identified in Step 1. Confirm it's in the supported list. If not,
 
 ### Step 6: Generate Notebook
 
-Ask the user if they have an existing notebook to add the deployment cells to, or if they want a new one. If new, suggest a name like `deploy-[model]-[target].ipynb` and ask where to save it.
+If a project directory already exists (from earlier in the workflow), use it. Otherwise, activate the **directory-management** skill to set one up.
+
+Check if the project notebook already exists at `<project-dir>/notebooks/<project-name>.ipynb`.
+
+- If it exists → ask: _"Would you like me to append the deployment cells to the existing notebook, or create a new one?"_
+- If it doesn't exist → create it
+
+When appending, add a markdown header cell `## Model Deployment — Bedrock` as a section divider before the new cells.
 
 ⏸ Wait for user.
 
@@ -123,7 +130,7 @@ To run:
 ## Common Issues
 
 - **"Model weights are larger than 200GB"**: Cannot use this pathway.
-- **"No module named 'sagemaker.serve.bedrock_model_builder'"**: Upgrade SDK: `pip install --upgrade sagemaker>=3.7.0`
+- **"No module named 'sagemaker.serve.bedrock_model_builder'"**: Upgrade SDK: `pip install --upgrade sagemaker>=3.7.1`
 - **Import starts but uses wrong region**: Known issue — `BedrockModelBuilder` defaults to us-east-1. The notebook code overrides this.
 - **"Access denied to S3"**: Add S3 read permissions to the IAM role for the model bucket.
 - **"Provided IAM role could not be assumed"**: Ensure role has trust policy for `bedrock.amazonaws.com`.

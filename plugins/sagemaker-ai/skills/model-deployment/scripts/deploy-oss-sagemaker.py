@@ -1,6 +1,6 @@
 # Cell 1: Setup
 
-%pip install sagemaker>=3.7.0 --quiet
+%pip install --upgrade sagemaker>=3.7.1 --quiet
 
 # Cell 2: Configuration
 
@@ -20,6 +20,7 @@ ROLE_ARN = "[ROLE_ARN]"
 INSTANCE_TYPE = "[INSTANCE_TYPE]"
 ENDPOINT_NAME = "[ENDPOINT_NAME]"
 ADAPTER_IC_NAME = f"{ENDPOINT_NAME}-adapter"
+ACCEPT_EULA = [ACCEPT_EULA]  # True if user accepted the license in Step 4, False otherwise
 
 # Cell 3: Build Model
 
@@ -32,6 +33,7 @@ model_builder = ModelBuilder(
     role_arn=ROLE_ARN,
     instance_type=INSTANCE_TYPE,
 )
+model_builder.accept_eula = ACCEPT_EULA
 model = model_builder.build(model_name=ENDPOINT_NAME)
 print(f"Model: {model.model_arn}")
 
