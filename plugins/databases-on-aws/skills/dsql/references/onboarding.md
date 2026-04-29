@@ -1,7 +1,3 @@
----
-inclusion: manual
----
-
 # Aurora DSQL Get Started Guide
 
 ## Overview
@@ -11,6 +7,15 @@ This guide provides steps to help users get started with Aurora DSQL in their pr
 ## Use Case
 
 These guidelines apply when users say "Get started with DSQL" or similar phrases. The user's codebase may be mature (with existing database connections) or have little to no code - the guidelines should apply to both cases.
+
+## Contents
+
+- [Overview](#overview)
+- [Use Case](#use-case)
+- [Agent Communication Style](#agent-communication-style)
+- [Get Started with DSQL (Interactive Guide)](#get-started-with-dsql-interactive-guide) — 10-step linear walkthrough
+- [DSQL Best Practices](#dsql-best-practices)
+- [Additional Resources](#additional-resources)
 
 ## Agent Communication Style
 
@@ -359,8 +364,7 @@ Let them know you're ready to help with more:
 2. **Distributed:** Active-active writes across multiple regions
 3. **Strong Consistency:** Immediate read-your-writes across all regions
 4. **IAM Authentication:** No password management, automatic token rotation
-5. **PostgreSQL Compatible:** Supports a listed 10 [Database Drivers](./development-guide.md#database-drivers)
-   (#database-drivers), 4 [ORMs](./development-guide.md#object-relational-mapping-orm-libraries), and 3 [Adapters/Dialects](./development-guide.md#adapters-and-dialects) as listed.
+5. **PostgreSQL Compatible:** Supports 10 [Database Drivers](./auth/connectivity-tools.md#database-drivers), 4 [ORMs](./auth/connectivity-tools.md#object-relational-mapping-orm-libraries), and 3 [Adapters/Dialects](./auth/connectivity-tools.md#aurora-dsql-adapters-and-dialects) as listed.
 
 **For detailed patterns, see [`./development-guide.md`](./development-guide.md)**
 

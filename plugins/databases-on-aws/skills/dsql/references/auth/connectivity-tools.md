@@ -66,7 +66,7 @@ Developers SHOULD PREFER the DSQL Loader for:
 ALWAYS use the loader's schema inference, PREFERRED to separate schema
 creation for data migration.
 
-**Install and use the DSQL Loader with [loader.sh](../../../scripts/loader.sh)**
+**Install and use the DSQL Loader with [loader.sh](../../../../scripts/loader.sh)**
 
 ### Common Examples
 

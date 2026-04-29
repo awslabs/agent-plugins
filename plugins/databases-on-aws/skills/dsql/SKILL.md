@@ -182,7 +182,7 @@ Use get_schema to understand table structure
 ```
 Use readonly_query for SELECT queries
 Always include tenant_id in WHERE clause for multi-tenant apps
-Validate inputs carefully (no parameterized queries available)
+MUST build SQL with safe_query.build() — see mcp/tools/input-validation.md
 ```
 
 ### 3. Execute schema changes
@@ -222,6 +222,8 @@ ALTER COLUMN TYPE, DROP COLUMN, DROP CONSTRAINT → Table Recreation Pattern (Wo
 - MUST batch updates under 3,000 rows in separate transact calls
 - MUST issue each ALTER TABLE in its own transaction
 
+**Recovery — batch fails midway:** Rows already updated keep their new value (each batch committed independently). Resume by filtering on the unset state (`WHERE new_column IS NULL`) and continue. Re-running is safe because the filter naturally excludes completed rows.
+
 ### Workflow 3: Application-Layer Referential Integrity
 
 **INSERT:** MUST validate parent exists with readonly_query → throw error if not found → insert child with transact.
@@ -230,13 +232,11 @@ ALTER COLUMN TYPE, DROP COLUMN, DROP CONSTRAINT → Table Recreation Pattern (Wo
 
 ### Workflow 4: Query with Tenant Isolation
 
-1. ALWAYS include tenant_id in WHERE clause
-2. MUST validate and sanitize tenant_id input (no parameterized queries!)
-3. MUST use readonly_query with validated tenant_id
-
-- MUST validate ALL inputs before building SQL (SQL injection risk!)
-- MUST reject cross-tenant access at application layer
-- SHOULD use allowlists or regex validation for tenant IDs
+1. **MUST** authorize the caller against the tenant — format validation does not establish authorization
+2. **MUST** build SQL with [`safe_query.build()`](mcp/tools/safe_query.py) — use `allow()`/`regex()` for
+   values (emits `'v'`), `ident()` for table/column names (emits `"v"`).
+   See [input-validation.md](mcp/tools/input-validation.md)
+3. **MUST** include `tenant_id` in the WHERE clause; reject cross-tenant access at the application layer
 
 ### Workflow 5: Set Up Scoped Database Roles
 

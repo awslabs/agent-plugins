@@ -5,11 +5,34 @@ Automated evaluation harnesses for the plugin's skills, created using the skill-
 > **Note:** Evals live under `tools/evals/`, not inside the plugin directory, so they aren't
 > shipped to users when the plugin is installed.
 
-## Skills Covered
+## Directory Structure
 
-- **dsql** — Schema management, migrations, MCP delegation, query plan explainability (Workflow 8)
+Evals are organized by database service. Each subfolder contains the eval definitions, runner
+scripts, and unit tests for that database's skill.
 
-## Tier 1: Triggering Evals
+```
+tools/evals/databases-on-aws/
+├── README.md                        # This file — top-level index
+└── dsql/                            # Aurora DSQL skill evals
+    ├── evals.json                   # Tier 2: functional evals (5 prompts, 20 assertions)
+    ├── trigger_evals.json           # Tier 1: triggering evals (26 test cases)
+    ├── safe_query_evals.json        # Tier 3: safe_query enforcement (6 prompts, ~30 expectations)
+    ├── query_explainability_evals.json  # Workflow 8: query plan diagnostics (9 prompts, 70 assertions)
+    └── scripts/
+        ├── run_functional_evals.py          # Runner/grader for Tier 2
+        ├── run_query_explainability_evals.py # Runner/grader for Workflow 8
+        └── test_safe_query.py               # Unit tests for safe_query.py module
+```
+
+As additional databases are added to the plugin (e.g., Aurora, DynamoDB, DocumentDB), create a
+peer subfolder (e.g., `aurora/`, `dynamodb/`) with the same structure: eval JSON files at the
+top level and runner scripts under `scripts/`.
+
+---
+
+## DSQL Skill Evals
+
+### Tier 1: Triggering Evals
 
 Tests whether the skill description triggers correctly for relevant vs irrelevant prompts.
 
@@ -21,7 +44,7 @@ Tests whether the skill description triggers correctly for relevant vs irrelevan
 
 # From repo root
 PYTHONPATH="<skill-creator-path>:$PYTHONPATH" python -m scripts.run_eval \
-  --eval-set tools/evals/databases-on-aws/trigger_evals.json \
+  --eval-set tools/evals/databases-on-aws/dsql/trigger_evals.json \
   --skill-path plugins/databases-on-aws/skills/dsql \
   --num-workers 5 \
   --runs-per-query 3 \
@@ -33,13 +56,13 @@ PYTHONPATH="<skill-creator-path>:$PYTHONPATH" python -m scripts.run_eval \
 - 13 should-trigger prompts (Aurora DSQL, distributed SQL, DSQL migrations, query plan explainability, etc.)
 - 13 should-not-trigger prompts (DynamoDB, Aurora/RDS PostgreSQL with EXPLAIN ANALYZE, Redshift, generic SQL, etc.)
 
-## Tier 2: Functional Evals
+### Tier 2: Functional Evals
 
 Tests simple skill correctness: MCP delegation, DSQL-specific guidance, and reference file routing.
 
 ```bash
-python tools/evals/databases-on-aws/scripts/run_functional_evals.py \
-  --evals tools/evals/databases-on-aws/evals.json \
+python tools/evals/databases-on-aws/dsql/scripts/run_functional_evals.py \
+  --evals tools/evals/databases-on-aws/dsql/evals.json \
   --plugin-dir plugins/databases-on-aws \
   --output-dir /tmp/dsql-eval-results \
   --verbose
@@ -55,13 +78,48 @@ python tools/evals/databases-on-aws/scripts/run_functional_evals.py \
 | 4. Python connection   | Language routing      | Recommends DSQL Python Connector, IAM auth, 15-min token expiry, SSL       |
 | 5. Column type change  | DDL migration routing | Table Recreation Pattern, DROP TABLE warning, batching, user confirmation  |
 
-## Description Optimization
+### Tier 3: Safe-Query Enforcement Evals
+
+Tests whether an agent loading the DSQL skill uses `safe_query.build()` when writing DSQL MCP queries, including under social pressure and in write mode.
+
+```bash
+python tools/evals/databases-on-aws/dsql/scripts/run_functional_evals.py \
+  --evals tools/evals/databases-on-aws/dsql/safe_query_evals.json \
+  --plugin-dir plugins/databases-on-aws \
+  --output-dir /tmp/dsql-safe-query-eval-results \
+  --verbose
+```
+
+**What it checks** (6 eval prompts, ~30 expectations total):
+
+| Eval                           | Focus                  | Key assertions                                                                |
+| ------------------------------ | ---------------------- | ----------------------------------------------------------------------------- |
+| 0. Basic tenant-scoped select  | Validator adoption     | Imports safe_query, uses regex() for tenant_id, builds via build()            |
+| 1. Batch insert with free text | Free-text handling     | Uses literal() for descriptions, regex() for IDs, batches under 3000          |
+| 2. Write-mode pressure         | Discipline under nudge | Still uses build() despite "quick script" framing, validates all params       |
+| 3. Dynamic ORDER BY            | Semantic correctness   | Uses ident() for column (not allow()), keyword() for sort direction           |
+| 4. Rejects f-string request    | Pushback               | Refuses f-string suggestion, explains why build-every-query is non-negotiable |
+| 5. Application-layer FK check  | Multi-statement flow   | Two build() calls, validates parent_id UUID, uses literal() for free text     |
+
+### Unit Tests (safe_query module)
+
+Deterministic unit tests for the `safe_query.py` helper module:
+
+```bash
+# From repo root
+python -m pytest tools/evals/databases-on-aws/dsql/scripts/test_safe_query.py -v
+
+# Or without pytest
+python tools/evals/databases-on-aws/dsql/scripts/test_safe_query.py
+```
+
+### Description Optimization
 
 To optimize the skill description for better triggering:
 
 ```bash
 PYTHONPATH="<skill-creator-path>:$PYTHONPATH" python -m scripts.run_loop \
-  --eval-set tools/evals/databases-on-aws/trigger_evals.json \
+  --eval-set tools/evals/databases-on-aws/dsql/trigger_evals.json \
   --skill-path plugins/databases-on-aws/skills/dsql \
   --model <model-id> \
   --max-iterations 5 \
@@ -70,7 +128,7 @@ PYTHONPATH="<skill-creator-path>:$PYTHONPATH" python -m scripts.run_loop \
 
 ---
 
-## Query Plan Explainability Functional Evals (Workflow 8)
+### Query Plan Explainability Functional Evals (Workflow 8)
 
 Tests the full diagnostic workflow: EXPLAIN ANALYZE execution, catalog queries, cardinality checks, report generation.
 Triggering is covered by the main `trigger_evals.json` (explainability prompts included there).
@@ -90,8 +148,8 @@ still downloading the package and `boto3` is still initializing the AWS session.
 `--skip-warmup` to disable.
 
 ```bash
-python tools/evals/databases-on-aws/scripts/run_query_explainability_evals.py \
-  --evals tools/evals/databases-on-aws/query_explainability_evals.json \
+python tools/evals/databases-on-aws/dsql/scripts/run_query_explainability_evals.py \
+  --evals tools/evals/databases-on-aws/dsql/query_explainability_evals.json \
   --plugin-dir plugins/databases-on-aws \
   --mcp-config .claude/.mcp.json \
   --output-dir /tmp/dsql-explainability-eval-results \
@@ -101,8 +159,8 @@ python tools/evals/databases-on-aws/scripts/run_query_explainability_evals.py \
 Run a single eval by ID:
 
 ```bash
-python tools/evals/databases-on-aws/scripts/run_query_explainability_evals.py \
-  --evals tools/evals/databases-on-aws/query_explainability_evals.json \
+python tools/evals/databases-on-aws/dsql/scripts/run_query_explainability_evals.py \
+  --evals tools/evals/databases-on-aws/dsql/query_explainability_evals.json \
   --plugin-dir plugins/databases-on-aws \
   --mcp-config .claude/.mcp.json \
   --output-dir /tmp/dsql-explainability-eval-results \

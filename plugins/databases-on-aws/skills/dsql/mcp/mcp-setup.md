@@ -114,6 +114,7 @@ navigate to those custom instructions.
 1. [Claude Code](platforms/claude-code.md)
 2. [Gemini](platforms/gemini.md)
 3. [Codex](platforms/codex.md)
+4. [Kiro](platforms/kiro.md)
 
 ## Additional Documentation
 

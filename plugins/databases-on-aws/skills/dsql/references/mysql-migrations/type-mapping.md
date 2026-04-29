@@ -61,16 +61,16 @@ Map MySQL data types to their DSQL equivalents.
 
 ### String Types
 
-| MySQL Type        | DSQL Equivalent                    | Notes                                                                                    |
-| ----------------- | ---------------------------------- | ---------------------------------------------------------------------------------------- |
-| CHAR(n)           | CHAR(n)                            | Direct equivalent                                                                        |
-| VARCHAR(n)        | VARCHAR(n)                         | Direct equivalent                                                                        |
-| TINYTEXT          | TEXT                               | DSQL uses TEXT for all unbounded strings                                                 |
-| TEXT              | TEXT                               | Direct equivalent                                                                        |
-| MEDIUMTEXT        | TEXT                               | DSQL uses TEXT for all unbounded strings                                                 |
-| LONGTEXT          | TEXT                               | DSQL uses TEXT for all unbounded strings                                                 |
-| ENUM('a','b','c') | VARCHAR(255) with CHECK constraint | See [ENUM Migration](ddl-operations.md#enum-type-migration)                              |
-| SET('a','b','c')  | TEXT                               | Store as comma-separated TEXT; see [SET Migration](ddl-operations.md#set-type-migration) |
+| MySQL Type        | DSQL Equivalent                    | Notes                                                                                           |
+| ----------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------- |
+| CHAR(n)           | CHAR(n)                            | Direct equivalent                                                                               |
+| VARCHAR(n)        | VARCHAR(n)                         | Direct equivalent                                                                               |
+| TINYTEXT          | TEXT                               | DSQL uses TEXT for all unbounded strings                                                        |
+| TEXT              | TEXT                               | Direct equivalent                                                                               |
+| MEDIUMTEXT        | TEXT                               | DSQL uses TEXT for all unbounded strings                                                        |
+| LONGTEXT          | TEXT                               | DSQL uses TEXT for all unbounded strings                                                        |
+| ENUM('a','b','c') | VARCHAR(255) with CHECK constraint | See [ENUM Migration](ddl-type-alternatives.md#enum-type-migration)                              |
+| SET('a','b','c')  | TEXT                               | Store as comma-separated TEXT; see [SET Migration](ddl-type-alternatives.md#set-type-migration) |
 
 ### Date/Time Types
 
@@ -95,10 +95,10 @@ Map MySQL data types to their DSQL equivalents.
 
 ### Other Types
 
-| MySQL Type     | DSQL Equivalent                                           | Notes                                                                                            |
-| -------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| JSON           | TEXT                                                      | MUST store as TEXT                                                                               |
-| AUTO_INCREMENT | UUID with gen_random_uuid(), IDENTITY column, or SEQUENCE | See [AUTO_INCREMENT Migration](ddl-operations.md#auto_increment-migration) for all three options |
+| MySQL Type     | DSQL Equivalent                                           | Notes                                                                                                |
+| -------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| JSON           | TEXT                                                      | MUST store as TEXT                                                                                   |
+| AUTO_INCREMENT | UUID with gen_random_uuid(), IDENTITY column, or SEQUENCE | See [AUTO_INCREMENT Migration](ddl-auto-increment.md#auto_increment-migration) for all three options |
 
 ---
 

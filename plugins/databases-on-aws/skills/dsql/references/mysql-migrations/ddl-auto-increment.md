@@ -15,7 +15,7 @@ CREATE TABLE users (
 );
 ```
 
-DSQL provides three options for replacing MySQL's AUTO_INCREMENT. Choose based on your workload requirements. See [Choosing Identifier Types](development-guide.md#choosing-identifier-types) in the development guide for detailed guidance.
+DSQL provides three options for replacing MySQL's AUTO_INCREMENT. Choose based on your workload requirements. See [Choosing Identifier Types](../auth/scaling-guide.md#choosing-identifier-types) in the scaling guide for detailed guidance.
 
 **ALWAYS use `GENERATED AS IDENTITY`** for auto-incrementing integer columns.
 
