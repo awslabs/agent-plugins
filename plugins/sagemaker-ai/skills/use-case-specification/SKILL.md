@@ -14,6 +14,7 @@ Multi-turn conversation to gather use case details and produce a use case specif
 1. **One thing at a time.** Each response advances exactly one decision or collects one piece of information.
 2. **Confirm before proceeding.** Wait for the user to approve the spec before considering this skill complete.
 3. **Infer, don't interrogate.** Use what's already known from the conversation. Only ask when you truly can't infer.
+4. **Do NOT ask about base model selection.** Model selection is handled exclusively by the finetuning-setup skill.
 
 ## Workflow
 

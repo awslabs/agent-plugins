@@ -87,7 +87,16 @@ Suggest a name based on the model, e.g., `nova-micro-deploy-<timestamp>`. Ask th
 
 ### Step 7: Generate Notebook
 
-Ask the user if they have an existing notebook to add the deployment cells to, or if they want a new one. If new, suggest a name like `deploy-[model]-[target].ipynb` and ask where to save it.
+If a project directory already exists (from earlier in the workflow), use it. Otherwise, activate the **directory-management** skill to set one up.
+
+Check if the project notebook already exists at `<project-dir>/notebooks/<project-name>.ipynb`.
+
+- If it exists → ask: _"Would you like me to append the deployment cells to the existing notebook, or create a new one?"_
+- If it doesn't exist → create it
+
+When appending, add a markdown header cell `## Model Deployment — SageMaker` as a section divider before the new cells.
+
+⏸ Wait for user.
 
 ## Notebook Structure
 
