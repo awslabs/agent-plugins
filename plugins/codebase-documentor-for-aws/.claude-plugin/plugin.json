@@ -1,0 +1,24 @@
+{
+  "author": {
+    "name": "Amazon Web Services"
+  },
+  "description": "Analyze codebases to generate structured technical documentation with source-of-truth citations. Optimized for AWS workloads using CDK, CloudFormation, and Terraform.",
+  "homepage": "https://github.com/awslabs/agent-plugins",
+  "keywords": [
+    "aws",
+    "aws agent skills",
+    "documentation",
+    "architecture",
+    "diagram",
+    "draw.io",
+    "codebase-analysis",
+    "cdk",
+    "cloudformation",
+    "terraform",
+    "onboarding"
+  ],
+  "license": "Apache-2.0",
+  "name": "codebase-documentor-for-aws",
+  "repository": "https://github.com/awslabs/agent-plugins",
+  "version": "0.1.0"
+}

@@ -28,15 +28,15 @@ To maximize the benefits of plugin-assisted development while maintaining securi
 
 ## Plugins
 
-| Plugin                      | Description                                                                                                                                                                                             | Status                                |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| **amazon-location-service** | Add maps, geocoding, routing, places search, and geospatial features to applications with Amazon Location Service                                                                                       | Available                             |
-| **aws-amplify**             | Build full-stack apps with AWS Amplify Gen 2 using guided workflows for auth, data, storage, and functions                                                                                              | Available                             |
-| **aws-serverless**          | Build serverless applications with Lambda, API Gateway, EventBridge, Step Functions, and durable functions                                                                                              | Available                             |
-| **databases-on-aws**        | Database guidance for the AWS database portfolio — schema design, queries, migrations, and multi-tenant patterns                                                                                        | Some Services Available (Aurora DSQL) |
-| **deploy-on-aws**           | Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment                                                                                                        | Available                             |
-| **migration-to-aws**        | Migrate GCP infrastructure to AWS with resource discovery, architecture mapping, cost analysis, and execution planning                                                                                  | Available                             |
-| **sagemaker-ai**            | Build, train, and deploy AI models with deep AWS AI/ML expertise brought directly into your coding assistants, covering the surface area of [Amazon SageMaker AI](https://aws.amazon.com/sagemaker/ai/) | Available                             |
+| Plugin                          | Description                                                                                                                                                                                             | Status                                |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| **amazon-location-service**     | Add maps, geocoding, routing, places search, and geospatial features to applications with Amazon Location Service                                                                                       | Available                             |
+| **aws-amplify**                 | Build full-stack apps with AWS Amplify Gen 2 using guided workflows for auth, data, storage, and functions                                                                                              | Available                             |
+| **aws-serverless**              | Build serverless applications with Lambda, API Gateway, EventBridge, Step Functions, and durable functions                                                                                              | Available                             |
+| **codebase-documentor-for-aws** | Analyze AWS-deployed services and codebases to generate structured technical documentation with source-of-truth citations                                                                               | Available                             |
+| **databases-on-aws**            | Database guidance for the AWS database portfolio — schema design, queries, migrations, and multi-tenant patterns                                                                                        | Some Services Available (Aurora DSQL) |
+| **deploy-on-aws**               | Deploy applications to AWS with architecture recommendations, cost estimates, and IaC deployment                                                                                                        | Available                             |
+| **sagemaker-ai**                | Build, train, and deploy AI models with deep AWS AI/ML expertise brought directly into your coding assistants, covering the surface area of [Amazon SageMaker AI](https://aws.amazon.com/sagemaker/ai/) | Available                             |
 
 ## Installation
 
@@ -69,6 +69,12 @@ or
 or
 
 ```bash
+/plugin install codebase-documentor-for-aws@agent-plugins-for-aws
+```
+
+or
+
+```bash
 /plugin install databases-on-aws@agent-plugins-for-aws
 ```
 
@@ -76,12 +82,6 @@ or
 
 ```bash
 /plugin install deploy-on-aws@agent-plugins-for-aws
-```
-
-or
-
-```bash
-/plugin install migration-to-aws@agent-plugins-for-aws
 ```
 
 or
@@ -227,6 +227,23 @@ Design, build, deploy, test, and debug serverless applications with AWS Lambda, 
 | --------------------------- | --------------------------------------------- | --------------------------------------------- |
 | **SAM template validation** | After edits to `template.yaml`/`template.yml` | Runs `sam validate` and reports errors inline |
 
+## codebase-documentor-for-aws
+
+Analyzes codebases to generate structured technical documentation with source-of-truth citations linking every finding back to the exact code that produced it. Uses an outline-driven pipeline to systematically analyze codebases of any size with a persistent task board for resumability.
+
+### Agent Skill Triggers
+
+| Agent Skill          | Triggers                                                                                                                                                                                          |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **document-service** | "analyze this codebase", "generate documentation", "document this service", "I inherited this code", "help me understand this system", "draw the architecture", "what does this system look like" |
+
+### MCP Servers
+
+| Server           | Purpose                                                              |
+| ---------------- | -------------------------------------------------------------------- |
+| **awsknowledge** | AWS service descriptions, architecture guidance, documentation links |
+| **awsiac**       | CDK/CloudFormation resource schema validation and IaC best practices |
+
 ## databases-on-aws
 
 Database guidance for the AWS database portfolio. Design schemas, execute queries, handle migrations, build applications, and choose the right database for your workload. Currently includes Aurora DSQL — a serverless, PostgreSQL-compatible distributed SQL database.
@@ -275,31 +292,6 @@ Equips agents with the skills to accelerate AWS deployment - recommending AWS ar
 | **awsknowledge** | AWS documentation, architecture guidance, and best practices |
 | **awspricing**   | Real-time AWS service pricing for cost estimates             |
 | **aws-iac-mcp**  | IaC best practices for CDK/CloudFormation                    |
-
-## migration-to-aws
-
-Helps you systematically migrate GCP infrastructure to AWS through Terraform resource discovery, architecture mapping, cost estimation, and execution planning.
-
-### Workflow
-
-1. **Discover** - Scan Terraform files for GCP resources and extract infrastructure
-2. **Clarify** - Understand compute workloads and architecture patterns
-3. **Design** - Map GCP services to AWS equivalents with rationale
-4. **Estimate** - Calculate monthly AWS costs and compare to GCP
-5. **Execute** - Plan migration timeline and identify deployment risks
-
-### Agent Skill Triggers
-
-| Agent Skill    | Triggers                                                                                                           |
-| -------------- | ------------------------------------------------------------------------------------------------------------------ |
-| **gcp-to-aws** | "migrate GCP to AWS", "move from GCP", "GCP migration plan", "estimate AWS costs", "GCP infrastructure assessment" |
-
-### MCP Servers
-
-| Server           | Purpose                                          |
-| ---------------- | ------------------------------------------------ |
-| **awsknowledge** | AWS documentation, architecture guidance         |
-| **awspricing**   | Real-time AWS service pricing for cost estimates |
 
 ## sagemaker-ai
 

@@ -30,5 +30,5 @@ When working with the agent, all generated files are organized under an project 
 ├── scripts/                # Generated Python scripts
 │   ├── <project-name>_transform_fn.py
 └── notebooks/              # Generated Jupyter notebooks
-    ├── <project-name>_training.ipynb
+    ├── <project-name>.ipynb
 ```

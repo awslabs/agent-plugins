@@ -1,6 +1,6 @@
 # Cell 1: Setup
 
-%pip install sagemaker>=3.7.0 --quiet
+%pip install --upgrade sagemaker>=3.7.1 --quiet
 
 # Cell 2: Configuration
 

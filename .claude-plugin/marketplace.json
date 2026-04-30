@@ -80,6 +80,27 @@
       "version": "1.0.0"
     },
     {
+      "category": "development",
+      "description": "Analyze codebases to generate structured technical documentation with source-of-truth citations. Optimized for AWS workloads using CDK, CloudFormation, and Terraform.",
+      "keywords": [
+        "aws",
+        "aws agent skills",
+        "documentation",
+        "architecture",
+        "diagram",
+        "draw.io",
+        "codebase-analysis",
+        "cdk",
+        "cloudformation",
+        "terraform",
+        "onboarding"
+      ],
+      "name": "codebase-documentor-for-aws",
+      "source": "./plugins/codebase-documentor-for-aws",
+      "tags": ["aws", "documentation", "architecture", "diagram"],
+      "version": "0.1.0"
+    },
+    {
       "category": "database",
       "description": "Expert database guidance for the AWS database portfolio. Design schemas, execute queries, handle migrations, and choose the right database for your workload.",
       "keywords": [
@@ -126,25 +147,6 @@
       "version": "1.2.0"
     },
     {
-      "category": "migration",
-      "description": "This no-cost tool assesses your current cloud provider's usage, geography, and billing data to estimate and compare AWS services and pricing, and recommends migration or continued use of your current provider. AWS pricing is based on current published pricing and may vary over time. The tool may generate a .migration folder containing comparison and migration execution data, which you may delete upon completion or use to migrate to AWS.",
-      "keywords": [
-        "aws",
-        "gcp",
-        "google-cloud",
-        "migration",
-        "cloud-migration",
-        "terraform",
-        "fargate",
-        "rds",
-        "eks"
-      ],
-      "name": "migration-to-aws",
-      "source": "./plugins/migration-to-aws",
-      "tags": ["aws", "gcp", "migration", "infrastructure"],
-      "version": "1.0.0"
-    },
-    {
       "category": "ai",
       "description": "Build, train, and deploy AI models with deep AWS AI/ML expertise brought directly into your coding assistants, covering the surface area of Amazon SageMaker AI.",
       "keywords": [
@@ -161,7 +163,7 @@
       "name": "sagemaker-ai",
       "source": "./plugins/sagemaker-ai",
       "tags": ["aws", "sagemaker", "machine-learning", "generative-ai"],
-      "version": "1.0.0"
+      "version": "1.1.0"
     }
   ]
 }

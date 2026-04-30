@@ -4,7 +4,7 @@
 
 ## TL;DR Pitch
 
-This repository supports **plugins** - bundles of skills, MCP servers, and agent configurations that extend capabilities. The `awslabs/agent-plugins` marketplace includes plugins like `deploy-on-aws` (architecture recommendations, cost estimates, and working IaC), `amazon-location-service` (maps, geocoding, routing, and geospatial features), `databases-on-aws` (database guidance for the AWS portfolio, starting with Aurora DSQL), and `migration-to-aws` (GCP-to-AWS migration with resource discovery, architecture mapping, and cost analysis).
+This repository supports **plugins** - bundles of skills, MCP servers, and agent configurations that extend capabilities. The `awslabs/agent-plugins` marketplace includes plugins like `deploy-on-aws` (architecture recommendations, cost estimates, and working IaC), `amazon-location-service` (maps, geocoding, routing, and geospatial features), and `databases-on-aws` (database guidance for the AWS portfolio, starting with Aurora DSQL).
 
 ## Core Concepts
 
@@ -68,14 +68,6 @@ agent-plugins/
 │   │           ├── SKILL.md
 │   │           ├── mcp/
 │   │           └── references/
-│   └── migration-to-aws/
-│       ├── .claude-plugin/
-│       │   └── plugin.json
-│       ├── .mcp.json
-│       └── skills/
-│           └── gcp-to-aws/
-│               ├── SKILL.md
-│               └── references/
 ├── schemas/                      # JSON schemas for manifests
 │   ├── marketplace.schema.json
 │   ├── plugin.schema.json
@@ -120,13 +112,6 @@ agent-plugins/
 | -------------- | ----- | -------------------------------------------------------------------------------- |
 | `awsknowledge` | HTTP  | AWS documentation, architecture guidance, and best practices                     |
 | `aurora-dsql`  | stdio | Direct database operations — queries, schema, transactions (disabled by default) |
-
-### migration-to-aws
-
-| Server         | Type  | Purpose                                         |
-| -------------- | ----- | ----------------------------------------------- |
-| `awsknowledge` | HTTP  | AWS documentation and architecture guidance     |
-| `awspricing`   | stdio | Real-time AWS service pricing for cost analysis |
 
 ## Workflow: Deploy Skill
 
