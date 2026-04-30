@@ -297,11 +297,11 @@ Equips agents with the skills to accelerate AWS deployment - recommending AWS ar
 
 ### MCP Servers
 
-| Server           | Purpose                                                      |
-| ---------------- | ------------------------------------------------------------ |
-| **awsknowledge** | AWS documentation, architecture guidance, and best practices |
-| **awspricing**   | Real-time AWS service pricing for cost estimates             |
-| **aws-iac-mcp**  | IaC best practices for CDK/CloudFormation                    |
+| Server        | Purpose                                                      |
+| ------------- | ------------------------------------------------------------ |
+| **knowledge** | AWS documentation, architecture guidance, and best practices |
+| **pricing**   | Real-time AWS service pricing for cost estimates             |
+| **iac**       | IaC best practices for CDK/CloudFormation                    |
 
 ## sagemaker-ai
 

@@ -10,7 +10,7 @@ This repository contains Agent Plugins for AWS that equip AI coding agents with 
 - **Framework**: Claude Code plugins
 - **Cloud Platform**: AWS
 - **Infrastructure as Code**: CDK and CloudFormation
-- **Tools**: MCP Servers (awsknowledge, awspricing, aws-iac-mcp)
+- **Tools**: MCP Servers (knowledge, pricing, iac — plugin-local keys may vary)
 
 ## Code Organization
 

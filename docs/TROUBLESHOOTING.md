@@ -104,7 +104,7 @@ claude
 
 #### MCP Server Connection Issues
 
-If MCP servers (like `awspricing`, `awsknowledge`, `awsiac`) fail to connect:
+If MCP servers (like `pricing`, `knowledge`, `iac` — names may vary per plugin) fail to connect:
 
 1. Check MCP server logs:
 

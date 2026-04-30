@@ -14,7 +14,7 @@ This repository supports **plugins** - bundles of skills, MCP servers, and agent
 | --------------- | ---------------------------------------------------------------------------------- | ----------------------------------------- |
 | **Plugin**      | A distributable bundle (skills + MCP servers + agents)                             | `deploy-on-aws`                           |
 | **Skill**       | Instructions that auto-trigger based on user intent (YAML frontmatter description) | "deploy to AWS" triggers the deploy skill |
-| **MCP Server**  | External tool integration via Model Context Protocol                               | `awspricing` for cost estimates           |
+| **MCP Server**  | External tool integration via Model Context Protocol                               | `pricing` for cost estimates              |
 | **Marketplace** | Registry of plugins users can install                                              | `awslabs/agent-plugins`                   |
 
 ### Key Design Decision: Skills Auto-Trigger
@@ -97,11 +97,11 @@ agent-plugins/
 
 ### deploy-on-aws
 
-| Server         | Type  | Purpose                                           |
-| -------------- | ----- | ------------------------------------------------- |
-| `awsknowledge` | HTTP  | AWS documentation, architecture guidance          |
-| `awspricing`   | stdio | Real-time cost estimates                          |
-| `awsiac`       | stdio | IaC best practices (CDK/CloudFormation/Terraform) |
+| Server      | Type  | Purpose                                           |
+| ----------- | ----- | ------------------------------------------------- |
+| `knowledge` | HTTP  | AWS documentation, architecture guidance          |
+| `pricing`   | stdio | Real-time cost estimates                          |
+| `iac`       | stdio | IaC best practices (CDK/CloudFormation/Terraform) |
 
 ### amazon-location-service
 
