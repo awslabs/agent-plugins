@@ -36,16 +36,16 @@ Design rules:
 import re
 import secrets
 import string
-from typing import AbstractSet, Any, Pattern
+from typing import AbstractSet, Any
 
 
-TENANT_SLUG: Pattern[str] = re.compile(r"[a-z0-9-]{1,64}")
-UUID: Pattern[str] = re.compile(
+TENANT_SLUG: re.Pattern[str] = re.compile(r"[a-z0-9-]{1,64}")
+UUID: re.Pattern[str] = re.compile(
     r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
     re.IGNORECASE,
 )
-INT: Pattern[str] = re.compile(r"-?[0-9]{1,19}")
-_IDENT: Pattern[str] = re.compile(r"[a-z_][a-z0-9_]{0,62}", re.IGNORECASE)
+INT: re.Pattern[str] = re.compile(r"-?[0-9]{1,19}")
+_IDENT: re.Pattern[str] = re.compile(r"[a-z_][a-z0-9_]{0,62}", re.IGNORECASE)
 
 
 class UnsafeSQLError(ValueError):
@@ -88,13 +88,13 @@ def keyword(value: str, allowed: AbstractSet[str], *, label: str = "keyword") ->
     return Safe(value)
 
 
-def regex(value: Any, pattern: Pattern[str], *, label: str = "value") -> Safe:
+def regex(value: Any, pattern: re.Pattern[str], *, label: str = "value") -> Safe:
     """Regex-validate with re.fullmatch and emit as a single-quoted literal.
 
-    Rejects values containing a single quote or backslash. `regex()` is for
-    strict-format values (UUIDs, slugs, dates) that never legitimately need
-    embedded quotes or backslashes; free text belongs in `literal()`, which
-    dollar-quotes and sidesteps escaping entirely.
+    Rejects values containing a single quote, backslash, or null byte.
+    `regex()` is for strict-format values (UUIDs, slugs, dates) that never
+    legitimately need embedded quotes or backslashes; free text belongs in
+    `literal()`, which dollar-quotes and sidesteps escaping entirely.
     """
     if not isinstance(value, str) or not pattern.fullmatch(value):
         raise UnsafeSQLError(f"{label} failed pattern {pattern.pattern!r}: {value!r}")
@@ -107,6 +107,10 @@ def regex(value: Any, pattern: Pattern[str], *, label: str = "value") -> Safe:
             f"{label} contains a backslash; use literal() for values "
             f"needing special characters: {value!r}"
         )
+    if "\x00" in value:
+        raise UnsafeSQLError(
+            f"{label} contains a null byte: {value!r}"
+        )
     return Safe("'" + value + "'")
 
 
@@ -114,7 +118,7 @@ def ident(name: str) -> Safe:
     """Validate a SQL identifier (table or column) and emit it double-quoted."""
     if not isinstance(name, str) or not _IDENT.fullmatch(name):
         raise UnsafeSQLError(f"invalid identifier: {name!r}")
-    return Safe('"' + name + '"')
+    return Safe('"' + name.replace('"', '""') + '"')
 
 
 def integer(value: Any) -> Safe:
@@ -158,6 +162,8 @@ def build(template: str, **parts: Safe) -> str:
     key would be silently ignored — dropping, for example, a tenant filter
     from the query.
     """
+    if not isinstance(template, str):
+        raise UnsafeSQLError(f"template must be a str, got {type(template).__name__}")
     for key, value in parts.items():
         if not isinstance(value, Safe):
             raise UnsafeSQLError(
@@ -256,6 +262,8 @@ def _selftest() -> None:
     _expect_unsafe("build", "SELECT {x:>30}", x=ident("col"))
     _expect_unsafe("build", "SELECT {}", x=ident("col"))
     _expect_unsafe("build", "SELECT {0}", x=ident("col"))
+    _expect_unsafe("build", None)
+    _expect_unsafe("build", 123)
 
     print("safe_query self-test passed")
 

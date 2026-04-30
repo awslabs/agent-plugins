@@ -77,10 +77,13 @@ agent-plugins/
 │   ├── evals/                    # Eval suites for plugins, kept separate from plugin clients
 │   │   └── databases-on-aws/
 │   │       ├── README.md
-│   │       ├── evals.json
-│   │       ├── trigger_evals.json
-│   │       └── scripts/
-│   │           └── run_functional_evals.py
+│   │       └── dsql/
+│   │           ├── evals.json
+│   │           ├── trigger_evals.json
+│   │           ├── query_explainability_evals.json
+│   │           ├── safe_query_evals.json
+│   │           └── scripts/
+│   │               └── run_functional_evals.py
 │   ├── validate-cross-refs.cjs
 │   └── ...
 ├── mise.toml                     # Tool versions and tasks

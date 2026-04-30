@@ -7,14 +7,20 @@ Part of [Aurora DSQL MCP Tools Reference](../mcp-tools.md).
 ## Pattern 1: Explore Schema
 
 ```python
-# Step 1: List all tables
-readonly_query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+from safe_query import build
+
+# Step 1: List all tables (fully static — build() documents safe-query intent)
+readonly_query(build(
+    "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'",
+))
 
 # Step 2: Get schema for specific table
 get_schema("entities")
 
-# Step 3: Query data
-readonly_query("SELECT * FROM entities LIMIT 10")
+# Step 3: Query data (fully static — build() documents safe-query intent)
+readonly_query(build(
+    "SELECT * FROM entities LIMIT 10",
+))
 ```
 
 ## Pattern 2: Create Table with Index
@@ -52,8 +58,10 @@ populate = build(
 transact([populate])
 transact([populate])
 
-# Step 3: Verify
-readonly_query("SELECT COUNT(*) AS total, COUNT(status) AS with_status FROM entities")
+# Step 3: Verify (fully static — build() documents safe-query intent)
+readonly_query(build(
+    "SELECT COUNT(*) AS total, COUNT(status) AS with_status FROM entities",
+))
 
 # Step 4: Create index in a separate transaction
 transact(["CREATE INDEX ASYNC idx_status ON entities(tenant_id, status)"])

@@ -63,7 +63,9 @@ sql = build("... WHERE tenant_id = {tid}", tid=regex(tenant_id, TENANT_SLUG))
 
 ## Rules
 
-- **MUST** build every SQL string with `safe_query.build()`.
+- **MUST** build every SQL string with `safe_query.build()`. Fully static queries
+  with zero interpolated values MAY call `build()` with no kwargs — this validates
+  the template contains no placeholders and documents intent.
 - **MUST** authorize the caller before validating format.
 - **MUST NOT** fall back to f-strings, `%`, `.format()`, or concatenation when
   a validator rejects a value — fix the caller or widen the validator.

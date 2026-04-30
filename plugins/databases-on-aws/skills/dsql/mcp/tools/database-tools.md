@@ -153,6 +153,10 @@ table_name = "entities"
 
 **Note:** There is no `list_tables` tool. To discover tables, use `readonly_query` with:
 
-```sql
-SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'
+```python
+from safe_query import build
+
+readonly_query(build(
+    "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'",
+))
 ```

@@ -701,7 +701,7 @@ def grade_eval(eval_item: dict, run_result: dict) -> dict:
             next_hypothesis = re.search(
                 r"(next hypothesis|investigate (further|why)|another possible cause|"
                 r"additional investigation|would want to (investigate|explore|dig)|"
-                r"worth checking|next step is to)",
+                r"worth checking (whether|if|why|the|that|for)|next step is to)",
                 output_text,
             )
             if not short_signal:
@@ -969,7 +969,7 @@ def main():
                         help="Path to a JSON file with MCP server config (e.g., .claude/.mcp.json) "
                              "to override the plugin's default (disabled) aurora-dsql config")
     parser.add_argument("--max-turns", type=int, default=60,
-                        help="Maximum agent turns per eval (default: 40)")
+                        help="Maximum agent turns per eval (default: %(default)s)")
     parser.add_argument("--skip-warmup", action="store_true",
                         help="Skip the throwaway MCP warmup run (not recommended — first "
                              "eval is likely to fail because uvx/boto3 haven't initialized)")

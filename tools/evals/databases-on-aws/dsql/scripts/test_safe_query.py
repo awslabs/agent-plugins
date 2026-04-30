@@ -142,11 +142,23 @@ def test_regex_rejects_embedded_single_quote(payload):
         regex(payload, permissive)
 
 
+def test_regex_rejects_null_byte():
+    """regex() must reject values containing a null byte (defense-in-depth)."""
+    permissive = re.compile(r".+", re.DOTALL)
+    with pytest.raises(UnsafeSQLError):
+        regex("abc\x00tail", permissive)
+
+
 def test_allow_rejects_outside_set():
     with pytest.raises(UnsafeSQLError):
         allow("evil", {"ok"})
     with pytest.raises(UnsafeSQLError):
         allow("", {"ok"})
+
+
+def test_allow_escapes_embedded_quote():
+    """allow() belt-and-braces escaping handles quotes in the allowlist."""
+    assert str(allow("it's", {"it's"})) == "'it''s'"  # nosec B101 - test assertion
 
 
 def test_keyword_rejects_outside_set():
@@ -296,6 +308,44 @@ def test_literal_rejects_non_string():
         literal(None)
 
 
+def test_literal_tag_exhaustion(monkeypatch):
+    """literal() must raise UnsafeSQLError when all 8 tag attempts collide."""
+    import safe_query as sq
+    monkeypatch.setattr(sq.secrets, "token_hex", lambda _: "deadbeef")
+    with pytest.raises(UnsafeSQLError):
+        sq.literal("$dq_deadbeef$injected$dq_deadbeef$")
+
+
+def test_literal_tag_retry_on_partial_collision(monkeypatch):
+    """literal() must retry when the first tag collides, succeeding on a later attempt."""
+    import safe_query as sq
+    calls = iter(["deadbeef", "deadbeef", "cafecafe"])
+    monkeypatch.setattr(sq.secrets, "token_hex", lambda _: next(calls))
+    out = str(sq.literal("$dq_deadbeef$injected$dq_deadbeef$"))
+    assert "$dq_cafecafe$" in out  # nosec B101 - test assertion
+    assert "$dq_deadbeef$injected$dq_deadbeef$" in out  # nosec B101 - test assertion
+
+
+def test_literal_dollar_quote_collision():
+    """literal() must handle input containing a $dq_...$ pattern safely."""
+    payload = "$dq_deadbeef$injected$dq_deadbeef$"
+    out = str(literal(payload))
+    assert out.startswith("$dq_")  # nosec B101 - test assertion
+    assert payload in out  # nosec B101 - test assertion
+    tag = out.split("$", 2)[1]
+    assert f"${tag}$" not in payload  # nosec B101 - test assertion
+
+
+def test_build_rejects_non_string_template():
+    """build() must raise UnsafeSQLError for non-string templates."""
+    with pytest.raises(UnsafeSQLError):
+        build(None)
+    with pytest.raises(UnsafeSQLError):
+        build(123)
+    with pytest.raises(UnsafeSQLError):
+        build(["SELECT 1"])
+
+
 def test_safe_value_cannot_be_forged_from_plain_string():
     """The only route to a Safe value is a validator."""
     assert not isinstance("raw", Safe)  # nosec B101 - test assertion
@@ -341,8 +391,14 @@ if __name__ == "__main__":
         "test_build_rejects_format_spec": ["SELECT {x:>30}", "SELECT {x:.5}"],
     }
 
+    # Tests requiring pytest fixtures (monkeypatch) — skip in fallback runner
+    skip_in_fallback = {"test_literal_tag_exhaustion", "test_literal_tag_retry_on_partial_collision"}
+
     passed = failed = 0
     for name, fn in tests:
+        if name in skip_in_fallback:
+            print(f"SKIP  {name} (requires pytest fixtures)")
+            continue
         if name in parametrized:
             for payload in parametrized[name]:
                 try:
