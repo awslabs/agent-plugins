@@ -1,6 +1,6 @@
 {
   "name": "codebase-documentor-for-aws",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Analyze codebases to generate structured technical documentation with source-of-truth citations. Optimized for AWS workloads using CDK, CloudFormation, and Terraform.",
   "author": {
     "name": "Amazon Web Services",
