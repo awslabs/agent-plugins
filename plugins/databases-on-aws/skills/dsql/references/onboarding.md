@@ -35,7 +35,7 @@ These guidelines apply when users say "Get started with DSQL" or similar phrases
   - Example:
     - "What column names would you like in this table?"
     - "What is the column name of the primary key?"
-    - "JSON must be serialized. Would you like to stringify the JSON to serialize it as TEXT?"
+    - "Would you like to store this in a `JSON` column, or serialize as TEXT?"
 
 **Examples:**
 
@@ -252,7 +252,9 @@ cargo add aws-sdk-dsql tokio --features full
 - If yes, MUST verify DSQL compatibility:
   - No SERIAL types (use `GENERATED AS IDENTITY` with sequences, or UUID)
   - No foreign keys (implement in application)
-  - No array/JSON column types (serialize as TEXT)
+  - Serialize arrays as TEXT or JSON; cast back at query time (`string_to_array(text, ',')` / `jsonb_array_elements_text(json::jsonb)`)
+  - Cast to `JSONB` at query time for JSONB operators (`JSONB` is not a valid column type)
+  - Verify column types against the [supported data types list](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-supported-data-types.html)
   - Reference [`./development-guide.md`](./development-guide.md) for full constraints
 
 **If no schema found:**
@@ -349,7 +351,7 @@ Let them know you're ready to help with more:
 **ALWAYS follow these rules:**
 
 1. **Indexes:** Use `CREATE INDEX ASYNC` - synchronous index creation not supported
-2. **Serialization:** Store arrays/JSON as TEXT (comma-separated or JSON.stringify)
+2. **Runtime-only types:** Serialize arrays as TEXT or JSON; cast to `JSONB` at query time for JSONB operators
 3. **Referential Integrity:** Implement foreign key validation in application code
 4. **DDL Operations:** Execute one DDL per transaction, no mixing with DML
 5. **Transaction Limits:** Maximum 3,000 row modifications, 10 MiB data size per transaction

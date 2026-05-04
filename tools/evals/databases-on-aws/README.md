@@ -14,7 +14,7 @@ scripts, and unit tests for that database's skill.
 tools/evals/databases-on-aws/
 ├── README.md                        # This file — top-level index
 └── dsql/                            # Aurora DSQL skill evals
-    ├── evals.json                   # Tier 2: functional evals (5 prompts, 20 assertions)
+    ├── evals.json                   # Tier 2: functional evals (9 prompts, 31 assertions)
     ├── trigger_evals.json           # Tier 1: triggering evals (26 test cases)
     ├── safe_query_evals.json        # Tier 3: safe_query enforcement (6 prompts, ~30 expectations)
     ├── query_explainability_evals.json  # Workflow 8: query plan diagnostics (9 prompts, 70 assertions)
@@ -68,15 +68,39 @@ python tools/evals/databases-on-aws/dsql/scripts/run_functional_evals.py \
   --verbose
 ```
 
-**What it checks** (5 eval prompts, 20 assertions total):
+Run a subset by ID (e.g., just the new type / lifecycle evals):
 
-| Eval                   | Focus                 | Key assertions                                                             |
-| ---------------------- | --------------------- | -------------------------------------------------------------------------- |
-| 1. Transaction limits  | MCP delegation        | Calls `awsknowledge`, cites 3,000 row limit, recommends batching           |
-| 2. Multi-tenant schema | Correctness           | Uses `tenant_id`, `CREATE INDEX ASYNC`, no foreign keys, separate DDL txns |
-| 3. Index limits        | MCP delegation        | Calls `awsknowledge`, cites 24 index limit, suggests alternatives          |
-| 4. Python connection   | Language routing      | Recommends DSQL Python Connector, IAM auth, 15-min token expiry, SSL       |
-| 5. Column type change  | DDL migration routing | Table Recreation Pattern, DROP TABLE warning, batching, user confirmation  |
+```bash
+python tools/evals/databases-on-aws/dsql/scripts/run_functional_evals.py \
+  --evals tools/evals/databases-on-aws/dsql/evals.json \
+  --plugin-dir plugins/databases-on-aws \
+  --output-dir /tmp/dsql-eval-results \
+  --eval-ids 6,7,8 \
+  --verbose
+```
+
+**What it checks** (9 eval prompts, 31 assertions total):
+
+| Eval                       | Focus                 | Grader    | Key assertions                                                                                    |
+| -------------------------- | --------------------- | --------- | ------------------------------------------------------------------------------------------------- |
+| 1. Transaction limits      | MCP delegation        | regex     | Calls `awsknowledge`, cites 3,000 row limit, recommends batching                                  |
+| 2. Multi-tenant schema     | Correctness           | regex     | Uses `tenant_id`, `CREATE INDEX ASYNC`, no foreign keys, separate DDL txns                        |
+| 3. Index limits            | MCP delegation        | regex     | Calls `awsknowledge`, cites 24 index limit, suggests alternatives                                 |
+| 4. Python connection       | Language routing      | regex     | Recommends DSQL Python Connector, IAM auth, 15-min token expiry, SSL                              |
+| 5. Column type change      | DDL migration routing | regex     | Table Recreation Pattern, DROP TABLE warning, batching, user confirmation                         |
+| 6. JSON column storage     | Type guidance         | LLM judge | Explains `::jsonb` cast, does not recommend `JSONB` as a column type                              |
+| 7. Array storage           | Type guidance         | LLM judge | Flags `TEXT[]` / array column as unsupported, recommends TEXT or `JSON` column                    |
+| 8. INACTIVE cluster error  | Troubleshooting       | LLM judge | Identifies INACTIVE state, uses `aws dsql get-cluster` to poll until `ACTIVE`, retries afterwards |
+| 9. Backup on IDLE/INACTIVE | Troubleshooting       | LLM judge | Identifies `FailedPrecondition`, connects to wake cluster to ACTIVE, retries backup               |
+
+### Grader modes
+
+The runner supports two grading strategies; each eval declares which via `"llm_judge": true|false` (default `false`):
+
+- **Regex / tool-call** (evals 1-5): fast, cheap, deterministic. Good for verbatim tokens (`tenant_id`, `CREATE INDEX ASYNC`, the `3,000` row limit) and tool-invocation checks (`Calls awsknowledge with topic=X`).
+- **LLM judge** (evals 6-9): runs `claude -p` once per expectation with the agent's final text, the user prompt, and the assertion. Returns `{passed, evidence}`. Good for semantic assertions where paraphrasing, negation, or synonym coverage makes regex brittle. Costs ~$0.01–0.05 per expectation; slower than regex. Use for assertions like "Does NOT recommend X" where the agent may phrase the refutation a hundred different ways.
+
+Pin the judge model independently of the subject model via `--judge-model` (defaults to the CLI default). Keep it stable across runs when bumping `--model` so grading stays comparable.
 
 ### Tier 3: Safe-Query Enforcement Evals
 

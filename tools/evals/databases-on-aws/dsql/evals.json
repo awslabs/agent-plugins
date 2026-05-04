@@ -60,6 +60,53 @@
         "Mentions batching the data copy for tables exceeding 3,000 rows",
         "Requires or recommends user confirmation before destructive steps"
       ]
+    },
+    {
+      "id": 6,
+      "prompt": "I need to store a JSON preferences blob per user in my DSQL users table. How should I model that column, and how do I query fields inside it?",
+      "expected_output": "Recommends either JSON or TEXT as a valid column type. Explains that JSONB is runtime-only and must be cast (preferences::jsonb->>'key') at query time for JSONB operators.",
+      "files": [],
+      "expectations": [
+        "Mentions casting to jsonb at query time for JSONB operators",
+        "Does NOT claim JSONB is a valid column type (JSONB is runtime-only)"
+      ],
+      "llm_judge": true
+    },
+    {
+      "id": 7,
+      "prompt": "I want to store a tags array per project in DSQL (e.g. ['backend','database','api']). Can I use TEXT[] for that?",
+      "expected_output": "Indicates TEXT[] / array column type is not supported in DSQL. Recommends storing arrays as TEXT (comma-separated) or inside a JSON column.",
+      "files": [],
+      "expectations": [
+        "Indicates TEXT[] or array column type is not supported in DSQL",
+        "Recommends storing arrays as TEXT (comma-separated) or inside a JSON column"
+      ],
+      "llm_judge": true
+    },
+    {
+      "id": 8,
+      "prompt": "My DSQL connection just failed with: FATAL: unable to accept connection, waking up cluster, please retry later. What's happening and what should I do?",
+      "expected_output": "Identifies the cluster as INACTIVE, explains that the first connection triggers the wake. Recommends polling cluster status via aws dsql get-cluster until ACTIVE, then retrying the connection.",
+      "files": [],
+      "expectations": [
+        "Identifies the cluster is in INACTIVE state and waking up",
+        "Mentions aws dsql get-cluster for checking cluster status",
+        "Recommends polling until the cluster reaches ACTIVE state",
+        "Recommends retrying the connection after cluster becomes ACTIVE"
+      ],
+      "llm_judge": true
+    },
+    {
+      "id": 9,
+      "prompt": "I ran `aws backup start-backup-job` on my DSQL cluster and got FailedPrecondition: Cluster is in state 'IDLE' and can't be backed up. How do I fix this?",
+      "expected_output": "Identifies that backups require an ACTIVE cluster. Recommends connecting to the cluster to transition it to ACTIVE, then retrying the backup.",
+      "files": [],
+      "expectations": [
+        "Identifies that backups require the cluster to be in ACTIVE state",
+        "Recommends connecting to the cluster to wake it to ACTIVE",
+        "Recommends retrying the backup after cluster is ACTIVE"
+      ],
+      "llm_judge": true
     }
   ]
 }

@@ -153,13 +153,11 @@ defaults that may change — when a user's decision depends on an exact limit, v
 | Max indexes per table          | 24            | `aurora dsql index limits`         |
 | Max columns per index          | 8             | `aurora dsql index limits`         |
 | IDENTITY/SEQUENCE CACHE values | 1 or >= 65536 | `aurora dsql sequence cache`       |
+| Supported column data types    | See docs      | `aurora dsql supported data types` |
 
-**When to verify:** Before recommending batch sizes, connection pool settings, or schema designs
-where hitting a limit would cause failures. No need to verify for general guidance or when
-the exact number doesn't affect the user's decision.
+**When to verify:** Before recommending batch sizes, connection pool settings, or schema designs where hitting a limit would cause failures; any time the exact number can affect user decision.
 
-**Fallback:** If `awsknowledge` is unavailable, use the defaults above and note to the user
-that limits should be verified against [DSQL documentation](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/).
+**Fallback:** If `awsknowledge` is unavailable, use the defaults above and flag that limits should be verified against [DSQL documentation](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/).
 
 ## CLI Scripts Available
 
@@ -208,7 +206,7 @@ ALTER COLUMN TYPE, DROP COLUMN, DROP CONSTRAINT → Table Recreation Pattern (Wo
 - MUST include tenant_id in all tables
 - MUST use `CREATE INDEX ASYNC` exclusively
 - MUST issue each DDL in its own transact call: `transact(["CREATE TABLE ..."])`
-- MUST store arrays/JSON as TEXT
+- MUST serialize arrays as TEXT or JSON; cast back at query time (`string_to_array(text, ',')` or `jsonb_array_elements_text(json::jsonb)`)
 
 ### Workflow 2: Safe Data Migration
 

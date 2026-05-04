@@ -45,7 +45,7 @@ transact([
      price DECIMAL(10,2) NOT NULL,
      category VARCHAR(255) DEFAULT 'other' CHECK (category IN ('electronics', 'clothing', 'food', 'other')),
      tags TEXT,
-     metadata TEXT,
+     metadata JSON,
      stock INTEGER DEFAULT 0 CHECK (stock >= 0),
      is_active BOOLEAN DEFAULT true,
      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -70,7 +70,7 @@ transact(["CREATE INDEX ASYNC idx_products_category ON products(tenant_id, categ
 | `MEDIUMTEXT`                  | `TEXT`                                                                                                                                                     |
 | `ENUM(...)`                   | `VARCHAR(255)` with `CHECK` constraint                                                                                                                     |
 | `SET(...)`                    | `TEXT` (comma-separated)                                                                                                                                   |
-| `JSON`                        | `TEXT` (JSON.stringify)                                                                                                                                    |
+| `JSON`                        | `JSON`                                                                                                                                                     |
 | `UNSIGNED`                    | `CHECK (col >= 0)`                                                                                                                                         |
 | `TINYINT(1)`                  | `BOOLEAN`                                                                                                                                                  |
 | `DATETIME`                    | `TIMESTAMP`                                                                                                                                                |
@@ -99,7 +99,6 @@ transact(["CREATE INDEX ASYNC idx_products_category ON products(tenant_id, categ
 - **MUST convert** AUTO_INCREMENT to UUID with gen_random_uuid(), IDENTITY column with `GENERATED AS IDENTITY (CACHE ...)`, or explicit SEQUENCE -- ALWAYS use `GENERATED AS IDENTITY` for auto-incrementing columns (see [AUTO_INCREMENT Migration](ddl-auto-increment.md#auto_increment-migration))
 - **MUST replace** ENUM with VARCHAR and CHECK constraint
 - **MUST replace** SET with TEXT (comma-separated)
-- **MUST replace** JSON columns with TEXT
 - **MUST replace** FOREIGN KEY constraints with application-layer referential integrity
 - **MUST replace** ON UPDATE CURRENT_TIMESTAMP with application-layer updates
 - **MUST convert** all index creation to use CREATE INDEX ASYNC

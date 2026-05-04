@@ -13,7 +13,8 @@ effortless scaling, multi-region viability, among other advantages.
 - **REQUIRED: Follow DDL Guidelines** - Refer to [DDL Rules](#schema-ddl-rules)
 - **SHALL repeatedly generate fresh tokens** - Refer to [Connection Limits](auth/authentication-guide.md#connection-rules)
 - **ALWAYS use ASYNC indexes** - `CREATE INDEX ASYNC` is mandatory
-- **MUST Serialize arrays/JSON as TEXT** - Store arrays/JSON as TEXT (comma separated, JSON.stringify)
+- **MUST serialize arrays as TEXT or JSON** - see [Schema Design Rules](#schema-design-rules)
+- **MUST cast to `JSONB` at query time** for JSONB operators — see [Supported Data Types](#supported-data-types)
 - **ALWAYS Batch within row limit** - maintain transaction limits (verify via `awsknowledge`: `aurora dsql transaction limits`)
 - **REQUIRED: Build and sanitize all SQL with `safe_query.build()`** - See [Input Validation](../mcp/tools/input-validation.md#required-pattern)
 - **MUST follow correct Application Layer Patterns** - when multi-tenant isolation or application referential integrity are required; refer to [Application Layer Patterns](#application-layer-patterns)
@@ -53,9 +54,8 @@ effortless scaling, multi-region viability, among other advantages.
 
 ### Schema Design Rules
 
-- MUST use **simple PostgreSQL types:** VARCHAR, TEXT, INTEGER, BOOLEAN, TIMESTAMP
-- MUST store arrays as TEXT (comma-separated is recommended)
-- MUST store JSON objects as TEXT (JSON.stringify)
+- MUST verify column types via `awsknowledge`: `aurora dsql supported data types` or the [DSQL supported data types list](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-supported-data-types.html)
+- MUST serialize arrays as TEXT or JSON; cast back at query time via `string_to_array(text, ',')` or `jsonb_array_elements_text(json::jsonb)`
 - ALWAYS include tenant_id in tables for multi-tenant isolation
 - SHOULD create async indexes for tenant_id and common query patterns
 
@@ -124,9 +124,9 @@ UPDATE table SET c = 'default' WHERE c IS NULL;        ← AFTER ADD COLUMN
 
 ### Supported Data Types
 
-```
-VARCHAR, TEXT, INTEGER, DECIMAL, BOOLEAN, TIMESTAMP, UUID
-```
+**MUST verify** column types against the [DSQL supported data types docs](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-supported-data-types.html) or via `awsknowledge`: `aurora dsql supported data types` — the supported set evolves, so do not treat any static list as exhaustive.
+
+`JSONB`, arrays, and `INET` are **[runtime-only](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-supported-data-types.html#working-with-postgresql-compatibility-query-runtime)** — cast at query time
 
 ### Supported Key
 
