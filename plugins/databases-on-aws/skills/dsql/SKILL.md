@@ -135,13 +135,13 @@ The `aurora-dsql` MCP server provides these tools:
 
 **SQL Validation:**
 
-4. **dsql_lint** - Validate SQL for DSQL compatibility and optionally auto-fix issues. Returns diagnostics with rule violations, suggestions, and DSQL-compatible fixed SQL. Use before executing externally-sourced SQL (ORM migrations, pg_dump output, schema files).
+1. **dsql_lint** - Validate SQL for DSQL compatibility and optionally auto-fix issues. Returns diagnostics with rule violations, suggestions, and DSQL-compatible fixed SQL. Use before executing externally-sourced SQL (ORM migrations, pg_dump output, schema files).
 
 **Documentation & Knowledge:**
 
-5. **dsql_search_documentation** - Search Aurora DSQL documentation
-6. **dsql_read_documentation** - Read specific documentation pages
-7. **dsql_recommend** - Get DSQL best practice recommendations
+1. **dsql_search_documentation** - Search Aurora DSQL documentation
+2. **dsql_read_documentation** - Read specific documentation pages
+3. **dsql_recommend** - Get DSQL best practice recommendations
 
 **Note:** There is no `list_tables` tool. Use `readonly_query` with information_schema.
 
@@ -320,6 +320,7 @@ Validates arbitrary SQL (PostgreSQL, MySQL, ORM-generated) for DSQL compatibilit
 7. Verify schema with `get_schema`
 
 **Critical rules:**
+
 - **MUST** run `dsql_lint` before executing any externally-sourced SQL
 - **MUST** present `fixed_with_warning` items to user before proceeding
 - **MUST** resolve all `unfixable` errors before execution (use skill knowledge or ask user)
@@ -327,6 +328,7 @@ Validates arbitrary SQL (PostgreSQL, MySQL, ORM-generated) for DSQL compatibilit
 - **SHOULD** load [dsql-lint.md](references/dsql-lint.md) for usage patterns and resolution strategies
 
 **ORM-specific guidance:**
+
 - **Django:** Run `python manage.py sqlmigrate <app> <migration>` to get raw SQL, then lint
 - **Rails:** Export with `rails db:schema:dump` (SQL format), then lint
 - **Prisma:** Use `prisma migrate diff` to get SQL, then lint
