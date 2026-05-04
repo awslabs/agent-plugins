@@ -8,7 +8,7 @@
     },
     "awsknowledge": {
       "args": [
-        "fastmcp",
+        "fastmcp@latest",
         "run",
         "https://knowledge-mcp.global.api.aws"
       ],

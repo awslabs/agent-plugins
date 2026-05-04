@@ -222,7 +222,7 @@ If Codex reports an `awsknowledge` startup error similar to:
 Transport channel closed, when send initialized notification
 ```
 
-the plugin now uses a Codex-specific MCP configuration that proxies `awsknowledge` through local stdio using `uvx fastmcp run`.
+The plugin now uses a Codex-specific MCP configuration that proxies `awsknowledge` through local stdio using `uvx fastmcp run`.
 
 1. Verify Codex is using the Codex manifest and MCP file for your plugin:
    - `.codex-plugin/plugin.json` points to `./.mcp.codex.json`
@@ -244,9 +244,22 @@ For diagnostics only, you can force the previous direct HTTP transport path:
 
 1. Edit the plugin's `.codex-plugin/plugin.json`
 2. Change `mcpServers` from `./.mcp.codex.json` to `./.mcp.json`
-3. Restart Codex
+3. If the plugin does not include `./.mcp.json`, create a temporary `./.mcp.json` in the plugin root:
 
-Use this only for debugging and rollback. The Codex default should remain `./.mcp.codex.json`.
+   ```json
+   {
+     "mcpServers": {
+       "awsknowledge": {
+         "type": "http",
+         "url": "https://knowledge-mcp.global.api.aws"
+       }
+     }
+   }
+   ```
+
+4. Restart Codex
+
+Use this only for debugging and rollback. If you created a temporary `./.mcp.json`, remove it when finished. The Codex default should remain `./.mcp.codex.json`.
 
 ## Other AI Assistants
 
