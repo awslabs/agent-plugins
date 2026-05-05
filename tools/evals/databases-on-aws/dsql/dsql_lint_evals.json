@@ -1,0 +1,52 @@
+{
+  "skill_name": "dsql",
+  "evals": [
+    {
+      "id": 100,
+      "prompt": "I have this PostgreSQL schema from pg_dump. Can you check if it's compatible with DSQL and fix any issues?\n\nCREATE TABLE users (\n  id SERIAL PRIMARY KEY,\n  email VARCHAR(255) NOT NULL,\n  preferences JSON,\n  team_id INT REFERENCES teams(id)\n);\n\nCREATE INDEX idx_users_email ON users(email);",
+      "expected_output": "Calls dsql_lint with fix=true, presents diagnostics to user, shows the fixed SQL",
+      "files": [],
+      "expectations": [
+        "Calls the dsql_lint MCP tool with the provided SQL",
+        "Uses fix=true to get DSQL-compatible output",
+        "Presents diagnostics or warnings to the user before executing",
+        "Does NOT execute the SQL without validating first"
+      ]
+    },
+    {
+      "id": 101,
+      "prompt": "I'm migrating my Django app to DSQL. Here's the output of `python manage.py sqlmigrate myapp 0001`:\n\nBEGIN;\nCREATE TABLE myapp_order (\n  id SERIAL PRIMARY KEY,\n  customer_id INT REFERENCES myapp_customer(id),\n  total DECIMAL(10,2),\n  metadata JSON\n);\nCREATE INDEX myapp_order_customer_idx ON myapp_order(customer_id);\nCOMMIT;",
+      "expected_output": "Calls dsql_lint with fix=true, identifies multi-DDL transaction issue, presents fixed SQL with each DDL in separate transaction",
+      "files": [],
+      "expectations": [
+        "Calls the dsql_lint MCP tool",
+        "Identifies that the SQL has compatibility issues",
+        "Issues each DDL as a separate transact call (not all in one transaction)",
+        "Warns the user about removed foreign key constraint requiring app-layer enforcement"
+      ]
+    },
+    {
+      "id": 102,
+      "prompt": "Validate this SQL for DSQL compatibility but don't execute it yet:\n\nCREATE TABLE events (\n  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,\n  tenant_id VARCHAR(255) NOT NULL,\n  payload TEXT,\n  created_at TIMESTAMP DEFAULT now()\n);\n\nCREATE INDEX ASYNC idx_events_tenant ON events(tenant_id);",
+      "expected_output": "Calls dsql_lint, reports that the SQL is already DSQL-compatible (no issues), does NOT execute",
+      "files": [],
+      "expectations": [
+        "Calls the dsql_lint MCP tool to validate",
+        "Reports that the SQL is compatible (no errors or warnings)",
+        "Does NOT execute the SQL (user said don't execute)"
+      ]
+    },
+    {
+      "id": 103,
+      "prompt": "I need to migrate this MySQL table to DSQL:\n\nCREATE TABLE products (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  name VARCHAR(100),\n  tags SET('electronics','clothing','food'),\n  details JSON,\n  FOREIGN KEY (category_id) REFERENCES categories(id)\n) ENGINE=InnoDB PARTITION BY HASH(id) PARTITIONS 4;",
+      "expected_output": "Calls dsql_lint with fix=true, identifies multiple issues including unfixable ones (PARTITION BY), presents what can be auto-fixed vs what needs manual rewrite",
+      "files": [],
+      "expectations": [
+        "Calls the dsql_lint MCP tool with fix=true",
+        "Identifies unfixable issues that require manual intervention",
+        "Does NOT claim all issues can be auto-fixed",
+        "Loads or references the mysql-migrations type-mapping for unfixable items"
+      ]
+    }
+  ]
+}
