@@ -21,7 +21,7 @@ from pathlib import Path
 
 
 def run_prompt(prompt: str, plugin_dir: str, timeout: int = 300, model: str | None = None,
-               mcp_config: str | None = None, max_turns: int = 40) -> dict:
+               mcp_config: str | None = None, max_turns: int = 60) -> dict:
     """Run a prompt via claude -p with stream-json output to capture tool calls."""
     cmd = [
         "claude", "-p", prompt,
@@ -612,6 +612,33 @@ def grade_eval(eval_item: dict, run_result: dict) -> dict:
             else:
                 evidence = "No explanation of unused index found"
 
+        # --- Eval 6 assertion: identifies the composite index is now being used ---
+        # After the user applies the composite index from eval 1, the reassess
+        # run should show a plan using it. Accept any variant the agent uses to
+        # describe "that index is now in the plan".
+        elif ("composite index" in exp_lower or "index is now being used" in exp_lower) \
+                and ("now" in exp_lower or "is being used" in exp_lower or "index scan" in exp_lower):
+            index_used = re.search(
+                r"(idx_user_account_tenant_valid_from|"
+                r"index scan (on |using )?(idx_|\w*tenant\w*|\w*valid_from\w*)|"
+                r"(composite|new) index .{0,40} (being used|in use|now used|used by the planner|selected)|"
+                r"now uses (the |an )?(composite|index|new) (index|scan)|"
+                r"planner (picked|selected|chose|is using) (the |an )?(composite|new)?\s*index|"
+                r"finding \d+ .{0,40} (resolved|fixed|addressed))",
+                output_text,
+            )
+            # Also credit if the plan tree literally shows an Index Scan on the new composite columns
+            plan_tree_index = re.search(
+                r"(Index (Only )?Scan|B-Tree Scan) (on |using )?(idx_user_account_tenant_valid_from|\w*tenant_id\w*)",
+                output_text,
+                re.IGNORECASE,
+            )
+            if index_used or plan_tree_index:
+                passed = True
+                evidence = "Composite index identified as in-use"
+            else:
+                evidence = "No evidence the agent identified the composite index as now-in-use"
+
         # --- Eval 6 assertion: before/after comparison table with numeric duration delta ---
         elif "before/after" in exp_lower and ("comparison" in exp_lower or "table" in exp_lower):
             report = run_result.get("result_text", "") or ""
@@ -629,12 +656,24 @@ def grade_eval(eval_item: dict, run_result: dict) -> dict:
                 evidence = "No before/after comparison table found"
 
         # --- Eval 6 assertion: comments on match vs Expected Impact ---
+        # Accept any natural way of saying "the fix performed as/above/below
+        # prediction": matches, exceeds, falls short, as expected, as predicted,
+        # landed as expected, hit the target, delivered as promised, etc.
         elif ("observed improvement" in exp_lower or "expected impact" in exp_lower) \
                 and ("matches" in exp_lower or "exceeds" in exp_lower or "falls short" in exp_lower):
             phrases = re.compile(
-                r"(matches? (the )?expected|exceed(s|ed) (the )?expected|"
-                r"fall(s|ing) short of expected|below expected|under expected|"
-                r"as predicted|in line with expected|close to expected)",
+                r"(matches? (the )?(expected|prediction|target)|"
+                r"exceed(s|ed) (the )?(expected|prediction|target)|"
+                r"fall(s|ing) short of (expected|prediction|target)|"
+                r"below (expected|prediction|target)|under (expected|prediction|target)|"
+                r"as predicted|as expected|as promised|"
+                r"landed (as expected|as predicted|as promised)|"
+                r"hit the (target|prediction|mark)|"
+                r"in line with (expected|prediction|target)|"
+                r"close to (expected|prediction|target)|"
+                r"(delivered|performed) as (expected|predicted|promised)|"
+                r"the (fix|recommendation|change) (landed|worked|performed) as (expected|predicted)|"
+                r"(matches|meets) .{0,40} (predicted|expected|stated) (improvement|impact|reduction|gain))",
                 re.IGNORECASE,
             )
             if phrases.search(output_text):
@@ -647,9 +686,24 @@ def grade_eval(eval_item: dict, run_result: dict) -> dict:
         elif "next hypothesis" in exp_lower and ("falls short" in exp_lower or "does not declare success" in exp_lower):
             # Vacuously pass if there's no shortfall language at all; only fail if
             # the agent claimed success while results were below target.
-            short_signal = re.search(r"(fell short|below expected|less than expected|under-?performed)", output_text)
-            success_signal = re.search(r"(success(fully)?|as expected|matches|resolved)", output_text)
-            next_hypothesis = re.search(r"(next hypothesis|investigate (further|why)|another possible cause|additional investigation)", output_text)
+            short_signal = re.search(
+                r"(fell short|below expected|less than expected|under-?performed|"
+                r"short of (expected|prediction|target)|did not (match|meet) (the )?(expected|prediction|target))",
+                output_text,
+            )
+            success_signal = re.search(
+                r"(success(fully)?|as (expected|predicted|promised)|matches|resolved|"
+                r"landed (as|correctly)|you(')?re good to ship|no new findings|"
+                r"fix (landed|worked|delivered) as (expected|predicted)|"
+                r"finding \d+ .{0,40} resolved)",
+                output_text,
+            )
+            next_hypothesis = re.search(
+                r"(next hypothesis|investigate (further|why)|another possible cause|"
+                r"additional investigation|would want to (investigate|explore|dig)|"
+                r"worth checking (whether|if|why|the|that|for)|next step is to)",
+                output_text,
+            )
             if not short_signal:
                 passed = True
                 evidence = "No shortfall claimed; assertion vacuously satisfied"
@@ -914,8 +968,8 @@ def main():
     parser.add_argument("--mcp-config", type=str, default=None,
                         help="Path to a JSON file with MCP server config (e.g., .claude/.mcp.json) "
                              "to override the plugin's default (disabled) aurora-dsql config")
-    parser.add_argument("--max-turns", type=int, default=40,
-                        help="Maximum agent turns per eval (default: 40)")
+    parser.add_argument("--max-turns", type=int, default=60,
+                        help="Maximum agent turns per eval (default: %(default)s)")
     parser.add_argument("--skip-warmup", action="store_true",
                         help="Skip the throwaway MCP warmup run (not recommended — first "
                              "eval is likely to fail because uvx/boto3 haven't initialized)")

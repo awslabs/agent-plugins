@@ -111,8 +111,109 @@ def run_prompt(prompt: str, plugin_dir: str, timeout: int = 180, model: str | No
     }
 
 
-def grade_eval(eval_item: dict, run_result: dict) -> dict:
-    """Grade a single eval against its expectations."""
+def _llm_judge(prompt: str, result_text: str, expectation: str, model: str | None = None, timeout: int = 60) -> dict:
+    """Grade a single expectation via an LLM judge call (`claude -p`).
+
+    Returns {"passed": bool, "evidence": str}. Used for semantic assertions where regex
+    grading is brittle (agent paraphrasing, negation handling, synonym coverage). The judge
+    sees the user prompt, the agent's final text, and the expectation, and returns a
+    one-line verdict.
+    """
+    judge_prompt = (
+        "You are grading a single assertion about an AI agent's answer. "
+        "Respond with a JSON object only, no prose, matching this schema:\n"
+        '{"passed": true|false, "evidence": "<under 200 chars explaining the verdict>"}\n\n'
+        f"USER PROMPT TO AGENT:\n{prompt}\n\n"
+        f"AGENT'S FINAL ANSWER:\n{result_text}\n\n"
+        f"ASSERTION TO GRADE:\n{expectation}\n\n"
+        "Grade strictly: if the agent's answer supports the assertion, passed=true. "
+        "If the agent's answer contradicts or fails to address the assertion, passed=false. "
+        "For negative assertions (e.g. 'Does NOT claim X'), passed=true only if the agent "
+        "clearly avoids X or actively refutes it; passed=false if the agent endorses X."
+    )
+    cmd = ["claude", "-p", judge_prompt, "--output-format", "json", "--max-turns", "1"]
+    if model:
+        cmd.extend(["--model", model])
+    env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
+    try:
+        result = subprocess.run(  # nosec B603 - cmd is a fixed list of literals
+            cmd, capture_output=True, text=True, timeout=timeout, env=env,
+        )
+    except subprocess.TimeoutExpired:
+        return {"passed": False, "evidence": f"LLM judge timed out after {timeout}s"}
+    if result.returncode != 0:
+        return {"passed": False, "evidence": f"LLM judge exited {result.returncode}: {result.stderr[:200]}"}
+    # claude -p --output-format json returns a top-level object with `result` field containing the reply.
+    # Any parsing failure maps to `passed=False` so the grader fails-closed — never silently passes
+    # on malformed judge output. We catch the full Exception tree here (not just JSONDecodeError)
+    # because the judge reply may be a list, null, or otherwise non-dict shape, which would raise
+    # AttributeError/TypeError from `.get(...)` and crash the whole eval loop otherwise.
+    try:
+        outer = json.loads(result.stdout)
+        if not isinstance(outer, dict):
+            return {"passed": False, "evidence": f"LLM judge outer JSON not a dict: {type(outer).__name__}"}
+        reply = outer.get("result", "").strip()
+        # Extract the JSON verdict via brace-matching so nested `{` / `}` inside the `evidence`
+        # string (e.g. when the judge quotes a JSON snippet as proof) don't truncate the match.
+        # Fall through to the error path if no balanced object is found.
+        verdict_text = _extract_balanced_json_object(reply)
+        if verdict_text is None:
+            return {"passed": False, "evidence": f"LLM judge reply did not contain JSON: {reply[:200]}"}
+        verdict = json.loads(verdict_text)
+        if not isinstance(verdict, dict):
+            return {"passed": False, "evidence": f"LLM judge verdict not an object: {str(verdict)[:100]}"}
+        return {
+            "passed": bool(verdict.get("passed", False)),
+            "evidence": str(verdict.get("evidence", ""))[:500],
+        }
+    except (json.JSONDecodeError, AttributeError, TypeError, KeyError) as e:
+        return {"passed": False, "evidence": f"LLM judge returned invalid JSON: {str(e)[:100]}"}
+
+
+def _extract_balanced_json_object(s: str) -> str | None:
+    """Return the first balanced `{...}` substring in `s`, or None if none exists.
+
+    Needed because LLM replies sometimes wrap the verdict in prose or fences AND the verdict's
+    `evidence` field may itself contain quoted `{}` characters that confuse naive regex matching.
+    Parses character-by-character, tracking brace depth, and respects string quoting.
+    """
+    start = s.find("{")
+    if start == -1:
+        return None
+    depth = 0
+    in_str = False
+    escape = False
+    for i in range(start, len(s)):
+        ch = s[i]
+        if escape:
+            escape = False
+            continue
+        if ch == "\\":
+            escape = True
+            continue
+        if ch == '"':
+            in_str = not in_str
+            continue
+        if in_str:
+            continue
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return s[start:i + 1]
+    return None
+
+
+def grade_eval(eval_item: dict, run_result: dict, judge_model: str | None = None) -> dict:
+    """Grade a single eval against its expectations.
+
+    If `eval_item["llm_judge"]` is true, all expectations are graded via `_llm_judge`.
+    Otherwise, each expectation falls through to the regex-based elif chain below.
+    Hybrid graders that work best with LLM semantic judgment (evals 6-9 in this suite)
+    set `llm_judge: true` in `evals.json`; evals grading on verbatim tokens or tool-call
+    presence (evals 1-5) keep regex-based grading where it is both sufficient and faster.
+    """
     text = run_result["result_text"].lower()
     tool_calls = run_result["tool_calls"]
 
@@ -124,10 +225,25 @@ def grade_eval(eval_item: dict, run_result: dict) -> dict:
         full_text += " " + json.dumps(msg).lower()
 
     expectations = []
+    use_llm_judge = bool(eval_item.get("llm_judge", False))
 
     for expectation_text in eval_item.get("expectations", []):
         passed = False
         evidence = ""
+
+        if use_llm_judge:
+            verdict = _llm_judge(
+                prompt=eval_item.get("prompt", ""),
+                result_text=run_result.get("result_text", ""),
+                expectation=expectation_text,
+                model=judge_model,
+            )
+            expectations.append({
+                "text": expectation_text,
+                "passed": verdict["passed"],
+                "evidence": verdict["evidence"],
+            })
+            continue
 
         exp_lower = expectation_text.lower()
 
@@ -335,6 +451,10 @@ def grade_eval(eval_item: dict, run_result: dict) -> dict:
                 evidence = "No alternatives suggested"
 
         # --- Fallback: keyword search ---
+        # Note: evals 6-9 assertions (JSONB column type, TEXT[], INACTIVE/backup lifecycle)
+        # are semantic — graded via `_llm_judge` when the eval sets `"llm_judge": true`.
+        # Regex branches below cover only evals 1-5 where verbatim tokens / tool-call topic
+        # matches are the right signal. See `_llm_judge` doc comment for rationale.
         else:
             keywords = re.findall(r'\b[a-z_]{3,}\b', exp_lower)
             significant = [k for k in keywords if k not in (
@@ -373,18 +493,44 @@ def main():
     parser.add_argument("--evals", required=True, help="Path to evals.json")
     parser.add_argument("--plugin-dir", required=True, help="Path to the plugin directory")
     parser.add_argument("--output-dir", required=True, help="Directory to save results")
-    parser.add_argument("--model", default=None, help="Model to use")
+    parser.add_argument("--model", default=None, help="Model to use for the subject-under-test (the agent responding to eval prompts)")
+    parser.add_argument(
+        "--judge-model",
+        default=None,
+        help=(
+            "Model to use for the LLM judge on evals with `llm_judge: true`. Intentionally "
+            "separate from --model so that bumping the subject model does not silently swap "
+            "the judge and invalidate the regression baseline. Defaults to the claude CLI default."
+        ),
+    )
     parser.add_argument("--timeout", type=int, default=180, help="Timeout per prompt in seconds")
     parser.add_argument("--verbose", action="store_true", help="Print progress")
+    parser.add_argument(
+        "--eval-ids",
+        type=lambda s: [int(x) for x in s.split(",")],
+        default=None,
+        help="Comma-separated list of eval IDs to run (default: all)",
+    )
     args = parser.parse_args()
 
     evals_data = json.loads(Path(args.evals).read_text())
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    eval_items = evals_data["evals"]
+    if args.eval_ids is not None:
+        requested = set(args.eval_ids)
+        eval_items = [e for e in eval_items if e["id"] in requested]
+        missing = requested - {e["id"] for e in eval_items}
+        if missing:
+            print(f"WARNING: eval IDs not found: {sorted(missing)}", file=sys.stderr)
+        if not eval_items:
+            print("ERROR: no matching eval IDs", file=sys.stderr)
+            return 1
+
     all_results = []
 
-    for eval_item in evals_data["evals"]:
+    for eval_item in eval_items:
         eval_id = eval_item["id"]
         prompt = eval_item["prompt"]
 
@@ -400,7 +546,7 @@ def main():
         (eval_dir / "transcript.json").write_text(json.dumps(run_result, indent=2))
 
         # Grade
-        grading = grade_eval(eval_item, run_result)
+        grading = grade_eval(eval_item, run_result, judge_model=args.judge_model)
         (eval_dir / "grading.json").write_text(json.dumps(grading, indent=2))
 
         # Save timing
@@ -456,4 +602,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main() or 0)
