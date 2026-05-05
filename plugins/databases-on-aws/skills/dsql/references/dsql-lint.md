@@ -4,10 +4,6 @@
 common issues. It provides deterministic, rule-based analysis — more reliable than heuristic
 reasoning for catching DSQL-specific constraints.
 
-**Availability:** Requires `aurora-dsql-mcp-server` version with `dsql_lint` tool registered.
-If the tool is unavailable, fall back to manual validation using the skill's existing DDL rules
-and type constraints in [development-guide.md](development-guide.md).
-
 ---
 
 ## MCP Tool Reference
