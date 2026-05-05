@@ -118,8 +118,8 @@ sampled in [.mcp.json](../../.mcp.json)
 
 #### [dsql-lint.md](references/dsql-lint.md)
 
-**When:** SHOULD load when validating SQL for DSQL compatibility, migrating schemas from other databases, or working with ORM-generated migrations
-**Contains:** `dsql_lint` MCP tool reference, fix result statuses, ORM integration patterns, unfixable error resolution strategies
+**When:** SHOULD load when validating SQL for DSQL compatibility or migrating schemas
+**Contains:** `dsql_lint` MCP tool reference, fix statuses, ORM integration, unfixable error resolution
 
 ---
 
@@ -135,7 +135,7 @@ The `aurora-dsql` MCP server provides these tools:
 
 **SQL Validation:**
 
-1. **dsql_lint** - Validate SQL for DSQL compatibility and optionally auto-fix issues. Returns diagnostics with rule violations, suggestions, and DSQL-compatible fixed SQL. Use before executing externally-sourced SQL (ORM migrations, pg_dump output, schema files).
+1. **dsql_lint** - Validate SQL for DSQL compatibility and optionally auto-fix issues. Use before executing externally-sourced SQL.
 
 **Documentation & Knowledge:**
 
@@ -150,25 +150,7 @@ See [mcp-tools.md](mcp/mcp-tools.md) for detailed usage and examples.
 
 ### AWS Knowledge MCP (`awsknowledge`)
 
-Consult for verifying DSQL service limits before advising users. The numeric limits below are
-defaults that may change — when a user's decision depends on an exact limit, verify it first:
-
-| Limit                          | Default       | Verify query                       |
-| ------------------------------ | ------------- | ---------------------------------- |
-| Max rows per transaction       | 3,000         | `aurora dsql transaction limits`   |
-| Max data size per transaction  | 10 MiB        | `aurora dsql transaction limits`   |
-| Max transaction duration       | 5 minutes     | `aurora dsql transaction limits`   |
-| Max connections per cluster    | 10,000        | `aurora dsql connection limits`    |
-| Auth token expiry              | 15 minutes    | `aurora dsql authentication token` |
-| Max connection duration        | 60 minutes    | `aurora dsql connection limits`    |
-| Max indexes per table          | 24            | `aurora dsql index limits`         |
-| Max columns per index          | 8             | `aurora dsql index limits`         |
-| IDENTITY/SEQUENCE CACHE values | 1 or >= 65536 | `aurora dsql sequence cache`       |
-| Supported column data types    | See docs      | `aurora dsql supported data types` |
-
-**When to verify:** Before recommending batch sizes, connection pool settings, or schema designs where hitting a limit would cause failures; any time the exact number can affect user decision.
-
-**Fallback:** If `awsknowledge` is unavailable, use the defaults above and flag that limits should be verified against [DSQL documentation](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/).
+Consult for verifying DSQL service limits before advising users. See [development-guide.md](references/development-guide.md) for default limits and verification queries.
 
 ## CLI Scripts Available
 
@@ -179,29 +161,9 @@ See [scripts/README.md](../../scripts/README.md) for usage and hook configuratio
 
 ## Quick Start
 
-### 1. List tables and explore schema
-
-```
-Use readonly_query with information_schema to list tables
-Use get_schema to understand table structure
-```
-
-### 2. Query data
-
-```
-Use readonly_query for SELECT queries
-Always include tenant_id in WHERE clause for multi-tenant apps
-MUST build SQL with safe_query.build() — see mcp/tools/input-validation.md
-```
-
-### 3. Execute schema changes
-
-```
-Use transact tool with list of SQL statements
-Follow one-DDL-per-transaction rule
-Always use CREATE INDEX ASYNC in separate transaction
-ALTER COLUMN TYPE, DROP COLUMN, DROP CONSTRAINT → Table Recreation Pattern (Workflow 6)
-```
+1. **Explore:** `readonly_query` with information_schema to list tables; `get_schema` for structure
+2. **Query:** `readonly_query` for SELECT; include `tenant_id` in WHERE for multi-tenant apps
+3. **Schema changes:** `transact` with one DDL per transaction; `CREATE INDEX ASYNC` in separate call; `dsql_lint` to validate first
 
 ---
 
@@ -221,13 +183,11 @@ ALTER COLUMN TYPE, DROP COLUMN, DROP CONSTRAINT → Table Recreation Pattern (Wo
 
 ### Workflow 2: Safe Data Migration
 
-1. Draft the ALTER TABLE / DDL statement
-2. Validate with `dsql_lint(sql=..., fix=false)` — confirm no compatibility issues
-3. If diagnostics found, use `dsql_lint(sql=..., fix=true)` and review fixed SQL
-4. Add column using transact: `transact(["ALTER TABLE ... ADD COLUMN ..."])`
-5. Populate existing rows with UPDATE in separate transact calls (batched under 3,000 rows)
-6. Verify migration with readonly_query using COUNT
-7. Create async index for new column using transact if needed
+1. Validate DDL with `dsql_lint(sql=..., fix=true)` — apply fixes if needed
+2. Add column using transact: `transact(["ALTER TABLE ... ADD COLUMN ..."])`
+3. Populate existing rows with UPDATE in separate transact calls (batched under 3,000 rows)
+4. Verify migration with readonly_query using COUNT
+5. Create async index for new column using transact if needed
 
 - MUST validate DDL with `dsql_lint` before executing
 - MUST add column first, populate later
@@ -257,24 +217,13 @@ MUST load [access-control.md](references/access-control.md) for role setup, IAM 
 
 ### Workflow 6: Table Recreation DDL Migration
 
-DSQL does NOT support direct `ALTER COLUMN TYPE`, `DROP COLUMN`, `DROP CONSTRAINT`, or `MODIFY PRIMARY KEY`. These operations require the **Table Recreation Pattern** — creating a new table, copying data, dropping the original, and renaming. This is a destructive workflow that requires user confirmation at each step.
-
-1. Validate the new CREATE TABLE definition with `dsql_lint(sql=..., fix=true)` before execution
-2. Review diagnostics — confirm the new table structure is DSQL-compatible
-3. Follow the Table Recreation Pattern steps
+DSQL does NOT support direct `ALTER COLUMN TYPE`, `DROP COLUMN`, `DROP CONSTRAINT`, or `MODIFY PRIMARY KEY`. These require the **Table Recreation Pattern**. Validate the new CREATE TABLE with `dsql_lint(sql=..., fix=true)` before execution.
 
 MUST load [ddl-migrations/overview.md](references/ddl-migrations/overview.md) before attempting any of these operations.
 
 ### Workflow 7: MySQL to DSQL Schema Migration
 
-1. Obtain the MySQL DDL (CREATE TABLE, ALTER TABLE statements)
-2. Run `dsql_lint(sql=mysql_ddl, fix=true)` to auto-convert MySQL patterns to DSQL equivalents
-3. Review diagnostics:
-   - `fixed` / `fixed_with_warning`: Accept the mechanical transformations
-   - `unfixable`: Apply manual rewrites using type mappings
-4. Execute validated SQL with transact (one DDL per transaction)
-
-MUST load [mysql-migrations/type-mapping.md](references/mysql-migrations/type-mapping.md) for type mappings, feature alternatives, and migration steps when `dsql_lint` reports unfixable issues or for types not covered by auto-fix.
+Run `dsql_lint(sql=mysql_ddl, fix=true)` to auto-convert. MUST load [mysql-migrations/type-mapping.md](references/mysql-migrations/type-mapping.md) for unfixable issues or types not covered by auto-fix.
 
 ### Workflow 8: Query Plan Explainability
 
@@ -306,34 +255,7 @@ PGPASSWORD="$TOKEN" psql "host=$HOST port=5432 user=admin dbname=postgres sslmod
 
 ### Workflow 9: Validate & Migrate SQL to DSQL
 
-Validates arbitrary SQL (PostgreSQL, MySQL, ORM-generated) for DSQL compatibility and produces executable DSQL-compatible output. Use for any migration scenario: pg_dump imports, ORM migration files (Django, Rails, Prisma, TypeORM, Sequelize), or hand-written schemas.
-
-1. Obtain source SQL from user (migration file, ORM output, schema dump, or inline SQL)
-2. Run `dsql_lint(sql=source_sql, fix=true)`
-3. For each diagnostic in the response:
-   - `fixed`: Accept — safe mechanical transformation
-   - `fixed_with_warning`: Present to user — explain application-layer implications
-   - `unfixable`: Rewrite manually using skill knowledge (Table Recreation for `unsupported_alter_table_op`, DELETE for `truncate`, omit for `partition_by`)
-4. Take `fixed_sql` from the response
-5. If `fixed_sql` contains multiple DDL statements, issue each as a separate `transact` call
-6. Execute each DDL with `transact(["<single DDL statement>"])`
-7. Verify schema with `get_schema`
-
-**Critical rules:**
-
-- **MUST** run `dsql_lint` before executing any externally-sourced SQL
-- **MUST** present `fixed_with_warning` items to user before proceeding
-- **MUST** resolve all `unfixable` errors before execution (use skill knowledge or ask user)
-- **MUST** issue each DDL in its own `transact` call
-- **SHOULD** load [dsql-lint.md](references/dsql-lint.md) for usage patterns and resolution strategies
-
-**ORM-specific guidance:**
-
-- **Django:** Run `python manage.py sqlmigrate <app> <migration>` to get raw SQL, then lint
-- **Rails:** Export with `rails db:schema:dump` (SQL format), then lint
-- **Prisma:** Use `prisma migrate diff` to get SQL, then lint
-- **TypeORM/Sequelize:** Generate migration SQL, then lint
-- **SQLAlchemy:** Use `metadata.create_all()` with `echo=True` to capture SQL, then lint
+Validates arbitrary SQL for DSQL compatibility. MUST load [dsql-lint.md](references/dsql-lint.md) for the full workflow, ORM-specific guidance, and unfixable error resolution.
 
 ---
 

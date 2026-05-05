@@ -8,9 +8,10 @@ reasoning for catching DSQL-specific constraints.
 
 1. [MCP Tool Reference](#mcp-tool-reference)
 2. [Fix Result Statuses](#fix-result-statuses)
-3. [Usage Patterns](#usage-patterns)
-4. [Handling Unfixable Errors](#handling-unfixable-errors)
-5. [Exit Codes](#exit-codes-for-reference)
+3. [Workflow: Validate & Migrate SQL to DSQL](#workflow-validate--migrate-sql-to-dsql)
+4. [Usage Patterns](#usage-patterns)
+5. [Handling Unfixable Errors](#handling-unfixable-errors)
+6. [Exit Codes](#exit-codes-for-reference)
 
 ---
 
@@ -50,6 +51,38 @@ reasoning for catching DSQL-specific constraints.
 | `fixed` | Safe mechanical transformation | Accept and execute |
 | `fixed_with_warning` | Fix applied, may need app-layer changes | Present to user, explain implications |
 | `unfixable` | Cannot auto-fix | Rewrite manually using skill knowledge |
+
+---
+
+## Workflow: Validate & Migrate SQL to DSQL
+
+Use for any migration scenario: pg_dump imports, ORM migration files (Django, Rails, Prisma, TypeORM, Sequelize), or hand-written schemas.
+
+1. Obtain source SQL from user (migration file, ORM output, schema dump, or inline SQL)
+2. Run `dsql_lint(sql=source_sql, fix=true)`
+3. For each diagnostic in the response:
+   - `fixed`: Accept — safe mechanical transformation
+   - `fixed_with_warning`: Present to user — explain application-layer implications
+   - `unfixable`: Rewrite manually using skill knowledge (Table Recreation for `unsupported_alter_table_op`, DELETE for `truncate`, omit for `partition_by`)
+4. Take `fixed_sql` from the response
+5. If `fixed_sql` contains multiple DDL statements, issue each as a separate `transact` call
+6. Execute each DDL with `transact(["<single DDL statement>"])`
+7. Verify schema with `get_schema`
+
+**Critical rules:**
+
+- **MUST** run `dsql_lint` before executing any externally-sourced SQL
+- **MUST** present `fixed_with_warning` items to user before proceeding
+- **MUST** resolve all `unfixable` errors before execution (use skill knowledge or ask user)
+- **MUST** issue each DDL in its own `transact` call
+
+**ORM-specific guidance:**
+
+- **Django:** Run `python manage.py sqlmigrate <app> <migration>` to get raw SQL, then lint
+- **Rails:** Export with `rails db:schema:dump` (SQL format), then lint
+- **Prisma:** Use `prisma migrate diff` to get SQL, then lint
+- **TypeORM/Sequelize:** Generate migration SQL, then lint
+- **SQLAlchemy:** Use `metadata.create_all()` with `echo=True` to capture SQL, then lint
 
 ---
 
