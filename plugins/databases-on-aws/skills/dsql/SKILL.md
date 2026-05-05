@@ -3,7 +3,7 @@ name: dsql
 description: "Build with Aurora DSQL — manage schemas, execute queries, handle migrations, diagnose query plans, and develop applications with a serverless, distributed SQL database. Covers IAM auth, multi-tenant patterns, MySQL-to-DSQL migration, DDL operations, query plan explainability, and SQL compatibility validation via dsql-lint. Triggers on phrases like: DSQL, Aurora DSQL, create DSQL table, DSQL schema, migrate to DSQL, distributed SQL database, serverless PostgreSQL-compatible database, DSQL query plan, DSQL EXPLAIN ANALYZE, why is my DSQL query slow, lint SQL for DSQL, validate SQL DSQL compatibility, ORM migration DSQL, dsql-lint."
 license: Apache-2.0
 metadata:
-  tags: aws, aurora, dsql, distributed-sql, distributed, distributed-database, database, serverless, serverless-database, postgresql, postgres, sql, schema, migration, multi-tenant, iam-auth, aurora-dsql, mcp, lint, orm
+  tags: aws, aurora, dsql, distributed-sql, distributed, distributed-database, database, serverless, serverless-database, postgresql, postgres, sql, schema, migration, multi-tenant, iam-auth, aurora-dsql, mcp, orm
 ---
 
 # Amazon Aurora DSQL Skill
@@ -161,9 +161,9 @@ See [scripts/README.md](../../scripts/README.md) for usage and hook configuratio
 
 ## Quick Start
 
-1. **Explore:** `readonly_query` with information_schema to list tables; `get_schema` for structure
-2. **Query:** `readonly_query` for SELECT; include `tenant_id` in WHERE for multi-tenant apps
-3. **Schema changes:** `transact` with one DDL per transaction; `CREATE INDEX ASYNC` in separate call; `dsql_lint` to validate first
+1. **Explore:** Use `readonly_query` with `information_schema` to list tables. Use `get_schema` for table structure.
+2. **Query:** Use `readonly_query` for SELECT queries. **MUST** include `tenant_id` in WHERE for multi-tenant apps. **MUST** build SQL with `safe_query.build()`.
+3. **Schema changes:** Use `transact` with one DDL per transaction; multiple DML statements **MAY** share a transaction. **MUST** use `CREATE INDEX ASYNC` in a separate call. Use `dsql_lint` to validate first.
 
 ---
 
@@ -217,7 +217,7 @@ MUST load [access-control.md](references/access-control.md) for role setup, IAM 
 
 ### Workflow 6: Table Recreation DDL Migration
 
-DSQL does NOT support direct `ALTER COLUMN TYPE`, `DROP COLUMN`, `DROP CONSTRAINT`, or `MODIFY PRIMARY KEY`. These require the **Table Recreation Pattern**. Validate the new CREATE TABLE with `dsql_lint(sql=..., fix=true)` before execution.
+DSQL does NOT support direct `ALTER COLUMN TYPE`, `DROP COLUMN`, `DROP CONSTRAINT`, or `MODIFY PRIMARY KEY`. These require the **Table Recreation Pattern**. This is a destructive workflow that requires user confirmation at each step. Validate the new CREATE TABLE with `dsql_lint(sql=..., fix=true)` before execution.
 
 MUST load [ddl-migrations/overview.md](references/ddl-migrations/overview.md) before attempting any of these operations.
 
