@@ -10,10 +10,10 @@ reasoning for catching DSQL-specific constraints.
 
 ### dsql_lint
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `sql` | string | Yes | SQL to validate |
-| `fix` | boolean | No | Return DSQL-compatible fixed SQL (default: false) |
+| Parameter | Type    | Required | Description                                       |
+| --------- | ------- | -------- | ------------------------------------------------- |
+| `sql`     | string  | Yes      | SQL to validate                                   |
+| `fix`     | boolean | No       | Return DSQL-compatible fixed SQL (default: false) |
 
 **Returns:**
 
@@ -37,11 +37,11 @@ reasoning for catching DSQL-specific constraints.
 
 ## Fix Result Statuses
 
-| Status | Meaning | Agent action |
-|--------|---------|--------------|
-| `fixed` | Safe mechanical transformation | Accept and execute |
-| `fixed_with_warning` | Fix applied, may need app-layer changes | Present to user, explain implications |
-| `unfixable` | Cannot auto-fix | Rewrite manually using skill knowledge |
+| Status               | Meaning                                 | Agent action                           |
+| -------------------- | --------------------------------------- | -------------------------------------- |
+| `fixed`              | Safe mechanical transformation          | Accept and execute                     |
+| `fixed_with_warning` | Fix applied, may need app-layer changes | Present to user, explain implications  |
+| `unfixable`          | Cannot auto-fix                         | Rewrite manually using skill knowledge |
 
 ---
 
@@ -114,30 +114,30 @@ Use for any migration scenario: pg_dump imports, ORM migration files (Django, Ra
 
 When `dsql_lint` reports unfixable errors, use skill knowledge to resolve:
 
-| Rule | Resolution |
-|------|-----------|
-| `temp_table` | Use a regular table with a session/request identifier column |
-| `partition_by` | Omit — DSQL manages distribution automatically |
-| `inherits` | Flatten into a single table or use application-layer inheritance |
-| `create_table_as` | CREATE TABLE with explicit columns, then INSERT ... SELECT |
-| `truncate` | Use `DELETE FROM table_name` (batch if > 3,000 rows) |
-| `unsupported_alter_table_op` | Use Table Recreation Pattern (Workflow 6) |
-| `add_column_constraint` | Split: ADD COLUMN (name + type only) → UPDATE → ALTER COLUMN |
-| `index_using` | Use default B-tree index (DSQL's only supported method) |
-| `index_expression` | Create a computed column, then index that column |
-| `index_partial` | Create a full index; filter at query time |
-| `transaction_isolation` | Omit — DSQL uses Repeatable Read (fixed) |
+| Rule                         | Resolution                                                       |
+| ---------------------------- | ---------------------------------------------------------------- |
+| `temp_table`                 | Use a regular table with a session/request identifier column     |
+| `partition_by`               | Omit — DSQL manages distribution automatically                   |
+| `inherits`                   | Flatten into a single table or use application-layer inheritance |
+| `create_table_as`            | CREATE TABLE with explicit columns, then INSERT ... SELECT       |
+| `truncate`                   | Use `DELETE FROM table_name` (batch if > 3,000 rows)             |
+| `unsupported_alter_table_op` | Use Table Recreation Pattern (Workflow 6)                        |
+| `add_column_constraint`      | Split: ADD COLUMN (name + type only) → UPDATE → ALTER COLUMN     |
+| `index_using`                | Use default B-tree index (DSQL's only supported method)          |
+| `index_expression`           | Create a computed column, then index that column                 |
+| `index_partial`              | Create a full index; filter at query time                        |
+| `transaction_isolation`      | Omit — DSQL uses Repeatable Read (fixed)                         |
 
 ---
 
 ## Exit Codes (for reference)
 
-| Code | Meaning |
-|------|---------|
-| 0 | Clean — no issues, or all fixes applied without warnings |
-| 1 | Errors found (lint mode) or unfixable errors remain (fix mode) |
-| 2 | Usage error (invalid arguments) |
-| 3 | Fix mode: all fixed, but some produced warnings (review recommended) |
+| Code | Meaning                                                              |
+| ---- | -------------------------------------------------------------------- |
+| 0    | Clean — no issues, or all fixes applied without warnings             |
+| 1    | Errors found (lint mode) or unfixable errors remain (fix mode)       |
+| 2    | Usage error (invalid arguments)                                      |
+| 3    | Fix mode: all fixed, but some produced warnings (review recommended) |
 
 The MCP tool handles exit codes internally. Agents receive structured JSON regardless of exit code.
 
