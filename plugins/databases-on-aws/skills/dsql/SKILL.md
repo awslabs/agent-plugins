@@ -1,6 +1,6 @@
 ---
 name: dsql
-description: "Build with Aurora DSQL — manage schemas, execute queries, handle migrations, diagnose query plans, and develop applications with a serverless, distributed SQL database. Covers IAM auth, multi-tenant patterns, MySQL-to-DSQL migration, DDL operations, query plan explainability, and SQL compatibility validation via dsql-lint. Triggers on phrases like: DSQL, Aurora DSQL, create DSQL table, DSQL schema, migrate to DSQL, distributed SQL database, serverless PostgreSQL-compatible database, DSQL query plan, DSQL EXPLAIN ANALYZE, why is my DSQL query slow, lint SQL for DSQL, validate SQL DSQL compatibility, ORM migration DSQL, dsql-lint."
+description: "Build with Aurora DSQL — manage schemas, execute queries, handle migrations, diagnose query plans, and develop applications with a serverless, distributed SQL database. Covers IAM auth, multi-tenant patterns, MySQL-to-DSQL migration, DDL operations, query plan explainability, and SQL compatibility validation via dsql-lint. Triggers on phrases like: DSQL, Aurora DSQL, create DSQL table, DSQL schema, migrate to DSQL, distributed SQL database, serverless PostgreSQL-compatible database, DSQL query plan, DSQL EXPLAIN ANALYZE, why is my DSQL query slow, lint SQL for DSQL."
 license: Apache-2.0
 metadata:
   tags: aws, aurora, dsql, distributed-sql, distributed, distributed-database, database, serverless, serverless-database, postgresql, postgres, sql, schema, migration, multi-tenant, iam-auth, aurora-dsql, mcp, orm
@@ -150,7 +150,25 @@ See [mcp-tools.md](mcp/mcp-tools.md) for detailed usage and examples.
 
 ### AWS Knowledge MCP (`awsknowledge`)
 
-Consult for verifying DSQL service limits before advising users. See [development-guide.md](references/development-guide.md) for default limits and verification queries.
+Consult for verifying DSQL service limits before advising users. The numeric limits below are
+defaults that may change — when a user's decision depends on an exact limit, verify it first:
+
+| Limit                          | Default       | Verify query                       |
+| ------------------------------ | ------------- | ---------------------------------- |
+| Max rows per transaction       | 3,000         | `aurora dsql transaction limits`   |
+| Max data size per transaction  | 10 MiB        | `aurora dsql transaction limits`   |
+| Max transaction duration       | 5 minutes     | `aurora dsql transaction limits`   |
+| Max connections per cluster    | 10,000        | `aurora dsql connection limits`    |
+| Auth token expiry              | 15 minutes    | `aurora dsql authentication token` |
+| Max connection duration        | 60 minutes    | `aurora dsql connection limits`    |
+| Max indexes per table          | 24            | `aurora dsql index limits`         |
+| Max columns per index          | 8             | `aurora dsql index limits`         |
+| IDENTITY/SEQUENCE CACHE values | 1 or >= 65536 | `aurora dsql sequence cache`       |
+| Supported column data types    | See docs      | `aurora dsql supported data types` |
+
+**When to verify:** Before recommending batch sizes, connection pool settings, or schema designs where hitting a limit would cause failures; any time the exact number can affect user decision.
+
+**Fallback:** If `awsknowledge` is unavailable, use the defaults above and flag that limits should be verified against [DSQL documentation](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/).
 
 ## CLI Scripts Available
 
@@ -221,9 +239,9 @@ DSQL does NOT support direct `ALTER COLUMN TYPE`, `DROP COLUMN`, `DROP CONSTRAIN
 
 MUST load [ddl-migrations/overview.md](references/ddl-migrations/overview.md) before attempting any of these operations.
 
-### Workflow 7: MySQL to DSQL Schema Migration
+### Workflow 7: Validate and Migrate to DSQL
 
-Run `dsql_lint(sql=mysql_ddl, fix=true)` to auto-convert. MUST load [mysql-migrations/type-mapping.md](references/mysql-migrations/type-mapping.md) for unfixable issues or types not covered by auto-fix.
+Run `dsql_lint(sql=source_sql, fix=true)` to validate and auto-convert SQL from any source (PostgreSQL, MySQL, ORM-generated). MUST load [dsql-lint.md](references/dsql-lint.md) for the full workflow, ORM-specific guidance, and unfixable error resolution. MUST load [mysql-migrations/type-mapping.md](references/mysql-migrations/type-mapping.md) for MySQL-specific types not covered by auto-fix.
 
 ### Workflow 8: Query Plan Explainability
 
@@ -252,10 +270,6 @@ PGPASSWORD="$TOKEN" psql "host=$HOST port=5432 user=admin dbname=postgres sslmod
 ```
 
 **Safety.** Plan capture uses `readonly_query` exclusively — it rejects INSERT/UPDATE/DELETE/DDL at the MCP layer. Rewrite DML to SELECT (Phase 1) rather than asking `transact --allow-writes` to run it; write-mode `transact` bypasses all MCP safety checks. **MUST NOT** run arbitrary DDL/DML or pl/pgsql.
-
-### Workflow 9: Validate & Migrate SQL to DSQL
-
-Validates arbitrary SQL for DSQL compatibility. MUST load [dsql-lint.md](references/dsql-lint.md) for the full workflow, ORM-specific guidance, and unfixable error resolution.
 
 ---
 
