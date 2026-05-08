@@ -21,14 +21,14 @@ Complete workflow for diagnosing DSQL query plan performance issues. Produces a 
 
 Enter this workflow if **ANY** of these signals are present:
 
-| Signal | Examples |
-|--------|----------|
-| User provides SQL + mentions performance/speed/cost | "this query takes 8 seconds", "too slow", "optimize this", "make this faster" |
-| User mentions DPU cost or resource consumption | "high DPU", "query cost is too high", "read DPU seems excessive" |
-| User asks about a plan choice or scan type | "why is it doing a full scan?", "why not use the index?" |
-| User pastes EXPLAIN / EXPLAIN ANALYZE output | Raw plan text in the message |
-| User references a Query ID and asks about performance | "query abc-123 is slow" |
-| User says "reassess" / "re-run" / "I added the index" | Phase 5 re-entry for an existing report |
+| Signal                                                | Examples                                                                      |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------- |
+| User provides SQL + mentions performance/speed/cost   | "this query takes 8 seconds", "too slow", "optimize this", "make this faster" |
+| User mentions DPU cost or resource consumption        | "high DPU", "query cost is too high", "read DPU seems excessive"              |
+| User asks about a plan choice or scan type            | "why is it doing a full scan?", "why not use the index?"                      |
+| User pastes EXPLAIN / EXPLAIN ANALYZE output          | Raw plan text in the message                                                  |
+| User references a Query ID and asks about performance | "query abc-123 is slow"                                                       |
+| User says "reassess" / "re-run" / "I added the index" | Phase 5 re-entry for an existing report                                       |
 
 ---
 
@@ -36,25 +36,25 @@ Enter this workflow if **ANY** of these signals are present:
 
 Before entering the workflow, confirm the query targets DSQL:
 
-| Condition | Action |
-|-----------|--------|
-| Only `aurora-dsql` MCP is connected (no other database MCPs) | Proceed — DSQL is the only target |
-| User explicitly mentions DSQL, Aurora DSQL, or a known DSQL cluster | Proceed |
-| Conversation already has prior DSQL interaction (earlier queries, schema ops) | Proceed |
-| Multiple database MCPs are connected and no DSQL signal in the message | Ask the user which database they mean before proceeding |
-| No database MCP is connected | Inform the user that the `aurora-dsql` MCP is required and offer the psql fallback |
+| Condition                                                                     | Action                                                                             |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Only `aurora-dsql` MCP is connected (no other database MCPs)                  | Proceed — DSQL is the only target                                                  |
+| User explicitly mentions DSQL, Aurora DSQL, or a known DSQL cluster           | Proceed                                                                            |
+| Conversation already has prior DSQL interaction (earlier queries, schema ops) | Proceed                                                                            |
+| Multiple database MCPs are connected and no DSQL signal in the message        | Ask the user which database they mean before proceeding                            |
+| No database MCP is connected                                                  | Inform the user that the `aurora-dsql` MCP is required and offer the psql fallback |
 
 ---
 
 ## Routing
 
-| Condition | Path |
-|-----------|------|
-| User provides SQL but no plan output | Full workflow: Phase 0 → 1 → 2 → 3 → 4 |
-| User pastes plan output + asks to fix/optimize | Full workflow: Phase 0 → 1 (re-capture fresh plan) → 2 → 3 → 4 |
+| Condition                                                  | Path                                                                                                                                                   |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| User provides SQL but no plan output                       | Full workflow: Phase 0 → 1 → 2 → 3 → 4                                                                                                                 |
+| User pastes plan output + asks to fix/optimize             | Full workflow: Phase 0 → 1 (re-capture fresh plan) → 2 → 3 → 4                                                                                         |
 | User pastes plan output + asks what it means (educational) | Full workflow: Phase 0 → 1 (re-capture fresh plan) → 2 → 3 → 4. The report is the explanation — do not produce a shorter conversational answer instead |
-| Execution time >30s detected at Phase 1 | Phase 3 skips experiments per guc-experiments.md |
-| User says "reassess" or equivalent | Re-run Phase 1–2, append Addendum to existing report |
+| Execution time >30s detected at Phase 1                    | Phase 3 skips experiments per guc-experiments.md                                                                                                       |
+| User says "reassess" or equivalent                         | Re-run Phase 1–2, append Addendum to existing report                                                                                                   |
 
 ---
 
@@ -79,11 +79,11 @@ When EXPLAIN errors (`relation does not exist`, `column does not exist`), **MUST
 
 Extract: Query ID, Planning Time, Execution Time, DPU Estimate.
 
-| Statement type | Action |
-|---------------|--------|
-| SELECT | Run as-is |
-| UPDATE / DELETE | Rewrite to equivalent SELECT (same join chain + WHERE) — optimizer picks the same plan shape |
-| INSERT, pl/pgsql, DO blocks, functions | **MUST** reject |
+| Statement type                         | Action                                                                                       |
+| -------------------------------------- | -------------------------------------------------------------------------------------------- |
+| SELECT                                 | Run as-is                                                                                    |
+| UPDATE / DELETE                        | Rewrite to equivalent SELECT (same join chain + WHERE) — optimizer picks the same plan shape |
+| INSERT, pl/pgsql, DO blocks, functions | **MUST** reject                                                                              |
 
 **MUST NOT** use `transact --allow-writes` for plan capture; it bypasses MCP safety.
 
