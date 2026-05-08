@@ -23,9 +23,9 @@ For standard Lambda development, see [aws-lambda skill](../aws-lambda/). For SAM
 
 - **Cost comparison**, **pricing analysis**, **Lambda vs LMI cost**, **Savings Plans**, or **Reserved Instances** -> see [references/cost-comparison.md](references/cost-comparison.md)
 - **Instance types**, **memory sizing**, **vCPU ratios**, **scaling tuning**, or **capacity provider config** -> see [references/configuration-guide.md](references/configuration-guide.md)
-- **Thread safety**, **code review checklist**, or **multi-concurrency readiness** -> see [references/thread-safety.md](references/thread-safety.md)
+- **Thread safety**, **concurrency model**, **code review checklist**, **Powertools compatibility**, or **multi-concurrency readiness** -> see [references/thread-safety.md](references/thread-safety.md)
 - **Before/after code examples**, **runtime-specific migration** (Node.js, Python, Java, .NET), or **connection pooling** -> see [references/migration-patterns.md](references/migration-patterns.md)
-- **IAM roles**, **VPC setup**, **CLI commands**, **SAM template**, or **CDK example** -> see [references/infrastructure-setup.md](references/infrastructure-setup.md)
+- **IAM roles**, **VPC setup**, **CLI commands**, **SAM template**, or **CDK example** -> see [references/infrastructure-setup.md](references/infrastructure-setup.md) and [scripts/setup-lmi.sh](scripts/setup-lmi.sh)
 - **Errors**, **throttling**, **debugging**, or **stuck deployments** -> see [references/troubleshooting.md](references/troubleshooting.md)
 
 ## Quick Decision: Is LMI Right for This Workload?
@@ -34,11 +34,11 @@ For standard Lambda development, see [aws-lambda skill](../aws-lambda/). For SAM
 |--------|---------------------|---------------------------|
 | Traffic | Steady, predictable, 50M+ req/mo | Bursty, unpredictable, long idle |
 | Cost | Duration-heavy spend at scale | Low or sporadic invocations |
-| Cold starts | Unacceptable (LMI has zero) | Tolerable or mitigated by SnapStart |
-| Compute | Latest CPUs, specific families, high network BW | Standard Lambda memory/CPU sufficient |
-| Compliance | Single-tenant required, VPC control | Multi-tenant Firecracker acceptable |
+| Cold starts | Unacceptable (LMI eliminates for provisioned capacity; scale-out may have brief delays) | Tolerable or mitigated by SnapStart |
+| Compute | Latest CPUs, specific families, high network bandwidth | Standard Lambda memory/CPU sufficient |
+| Isolation | Dedicated EC2 instances in your account, full VPC control | Shared Firecracker micro-VMs acceptable |
 | Scale-to-zero | Not needed (min 3 instances always run) | Required (pay nothing when idle) |
-| Code readiness | Thread-safe or feasible to refactor | Non-thread-safe, expensive to change |
+| Code readiness | Thread-safe (Node.js/Java/.NET) or any Python code | Non-thread-safe Node.js/Java/.NET, expensive to change |
 
 ## Instructions
 
@@ -51,23 +51,21 @@ Gather these signals before recommending:
 3. **Runtime**: Node.js, Java, .NET, or Python?
 4. **Memory/CPU**: How much memory? CPU-bound or I/O-bound?
 5. **Execution duration**: Average and P99?
-6. **Thread safety**: Mutable globals, shared `/tmp` paths, non-thread-safe libs?
+6. **Concurrency readiness**: Thread safety (Node.js/Java/.NET)? Shared `/tmp` paths? Per-invocation DB connections?
 7. **VPC**: Already in a VPC? Private resource access needed?
 
 ### Step 2: Build the Cost Comparison
 
-REQUIRED: Present a 4-column comparison before recommending LMI.
+REQUIRED: Present a cost comparison before recommending LMI. Compare at minimum:
 
 | Scenario | When it wins |
 |----------|-------------|
 | Lambda on-demand | Low volume, bursty traffic |
-| Lambda + Savings Plan | Moderate steady volume (~17% duration discount) |
 | LMI on-demand | High volume, steady traffic |
-| LMI + 3yr Savings Plan | High volume + commitment (up to 72% EC2 discount) |
 
 Rule of thumb: LMI becomes cost-competitive at 50-100M+ req/month with steady traffic.
 
-See [references/cost-comparison.md](references/cost-comparison.md) for formulas, worked example, and comparison table template.
+For discount analysis (Savings Plans, Reserved Instances), refer users to the [AWS Pricing Calculator](https://calculator.aws/) and [references/cost-comparison.md](references/cost-comparison.md) for formulas and worked examples. Discount recommendations require workload-specific forecasting beyond this skill's scope.
 
 ### Step 3: Configure the Deployment
 
@@ -83,21 +81,30 @@ See [references/configuration-guide.md](references/configuration-guide.md) for d
 
 ### Step 4: Migrate the Code
 
-Review code for thread safety. LMI runs multiple invocations concurrently per execution environment.
+Review code for concurrency safety. LMI runs multiple invocations concurrently per execution environment, but the model differs by runtime:
 
-**Common issues**: mutable globals, shared `/tmp` paths, non-thread-safe libs, per-invocation DB connections.
+- **Python**: Process-based isolation — globals are NOT shared. No thread-safety changes needed. Focus on `/tmp` conflicts and memory sizing (per-process × concurrency).
+- **Node.js**: Worker threads — globals shared within a worker. Requires async safety. Callback handlers not supported on Node.js 22.
+- **Java/.NET**: OS threads/Tasks — handler shared across threads. Requires full thread safety.
+
+**Common issues (all runtimes)**: shared `/tmp` paths, per-invocation DB connections.
+**Thread-safety issues (Node.js/Java/.NET only)**: mutable globals, non-thread-safe libs.
 
 See [references/thread-safety.md](references/thread-safety.md) for the review checklist and [references/migration-patterns.md](references/migration-patterns.md) for runtime-specific before/after code.
 
 ### Step 5: Set Up Infrastructure
 
-Two IAM roles required (execution + operator). VPC with 3+ AZ subnets. Create capacity provider, attach function, publish version.
+1. Create two IAM roles: execution role (for the function) and operator role (for capacity provider EC2 management)
+2. Configure VPC with subnets across 3+ AZs
+3. Create capacity provider with VPC config and scaling limits
+4. Create or update function with capacity provider attachment
+5. Publish a version (triggers instance provisioning)
 
-See [references/infrastructure-setup.md](references/infrastructure-setup.md) for CLI commands, SAM, and CDK templates.
+See [references/infrastructure-setup.md](references/infrastructure-setup.md) for CLI commands and SAM templates.
 
 ### Step 6: Validate and Cut Over
 
-1. Test locally with LocalStack (supports LMI emulation)
+1. Deploy to a non-production environment first
 2. Monitor CloudWatch: CPU utilization, memory, concurrency, throttle rate
 3. Gradual traffic shift with weighted aliases (10% → 50% → 100%)
 4. Compare costs after 1-2 weeks of production data
@@ -116,7 +123,8 @@ See [references/infrastructure-setup.md](references/infrastructure-setup.md) for
 
 ### Migration
 
-- Do: Review all code for thread safety before attaching to capacity provider
+- Do: Start with I/O-heavy functions (benefit most from multi-concurrency; CPU-bound functions compete for same CPU)
+- Do: Review code for concurrency safety before attaching to capacity provider (thread safety for Node.js/Java/.NET; `/tmp` and memory for Python)
 - Do: Use weighted aliases for gradual traffic shift
 - Do: Include request IDs in all log statements
 - Do: Initialize DB pools and SDK clients outside the handler
@@ -164,7 +172,7 @@ REQUIRED: AWS credentials configured on the host machine.
 
 ### Regional Availability
 
-us-east-1, us-east-2, us-west-2, ap-northeast-1, eu-west-1
+Check the [Lambda Managed Instances documentation](https://docs.aws.amazon.com/lambda/latest/dg/lambda-managed-instances.html) for current regional availability.
 
 ## Language Selection
 
@@ -202,4 +210,7 @@ Override: "use SAM" → SAM YAML, "use CloudFormation" → CloudFormation YAML. 
 - [Lambda Managed Instances Docs](https://docs.aws.amazon.com/lambda/latest/dg/lambda-managed-instances.html)
 - [Introducing LMI (AWS Blog)](https://aws.amazon.com/blogs/aws/introducing-aws-lambda-managed-instances-serverless-simplicity-with-ec2-flexibility/)
 - [Build High-Performance Apps with LMI](https://aws.amazon.com/blogs/compute/build-high-performance-apps-with-aws-lambda-managed-instances/)
+- [Migrating Functions to LMI (AWS Blog)](https://aws.amazon.com/blogs/compute/migrating-your-functions-to-aws-lambda-managed-instances/)
+- [LMI Pricing Calculator](https://aws-samples.github.io/sample-aws-lambda-managed-instances/)
+- [LMI Samples Repository](https://github.com/aws-samples/sample-aws-lambda-managed-instances)
 - [AWS Lambda Pricing](https://aws.amazon.com/lambda/pricing/)

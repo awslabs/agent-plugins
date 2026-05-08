@@ -53,30 +53,27 @@ exports.handler = async (event) => {
 
 ## Python
 
-### Global State
+Python on LMI uses **process-based isolation**. Each concurrent invocation runs in its own process with independent memory. Global state is NOT shared, so no locking is needed. The main migration concerns are `/tmp` conflicts, memory sizing, and connection pooling.
+
+### Global State (No Changes Needed)
 ```python
-# BEFORE (race condition)
+# This is SAFE on LMI — each process has its own copy of cache
 cache = {}
 def handler(event, context):
     cache[event['key']] = compute(event)
+    return cache[event['key']]
 
-# AFTER (thread-safe)
-import threading
-_lock = threading.Lock()
-_cache = {}
-def handler(event, context):
-    with _lock:
-        if event['key'] not in _cache:
-            _cache[event['key']] = compute(event)
-        return _cache[event['key']]
+# Module-level clients are also safe (isolated per process)
+s3_client = boto3.client('s3')
+dynamodb = boto3.resource('dynamodb')
 ```
 
-### File I/O
+### File I/O (Change Required — `/tmp` is shared across processes)
 ```python
-# BEFORE
+# BEFORE (conflict — all processes share /tmp)
 with open('/tmp/data.json', 'w') as f: json.dump(event, f)
 
-# AFTER
+# AFTER (request-unique path)
 path = f'/tmp/data-{context.aws_request_id}.json'
 try:
     with open(path, 'w') as f: json.dump(event, f)
@@ -84,19 +81,28 @@ finally:
     os.unlink(path)
 ```
 
-### Database
+### Database (Change Required — each process needs pooled connections)
 ```python
-# BEFORE (per-invocation)
+# BEFORE (per-invocation connection — exhausts limits at concurrency)
 def handler(event, context):
     conn = psycopg2.connect(host='...')
 
-# AFTER (pool)
+# AFTER (pool per process — initialized at module level)
 from psycopg2 import pool
-db_pool = pool.ThreadedConnectionPool(2, 10, host=os.environ['DB_HOST'])
+db_pool = pool.SimpleConnectionPool(1, 3, host=os.environ['DB_HOST'])
 def handler(event, context):
     conn = db_pool.getconn()
     try: return query(conn, event)
     finally: db_pool.putconn(conn)
+# Note: total connections = pool_size × concurrency (e.g., 3 × 16 = 48)
+```
+
+### Memory Sizing
+```python
+# A function using 200 MB per process with default concurrency of 16:
+# Total memory ≈ 200 MB × 16 = 3.2 GB
+# Use 4:1 or 8:1 memory-to-vCPU ratio to accommodate
+# Monitor MemoryUtilization metric and adjust as needed
 ```
 
 ## Java

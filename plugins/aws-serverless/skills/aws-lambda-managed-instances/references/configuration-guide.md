@@ -57,3 +57,13 @@ Total capacity = MinExecutionEnvironments × PerExecutionEnvironmentMaxConcurren
 - **CPU < 20%**: increase concurrency for better utilization
 - **Throttle rate (429s) > 1%**: increase MinExecutionEnvironments or reduce utilization target
 - **Memory > 90%**: increase memory or reduce concurrency
+- **ExecutionEnvironmentConcurrency near ExecutionEnvironmentConcurrencyLimit**: saturation — reduce concurrency or scale out
+
+## CloudWatch Metrics Dimensions
+
+LMI metrics are split across two CloudWatch dimensions:
+
+- **Alias (live)**: Invocations, Errors, Throttles, Duration
+- **Version ($LATEST or numbered)**: CPUUtilization, MemoryUtilization, ExecutionEnvironmentConcurrency, ExecutionEnvironmentCount
+
+Create a unified dashboard combining both views to monitor LMI performance effectively.

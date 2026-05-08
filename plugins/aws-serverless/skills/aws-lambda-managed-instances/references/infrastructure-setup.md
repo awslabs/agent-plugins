@@ -3,49 +3,179 @@
 ## IAM Roles (Two Required)
 
 ### 1. Execution Role (for the function)
-```bash
-aws iam create-role --role-name LMIExecutionRole \
-  --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
-aws iam attach-role-policy --role-name LMIExecutionRole \
-  --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+Trust policy:
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": {"Service": "lambda.amazonaws.com"},
+    "Action": "sts:AssumeRole"
+  }]
+}
+```
+
+Minimum permissions:
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:*:*:log-group:/aws/lambda/*"
+    }
+  ]
+}
+```
+
+Add VPC permissions only if the function accesses VPC resources:
+```json
+{
+  "Effect": "Allow",
+  "Action": [
+    "ec2:CreateNetworkInterface",
+    "ec2:DescribeNetworkInterfaces",
+    "ec2:DeleteNetworkInterface"
+  ],
+  "Resource": "*"
+}
 ```
 
 ### 2. Operator Role (for capacity provider EC2 management)
-```bash
-aws iam create-role --role-name LMIOperatorRole \
-  --assume-role-policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"Service":"lambda.amazonaws.com"},"Action":"sts:AssumeRole"}]}'
-aws iam attach-role-policy --role-name LMIOperatorRole \
-  --policy-arn arn:aws:iam::aws:policy/AWSLambdaManagedEC2ResourceOperator
+
+Trust policy:
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": {"Service": "lambda.amazonaws.com"},
+    "Action": "sts:AssumeRole"
+  }]
+}
 ```
 
-First-time capacity provider creation also requires `iam:CreateServiceLinkedRole`.
+Minimum permissions (scoped with conditions):
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["ec2:RunInstances", "ec2:CreateTags", "ec2:AttachNetworkInterface"],
+      "Resource": [
+        "arn:aws:ec2:*:*:instance/*",
+        "arn:aws:ec2:*:*:network-interface/*",
+        "arn:aws:ec2:*:*:volume/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "ec2:ManagedResourceOperator": "scaler.lambda.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeAvailabilityZones",
+        "ec2:DescribeCapacityReservations",
+        "ec2:DescribeInstances",
+        "ec2:DescribeInstanceStatus",
+        "ec2:DescribeInstanceTypeOfferings",
+        "ec2:DescribeInstanceTypes",
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeSubnets"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["ec2:RunInstances", "ec2:CreateNetworkInterface"],
+      "Resource": [
+        "arn:aws:ec2:*:*:subnet/*",
+        "arn:aws:ec2:*:*:security-group/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": "ec2:RunInstances",
+      "Resource": "arn:aws:ec2:*:*:image/*",
+      "Condition": {
+        "StringEquals": { "ec2:Owner": "amazon" }
+      }
+    },
+    {
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "<execution-role-arn>"
+    }
+  ]
+}
+```
+
+The `ec2:ManagedResourceOperator` condition ensures RunInstances/CreateTags only apply to Lambda-managed instances. First-time capacity provider creation also requires `iam:CreateServiceLinkedRole`.
 
 ## VPC Requirements
 
+LMI runs functions on EC2 instances inside the VPC. These instances need VPC endpoints or NAT to reach AWS services.
+
 - 3+ subnets across different AZs (for default 3-instance fleet)
-- Security groups restricting to necessary traffic only
-- NAT Gateway or VPC endpoints for egress (CloudWatch Logs, X-Ray)
-- Function invocations bypass VPC (routed through Lambda service)
-- Recommended VPC endpoints: CloudWatch Logs, X-Ray, S3, DynamoDB, SQS
+- Security groups: HTTPS egress (port 443) for AWS API calls; no ingress needed
+- Required VPC endpoints:
+
+| Endpoint | Type | Purpose | Cost |
+|----------|------|---------|------|
+| S3 | Gateway | Object storage access | Free |
+| DynamoDB | Gateway | Table access | Free |
+| SQS | Interface | Queue operations | $0.01/hr per AZ |
+| CloudWatch Logs | Interface | Log delivery | $0.01/hr per AZ |
+| CloudWatch Monitoring | Interface | Metrics/EMF | $0.01/hr per AZ |
+| X-Ray | Interface | Distributed tracing | $0.01/hr per AZ |
+
+Gateway endpoints are free; interface endpoints incur hourly charges per AZ.
 
 ## CLI Workflow
+
+Use the setup script for automated provisioning:
+
+```bash
+# Set required environment variables
+export SUBNET_IDS="subnet-abc,subnet-def,subnet-ghi"
+export SECURITY_GROUP_ID="sg-123456"
+export ACCOUNT_ID="123456789012"
+export OPERATOR_ROLE_ARN="arn:aws:iam::123456789012:role/LMIOperatorRole"
+export EXECUTION_ROLE_ARN="arn:aws:iam::123456789012:role/LMIExecutionRole"
+
+# Run setup
+./scripts/setup-lmi.sh my-function my-capacity-provider arm64
+```
+
+See [`scripts/setup-lmi.sh`](../scripts/setup-lmi.sh) for the full script with configurable options.
+
+### Manual Steps (if not using the script)
 
 ```bash
 # 1. Create capacity provider
 aws lambda create-capacity-provider \
   --capacity-provider-name my-cp \
-  --vpc-config SubnetIds=[$SUBNET1,$SUBNET2,$SUBNET3],SecurityGroupIds=[$SG_ID] \
-  --permissions-config CapacityProviderOperatorRoleArn=arn:aws:iam::$ACCT:role/LMIOperatorRole \
-  --instance-requirements Architectures=[arm64] \
-  --capacity-provider-scaling-config MaxVCpuCount=30
+  --vpc-config "SubnetIds=[subnet-abc,subnet-def,subnet-ghi],SecurityGroupIds=[sg-123456]" \
+  --permissions-config "CapacityProviderOperatorRoleArn=arn:aws:iam::$ACCT:role/LMIOperatorRole" \
+  --instance-requirements "Architectures=[arm64]" \
+  --capacity-provider-scaling-config "MaxVCpuCount=30"
 
 # 2. Create function
 aws lambda create-function --function-name my-fn --runtime python3.13 \
   --handler app.handler --zip-file fileb://function.zip \
-  --role arn:aws:iam::$ACCT:role/LMIExecutionRole --architectures arm64 \
+  --role "arn:aws:iam::$ACCT:role/LMIExecutionRole" --architectures arm64 \
   --memory-size 4096 \
   --capacity-provider-config \
-    LambdaManagedInstancesCapacityProviderConfig='{CapacityProviderArn=arn:aws:lambda:$REGION:$ACCT:capacity-provider:my-cp}'
+    "LambdaManagedInstancesCapacityProviderConfig={CapacityProviderArn=arn:aws:lambda:$REGION:$ACCT:capacity-provider:my-cp}"
 
 # 3. Publish version (triggers provisioning — takes several minutes)
 aws lambda publish-version --function-name my-fn

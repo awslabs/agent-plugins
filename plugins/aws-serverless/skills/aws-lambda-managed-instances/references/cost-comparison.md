@@ -70,3 +70,8 @@ Node.js API, 100 req/s steady (259M req/mo), 200ms avg, 512 MB, x86:
 - Very short functions (< 100ms duration)
 - Highly bursty, unpredictable traffic
 - Workloads needing scale-to-zero
+
+## Tools
+
+- [LMI Pricing Calculator](https://aws-samples.github.io/sample-aws-lambda-managed-instances/) — interactive comparison tool
+- [AWS Pricing Calculator](https://calculator.aws/) — general AWS cost estimation
