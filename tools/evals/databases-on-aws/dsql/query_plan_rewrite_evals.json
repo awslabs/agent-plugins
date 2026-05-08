@@ -1,0 +1,83 @@
+{
+  "skill_name": "dsql",
+  "evals": [
+    {
+      "id": 200,
+      "prompt": "My DSQL query is slow. It does:\n\nSELECT * FROM customers WHERE customer_id IN (SELECT customer_id FROM orders WHERE order_date > '2024-01-01');\n\nThe EXPLAIN shows a Full Scan on customers. Can you diagnose and suggest a fix?",
+      "expected_output": "Runs EXPLAIN ANALYZE, identifies subquery-driven Full Scan, recommends EXISTS or JOIN rewrite from query-rewrites-generic.md",
+      "files": [],
+      "expectations": [
+        "Loads query-plan/workflow.md or reads the reference files listed in Phase 0",
+        "Attempts to run EXPLAIN ANALYZE VERBOSE via readonly_query",
+        "Identifies the IN-subquery pattern as a potential cause of the Full Scan",
+        "Recommends rewriting to EXISTS or to an explicit JOIN (from query-rewrites-generic.md)",
+        "Provides both the original and rewritten SQL",
+        "Does NOT recommend only adding an index without also suggesting the rewrite"
+      ]
+    },
+    {
+      "id": 201,
+      "prompt": "This DSQL query takes 3 seconds:\n\nSELECT order_id, total FROM orders WHERE customer_id = '12345' AND status = 'pending';\n\nI have an index on customer_id (integer type). The EXPLAIN shows a Full Scan on btree-table. Why isn't it using my index?",
+      "expected_output": "Identifies type coercion index bypass — string literal '12345' compared against integer column prevents index use. Recommends removing quotes or casting.",
+      "files": [],
+      "expectations": [
+        "Loads query-plan/workflow.md or the Phase 0 reference files",
+        "Identifies that the string literal '12345' compared against an integer customer_id column causes type coercion",
+        "Explains that type coercion prevents the B-Tree index from being used",
+        "References the implicit cast compatibility matrix or type mismatch concept",
+        "Recommends removing quotes (customer_id = 12345) or explicit cast (customer_id = '12345'::integer)",
+        "Does NOT blame missing indexes as the primary cause"
+      ]
+    },
+    {
+      "id": 202,
+      "prompt": "I have a DSQL query that joins 12 tables and it's very slow. The optimizer seems to pick a bad join order. Is there anything I can do about this?",
+      "expected_output": "Identifies that 12 tables exceeds the DP join ordering threshold, recommends splitting into CTEs per query-rewrites-dsql-specific.md",
+      "files": [],
+      "expectations": [
+        "Identifies that 12 tables likely exceeds the optimizer's DP threshold (join_collapse_limit)",
+        "Recommends splitting the join into smaller CTEs or subqueries, each below the threshold",
+        "References the DP join ordering concept or join_collapse_limit",
+        "Provides a structural example of how to partition the join",
+        "Does NOT only suggest adding indexes without addressing the join ordering issue"
+      ]
+    },
+    {
+      "id": 203,
+      "prompt": "My DSQL table has 50 million rows and I need to know approximately how many rows are in it. COUNT(*) times out. Is there a faster way?",
+      "expected_output": "Recommends querying pg_class reltuples for an approximate count per query-rewrites-dsql-specific.md",
+      "files": [],
+      "expectations": [
+        "Recommends using pg_class reltuples as an approximate row count",
+        "Provides the SQL: SELECT reltuples::bigint FROM pg_class WHERE oid = 'schema.table'::regclass",
+        "Notes this is an estimate, not an exact count",
+        "Does NOT suggest only increasing timeout or retrying COUNT(*)"
+      ]
+    },
+    {
+      "id": 204,
+      "prompt": "My DSQL query is:\n\nSELECT * FROM employees WHERE department_id = 1 OR department_id = 2 OR department_id = 3 OR department_id = 4 OR department_id = 5;\n\nIt's doing a Full Scan. I have an index on department_id. Can you help?",
+      "expected_output": "Recommends rewriting multiple OR clauses to IN per query-rewrites-generic.md, also checks for type coercion",
+      "files": [],
+      "expectations": [
+        "Identifies the multiple OR pattern as potentially inefficient",
+        "Recommends rewriting to: WHERE department_id IN (1, 2, 3, 4, 5)",
+        "Checks or mentions whether type coercion could also be a factor",
+        "Attempts to run EXPLAIN ANALYZE to get the actual plan",
+        "Provides the rewritten SQL"
+      ]
+    },
+    {
+      "id": 205,
+      "prompt": "I have this DSQL query:\n\nSELECT c.customer_id, c.name, c.email, COUNT(*) AS order_count FROM customers c JOIN orders o ON c.customer_id = o.customer_id GROUP BY c.customer_id, c.name, c.email;\n\nIt's slow because it's grouping over the large joined result. How can I optimize it?",
+      "expected_output": "Recommends pushing GROUP BY into a subquery on orders, then joining back to customers per query-rewrites-generic.md",
+      "files": [],
+      "expectations": [
+        "Identifies that grouping after the join processes more rows than necessary",
+        "Recommends pushing the GROUP BY into a subquery on the orders (fact) table",
+        "Provides rewritten SQL with the aggregation in a subquery joined to customers",
+        "Explains that this aggregates fewer rows before joining to the dimension table"
+      ]
+    }
+  ]
+}
