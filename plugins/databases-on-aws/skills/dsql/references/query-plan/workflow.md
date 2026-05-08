@@ -10,8 +10,8 @@ Complete workflow for diagnosing DSQL query plan performance issues. Produces a 
 4. [Phase 0 — Load Reference Material](#phase-0--load-reference-material)
 5. [Phase 1 — Capture the Plan](#phase-1--capture-the-plan)
 6. [Phase 2 — Gather Evidence](#phase-2--gather-evidence)
-7. [Phase 3 — Experiment](#phase-3--experiment)
-8. [Phase 4 — Produce the Report](#phase-4--produce-the-report)
+7. [Phase 3 — Experiment (conditional)](#phase-3--experiment-conditional)
+8. [Phase 4 — Produce the Report, Invite Reassessment](#phase-4--produce-the-report-invite-reassessment)
 9. [psql Fallback](#psql-fallback)
 10. [Safety](#safety)
 
