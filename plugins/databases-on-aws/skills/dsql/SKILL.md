@@ -118,7 +118,7 @@ sampled in [.mcp.json](../../.mcp.json)
 
 #### [dsql-lint.md](references/dsql-lint.md)
 
-**When:** SHOULD load when validating SQL for DSQL compatibility or migrating schemas
+**When:** MUST load before running `dsql_lint`, processing externally-sourced SQL (pg_dump, ORM migrations, user-pasted DDL), or resolving `fixed_with_warning` / unfixable diagnostics
 **Contains:** `dsql_lint` MCP tool reference, fix statuses, ORM integration, unfixable error resolution
 
 ---
@@ -181,7 +181,7 @@ See [scripts/README.md](../../scripts/README.md) for usage and hook configuratio
 
 1. **Explore:** Use `readonly_query` with `information_schema` to list tables. Use `get_schema` for table structure.
 2. **Query:** Use `readonly_query` for SELECT queries. **MUST** include `tenant_id` in WHERE for multi-tenant apps. **MUST** build SQL with `safe_query.build()`.
-3. **Schema changes:** Use `transact` with one DDL per transaction; multiple DML statements **MAY** share a transaction. **MUST** use `CREATE INDEX ASYNC` in a separate call. Use `dsql_lint` to validate first.
+3. **Schema changes:** Use `transact` with one DDL per transaction. **MUST** batch DML under 3,000 rows. **MUST** use `CREATE INDEX ASYNC` in a separate call. Use `dsql_lint` to validate first.
 
 ---
 
@@ -201,13 +201,15 @@ See [scripts/README.md](../../scripts/README.md) for usage and hook configuratio
 
 ### Workflow 2: Safe Data Migration
 
-1. Validate DDL with `dsql_lint(sql=..., fix=true)` — apply fixes if needed
+Every DDL statement generated in this workflow MUST be validated with `dsql_lint(fix=true)` before its `transact` call — applies to step 2 (ADD COLUMN) and step 5 (async index). DML (`UPDATE` in step 3) does not require linting.
+
+1. Validate ALTER TABLE DDL with `dsql_lint(sql=..., fix=true)` — handle diagnostics per [dsql-lint.md](references/dsql-lint.md)
 2. Add column using transact: `transact(["ALTER TABLE ... ADD COLUMN ..."])`
 3. Populate existing rows with UPDATE in separate transact calls (batched under 3,000 rows)
 4. Verify migration with readonly_query using COUNT
-5. Create async index for new column using transact if needed
+5. If an index is needed: validate CREATE INDEX ASYNC DDL with `dsql_lint(sql=..., fix=true)`, then create via transact
 
-- MUST validate DDL with `dsql_lint` before executing
+- MUST validate every externally-sourced or generated DDL statement with `dsql_lint` before executing
 - MUST add column first, populate later
 - MUST issue ADD COLUMN with only name and type; apply DEFAULT via separate UPDATE
 - MUST batch updates under 3,000 rows in separate transact calls
@@ -235,13 +237,18 @@ MUST load [access-control.md](references/access-control.md) for role setup, IAM 
 
 ### Workflow 6: Table Recreation DDL Migration
 
-DSQL does NOT support direct `ALTER COLUMN TYPE`, `DROP COLUMN`, `DROP CONSTRAINT`, or `MODIFY PRIMARY KEY`. These require the **Table Recreation Pattern**. This is a destructive workflow that requires user confirmation at each step. Validate the new CREATE TABLE with `dsql_lint(sql=..., fix=true)` before execution.
+DSQL does NOT support direct `ALTER COLUMN TYPE`, `DROP COLUMN`, `DROP CONSTRAINT`, or `MODIFY PRIMARY KEY`. These require the **Table Recreation Pattern**. This is a destructive workflow that requires user confirmation at each step. Every generated DDL in the pattern (CREATE new, INSERT ... SELECT, DROP old, RENAME) MUST be validated with `dsql_lint(sql=..., fix=true)` before execution.
 
 MUST load [ddl-migrations/overview.md](references/ddl-migrations/overview.md) before attempting any of these operations.
 
 ### Workflow 7: Validate and Migrate to DSQL
 
-Run `dsql_lint(sql=source_sql, fix=true)` to validate and auto-convert SQL from any source (PostgreSQL, MySQL, ORM-generated). MUST load [dsql-lint.md](references/dsql-lint.md) for the full workflow, ORM-specific guidance, and unfixable error resolution. MUST load [mysql-migrations/type-mapping.md](references/mysql-migrations/type-mapping.md) for MySQL-specific types not covered by auto-fix.
+MUST load [dsql-lint.md](references/dsql-lint.md) before running `dsql_lint` — it defines diagnostic handling, the three `fix_result.status` values (`fixed`, `fixed_with_warning`, `unfixable`), and user-confirmation gates.
+
+Run `dsql_lint(sql=source_sql, fix=true)` to validate and auto-convert PostgreSQL-compatible SQL. `dsql_lint` uses a PostgreSQL parser, so MySQL dialect syntax that PostgreSQL cannot parse (e.g., `PARTITION BY HASH`, `AUTO_INCREMENT` in some positions) surfaces as a `parse_error` rule rather than individual diagnostics.
+
+- For MySQL-origin SQL, MUST cross-check the source against [mysql-migrations/type-mapping.md](references/mysql-migrations/type-mapping.md) even when lint returns clean — `ENGINE=` clauses and `SET(...)` column types can pass silently through the PostgreSQL parser.
+- On `parse_error`, fall back to [mysql-migrations/type-mapping.md](references/mysql-migrations/type-mapping.md) for manual conversion, then re-run `dsql_lint` on the converted output before executing.
 
 ### Workflow 8: Query Plan Explainability
 
@@ -276,6 +283,7 @@ PGPASSWORD="$TOKEN" psql "host=$HOST port=5432 user=admin dbname=postgres sslmod
 ## Error Scenarios
 
 - **`awsknowledge` returns no results:** Use the default limits in the table above and note that limits should be verified against [DSQL documentation](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/).
+- **`dsql_lint` unavailable or timing out:** See the Error Handling section of [dsql-lint.md](references/dsql-lint.md). Do not silently skip validation — inform the user and require explicit confirmation before proceeding with manual rules from [development-guide.md](references/development-guide.md).
 - **OCC serialization error:** Retry the transaction. If persistent, check for hot-key contention — see [troubleshooting.md](references/troubleshooting.md).
 - **Transaction exceeds limits:** Split into batches under 3,000 rows — see [batched-migration.md](references/ddl-migrations/batched-migration.md).
 - **Token expiration mid-operation:** Generate a fresh IAM token — see [authentication-guide.md](references/auth/authentication-guide.md). See [troubleshooting.md](references/troubleshooting.md) for other issues.

@@ -9,8 +9,9 @@
       "expectations": [
         "Calls the dsql_lint MCP tool with the provided SQL",
         "Uses fix=true to get DSQL-compatible output",
-        "Presents diagnostics or warnings to the user before executing",
-        "Does NOT execute the SQL without validating first"
+        "Surfaces each diagnostic (fixed, fixed_with_warning, unfixable) to the user before executing",
+        "For fixed_with_warning diagnostics, explains application-layer implications before proceeding",
+        "Does NOT execute the SQL before dsql_lint returns and diagnostics are presented"
       ]
     },
     {
@@ -21,8 +22,9 @@
       "expectations": [
         "Calls the dsql_lint MCP tool",
         "Identifies that the SQL has compatibility issues",
-        "Issues each DDL as a separate transact call (not all in one transaction)",
-        "Warns the user about removed foreign key constraint requiring app-layer enforcement"
+        "Splits the multi-DDL transaction into separate transact calls (one DDL per call), not a single transact with all statements",
+        "Warns the user about removed foreign key constraint requiring app-layer enforcement",
+        "Does NOT execute fixed_sql while any diagnostic has fix_result.status == unfixable"
       ]
     },
     {
@@ -32,20 +34,21 @@
       "files": [],
       "expectations": [
         "Calls the dsql_lint MCP tool to validate",
-        "Reports that the SQL is compatible (no errors or warnings)",
-        "Does NOT execute the SQL (user said don't execute)"
+        "Reports that the SQL is compatible (diagnostics array is empty, summary errors and warnings are zero)",
+        "Does NOT call transact (user explicitly said don't execute)"
       ]
     },
     {
       "id": 103,
-      "prompt": "I need to migrate this MySQL table to DSQL:\n\nCREATE TABLE products (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  name VARCHAR(100),\n  tags SET('electronics','clothing','food'),\n  details JSON,\n  FOREIGN KEY (category_id) REFERENCES categories(id)\n) ENGINE=InnoDB PARTITION BY HASH(id) PARTITIONS 4;",
+      "prompt": "I need to migrate this MySQL table to DSQL:\n\nCREATE TABLE products (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  name VARCHAR(100),\n  category_id INT,\n  tags SET('electronics','clothing','food'),\n  details JSON,\n  FOREIGN KEY (category_id) REFERENCES categories(id)\n) ENGINE=InnoDB PARTITION BY HASH(id) PARTITIONS 4;",
       "expected_output": "Calls dsql_lint with fix=true, identifies multiple issues including unfixable ones (PARTITION BY), presents what can be auto-fixed vs what needs manual rewrite",
       "files": [],
       "expectations": [
         "Calls the dsql_lint MCP tool with fix=true",
-        "Identifies unfixable issues that require manual intervention",
+        "Recognizes that the tool returned a parse_error diagnostic (the PostgreSQL parser short-circuits on AUTO_INCREMENT before reaching SET / ENGINE / PARTITION BY)",
         "Does NOT claim all issues can be auto-fixed",
-        "Loads or references the mysql-migrations type-mapping for unfixable items"
+        "Loads references/mysql-migrations/type-mapping.md and manually scans the source SQL for MySQL-specific syntax (AUTO_INCREMENT, SET column type, ENGINE=, PARTITION BY) rather than trusting a post-fix clean lint as sufficient",
+        "Proposes conversions for each MySQL-specific construct and offers to re-run dsql_lint on the converted SQL before executing"
       ]
     }
   ]

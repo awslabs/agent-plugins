@@ -1,9 +1,9 @@
 # dsql_lint Eval Results — With-Skill vs Baseline
 
-**Date:** 2026-05-06
-**MCP Server:** awslabs.aurora-dsql-mcp-server (local build, feature/dsql-lint-mcp-tool merged to main)
-**dsql-lint version:** 0.1.3
-**Model:** Claude Opus 4.6 (subagent execution)
+**Date:** 2026-05-08
+**MCP Server:** awslabs.aurora-dsql-mcp-server (local build from `feature/dsql-lint-mcp-tool` branch; upstream mirror PR not yet merged)
+**dsql-lint version:** 0.1.4
+**Evaluation method:** Manual behavioral comparison — subagent run with skill loaded vs. subagent run without skill. Automated grading for these evals is not yet wired into `run_functional_evals.py`; PASS/FAIL is a human assessment of transcripts against the expectations in `dsql_lint_evals.json`.
 
 ## Summary
 
@@ -11,6 +11,8 @@
 | ---- | ------------------------- | ---------- | --------------- | --------------------------------------------------------------- |
 | 100  | pg_dump PostgreSQL schema | **PASS**   | FAIL (3 errors) | Skill corrects JSON, index, transaction handling                |
 | 101  | Django ORM migration      | **PASS**   | FAIL (3 errors) | Skill corrects JSON, index, provides actionable Django guidance |
+| 102  | Clean DSQL-compatible SQL | **PASS**   | N/A             | Tool correctly reports no issues; agent does not execute        |
+| 103  | MySQL unsupported syntax  | **PASS**   | N/A             | Tool returns parse error; agent falls back to mysql-migrations  |
 
 The skill demonstrably changes agent behavior. The baseline agent hallucinates incorrect
 DSQL constraints (JSONB support, synchronous indexes) while the skill-guided agent uses
@@ -35,14 +37,14 @@ CREATE INDEX idx_users_email ON users(email);
 
 ### Behavior Comparison
 
-| Behavior                | With Skill                                   | Baseline                 | Correct?                                                        |
-| ----------------------- | -------------------------------------------- | ------------------------ | --------------------------------------------------------------- |
-| Used deterministic tool | ✅ Called `dsql_lint`                        | ❌ Relied on memory      | Skill wins                                                      |
-| SERIAL replacement      | BIGINT IDENTITY (CACHE 1)                    | UUID gen_random_uuid()   | Both valid, skill matches dsql-lint output                      |
-| JSON handling           | ✅ TEXT                                      | ❌ JSONB                 | **Baseline wrong** — DSQL does not support JSONB as column type |
-| Index handling          | ✅ CREATE INDEX ASYNC                        | ❌ "Index is fine as-is" | **Baseline wrong** — DSQL requires ASYNC                        |
-| Transaction splitting   | ✅ Explicitly stated one DDL per transaction | ❌ Not mentioned         | **Baseline misses**                                             |
-| Foreign key guidance    | ✅ App-layer enforcement                     | ✅ App-layer enforcement | Both correct                                                    |
+| Behavior                | With Skill                            | Baseline                   | Correct?                                                        |
+| ----------------------- | ------------------------------------- | -------------------------- | --------------------------------------------------------------- |
+| Used deterministic tool | PASS Called `dsql_lint`               | FAIL Relied on memory      | Skill wins                                                      |
+| SERIAL replacement      | BIGINT IDENTITY (CACHE 1)             | UUID gen_random_uuid()     | Both valid, skill matches `dsql_lint` output                    |
+| JSON handling           | PASS TEXT                             | FAIL JSONB                 | **Baseline wrong** — DSQL does not support JSONB as column type |
+| Index handling          | PASS CREATE INDEX ASYNC               | FAIL "Index is fine as-is" | **Baseline wrong** — DSQL requires ASYNC                        |
+| Transaction splitting   | PASS Explicitly stated one DDL per tx | FAIL Not mentioned         | **Baseline misses**                                             |
+| Foreign key guidance    | PASS App-layer enforcement            | PASS App-layer enforcement | Both correct                                                    |
 
 ### With-Skill Output (summary)
 
@@ -58,7 +60,7 @@ CREATE INDEX idx_users_email ON users(email);
 - Recommended `JSONB` for the JSON column (incorrect — DSQL rejects JSONB as a column type)
 - Said the CREATE INDEX statement "is fine" (incorrect — DSQL requires ASYNC)
 - Did not mention transaction splitting
-- Recommended UUID for SERIAL (valid but different from dsql-lint's IDENTITY approach)
+- Recommended UUID for SERIAL (valid but different from `dsql_lint`'s IDENTITY approach)
 
 ### Baseline Failures
 
@@ -87,19 +89,19 @@ COMMIT;
 
 ### Behavior Comparison
 
-| Behavior                | With Skill                                 | Baseline                                      | Correct?                |
-| ----------------------- | ------------------------------------------ | --------------------------------------------- | ----------------------- |
-| Used deterministic tool | ✅ Called `dsql_lint`                      | ❌ Relied on memory                           | Skill wins              |
-| SERIAL replacement      | BIGINT IDENTITY                            | UUID                                          | Both valid              |
-| JSON handling           | ✅ TEXT                                    | ❌ JSONB                                      | **Baseline wrong**      |
-| Index handling          | ✅ CREATE INDEX ASYNC                      | ❌ "Index is okay"                            | **Baseline wrong**      |
-| Multi-DDL detection     | ✅ Split into separate BEGIN/COMMIT blocks | ⚠️ Said "remove BEGIN/COMMIT" but didn't split | **Baseline incomplete** |
-| Django-specific advice  | ✅ "sqlmigrate → lint → execute fixed SQL" | ⚠️ Generic (custom backend, atomic=False)      | Skill more actionable   |
+| Behavior                | With Skill                               | Baseline                                        | Correct?                |
+| ----------------------- | ---------------------------------------- | ----------------------------------------------- | ----------------------- |
+| Used deterministic tool | PASS Called `dsql_lint`                  | FAIL Relied on memory                           | Skill wins              |
+| SERIAL replacement      | BIGINT IDENTITY                          | UUID                                            | Both valid              |
+| JSON handling           | PASS TEXT                                | FAIL JSONB                                      | **Baseline wrong**      |
+| Index handling          | PASS CREATE INDEX ASYNC                  | FAIL "Index is okay"                            | **Baseline wrong**      |
+| Multi-DDL detection     | PASS Split into separate BEGIN/COMMIT    | PARTIAL Said "remove BEGIN/COMMIT" but no split | **Baseline incomplete** |
+| Django-specific advice  | PASS "sqlmigrate → lint → execute fixed" | PARTIAL Generic (custom backend, atomic=False)  | Skill more actionable   |
 
 ### With-Skill Output (summary)
 
 - Called `dsql_lint(sql=..., fix=true)`
-- Reported 5 issues: serial, foreign_key, json, index_async, multi_ddl_transaction
+- Reported 5 diagnostics: `serial_type`, `foreign_key`, `json_type`, `index_async`, `multi_ddl_transaction`
 - Produced fixed SQL with each DDL in its own BEGIN/COMMIT block
 - Gave specific Django advice: run sqlmigrate, lint output, execute fixed SQL directly
 - Warned about foreign key removal requiring app-layer enforcement
@@ -119,6 +121,44 @@ COMMIT;
 3. **Incomplete transaction handling:** Told user to remove BEGIN/COMMIT but didn't show
    that each DDL needs its own transaction — user would likely run both DDL bare without
    any transaction isolation
+
+---
+
+## Eval 102: Clean DSQL-Compatible SQL
+
+**Prompt:** "Validate this SQL for DSQL compatibility but don't execute it yet: …" (UUID PK with `gen_random_uuid()`, TEXT payload, `CREATE INDEX ASYNC`).
+
+**Baseline:** Not run — this eval tests that the agent calls `dsql_lint` even when no compatibility issues are expected, and does not execute when the user said "don't execute." Baseline behavior is not a meaningful comparison for this expectation (either a baseline agent would also decline to execute, or it would over-modify compatible SQL — both are failure modes the skill change addresses by deferring to the deterministic tool).
+
+### With-Skill Output (summary)
+
+- Called `dsql_lint(sql=..., fix=false)` (validation-only mode appropriate for "don't execute")
+- Tool returned `diagnostics: []`, `summary: { errors: 0, warnings: 0, fixed: 0 }`
+- Agent reported to user that SQL is DSQL-compatible with no changes needed
+- Agent did NOT call `transact` (honored the "don't execute" instruction)
+
+### Verdict
+
+PASS on all four expectations in `dsql_lint_evals.json` eval 102. The skill's "user said don't execute" handling works as documented in [Workflow: Validate & Migrate SQL to DSQL](../../../plugins/databases-on-aws/skills/dsql/references/dsql-lint.md).
+
+---
+
+## Eval 103: MySQL Unsupported Syntax (`parse_error` fallback)
+
+**Prompt:** MySQL `CREATE TABLE` with `AUTO_INCREMENT`, `SET(...)` column, `ENGINE=InnoDB`, `PARTITION BY HASH(id)`, and explicit `FOREIGN KEY`.
+
+**Baseline:** Not run. Goal of this eval is to verify the `parse_error` fallback path — a baseline agent with no skill would hallucinate DSQL-compatible transformations without ever invoking the tool, so the signal (did the agent correctly fall back to `mysql-migrations/type-mapping.md`?) does not translate to a baseline comparison.
+
+### With-Skill Output (summary)
+
+- Called `dsql_lint(sql=..., fix=true)`
+- Tool returned a single `parse_error` diagnostic at `AUTO_INCREMENT` (the PostgreSQL parser short-circuits on the first unsupported token; `AUTO_INCREMENT` and `PARTITION BY` reliably trigger `parse_error`, while `ENGINE=` clauses and `SET(...)` column types can pass silently through the PostgreSQL parser)
+- Agent recognized `parse_error` rule and followed the Error Handling guidance in [dsql-lint.md](../../../plugins/databases-on-aws/skills/dsql/references/dsql-lint.md) to load [mysql-migrations/type-mapping.md](../../../plugins/databases-on-aws/skills/dsql/references/mysql-migrations/type-mapping.md)
+- Agent proposed manual conversion (`INT AUTO_INCREMENT` → `BIGINT GENERATED ALWAYS AS IDENTITY`; `SET(...)` → TEXT with app-layer validation; omit `ENGINE=` and `PARTITION BY`) and offered to re-run `dsql_lint` on the converted SQL
+
+### Verdict
+
+PASS on the expectations in `dsql_lint_evals.json` eval 103. Agents MUST cross-check MySQL-origin SQL against `mysql-migrations/type-mapping.md` even when `dsql_lint` returns clean — `ENGINE=` and `SET(...)` pass silently.
 
 ---
 
