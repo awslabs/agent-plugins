@@ -68,7 +68,6 @@ Uses a single process with .NET Tasks (same model as ASP.NET Core). The handler 
 - Initialize `HttpClient` and SDK clients as singletons
 - Use `ConcurrentDictionary<TKey, TValue>` and `SemaphoreSlim` for thread-safe access
 - Invocation timeouts are NOT enforced by the runtime — use `ILambdaContext.RemainingTime` to detect approaching timeouts
-- Powertools for AWS Lambda (.NET) does not yet support Lambda Managed Instances
 
 ## Common Anti-Patterns
 
@@ -91,7 +90,7 @@ Powertools handles multi-concurrency transparently (structured logging, tracing,
 | Python | Powertools for AWS Lambda (Python) | 3.23.0 |
 | TypeScript | Powertools for AWS Lambda (TypeScript) | 2.29.0 |
 | Java | Powertools for AWS Lambda (Java) | 2.8.0 |
-| .NET | Powertools for AWS Lambda (.NET) | Not yet supported |
+| .NET | Powertools for AWS Lambda (.NET) | Supported (logging, tracing, idempotency, batch, parameters) |
 
 AWS SDK and X-Ray minimum versions:
 

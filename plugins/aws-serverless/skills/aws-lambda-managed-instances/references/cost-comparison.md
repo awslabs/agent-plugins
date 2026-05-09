@@ -55,14 +55,9 @@ Present this for every assessment:
 
 ## Worked Example
 
-Node.js API, 100 req/s steady (259M req/mo), 200ms avg, 512 MB, x86:
+Use the [LMI Pricing Calculator](https://aws-samples.github.io/sample-aws-lambda-managed-instances/) for accurate, up-to-date cost comparisons based on your specific workload parameters (region, instance type, request volume, duration).
 
-| Scenario | Monthly | Annual | Savings |
-|----------|---------|--------|---------|
-| Lambda on-demand | $484 | $5,808 | baseline |
-| Lambda + 3yr SP | $411 | $4,932 | 15% |
-| LMI on-demand (3× m7i.large) | $288 | $3,456 | 40% |
-| LMI + 3yr SP | $155 | $1,860 | 68% |
+When building a cost comparison for a user, gather: region, runtime, requests/month, average duration, memory, and architecture (x86 vs ARM). Plug these into the calculator rather than relying on hardcoded estimates.
 
 ## When LMI is NOT Cheaper
 
