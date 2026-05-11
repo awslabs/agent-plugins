@@ -242,7 +242,7 @@ def handler(event: dict, context: DurableContext) -> dict:
 **Java:**
 
 ```java
-import software.amazon.lambda.durable.config.CallbackConfig;
+import software.amazon.lambda.durable.config.WaitForCallbackConfig;
 
 public class ApprovalHandler extends DurableHandler<ApprovalInput, ApprovalOutput> {
   @Override
@@ -250,7 +250,7 @@ public class ApprovalHandler extends DurableHandler<ApprovalInput, ApprovalOutpu
     var plan = ctx.step("generate-plan", Plan.class, s -> generatePlan(event));
     var answer = ctx.waitForCallback("wait-for-approval", String.class,
       (callbackId, s) -> sendApprovalEmail(event.getApproverEmail(), plan, callbackId),
-      CallbackConfig.builder().timeout(Duration.ofHours(24)).build());
+      WaitForCallbackConfig.builder().timeout(Duration.ofHours(24)).build());
     if ("APPROVED".equals(answer)) {
       ctx.step("execute", Void.class, s -> { performAction(plan); return null; });
       return new ApprovalOutput("completed");
