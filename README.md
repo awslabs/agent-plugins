@@ -219,11 +219,11 @@ Design, build, deploy, test, and debug serverless applications with AWS Lambda, 
 
 ### Agent Skill Triggers
 
-| Agent Skill                      | Triggers                                                                                                                                                                     |
-| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **aws-lambda**                   | "Lambda function", "event source", "serverless application", "API Gateway", "EventBridge", "Step Functions", "serverless API", "event-driven architecture", "Lambda trigger" |
-| **aws-serverless-deployment**    | "use SAM", "SAM template", "SAM init", "SAM deploy", "CDK serverless", "CDK Lambda construct", "NodejsFunction", "PythonFunction", "serverless CI/CD pipeline"               |
-| **aws-lambda-durable-functions** | "lambda durable functions", "workflow orchestration", "state machines", "retry/checkpoint patterns", "long-running stateful Lambda", "saga pattern", "human-in-the-loop"     |
+| Agent Skill                      | Triggers                                                                                                                                                                                                 |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **aws-lambda**                   | "Lambda function", "event source", "serverless application", "API Gateway", "EventBridge", "Step Functions", "serverless API", "event-driven architecture", "Lambda trigger"                             |
+| **aws-serverless-deployment**    | "use SAM", "SAM template", "SAM init", "SAM deploy", "CDK serverless", "CDK Lambda construct", "NodejsFunction", "PythonFunction", "serverless CI/CD pipeline"                                           |
+| **aws-lambda-durable-functions** | "lambda durable functions", "workflow orchestration", "state machines", "retry/checkpoint patterns", "long-running stateful Lambda", "saga pattern", "human-in-the-loop"                                 |
 | **aws-lambda-managed-instances** | "Lambda Managed Instances", "LMI", "capacity provider", "multi-concurrency Lambda", "EC2-backed Lambda", "cold start elimination", "Graviton Lambda", "Lambda cost optimization with Reserved Instances" |
 
 ### MCP Servers
