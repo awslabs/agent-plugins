@@ -99,13 +99,13 @@ result = context.wait_for_callback(
 **Java:**
 
 ```java
-import software.amazon.lambda.durable.config.CallbackConfig;
+import software.amazon.lambda.durable.config.WaitForCallbackConfig;
 
 var result = ctx.waitForCallback("wait-for-approval", ApprovalResult.class,
     (callbackId, stepCtx) -> {
         sendApprovalEmail(approverEmail, callbackId);
     },
-    CallbackConfig.builder()
+    WaitForCallbackConfig.builder()
         .timeout(Duration.ofHours(24))
         .heartbeatTimeout(Duration.ofMinutes(5))
         .build());
@@ -463,7 +463,7 @@ def handler(event: dict, context: DurableContext) -> dict:
 **Java:**
 
 ```java
-import software.amazon.lambda.durable.config.CallbackConfig;
+import software.amazon.lambda.durable.config.WaitForCallbackConfig;
 
 public class ApprovalHandler extends DurableHandler<ApprovalRequest, ApprovalResult> {
     @Override
@@ -480,7 +480,7 @@ public class ApprovalHandler extends DurableHandler<ApprovalRequest, ApprovalRes
                             "Reject: " + approvalUrl + "?callback=" + callbackId + "&action=reject"
                 ));
             },
-            CallbackConfig.builder().timeout(Duration.ofHours(48)).build());
+            WaitForCallbackConfig.builder().timeout(Duration.ofHours(48)).build());
         
         if ("approve".equals(decision.getAction())) {
             ctx.step("execute", Void.class, s -> { executeRequest(request); return null; });
@@ -569,7 +569,7 @@ public class OrderHandler extends DurableHandler<OrderRequest, OrderResult> {
                     "webhookUrl", webhookUrl + "?callback=" + callbackId
                 ));
             },
-            CallbackConfig.builder().timeout(Duration.ofMinutes(15)).build());
+            WaitForCallbackConfig.builder().timeout(Duration.ofMinutes(15)).build());
         
         if ("success".equals(payment.getStatus())) {
             ctx.step("fulfill", Void.class, s -> { fulfillOrder(order); return null; });
@@ -765,7 +765,7 @@ import software.amazon.lambda.durable.exception.WaitForConditionFailedException;
 try {
     var result = ctx.waitForCallback("wait-approval", ApprovalResult.class,
         (callbackId, stepCtx) -> sendApproval(callbackId),
-        CallbackConfig.builder().timeout(Duration.ofHours(24)).build());
+        WaitForCallbackConfig.builder().timeout(Duration.ofHours(24)).build());
 } catch (CallbackTimeoutException e) {
     ctx.getLogger().warn("Approval timed out: {}", e.getMessage());
     // Handle timeout
