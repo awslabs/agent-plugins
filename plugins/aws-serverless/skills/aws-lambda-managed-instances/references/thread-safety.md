@@ -90,7 +90,7 @@ Powertools handles multi-concurrency transparently (structured logging, tracing,
 | Python | Powertools for AWS Lambda (Python) | 3.23.0 |
 | TypeScript | Powertools for AWS Lambda (TypeScript) | 2.29.0 |
 | Java | Powertools for AWS Lambda (Java) | 2.8.0 |
-| .NET | Powertools for AWS Lambda (.NET) | Supported (logging, tracing, idempotency, batch, parameters) |
+| .NET | Powertools for AWS Lambda (.NET) | 3.1.0 |
 
 AWS SDK and X-Ray minimum versions:
 

@@ -129,59 +129,62 @@ LMI runs functions on EC2 instances inside the VPC. These instances need VPC end
 - Security groups: HTTPS egress (port 443) for AWS API calls; no ingress needed
 - Required VPC endpoints:
 
-| Endpoint | Type | Purpose | Cost |
-|----------|------|---------|------|
-| S3 | Gateway | Object storage access | Free |
-| DynamoDB | Gateway | Table access | Free |
-| SQS | Interface | Queue operations | $0.01/hr per AZ |
-| CloudWatch Logs | Interface | Log delivery | $0.01/hr per AZ |
-| CloudWatch Monitoring | Interface | Metrics/EMF | $0.01/hr per AZ |
-| X-Ray | Interface | Distributed tracing | $0.01/hr per AZ |
-
-Gateway endpoints are free; interface endpoints incur hourly charges per AZ.
+| Endpoint | Type | Purpose |
+|----------|------|---------|
+| S3 | Gateway | Object storage access |
+| DynamoDB | Gateway | Table access |
+| SQS | Interface | Queue operations |
+| CloudWatch Logs | Interface | Log delivery |
+| CloudWatch Monitoring | Interface | Metrics/EMF |
+| X-Ray | Interface | Distributed tracing |
 
 ## CLI Workflow
 
-Use the setup script for automated provisioning:
+### Required Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `SUBNET_IDS` | Comma-separated subnet IDs across 3+ AZs |
+| `SECURITY_GROUP_ID` | Security group ID for the capacity provider |
+| `ACCOUNT_ID` | AWS account ID |
+| `OPERATOR_ROLE_ARN` | ARN of the operator role (see above) |
+| `EXECUTION_ROLE_ARN` | ARN of the execution role (see above) |
+| `FUNCTION_NAME` | Name for the Lambda function |
+| `CP_NAME` | Name for the capacity provider |
+| `ARCHITECTURE` | `arm64` (Graviton) or `x86_64` |
+
+### Automated Setup
+
+See [`scripts/setup-lmi.sh`](../scripts/setup-lmi.sh) — set the environment variables above and run:
 
 ```bash
-# Set required environment variables
-export SUBNET_IDS="subnet-abc,subnet-def,subnet-ghi"
-export SECURITY_GROUP_ID="sg-123456"
-export ACCOUNT_ID="123456789012"
-export OPERATOR_ROLE_ARN="arn:aws:iam::123456789012:role/LMIOperatorRole"
-export EXECUTION_ROLE_ARN="arn:aws:iam::123456789012:role/LMIExecutionRole"
-
-# Run setup
-./scripts/setup-lmi.sh my-function my-capacity-provider arm64
+./scripts/setup-lmi.sh <function-name> <capacity-provider-name> <architecture>
 ```
 
-See [`scripts/setup-lmi.sh`](../scripts/setup-lmi.sh) for the full script with configurable options.
-
-### Manual Steps (if not using the script)
+### Manual Steps
 
 ```bash
 # 1. Create capacity provider
 aws lambda create-capacity-provider \
-  --capacity-provider-name my-cp \
-  --vpc-config "SubnetIds=[subnet-abc,subnet-def,subnet-ghi],SecurityGroupIds=[sg-123456]" \
-  --permissions-config "CapacityProviderOperatorRoleArn=arn:aws:iam::$ACCT:role/LMIOperatorRole" \
-  --instance-requirements "Architectures=[arm64]" \
+  --capacity-provider-name $CP_NAME \
+  --vpc-config "SubnetIds=[$SUBNET_IDS],SecurityGroupIds=[$SECURITY_GROUP_ID]" \
+  --permissions-config "CapacityProviderOperatorRoleArn=$OPERATOR_ROLE_ARN" \
+  --instance-requirements "Architectures=[$ARCHITECTURE]" \
   --capacity-provider-scaling-config "MaxVCpuCount=30"
 
 # 2. Create function
-aws lambda create-function --function-name my-fn --runtime python3.13 \
+aws lambda create-function --function-name $FUNCTION_NAME --runtime python3.13 \
   --handler app.handler --zip-file fileb://function.zip \
-  --role "arn:aws:iam::$ACCT:role/LMIExecutionRole" --architectures arm64 \
+  --role $EXECUTION_ROLE_ARN --architectures $ARCHITECTURE \
   --memory-size 4096 \
   --capacity-provider-config \
-    "LambdaManagedInstancesCapacityProviderConfig={CapacityProviderArn=arn:aws:lambda:$REGION:$ACCT:capacity-provider:my-cp}"
+    "LambdaManagedInstancesCapacityProviderConfig={CapacityProviderArn=arn:aws:lambda:$AWS_REGION:$ACCOUNT_ID:capacity-provider:$CP_NAME}"
 
 # 3. Publish version (triggers provisioning — takes several minutes)
-aws lambda publish-version --function-name my-fn
+aws lambda publish-version --function-name $FUNCTION_NAME
 
 # 4. Invoke (must use versioned ARN)
-aws lambda invoke --function-name my-fn:1 --payload '{}' response.json
+aws lambda invoke --function-name $FUNCTION_NAME:1 --payload '{}' response.json
 ```
 
 Architecture must match between function and capacity provider.
