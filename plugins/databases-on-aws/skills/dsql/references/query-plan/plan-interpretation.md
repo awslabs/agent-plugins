@@ -229,7 +229,7 @@ When a type coercion bypass is confirmed:
 
 - **Explicit cast in the predicate:** Rewrite `WHERE col = '42'` as `WHERE col = 42::float` (cast the literal to the column type)
 - **Application-layer fix:** Ensure the application passes parameters with the correct type rather than relying on implicit conversion
-- **Do NOT recommend changing the column type** to accommodate mismatched predicates — this masks the real issue and may break other queries
+- **MUST keep the column type unchanged** — changing it to accommodate mismatched predicates masks the real issue and MAY break other queries
 
 ### Evidence Gathering
 

@@ -12,8 +12,7 @@ Complete workflow for diagnosing DSQL query plan performance issues. Produces a 
 6. [Phase 2 — Gather Evidence](#phase-2--gather-evidence)
 7. [Phase 3 — Experiment (conditional)](#phase-3--experiment-conditional)
 8. [Phase 4 — Produce the Report, Invite Reassessment](#phase-4--produce-the-report-invite-reassessment)
-9. [psql Fallback](#psql-fallback)
-10. [Safety](#safety)
+9. [Safety](#safety)
 
 ---
 
@@ -60,14 +59,17 @@ Before entering the workflow, confirm the query targets DSQL:
 
 ## Phase 0 — Load Reference Material
 
-Read all files before starting — each has content later phases need verbatim (node-type math, exact catalog SQL, the `>30s` skip protocol, required report elements):
+MUST read these four files before starting — each has content later phases need verbatim (node-type math, exact catalog SQL, the `>30s` skip protocol, required report elements):
 
 1. [plan-interpretation.md](plan-interpretation.md) — node types, duration math, anomalous values
 2. [catalog-queries.md](catalog-queries.md) — pg_class / pg_stats / pg_indexes SQL
 3. [guc-experiments.md](guc-experiments.md) — GUC procedures and `>30s` skip protocol
 4. [report-format.md](report-format.md) — required report structure
-5. [query-rewrites-generic.md](query-rewrites-generic.md) — generic SQL rewrite patterns
-6. [query-rewrites-dsql-specific.md](query-rewrites-dsql-specific.md) — DSQL-specific rewrites
+
+SHOULD also load these index files to identify applicable rewrites at Phase 2:
+
+1. [query-rewrites-generic.md](query-rewrites-generic.md) — pattern index (load specific sub-file when a match is found)
+2. [query-rewrites-dsql-specific.md](query-rewrites-dsql-specific.md) — DSQL-specific pattern index
 
 ---
 
@@ -120,17 +122,6 @@ If a query rewrite was identified in Phase 2, include it as a recommendation wit
 
 ---
 
-## psql Fallback
-
-When the MCP is unavailable, pipe statements into `psql` via heredoc and check `$?`; report failures without proceeding on partial evidence:
-
-```bash
-TOKEN=$(aws dsql generate-db-connect-admin-auth-token --hostname "$HOST" --region "$REGION")
-PGPASSWORD="$TOKEN" psql "host=$HOST port=5432 user=admin dbname=postgres sslmode=require" <<<"EXPLAIN ANALYZE VERBOSE <sql>;"
-```
-
----
-
 ## Safety
 
-Plan capture uses `readonly_query` exclusively — it rejects INSERT/UPDATE/DELETE/DDL at the MCP layer. Rewrite DML to SELECT (Phase 1) rather than asking `transact --allow-writes` to run it; write-mode `transact` bypasses all MCP safety checks. **MUST NOT** run arbitrary DDL/DML or pl/pgsql.
+Plan capture MUST use `readonly_query` exclusively — it rejects INSERT/UPDATE/DELETE/DDL at the MCP layer. Rewrite DML to SELECT (Phase 1) rather than asking `transact --allow-writes` to run it; write-mode `transact` bypasses all MCP safety checks. **MUST NOT** run arbitrary DDL/DML or pl/pgsql.
