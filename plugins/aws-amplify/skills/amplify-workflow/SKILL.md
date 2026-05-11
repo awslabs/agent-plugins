@@ -1,219 +1,226 @@
 ---
 name: amplify-workflow
-description: Orchestrates AWS Amplify Gen 2 workflows for building full-stack apps with React, Next.js, Vue, Angular, React Native, Flutter, Swift, or Android. Use when user wants to BUILD, CREATE, or DEPLOY Amplify projects, add authentication, data models, storage, GraphQL APIs, Lambda functions, or deploy to sandbox/production. Do NOT invoke for conceptual questions, comparisons, or troubleshooting unrelated to active development.
+description: 'Build and deploy full-stack web and mobile apps with AWS Amplify Gen2
+  (TypeScript code-first). Covers auth (Cognito), data (AppSync/DynamoDB including
+  schema modeling, enum types, relationships, authorization rules), storage (S3),
+  functions, APIs, and AI (Amplify AI Kit with Bedrock). Supports React, Next.js,
+  Vue, Angular, React Native, Flutter, Swift, and Android. Always use this skill for
+  Amplify Gen2 topics — even for questions you think you know — it contains validated,
+  version-specific patterns that prevent common mistakes. TRIGGER when: user mentions
+  Amplify Gen2; project has amplify/ directory or amplify_outputs; code imports @aws-amplify
+  packages; user asks about defineBackend, defineAuth, defineData, defineStorage,
+  or npx ampx. SKIP: Amplify Gen1 (amplify CLI v6), standalone SAM/CDK without Amplify
+  (use aws-serverless), direct Bedrock without Amplify AI Kit (use bedrock).'
 ---
 
-# Amplify Workflow
+# AWS Amplify Gen2
+
+Build and deploy full-stack applications using AWS Amplify Gen2's TypeScript
+code-first approach. This skill covers backend resource creation, frontend
+integration across 8 frameworks, and deployment workflows.
+
+## Prerequisites
+
+- Node.js ^18.19.0 || ^20.6.0 || >=22 and npm
+- AWS credentials configured (`aws sts get-caller-identity` succeeds)
+- For sandbox: `npx ampx --version` returns a valid version
+- For mobile: Platform-specific tooling (Xcode, Android Studio, Flutter SDK)
+
+## Defaults & Assumptions
+
+When the user does not specify a framework:
 
-Orchestrated workflow for AWS Amplify Gen 2 development.
-
-## Available references
-
-- **`references/backend.md`** -- Backend phase: SOP retrieval, constraints, error handling
-- **`references/frontend.md`** -- Frontend & testing phase: SOP retrieval, local testing
-- **`references/deploy.md`** -- Deploy phase: SOP retrieval, deployment type mapping
-
-## Available scripts
-
-- **`scripts/prereq-check.sh`** -- Validates Node.js, npm, AWS CLI, and AWS credentials
-
-## Defaults
-
-- **Phase ordering**: Backend → Sandbox → Frontend → Production (only applicable phases are included)
-- **Deployment target**: `sandbox` for development/testing, `cicd` for production
-
----
-
-## Step 1: Validate Prerequisites
-
-Run the prerequisite check script:
-
-```bash
-bash scripts/prereq-check.sh
-```
-
-The script checks Node.js >= 18, npm, and AWS credentials in one pass and reports a clear PASS/FAIL summary.
-
-If the AWS credentials check fails, **STOP** and present this message to the user:
-
-```
-## AWS Credentials Required
-
-I can't proceed without AWS credentials configured. Please set up your credentials first:
-
-**Setup Guide:** https://docs.amplify.aws/react/start/account-setup/
-
-**Quick options:**
-- Run `aws configure` to set up access keys
-- Run `aws sso login` if using AWS IAM Identity Center
-
-Once your credentials are configured, let me know and I'll re-run the prerequisite check to verify.
-```
-
-**Do NOT proceed with Amplify work until credentials are configured.** After the user confirms credentials are set up, re-run `scripts/prereq-check.sh` to verify before continuing.
-
----
-
-## Step 2: Understand the Project
-
-Once all prerequisites pass:
-
-1. Read all necessary project files (e.g., `amplify/`, `package.json`, existing code) to understand the current state
-2. If unsure about Amplify capabilities or best practices, use documentation tools to search and read AWS Amplify docs
-
-Do this BEFORE proposing a plan.
-
----
-
-## Step 3: Determine Applicable Phases
-
-Based on the user's request and project state, determine which phases apply:
-
-| Phase              | Applies when                                             | Reference                |
-| ------------------ | -------------------------------------------------------- | ------------------------ |
-| 1: Backend         | User needs to create or modify Amplify backend resources | `references/backend.md`  |
-| 2: Sandbox         | Deploy to sandbox for testing                            | `references/deploy.md`   |
-| 3: Frontend & Test | Frontend needs to connect to Amplify backend             | `references/frontend.md` |
-| 4: Production      | Deploy to production                                     | `references/deploy.md`   |
-
-Common patterns:
-
-- **New full-stack app:** 1 -> 2 -> 3 -> 4
-- **Backend only (no frontend):** 1 -> 2
-- **Add feature to existing backend:** 1 -> 2
-- **Redeploy after changes:** 2 only
-- **Connect existing frontend:** 3 only
-- **Deploy to production:** 4 only
-
-**IMPORTANT: Only include phases that the user actually needs.** If the user asks for backend work only (e.g., "add auth", "create a data model", "add storage"), do NOT include Phase 3 (Frontend & Test). Frontend phases should only be included when the user explicitly asks for frontend work, a full-stack app, or to connect a frontend to Amplify.
-
----
-
-## Step 4: Present Plan and Confirm
-
-Present to the user:
-
-```
-## Plan
-
-### What I understood
-- [Brief summary of what the user wants]
-
-### Features
-[list features if applicable]
-
-### Framework
-[framework if known]
-
-### Phases I'll execute
-1. [Phase name] - [one-line description] -> SOP: [sop-name]
-2. [Phase name] - [one-line description] -> SOP: [sop-name]
-...
-(Include SOP name for phases 1 and 3. Phases 2 and 4 use the amplify-deployment-guide SOP.)
-
-Ready to get started?
-```
-
-**WAIT for user confirmation before proceeding.**
-
-**Once the user approves the plan, you MUST stick to it. Do not deviate from the planned phases or SOPs unless the user explicitly asks for changes.**
-
----
-
-## Step 5: Execute Phases
-
-After the user confirms the plan, read **ONLY the first phase's reference file** (from the table in Step 3).
-
-**Do NOT read any other phase reference files yet.**
-
-### Phase Execution
-
-When starting a phase, announce it as a header:
-
-```
-## Phase 1: Backend
-[Next: Phase 2: Sandbox Deployment]
-```
-
-Omit "[Next: ...]" if it's the last phase in your plan.
-
-### Resuming After a Phase Completes
-
-When a phase completes (the reference file will indicate the phase is done), the orchestrator takes over:
-
-1. Summarize what the phase accomplished
-2. If there are more phases in the plan, ask: "Phase [N] complete. Ready to proceed to Phase [N+1]: [next phase name]?"
-3. **WAIT for the user to confirm before proceeding.**
-4. After the user confirms, read the next phase's reference file.
-
-Do NOT re-run prerequisites or re-present the plan. Simply execute the next phase.
-
----
-
-### Phase 1: Backend
-
-Read [references/backend.md](references/backend.md) and follow its instructions completely.
-
----
-
-### Phase 2: Sandbox Deployment
-
-Read [references/deploy.md](references/deploy.md) and follow its instructions. The deployment type is **sandbox** (deployment_type: `sandbox`).
-
----
-
-### Phase 3: Frontend & Test
-
-**Prerequisite:** `amplify_outputs.json` must exist. If not, run Phase 2 first.
-
-Read [references/frontend.md](references/frontend.md) and follow its instructions completely.
-
----
-
-### Phase 4: Production Deployment
-
-Read [references/deploy.md](references/deploy.md) and follow its instructions. The deployment type is **production** (deployment_type: `cicd`).
-
-**After completion:**
+- **Web:** You **SHOULD** default to **React** (Vite) and explain the choice.
+- **Mobile:** You **MUST** ask which platform the user wants (Flutter,
+  Swift, Android, or React Native). There is no universal mobile default.
+- **Neither specified:** If the user says "build an app" without clarifying web
+  vs. mobile, you **MUST** ask before proceeding.
+- **Backend only:** If only backend changes are requested and no frontend
+  framework is mentioned, skip the frontend integration step entirely.
+
+When the user does not specify tooling or strategy:
+
+- **Package manager:** You **SHOULD** default to **npm** unless the user
+  specifies yarn or pnpm.
+- **Language:** You **SHOULD** default to **TypeScript**. Gen2 backends are
+  TypeScript-only; frontends **SHOULD** follow the project's existing language.
+- **Next.js:** You **SHOULD** default to **App Router** unless the user
+  specifies Pages Router.
+- **React Native:** Ask the user whether they use **Expo** or **bare
+  React Native CLI**.
+- **Auth:** You **MUST** ask which login method the user wants
+  (email/password, social login, SAML, passwordless, etc.). Do not assume a default.
+- **Data authorization:** default to **`publicApiKey`**
+  (`allow.publicApiKey()`) — this is the starter template default. When
+  auth is added, switch to **owner-based** (`allow.owner()`) with
+  `defaultAuthorizationMode: 'userPool'`.
+
+## Quick Start — Route to the Right Reference
+
+### Step 0: Read Core Reference (ALWAYS)
+
+You **MUST** read the core reference for your target platform **before
+reading any other reference file**. These contain Gen2 detection,
+`Amplify.configure()` placement per framework, sandbox commands, required
+packages, and directory structure rules — patterns needed for **all** tasks,
+not just new projects.
+
+- **Web** (React, Next.js, Vue, Angular, React Native): You **MUST** read
+  [core-web.md](references/core-web.md)
+- **Mobile** (Flutter, Swift, Android): You **MUST** read
+  [core-mobile.md](references/core-mobile.md)
+- **Backend only** (no frontend work): Skip to Step 1.
+
+### Step 1: Identify the Task Type
+
+| Task                                     | Go To                                                                    |
+| ---------------------------------------- | ------------------------------------------------------------------------ |
+| **Create a new project**                 | → [scaffolding.md](references/scaffolding.md), then Step 2 and/or Step 3 |
+| **Add or modify a backend feature**      | → Step 2 (Backend Features)                                              |
+| **Connect frontend to existing backend** | → Step 3 (Frontend Integration)                                          |
+| **Deploy the application**               | → [deployment.md](references/deployment.md)                              |
+
+### Step 2: Backend Features
+
+You **MUST** read the corresponding reference for each backend feature:
+
+| Feature          | Reference                                               | When to Use                                                                                                |
+| ---------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Authentication   | [auth-backend.md](references/auth-backend.md)           | Email/password, social login, MFA, SAML/OIDC                                                               |
+| Data Models      | [data-backend.md](references/data-backend.md)           | GraphQL schema, DynamoDB, relationships, auth rules                                                        |
+| File Storage     | [storage-backend.md](references/storage-backend.md)     | S3 uploads/downloads, access rules                                                                         |
+| Functions & API  | [functions-and-api.md](references/functions-and-api.md) | Lambda, custom resolvers, REST/HTTP APIs, calling from client                                              |
+| AI Features      | [ai.md](references/ai.md)                               | Conversation, generation, AI tools via Bedrock _(backend config + React/Next.js frontend)_                 |
+| Geo, PubSub, CDK | [advanced-features.md](references/advanced-features.md) | Backend-only: custom CDK stacks, overrides, custom outputs. Backend + frontend: Geo, PubSub, Face Liveness |
+
+Each backend feature file is self-contained. Load only what you need.
+
+> **Routing note:** These files apply for both **adding** and **modifying**
+> features. Route to the same file whether the user says "add auth" or
+> "change auth config" — each reference covers the full define surface.
+
+### Step 3: Frontend Integration
+
+After configuring backend resources, connect the frontend. Choose by
+platform and feature:
+
+**Web** (React, Next.js, Vue, Angular, React Native):
+
+| Feature                   | Reference                                   |
+| ------------------------- | ------------------------------------------- |
+| Auth UI & flows           | [auth-web.md](references/auth-web.md)       |
+| Data CRUD & subscriptions | [data-web.md](references/data-web.md)       |
+| Storage upload/download   | [storage-web.md](references/storage-web.md) |
+
+**Mobile** (Flutter, Swift, Android):
+
+| Feature                   | Reference                                         |
+| ------------------------- | ------------------------------------------------- |
+| Auth UI & flows           | [auth-mobile.md](references/auth-mobile.md)       |
+| Data CRUD & subscriptions | [data-mobile.md](references/data-mobile.md)       |
+| Storage upload/download   | [storage-mobile.md](references/storage-mobile.md) |
+
+> **Note:** AI and Functions frontend patterns are included in
+> [ai.md](references/ai.md) and
+> [functions-and-api.md](references/functions-and-api.md) respectively —
+> they are **not** split into separate web/mobile files.
+
+## Core Concepts
+
+### Amplify Gen2 Architecture
+
+- **Code-first:** All backend resources defined in TypeScript under `amplify/`
+- **Main config:** `amplify/backend.ts` imports and combines all resources via
+  `defineBackend()`
+- **Resource files:** `amplify/auth/resource.ts`, `amplify/data/resource.ts`,
+  `amplify/storage/resource.ts`, `amplify/functions/<name>/resource.ts`
+- **Generated output:** `amplify_outputs.json` — consumed by frontend
+  `Amplify.configure()`. **Gitignored** — generated by `npx ampx sandbox`
+  (local dev) or `npx ampx pipeline-deploy` (CI/CD), never committed.
+
+### Directory Structure
 
 ```
-## You're live!
-
-### Production URL
-[url from deployment output]
-
-### Amplify Console
-https://console.aws.amazon.com/amplify/home
-
-Your app is now deployed! Future updates: just push to your repo and it auto-deploys.
+project-root/
+├── amplify/
+│   ├── backend.ts            # defineBackend({ auth, data, ... })
+│   ├── auth/resource.ts      # defineAuth({ ... })
+│   ├── data/resource.ts      # defineData({ schema })
+│   ├── storage/resource.ts   # defineStorage({ ... })
+│   └── functions/
+│       └── my-func/
+│           ├── resource.ts   # defineFunction({ ... })
+│           └── handler.ts    # export const handler = ...
+├── src/                      # Frontend code
+├── amplify_outputs.json      # Generated — DO NOT edit or commit (gitignored)
+└── package.json
 ```
 
-This is the final phase. The workflow is complete.
+### Key APIs
 
----
+| Package                    | Purpose                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------ |
+| `@aws-amplify/backend`     | `defineAuth`, `defineData`, `defineStorage`, `defineFunction`, `defineBackend` |
+| `aws-amplify`              | Frontend: `Amplify.configure()`, `generateClient()`, auth/data/storage APIs    |
+| `@aws-amplify/ui-react`    | Pre-built UI: `<Authenticator>`, `<StorageBrowser>`                            |
+| `@aws-amplify/ui-react-ai` | AI UI: `<AIConversation>`, `useAIConversation`                                 |
 
-## Critical Rules
+## Documentation & Resource Verification
 
-1. **Always follow SOPs completely** -- Do not improvise or skip steps
-2. **Never use Gen 1 patterns** -- This is for Amplify Gen 2 only (TypeScript code-first, `defineAuth`/`defineData`/`defineStorage`/`defineFunction`)
-3. **Wait for confirmation between phases** -- After each phase completes, ask the user to confirm before executing the next phase. Do not proceed until the user confirms.
-4. **If you encounter an error or get sidetracked:**
-   - Fix the immediate issue
-   - Return to the SOP and continue from where you left off
-   - Do NOT abandon the SOP or start improvising
-5. **If you lose track of where you were in the SOP:**
-   - Use the SOP retrieval tool to get the SOP again
-   - Identify which step you completed last
-   - Continue from the next step
+When you need AWS documentation (advanced CDK constructs, service limits,
+provider-specific auth config):
 
----
+1. **If AWS documentation tools are available (e.g., via AWS MCP)**, you **SHOULD**
+   use them to search and retrieve relevant documentation pages.
+2. **If AWS documentation tools are unavailable**, you **MUST** fall back to web
+   search or the `aws` CLI for resource verification.
 
-## Troubleshooting
+> **Why conditional:** Amplify Gen2 is code-first — the primary workflow is
+> editing TypeScript files and running `npx ampx` commands. AWS MCP tools
+> are useful for post-deployment verification but are **not** required.
 
-If issues occur during any phase:
+## Security Considerations
 
-1. Check the SOP's troubleshooting section first
-2. Use documentation tools to search AWS Amplify docs for the error message
-3. Read the relevant documentation page
+- Use `secret()` for all credentials and API keys — never hardcode or use plain environment variables for sensitive values
+- Review `allow.guest()` exposure carefully — guest access is enabled by default and grants unauthenticated users access to IAM-authorized resources
+- Scope IAM policies to specific resource ARNs — avoid `resources: ['*']` in production
+- Never log secrets or include them in error messages
+- Enable CloudTrail and CloudWatch alarms for monitoring Amplify-deployed resources; enable access logging on S3, AppSync, and API Gateway
+- Configure security headers for web apps — set CSP, HSTS, X-Frame-Options, and X-Content-Type-Options via `customHeaders` in `amplify.yml`
+- Attach AWS WAF to public-facing AppSync APIs and API Gateway endpoints for defense in depth
+- Enable throttling and rate limiting on API Gateway and AppSync APIs to prevent abuse
+- Use IAM roles with ephemeral credentials for CI/CD pipelines and Lambda execution roles — never long-lived access keys
+- Encrypt CloudWatch Logs groups with KMS (aws:kms) when they may contain PII, tokens, or secrets; enable log retention policies
+- Enable AppSync schema validation and API Gateway request validators to reject malformed input at the edge
+- Use ACM-managed TLS certificates for custom domains on Amplify Hosting — configure via `customDomain` in deployment config
 
-**After resolving the issue, immediately return to the SOP and continue from where you left off. Do not abandon the workflow.**
+## Links
+
+> All documentation links use `react` as the default platform slug. Replace `/react/` in any URL with your target framework:
+
+| Framework    | Slug           |
+| ------------ | -------------- |
+| React        | `react`        |
+| Next.js      | `nextjs`       |
+| Vue          | `vue`          |
+| Angular      | `angular`      |
+| React Native | `react-native` |
+| Flutter      | `flutter`      |
+| Swift        | `swift`        |
+| Android      | `android`      |
+
+- [Amplify Docs for LLMs](https://docs.amplify.aws/ai/llms.txt)
+- [Amplify Docs](https://docs.amplify.aws/)
+- [Gen2 Docs](https://docs.amplify.aws/react/)
+- [Getting Started](https://docs.amplify.aws/react/start/)
+- [Quickstart](https://docs.amplify.aws/react/start/quickstart/)
+- [Account Setup](https://docs.amplify.aws/react/start/account-setup/)
+- [How Amplify Works](https://docs.amplify.aws/react/how-amplify-works/)
+- [Core Concepts](https://docs.amplify.aws/react/how-amplify-works/concepts/)
+- [Build a Backend](https://docs.amplify.aws/react/build-a-backend/)
+- [Deploy and Host](https://docs.amplify.aws/react/deploy-and-host/)
+- [Troubleshooting](https://docs.amplify.aws/react/build-a-backend/troubleshooting/)
+- [CLI Commands](https://docs.amplify.aws/react/reference/cli-commands/)
+- [Amplify Outputs](https://docs.amplify.aws/react/reference/amplify_outputs/)
+- [Project Structure](https://docs.amplify.aws/react/reference/project-structure/)
+- [Amplify UI](https://ui.docs.amplify.aws/)
