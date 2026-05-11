@@ -23,6 +23,7 @@ When reviewing a function for LMI readiness, check each item:
 Python uses **multiple independent processes**, each with its own interpreter and memory space. Global variables, module-level caches, and singleton objects are duplicated per process, not shared. If a function works on standard Lambda today, it works on LMI without code changes related to shared state.
 
 **Key concerns:**
+
 - Memory consumption: total footprint ≈ per-process memory × concurrency. A 200 MB function with 16 concurrent processes can consume 3+ GB.
 - `/tmp` filesystem is shared across all processes — use `context.aws_request_id` in filenames
 - Each process needs its own connection pool — size pools per-process, not globally
@@ -30,6 +31,7 @@ Python uses **multiple independent processes**, each with its own interpreter an
 - Monitor `MemoryUtilization` metric and adjust ratio if needed
 
 **Safe patterns (no locking needed):**
+
 - Module-level mutable globals (isolated per process)
 - Module-level SDK clients and caches
 - `os.environ` reads
@@ -41,6 +43,7 @@ Uses worker threads (configurable via `AWS_LAMBDA_NODEJS_WORKER_COUNT`) combined
 The `await` keyword yields control to the event loop, which may execute another invocation that overwrites shared state before the first resumes.
 
 **Key concerns:**
+
 - Use `AsyncLocalStorage` from `node:async_hooks` for request context
 - Keep mutable state within handler local scope
 - Initialize SDK clients and DB pools at module level (they are thread-safe)
@@ -52,6 +55,7 @@ The `await` keyword yields control to the event loop, which may execute another 
 Uses OS-level threads. Lambda loads the handler class once and invokes `handleRequest` from multiple threads simultaneously (identical to a Java app server).
 
 **Key concerns:**
+
 - Use immutable objects and thread-safe collections (`ConcurrentHashMap`, `Collections.synchronizedList`)
 - Initialize SDK clients and connection pools in constructor or static block
 - Avoid mutable `static` fields
@@ -63,6 +67,7 @@ Uses OS-level threads. Lambda loads the handler class once and invokes `handleRe
 Uses a single process with .NET Tasks (same model as ASP.NET Core). The handler object is shared across all Tasks.
 
 **Key concerns:**
+
 - Use `AsyncLocal<T>` for request-scoped data
 - Inject scoped services via DI container
 - Initialize `HttpClient` and SDK clients as singletons

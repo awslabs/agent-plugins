@@ -5,6 +5,7 @@
 ### 1. Execution Role (for the function)
 
 Trust policy:
+
 ```json
 {
   "Version": "2012-10-17",
@@ -17,6 +18,7 @@ Trust policy:
 ```
 
 Minimum permissions:
+
 ```json
 {
   "Version": "2012-10-17",
@@ -35,6 +37,7 @@ Minimum permissions:
 ```
 
 Add VPC permissions only if the function accesses VPC resources:
+
 ```json
 {
   "Effect": "Allow",
@@ -50,6 +53,7 @@ Add VPC permissions only if the function accesses VPC resources:
 ### 2. Operator Role (for capacity provider EC2 management)
 
 Trust policy:
+
 ```json
 {
   "Version": "2012-10-17",
@@ -62,6 +66,7 @@ Trust policy:
 ```
 
 Minimum permissions (scoped with conditions):
+
 ```json
 {
   "Version": "2012-10-17",

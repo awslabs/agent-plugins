@@ -5,6 +5,7 @@ Before/after code examples for migrating to multi-concurrency.
 ## Node.js
 
 ### Global State
+
 ```javascript
 // BEFORE (race condition)
 let requestCount = 0;
@@ -24,6 +25,7 @@ exports.handler = async (event) => {
 ```
 
 ### File I/O
+
 ```javascript
 // BEFORE (shared path)
 fs.writeFileSync('/tmp/output.json', JSON.stringify(data));
@@ -35,6 +37,7 @@ finally { fs.unlinkSync(path); }
 ```
 
 ### Database
+
 ```javascript
 // BEFORE (per-invocation connection)
 exports.handler = async (event) => {
@@ -56,6 +59,7 @@ exports.handler = async (event) => {
 Python on LMI uses **process-based isolation**. Each concurrent invocation runs in its own process with independent memory. Global state is NOT shared, so no locking is needed. The main migration concerns are `/tmp` conflicts, memory sizing, and connection pooling.
 
 ### Global State (No Changes Needed)
+
 ```python
 # This is SAFE on LMI — each process has its own copy of cache
 cache = {}
@@ -69,6 +73,7 @@ dynamodb = boto3.resource('dynamodb')
 ```
 
 ### File I/O (Change Required — `/tmp` is shared across processes)
+
 ```python
 # BEFORE (conflict — all processes share /tmp)
 with open('/tmp/data.json', 'w') as f: json.dump(event, f)
@@ -82,6 +87,7 @@ finally:
 ```
 
 ### Database (Change Required — each process needs pooled connections)
+
 ```python
 # BEFORE (per-invocation connection — exhausts limits at concurrency)
 def handler(event, context):
@@ -98,6 +104,7 @@ def handler(event, context):
 ```
 
 ### Memory Sizing
+
 ```python
 # A function using 200 MB per process with default concurrency of 16:
 # Total memory ≈ 200 MB × 16 = 3.2 GB
@@ -108,6 +115,7 @@ def handler(event, context):
 ## Java
 
 ### Global State
+
 ```java
 // BEFORE (race condition)
 private static Map<String, String> cache = new HashMap<>();
@@ -118,6 +126,7 @@ private static final ConcurrentHashMap<String, String> cache = new ConcurrentHas
 ```
 
 ### Database
+
 ```java
 // BEFORE (per-invocation)
 Connection conn = DriverManager.getConnection("jdbc:...");
