@@ -111,6 +111,28 @@ transact(["ALTER TABLE target_table_new RENAME TO target_table"])
 transact(["CREATE INDEX ASYNC idx_target_tenant ON target_table(tenant_id)"])
 ```
 
+### Recovery — Row Counts Do Not Match
+
+When `target_table_new` has fewer rows than `target_table`, treat the migration as incomplete.
+The original table still holds the authoritative data, so recovery is always possible — **MUST NOT**
+proceed with `DROP TABLE` until the counts agree.
+
+1. **Diagnose** — find the missing rows by comparing ranges (for cursor-based migrations, query
+   `target_table` for IDs greater than `MAX(id)` in `target_table_new`; for OFFSET-based, check
+   which batch dropped rows by re-running the SELECT portion of each batch and comparing counts).
+2. **Retry the missing batches** — insert the gap rows into `target_table_new` using the same
+   batch pattern from [batched-migration.md](batched-migration.md). Because each `INSERT … SELECT`
+   is idempotent on primary key, re-running completed batches is safe; they will collide on PK
+   and error without writing duplicate data.
+3. **If a type cast or constraint rejected rows** — migration cannot complete until the data is
+   reconciled. Fix the source data in `target_table` (or adjust the new table's constraint),
+   then re-run the missing batches.
+4. **Escape hatch** — if diagnosis stalls, drop `target_table_new` and restart the migration
+   from a clean slate. The original table is untouched, so no data is at risk.
+
+Re-run the count comparison after each retry. Only proceed to `DROP TABLE` once
+`COUNT(*)` matches exactly.
+
 ---
 
 ## Best Practices Summary

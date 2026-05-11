@@ -7,14 +7,20 @@ Part of [Aurora DSQL MCP Tools Reference](../mcp-tools.md).
 ## Pattern 1: Explore Schema
 
 ```python
-# Step 1: List all tables
-readonly_query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+from safe_query import build
+
+# Step 1: List all tables (fully static — build() documents safe-query intent)
+readonly_query(build(
+    "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'",
+))
 
 # Step 2: Get schema for specific table
 get_schema("entities")
 
-# Step 3: Query data
-readonly_query("SELECT * FROM entities LIMIT 10")
+# Step 3: Query data (fully static — build() documents safe-query intent)
+readonly_query(build(
+    "SELECT * FROM entities LIMIT 10",
+))
 ```
 
 ## Pattern 2: Create Table with Index
@@ -34,43 +40,72 @@ transact(["CREATE INDEX ASYNC idx_tenant ON entities(tenant_id)"])
 ## Pattern 3: Safe Data Migration
 
 ```python
-# Step 1: Add column (one transaction)
+from safe_query import build, allow, regex, TENANT_SLUG
+
+STATUSES = {"active", "archived", "pending"}
+
+# Step 1: Add column
 transact(["ALTER TABLE entities ADD COLUMN status VARCHAR(50)"])
 
-# Step 2: Populate in batches (separate transactions)
-transact(["UPDATE entities SET status = 'active' WHERE status IS NULL LIMIT 1000"])
-transact(["UPDATE entities SET status = 'active' WHERE status IS NULL LIMIT 1000"])
+# Step 2: Populate in batches — separate transactions, under 3,000 rows each
+populate = build(
+    "UPDATE entities SET status = {s} "
+    "WHERE entity_id IN ("
+    "    SELECT entity_id FROM entities WHERE status IS NULL LIMIT 1000"
+    ")",
+    s=allow("active", STATUSES),
+)
+transact([populate])
+transact([populate])
 
-# Step 3: Verify
-readonly_query("SELECT COUNT(*) as total, COUNT(status) as with_status FROM entities")
+# Step 3: Verify (fully static — build() documents safe-query intent)
+readonly_query(build(
+    "SELECT COUNT(*) AS total, COUNT(status) AS with_status FROM entities",
+))
 
-# Step 4: Create index (separate transaction)
+# Step 4: Create index in a separate transaction
 transact(["CREATE INDEX ASYNC idx_status ON entities(tenant_id, status)"])
 ```
 
 ## Pattern 4: Batch Inserts
 
 ```python
-# Build list of INSERT statements
-inserts = []
-for i in range(100):  # Keep under 3,000 rows per transaction
-    inserts.append(f"INSERT INTO entities (entity_id, tenant_id, name) VALUES ('e{i}', 't1', 'Entity {i}')")
+from safe_query import build, regex, literal, UUID, TENANT_SLUG
 
-# Execute in one transaction
+inserts = [
+    build(
+        "INSERT INTO entities (entity_id, tenant_id, name) "
+        "VALUES ({eid}, {tid}, {name})",
+        eid=regex(row["entity_id"], UUID),
+        tid=regex(row["tenant_id"], TENANT_SLUG),
+        name=literal(row["name"]),
+    )
+    for row in rows  # keep each transact call under 3,000 rows
+]
 transact(inserts)
 ```
 
 ## Pattern 5: Application-Layer Foreign Key Check
 
 ```python
-# Step 1: Validate parent exists
-result = readonly_query("SELECT entity_id FROM entities WHERE entity_id = 'parent-123' AND tenant_id = 'tenant-123'")
+from safe_query import build, regex, literal, UUID, TENANT_SLUG
 
-if len(result) == 0:
-    raise Error("Invalid parent reference")
+check = build(
+    "SELECT entity_id FROM entities "
+    "WHERE entity_id = {eid} AND tenant_id = {tid}",
+    eid=regex(parent_id, UUID),
+    tid=regex(tenant_id, TENANT_SLUG),
+)
+if not readonly_query(check):
+    raise ValueError("Invalid parent reference")
 
-# Step 2: Insert child
-transact([
-    "INSERT INTO objectives (objective_id, entity_id, tenant_id, title) VALUES ('obj-456', 'parent-123', 'tenant-123', 'My Objective')"
-])
+insert = build(
+    "INSERT INTO objectives (objective_id, entity_id, tenant_id, title) "
+    "VALUES ({oid}, {eid}, {tid}, {title})",
+    oid=regex(new_objective_id, UUID),
+    eid=regex(parent_id, UUID),
+    tid=regex(tenant_id, TENANT_SLUG),
+    title=literal(objective_title),
+)
+transact([insert])
 ```

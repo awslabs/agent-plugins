@@ -45,7 +45,7 @@ transact([
      price DECIMAL(10,2) NOT NULL,
      category VARCHAR(255) DEFAULT 'other' CHECK (category IN ('electronics', 'clothing', 'food', 'other')),
      tags TEXT,
-     metadata TEXT,
+     metadata JSON,
      stock INTEGER DEFAULT 0 CHECK (stock >= 0),
      is_active BOOLEAN DEFAULT true,
      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -63,22 +63,22 @@ transact(["CREATE INDEX ASYNC idx_products_category ON products(tenant_id, categ
 
 ## Migration Decisions Summary
 
-| MySQL Feature                 | DSQL Decision                                                                                                                                          |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `AUTO_INCREMENT`              | UUID with `gen_random_uuid()`, or IDENTITY column with CACHE, or SEQUENCE (see [AUTO_INCREMENT Migration](ddl-operations.md#auto_increment-migration)) |
-| `INT` tenant_id               | `VARCHAR(255)` for multi-tenant pattern                                                                                                                |
-| `MEDIUMTEXT`                  | `TEXT`                                                                                                                                                 |
-| `ENUM(...)`                   | `VARCHAR(255)` with `CHECK` constraint                                                                                                                 |
-| `SET(...)`                    | `TEXT` (comma-separated)                                                                                                                               |
-| `JSON`                        | `TEXT` (JSON.stringify)                                                                                                                                |
-| `UNSIGNED`                    | `CHECK (col >= 0)`                                                                                                                                     |
-| `TINYINT(1)`                  | `BOOLEAN`                                                                                                                                              |
-| `DATETIME`                    | `TIMESTAMP`                                                                                                                                            |
-| `ON UPDATE CURRENT_TIMESTAMP` | Application-layer `SET updated_at = CURRENT_TIMESTAMP`                                                                                                 |
-| `FOREIGN KEY`                 | Application-layer referential integrity                                                                                                                |
-| `INDEX`                       | `CREATE INDEX ASYNC`                                                                                                                                   |
-| `FULLTEXT INDEX`              | Application-layer text search                                                                                                                          |
-| `ENGINE=InnoDB`               | MUST omit                                                                                                                                              |
+| MySQL Feature                 | DSQL Decision                                                                                                                                              |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AUTO_INCREMENT`              | UUID with `gen_random_uuid()`, or IDENTITY column with CACHE, or SEQUENCE (see [AUTO_INCREMENT Migration](ddl-auto-increment.md#auto_increment-migration)) |
+| `INT` tenant_id               | `VARCHAR(255)` for multi-tenant pattern                                                                                                                    |
+| `MEDIUMTEXT`                  | `TEXT`                                                                                                                                                     |
+| `ENUM(...)`                   | `VARCHAR(255)` with `CHECK` constraint                                                                                                                     |
+| `SET(...)`                    | `TEXT` (comma-separated)                                                                                                                                   |
+| `JSON`                        | `JSON`                                                                                                                                                     |
+| `UNSIGNED`                    | `CHECK (col >= 0)`                                                                                                                                         |
+| `TINYINT(1)`                  | `BOOLEAN`                                                                                                                                                  |
+| `DATETIME`                    | `TIMESTAMP`                                                                                                                                                |
+| `ON UPDATE CURRENT_TIMESTAMP` | Application-layer `SET updated_at = CURRENT_TIMESTAMP`                                                                                                     |
+| `FOREIGN KEY`                 | Application-layer referential integrity                                                                                                                    |
+| `INDEX`                       | `CREATE INDEX ASYNC`                                                                                                                                       |
+| `FULLTEXT INDEX`              | Application-layer text search                                                                                                                              |
+| `ENGINE=InnoDB`               | MUST omit                                                                                                                                                  |
 
 ---
 
@@ -96,10 +96,9 @@ transact(["CREATE INDEX ASYNC idx_products_category ON products(tenant_id, categ
 ### MySQL-Specific Migration Rules
 
 - **MUST map** all MySQL data types to DSQL equivalents before creating tables
-- **MUST convert** AUTO_INCREMENT to UUID with gen_random_uuid(), IDENTITY column with `GENERATED AS IDENTITY (CACHE ...)`, or explicit SEQUENCE -- ALWAYS use `GENERATED AS IDENTITY` for auto-incrementing columns (see [AUTO_INCREMENT Migration](ddl-operations.md#auto_increment-migration))
+- **MUST convert** AUTO_INCREMENT to UUID with gen_random_uuid(), IDENTITY column with `GENERATED AS IDENTITY (CACHE ...)`, or explicit SEQUENCE -- ALWAYS use `GENERATED AS IDENTITY` for auto-incrementing columns (see [AUTO_INCREMENT Migration](ddl-auto-increment.md#auto_increment-migration))
 - **MUST replace** ENUM with VARCHAR and CHECK constraint
 - **MUST replace** SET with TEXT (comma-separated)
-- **MUST replace** JSON columns with TEXT
 - **MUST replace** FOREIGN KEY constraints with application-layer referential integrity
 - **MUST replace** ON UPDATE CURRENT_TIMESTAMP with application-layer updates
 - **MUST convert** all index creation to use CREATE INDEX ASYNC

@@ -129,9 +129,12 @@ INSERT INTO distributors VALUES (nextval('order_seq'), 'nothing');
 
 ---
 
-## Data Serialization
+## Runtime-Only Types
 
-**Pattern:** MUST store arrays and JSON as TEXT (runtime-only types). Per [DSQL docs](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-supported-data-types.html), cast to JSON at query time.
+`JSONB`, arrays, and `INET` are [runtime-only](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-supported-data-types.html#working-with-postgresql-compatibility-query-runtime) — not valid as column types.
+
+- **MUST** serialize arrays as `TEXT` or `JSON` — use `TEXT` (comma-separated) for homogeneous short strings; use `JSON` when elements may contain commas or aren't homogeneous
+- **MUST** cast back at query time — `string_to_array(text, ',')` for TEXT, `jsonb_array_elements_text(json::jsonb)` for JSON
 
 ```javascript
 function toTextArray(values) {
@@ -142,32 +145,21 @@ function fromTextArray(textValue) {
   return textValue ? textValue.split(',').map(v => v.trim()) : [];
 }
 
-function toTextJSON(object) {
-  return JSON.stringify(object);
-}
-
-function fromTextJSON(textValue) {
-  if (!textValue) return null;
-  try {
-    return JSON.parse(textValue);
-  } catch (err) {
-    console.warn('Invalid JSON in column:', err.message);
-    return null;
-  }
-}
-
 const categoriesText = toTextArray(['backend', 'api', 'database']);
 await pool.query('INSERT INTO projects (project_id, categories) VALUES ($1, $2)', [projectId, categoriesText]);
 
-const configText = toTextJSON({ theme: 'dark', notifications: true });
-await pool.query('INSERT INTO user_settings (user_id, preferences) VALUES ($1, $2)', [userId, configText]);
+await pool.query(
+  'INSERT INTO user_settings (user_id, preferences) VALUES ($1, $2)',
+  [userId, { theme: 'dark', notifications: true }],
+);
 ```
 
 Query-time operations:
 
 ```sql
-SELECT user_id, preferences::jsonb->>'theme' as theme
-FROM user_settings WHERE preferences::jsonb->>'notifications' = 'true';
+SELECT user_id, preferences::jsonb->>'theme' AS theme
+FROM user_settings
+WHERE preferences::jsonb->>'notifications' = 'true';
 
-SELECT project_id, string_to_array(categories, ',') as category_array FROM projects;
+SELECT project_id, string_to_array(categories, ',') AS category_array FROM projects;
 ```

@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "awsknowledge": {
+      "type": "http",
+      "url": "https://knowledge-mcp.global.api.aws"
+    },
+    "awsiac": {
+      "args": [
+        "awslabs.aws-iac-mcp-server@latest"
+      ],
+      "command": "uvx"
+    }
+  }
+}

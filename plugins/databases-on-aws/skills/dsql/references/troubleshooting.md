@@ -52,6 +52,18 @@ Before referring to any listed errors, refer to the complete [DSQL troubleshooti
 - Use native TLS libraries (not OpenSSL 1.0.x)
 - Set `server_name_indication` to cluster endpoint in SSL config
 
+## Cluster Lifecycle
+
+See [cluster lifecycle](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/cluster-lifecycle.html) for state definitions and behavior.
+
+### Error: "FATAL: unable to accept connection, waking up cluster, please retry later"
+
+The cluster is `INACTIVE` and waking up. Poll `aws dsql get-cluster --identifier <id> --region <region> --query status --output text` until `ACTIVE`, then retry.
+
+### Error: `FailedPrecondition` when backing up an `IDLE` / `INACTIVE` cluster
+
+Connect to the cluster to wake it, then retry the backup.
+
 ## Incompatibility
 
 When migrating from PostgreSQL, remember DSQL doesn't support:
@@ -83,10 +95,8 @@ See [full list of unsupported features](https://docs.aws.amazon.com/aurora-dsql/
 **Cause:** Using TEXT[] or other array types
 **Solution:**
 
-1. Change column to TEXT
-2. Store as comma-separated: `"tag1,tag2,tag3"`
-3. Or use JSON.stringify: `"["tag1","tag2","tag3"]"`
-4. Deserialize in application layer
+1. Change column to TEXT and store as comma-separated (`"tag1,tag2,tag3"`), or use a `JSON` column (`tags JSON`)
+2. Deserialize in application layer; cast to `JSONB` at query time for JSONB operators
 
 ### Error: "Please use CREATE INDEX ASYNC"
 

@@ -14,29 +14,44 @@ Part of [Aurora DSQL MCP Tools Reference](../mcp-tools.md).
 
 **Returns:** List of dictionaries containing query results
 
-**Security:**
-
-- Automatically prevents mutating keywords (INSERT, UPDATE, DELETE, etc.)
-- Checks for SQL injection risks
-- Prevents transaction bypass attempts
+**Server-side filters (read-only mode only):** Reject mutating keywords,
+textbook injection patterns (tautologies, `--` comments, `UNION SELECT`,
+stacked queries, `pg_sleep`, `COPY ... FROM/TO`), and `COMMIT; <other>`
+transaction-bypass attempts. These are a safety net, not a substitute for
+input validation.
 
 **Examples:**
 
-```sql
--- Simple SELECT
-SELECT * FROM entities WHERE tenant_id = 'tenant-123' LIMIT 10
+```python
+from safe_query import build, regex, ident, TENANT_SLUG
 
--- Aggregate query
-SELECT tenant_id, COUNT(*) as count FROM objectives GROUP BY tenant_id
+# Simple SELECT — user-supplied tenant_id goes through a validator
+readonly_query(build(
+    "SELECT * FROM {tbl} WHERE tenant_id = {tid} LIMIT 10",
+    tbl=ident("entities"),
+    tid=regex(tenant_id, TENANT_SLUG),
+))
 
--- Join query
-SELECT e.entity_id, e.name, o.title
-FROM entities e
-INNER JOIN objectives o ON e.entity_id = o.entity_id
-WHERE e.tenant_id = 'tenant-123'
+# Aggregate query (no user-supplied values)
+readonly_query(build(
+    "SELECT tenant_id, COUNT(*) as count FROM objectives GROUP BY tenant_id",
+))
+
+# Join query — e./o. aliases are static template text, not interpolated
+readonly_query(build(
+    "SELECT e.entity_id, e.name, o.title "
+    "FROM {e} INNER JOIN {o} ON e.entity_id = o.entity_id "
+    "WHERE e.tenant_id = {tid}",
+    e=ident("entities"),
+    o=ident("objectives"),
+    tid=regex(tenant_id, TENANT_SLUG),
+))
 ```
 
-**Note:** Parameterized queries ($1, $2) are NOT supported by this MCP tool. Use string interpolation carefully and validate inputs to prevent SQL injection.
+**Building queries:** **MUST** build SQL with
+[`safe_query.build()`](safe_query.py). Parameter binding is not supported by
+this tool, and raw f-string interpolation is the primary SQL-injection vector.
+See [input-validation.md](input-validation.md) for the required pattern.
 
 ---
 
@@ -73,26 +88,31 @@ WHERE e.tenant_id = 'tenant-123'
   "CREATE INDEX ASYNC idx_entities_tenant ON entities(tenant_id)"
 ]
 
-# Insert multiple rows in one transaction
-[
-  "INSERT INTO entities (entity_id, tenant_id, name) VALUES ('e1', 't1', 'Entity 1')",
-  "INSERT INTO entities (entity_id, tenant_id, name) VALUES ('e2', 't1', 'Entity 2')",
-  "INSERT INTO entities (entity_id, tenant_id, name) VALUES ('e3', 't1', 'Entity 3')"
-]
+# Insert rows — build each statement with safe_query.
+from safe_query import build, allow, regex, literal, UUID, TENANT_SLUG
 
-# Safe migration pattern
-[
-  "ALTER TABLE entities ADD COLUMN status VARCHAR(50)"
-]
-# Then in a separate transaction:
-[
-  "UPDATE entities SET status = 'active' WHERE status IS NULL AND tenant_id = 'tenant-123'"
-]
+transact([
+    build(
+        "INSERT INTO entities (entity_id, tenant_id, name) "
+        "VALUES ({eid}, {tid}, {name})",
+        eid=regex(row["entity_id"], UUID),
+        tid=regex(row["tenant_id"], TENANT_SLUG),
+        name=literal(row["name"]),
+    )
+    for row in rows
+])
 
-# Batch update
-[
-  "UPDATE entities SET status = 'archived', updated_at = CURRENT_TIMESTAMP WHERE tenant_id = 'tenant-123' AND created_at < '2024-01-01'"
-]
+# Two-step column migration
+STATUSES = {"active", "archived", "pending"}
+transact(["ALTER TABLE entities ADD COLUMN status VARCHAR(50)"])
+transact([
+    build(
+        "UPDATE entities SET status = {s} "
+        "WHERE status IS NULL AND tenant_id = {tid}",
+        s=allow("active", STATUSES),
+        tid=regex(tenant_id, TENANT_SLUG),
+    )
+])
 ```
 
 **Important Notes:**
@@ -100,7 +120,10 @@ WHERE e.tenant_id = 'tenant-123'
 - Each ALTER TABLE must be in its own transaction (DSQL limitation)
 - Keep transactions under 3,000 rows and 10 MiB
 - For large batch operations, split into multiple transact calls
-- Cannot use parameterized queries - validate inputs before building SQL strings
+- **MUST** build every statement with [`safe_query.build()`](safe_query.py).
+  Write mode disables all server-side injection filters
+  ([`server.py:295-318`](https://github.com/awslabs/mcp/blob/main/src/aurora-dsql-mcp-server/awslabs/aurora_dsql_mcp_server/server.py#L295-L318)) —
+  skill-level validation is the only defense.
 
 ---
 
@@ -130,6 +153,10 @@ table_name = "entities"
 
 **Note:** There is no `list_tables` tool. To discover tables, use `readonly_query` with:
 
-```sql
-SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'
+```python
+from safe_query import build
+
+readonly_query(build(
+    "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'",
+))
 ```

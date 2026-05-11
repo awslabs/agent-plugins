@@ -33,10 +33,14 @@ Detailed reference for the aurora-dsql MCP server tools based on the actual impl
 
 ## Detailed References
 
+- **[tools/input-validation.md](tools/input-validation.md)** — **MUST** load
+  before building any query. Build SQL with `safe_query.build()`, which rejects
+  raw strings by construction.
+- **[tools/safe_query.py](tools/safe_query.py)** — the validated-query helper
+  module.
 - **[tools/database-tools.md](tools/database-tools.md)** — readonly_query, transact, get_schema
 - **[tools/documentation-tools.md](tools/documentation-tools.md)** — dsql_search_documentation, dsql_read_documentation, dsql_recommend
 - **[tools/workflow-patterns.md](tools/workflow-patterns.md)** — Common multi-step workflow patterns
-- **[tools/input-validation.md](tools/input-validation.md)** — Input validation, quote escaping, security best practices
 
 ## Additional Resources
 

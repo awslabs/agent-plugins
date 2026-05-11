@@ -54,7 +54,7 @@ async function batchInsert(pool, tenantId, items) {
         await client.query(
           `INSERT INTO entities (tenant_id, name, metadata)
           VALUES ($1, $2, $3)`,
-          [tenantId, item.name, JSON.stringify(item.metadata)]
+          [tenantId, item.name, item.metadata]
         );
       }
 
@@ -105,7 +105,7 @@ async function processBatches(pool, tenantId, batches, startIdx, step) {
       for (const item of batch) {
         await client.query(
           'INSERT INTO entities (tenant_id, name, metadata) VALUES ($1, $2, $3)',
-          [tenantId, item.name, JSON.stringify(item.metadata)]
+          [tenantId, item.name, item.metadata]
         );
       }
 
