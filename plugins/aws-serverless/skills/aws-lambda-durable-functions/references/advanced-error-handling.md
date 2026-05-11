@@ -61,7 +61,7 @@ try {
 }
 ```
 
-For reliable cross-invocation timeouts that persist across replays, always use the timeout configuration in `CallbackConfig` or `WaitForConditionConfig`.
+For reliable cross-invocation timeouts that persist across replays, always use the timeout configuration in `WaitForCallbackConfig` or `WaitForConditionConfig`.
 
 ## Conditional Retry Based on Error Type
 
