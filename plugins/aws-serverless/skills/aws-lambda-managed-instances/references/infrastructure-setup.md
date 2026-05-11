@@ -11,7 +11,7 @@ Trust policy:
   "Version": "2012-10-17",
   "Statement": [{
     "Effect": "Allow",
-    "Principal": {"Service": "lambda.amazonaws.com"},
+    "Principal": { "Service": "lambda.amazonaws.com" },
     "Action": "sts:AssumeRole"
   }]
 }
@@ -59,7 +59,7 @@ Trust policy:
   "Version": "2012-10-17",
   "Statement": [{
     "Effect": "Allow",
-    "Principal": {"Service": "lambda.amazonaws.com"},
+    "Principal": { "Service": "lambda.amazonaws.com" },
     "Action": "sts:AssumeRole"
   }]
 }
@@ -134,29 +134,29 @@ LMI runs functions on EC2 instances inside the VPC. These instances need VPC end
 - Security groups: HTTPS egress (port 443) for AWS API calls; no ingress needed
 - Required VPC endpoints:
 
-| Endpoint | Type | Purpose |
-|----------|------|---------|
-| S3 | Gateway | Object storage access |
-| DynamoDB | Gateway | Table access |
-| SQS | Interface | Queue operations |
-| CloudWatch Logs | Interface | Log delivery |
-| CloudWatch Monitoring | Interface | Metrics/EMF |
-| X-Ray | Interface | Distributed tracing |
+| Endpoint              | Type      | Purpose               |
+| --------------------- | --------- | --------------------- |
+| S3                    | Gateway   | Object storage access |
+| DynamoDB              | Gateway   | Table access          |
+| SQS                   | Interface | Queue operations      |
+| CloudWatch Logs       | Interface | Log delivery          |
+| CloudWatch Monitoring | Interface | Metrics/EMF           |
+| X-Ray                 | Interface | Distributed tracing   |
 
 ## CLI Workflow
 
 ### Required Parameters
 
-| Parameter | Description |
-|-----------|-------------|
-| `SUBNET_IDS` | Comma-separated subnet IDs across 3+ AZs |
-| `SECURITY_GROUP_ID` | Security group ID for the capacity provider |
-| `ACCOUNT_ID` | AWS account ID |
-| `OPERATOR_ROLE_ARN` | ARN of the operator role (see above) |
-| `EXECUTION_ROLE_ARN` | ARN of the execution role (see above) |
-| `FUNCTION_NAME` | Name for the Lambda function |
-| `CP_NAME` | Name for the capacity provider |
-| `ARCHITECTURE` | `arm64` (Graviton) or `x86_64` |
+| Parameter            | Description                                 |
+| -------------------- | ------------------------------------------- |
+| `SUBNET_IDS`         | Comma-separated subnet IDs across 3+ AZs    |
+| `SECURITY_GROUP_ID`  | Security group ID for the capacity provider |
+| `ACCOUNT_ID`         | AWS account ID                              |
+| `OPERATOR_ROLE_ARN`  | ARN of the operator role (see above)        |
+| `EXECUTION_ROLE_ARN` | ARN of the execution role (see above)       |
+| `FUNCTION_NAME`      | Name for the Lambda function                |
+| `CP_NAME`            | Name for the capacity provider              |
+| `ARCHITECTURE`       | `arm64` (Graviton) or `x86_64`              |
 
 ### Automated Setup
 

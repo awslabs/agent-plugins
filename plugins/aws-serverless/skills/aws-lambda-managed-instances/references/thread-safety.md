@@ -76,31 +76,31 @@ Uses a single process with .NET Tasks (same model as ASP.NET Core). The handler 
 
 ## Common Anti-Patterns
 
-| Anti-pattern | Affected Runtimes | Risk | Fix |
-|-------------|-------------------|------|-----|
-| New DB connection per invocation | All | Exhausts connection limits | Module-level connection pool |
-| Hardcoded `/tmp` paths | All | File conflicts across processes | Use `aws_request_id` in path |
-| Logging without request ID | All | Unreadable interleaved logs | Include `aws_request_id` |
-| Mutable module-level state | Node.js, Java, .NET | Race condition / state corruption | Request-local scope or concurrent collections |
-| Setting env vars during request | Node.js, Java, .NET | Race condition | Pass state via parameters |
-| Assuming sequential execution | Node.js, Java, .NET | State corruption | Each invocation must be self-contained |
-| Ignoring memory multiplication | Python | OOM at high concurrency | Account for per-process × concurrency |
+| Anti-pattern                     | Affected Runtimes   | Risk                              | Fix                                           |
+| -------------------------------- | ------------------- | --------------------------------- | --------------------------------------------- |
+| New DB connection per invocation | All                 | Exhausts connection limits        | Module-level connection pool                  |
+| Hardcoded `/tmp` paths           | All                 | File conflicts across processes   | Use `aws_request_id` in path                  |
+| Logging without request ID       | All                 | Unreadable interleaved logs       | Include `aws_request_id`                      |
+| Mutable module-level state       | Node.js, Java, .NET | Race condition / state corruption | Request-local scope or concurrent collections |
+| Setting env vars during request  | Node.js, Java, .NET | Race condition                    | Pass state via parameters                     |
+| Assuming sequential execution    | Node.js, Java, .NET | State corruption                  | Each invocation must be self-contained        |
+| Ignoring memory multiplication   | Python              | OOM at high concurrency           | Account for per-process × concurrency         |
 
 ## Powertools for AWS Lambda Compatibility
 
 Powertools handles multi-concurrency transparently (structured logging, tracing, metrics). No code changes needed.
 
-| Runtime | Package | Minimum Version |
-|---------|---------|-----------------|
-| Python | Powertools for AWS Lambda (Python) | 3.23.0 |
-| TypeScript | Powertools for AWS Lambda (TypeScript) | 2.29.0 |
-| Java | Powertools for AWS Lambda (Java) | 2.8.0 |
-| .NET | Powertools for AWS Lambda (.NET) | 3.1.0 |
+| Runtime    | Package                                | Minimum Version |
+| ---------- | -------------------------------------- | --------------- |
+| Python     | Powertools for AWS Lambda (Python)     | 3.23.0          |
+| TypeScript | Powertools for AWS Lambda (TypeScript) | 2.29.0          |
+| Java       | Powertools for AWS Lambda (Java)       | 2.8.0           |
+| .NET       | Powertools for AWS Lambda (.NET)       | 3.1.0           |
 
 AWS SDK and X-Ray minimum versions:
 
-| Runtime | AWS SDK minimum | X-Ray SDK minimum |
-|---------|----------------|-------------------|
-| Node.js | AWS SDK for JavaScript v3 (3.933.0) | 3.12.0 |
-| Java | AWS SDK for Java 2.0 (2.34.0) | 2.20.0 |
-| .NET | AWSSDK.Core (4.0.0.32) | AWSXRayRecorder.Core (2.16.0) |
+| Runtime | AWS SDK minimum                     | X-Ray SDK minimum             |
+| ------- | ----------------------------------- | ----------------------------- |
+| Node.js | AWS SDK for JavaScript v3 (3.933.0) | 3.12.0                        |
+| Java    | AWS SDK for Java 2.0 (2.34.0)       | 2.20.0                        |
+| .NET    | AWSSDK.Core (4.0.0.32)              | AWSXRayRecorder.Core (2.16.0) |

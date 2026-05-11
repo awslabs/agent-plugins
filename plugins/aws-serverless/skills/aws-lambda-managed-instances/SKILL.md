@@ -30,15 +30,15 @@ For standard Lambda development, see [aws-lambda skill](../aws-lambda/). For SAM
 
 ## Quick Decision: Is LMI Right for This Workload?
 
-| Signal | LMI is a strong fit | Standard Lambda is better |
-|--------|---------------------|---------------------------|
-| Traffic | Steady, predictable, 50M+ req/mo | Bursty, unpredictable, long idle |
-| Cost | Duration-heavy spend at scale | Low or sporadic invocations |
-| Cold starts | Unacceptable (LMI eliminates for provisioned capacity; scale-out may have brief delays) | Tolerable or mitigated by SnapStart |
-| Compute | Latest CPUs, specific families, high network bandwidth | Standard Lambda memory/CPU sufficient |
-| Isolation | Dedicated EC2 instances in your account, full VPC control | Shared Firecracker micro-VMs acceptable |
-| Scale-to-zero | Not needed (min 3 instances always run) | Required (pay nothing when idle) |
-| Code readiness | Thread-safe (Node.js/Java/.NET) or any Python code | Non-thread-safe Node.js/Java/.NET, expensive to change |
+| Signal         | LMI is a strong fit                                                                     | Standard Lambda is better                              |
+| -------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| Traffic        | Steady, predictable, 50M+ req/mo                                                        | Bursty, unpredictable, long idle                       |
+| Cost           | Duration-heavy spend at scale                                                           | Low or sporadic invocations                            |
+| Cold starts    | Unacceptable (LMI eliminates for provisioned capacity; scale-out may have brief delays) | Tolerable or mitigated by SnapStart                    |
+| Compute        | Latest CPUs, specific families, high network bandwidth                                  | Standard Lambda memory/CPU sufficient                  |
+| Isolation      | Dedicated EC2 instances in your account, full VPC control                               | Shared Firecracker micro-VMs acceptable                |
+| Scale-to-zero  | Not needed (min 3 instances always run)                                                 | Required (pay nothing when idle)                       |
+| Code readiness | Thread-safe (Node.js/Java/.NET) or any Python code                                      | Non-thread-safe Node.js/Java/.NET, expensive to change |
 
 ## Instructions
 
@@ -58,10 +58,10 @@ Gather these signals before recommending:
 
 REQUIRED: Present a cost comparison before recommending LMI. Compare at minimum:
 
-| Scenario | When it wins |
-|----------|-------------|
-| Lambda on-demand | Low volume, bursty traffic |
-| LMI on-demand | High volume, steady traffic |
+| Scenario         | When it wins                |
+| ---------------- | --------------------------- |
+| Lambda on-demand | Low volume, bursty traffic  |
+| LMI on-demand    | High volume, steady traffic |
 
 Rule of thumb: LMI becomes cost-competitive at 50-100M+ req/month with steady traffic.
 
@@ -140,25 +140,25 @@ See [references/infrastructure-setup.md](references/infrastructure-setup.md) for
 
 ## Limits Quick Reference
 
-| Resource | Limit |
-|----------|-------|
-| Memory | 2 GB min, 32 GB max |
-| Instances | 3 minimum (AZ resiliency) |
-| Instance lifespan | 14 days (auto-replaced) |
-| Concurrency/vCPU | 64 (Node.js), 32 (Java/.NET), 16 (Python) |
-| Runtimes | Node.js, Java, .NET, Python |
-| Instance families | C, M, R (.large and up) |
-| Scaling | Absorbs 50% spike; doubles within 5 min |
+| Resource          | Limit                                     |
+| ----------------- | ----------------------------------------- |
+| Memory            | 2 GB min, 32 GB max                       |
+| Instances         | 3 minimum (AZ resiliency)                 |
+| Instance lifespan | 14 days (auto-replaced)                   |
+| Concurrency/vCPU  | 64 (Node.js), 32 (Java/.NET), 16 (Python) |
+| Runtimes          | Node.js, Java, .NET, Python               |
+| Instance families | C, M, R (.large and up)                   |
+| Scaling           | Absorbs 50% spike; doubles within 5 min   |
 
 ## Troubleshooting Quick Reference
 
-| Issue | Cause | Fix |
-|-------|-------|-----|
-| 429 throttles | Traffic exceeds scaling speed | Increase MinExecutionEnvironments or lower TargetResourceUtilization |
-| Function stuck PENDING | Provisioning instances | Wait; check VPC/IAM config |
-| Architecture mismatch | Function ≠ capacity provider arch | Align both to same architecture |
-| Cannot terminate instances | Managed by capacity provider | Delete capacity provider instead |
-| Race conditions | Code not thread-safe | See [references/thread-safety.md](references/thread-safety.md) |
+| Issue                      | Cause                             | Fix                                                                  |
+| -------------------------- | --------------------------------- | -------------------------------------------------------------------- |
+| 429 throttles              | Traffic exceeds scaling speed     | Increase MinExecutionEnvironments or lower TargetResourceUtilization |
+| Function stuck PENDING     | Provisioning instances            | Wait; check VPC/IAM config                                           |
+| Architecture mismatch      | Function ≠ capacity provider arch | Align both to same architecture                                      |
+| Cannot terminate instances | Managed by capacity provider      | Delete capacity provider instead                                     |
+| Race conditions            | Code not thread-safe              | See [references/thread-safety.md](references/thread-safety.md)       |
 
 See [references/troubleshooting.md](references/troubleshooting.md) for detailed resolution steps.
 

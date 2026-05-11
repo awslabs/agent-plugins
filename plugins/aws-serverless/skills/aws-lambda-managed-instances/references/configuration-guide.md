@@ -11,45 +11,45 @@ Architecture: ARM (Graviton, g-suffix) for price-performance. x86 (i=Intel, a=AM
 
 ## Memory-to-vCPU Ratios
 
-| Ratio | Profile | When to use | Memory examples |
-|-------|---------|-------------|-----------------|
-| 2:1 | Compute | CPU-bound work | 2GB/1vCPU, 4GB/2vCPU |
-| 4:1 | General | Most workloads (default) | 4GB/1vCPU, 8GB/2vCPU |
-| 8:1 | Memory | Caching, data, Python apps | 8GB/1vCPU, 16GB/2vCPU |
+| Ratio | Profile | When to use                | Memory examples       |
+| ----- | ------- | -------------------------- | --------------------- |
+| 2:1   | Compute | CPU-bound work             | 2GB/1vCPU, 4GB/2vCPU  |
+| 4:1   | General | Most workloads (default)   | 4GB/1vCPU, 8GB/2vCPU  |
+| 8:1   | Memory  | Caching, data, Python apps | 8GB/1vCPU, 16GB/2vCPU |
 
 Min: 2 GB / 1 vCPU. Max: 32 GB. Memory must align with ratio multiples.
 
 ## Memory Sizing from Existing Lambda
 
-| Current Lambda | LMI memory | Ratio | Rationale |
-|---------------|------------|-------|-----------|
-| 128-512 MB | 2048 MB | 4:1 | LMI minimum; multi-concurrency shares memory |
-| 512 MB-1 GB | 2048 MB | 4:1 | Room for concurrent requests |
-| 1-2 GB | 4096 MB | 4:1 | Standard upgrade path |
-| 2-4 GB | 4096-8192 MB | 4:1 or 8:1 | Depends on memory vs CPU bottleneck |
-| 4-10 GB | 8192-16384 MB | 8:1 | Likely memory-heavy workload |
+| Current Lambda | LMI memory    | Ratio      | Rationale                                    |
+| -------------- | ------------- | ---------- | -------------------------------------------- |
+| 128-512 MB     | 2048 MB       | 4:1        | LMI minimum; multi-concurrency shares memory |
+| 512 MB-1 GB    | 2048 MB       | 4:1        | Room for concurrent requests                 |
+| 1-2 GB         | 4096 MB       | 4:1        | Standard upgrade path                        |
+| 2-4 GB         | 4096-8192 MB  | 4:1 or 8:1 | Depends on memory vs CPU bottleneck          |
+| 4-10 GB        | 8192-16384 MB | 8:1        | Likely memory-heavy workload                 |
 
 ## Concurrency Tuning
 
-| Runtime | Default/vCPU | I/O-bound | CPU-bound |
-|---------|-------------|-----------|-----------|
-| Node.js | 64 | Keep or increase | 1 per vCPU |
-| Java | 32 | Keep | 1 per vCPU |
-| .NET | 32 | Keep | 1 per vCPU |
-| Python | 16 | Keep | 1 per vCPU |
+| Runtime | Default/vCPU | I/O-bound        | CPU-bound  |
+| ------- | ------------ | ---------------- | ---------- |
+| Node.js | 64           | Keep or increase | 1 per vCPU |
+| Java    | 32           | Keep             | 1 per vCPU |
+| .NET    | 32           | Keep             | 1 per vCPU |
+| Python  | 16           | Keep             | 1 per vCPU |
 
 Total capacity = MinExecutionEnvironments × PerExecutionEnvironmentMaxConcurrency
 
 ## Capacity Provider Scaling Controls
 
-| Control | Default | Guidance |
-|---------|---------|----------|
-| MinExecutionEnvironments | 3 | Increase for baseline capacity; never below 3 |
-| MaxExecutionEnvironments | — | Set based on cost budget |
-| MaxVCpuCount | Required | Start at 30, adjust by load |
+| Control                   | Default       | Guidance                                      |
+| ------------------------- | ------------- | --------------------------------------------- |
+| MinExecutionEnvironments  | 3             | Increase for baseline capacity; never below 3 |
+| MaxExecutionEnvironments  | —             | Set based on cost budget                      |
+| MaxVCpuCount              | Required      | Start at 30, adjust by load                   |
 | TargetResourceUtilization | ~50% headroom | Raise for cost savings (less burst tolerance) |
-| AllowedInstanceTypes | All | Restrict only for specific hardware needs |
-| ExcludedInstanceTypes | None | Exclude expensive types in dev/test |
+| AllowedInstanceTypes      | All           | Restrict only for specific hardware needs     |
+| ExcludedInstanceTypes     | None          | Exclude expensive types in dev/test           |
 
 ## Monitoring Thresholds
 

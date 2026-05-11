@@ -2,18 +2,18 @@
 
 ## Common Issues
 
-| Issue | Cause | Resolution |
-|-------|-------|------------|
-| 429 throttles during scale-up | Traffic doubled faster than 5-min scaling window | Increase MinExecutionEnvironments or lower TargetResourceUtilization |
-| Function stuck in PENDING | Capacity provider provisioning instances | Wait several minutes; verify VPC subnets have IP capacity and IAM roles are correct |
-| Architecture mismatch error | Function architecture ≠ capacity provider | Align both to arm64 or x86_64 |
-| Cannot terminate EC2 instances | LMI instances managed by capacity provider | Delete capacity provider to destroy instances; cannot use EC2 console |
-| High CPU, low throughput | Concurrency too high for CPU-bound work | Reduce PerExecutionEnvironmentMaxConcurrency to 1/vCPU |
-| Race conditions in production | Code not thread-safe for multi-concurrency | Review with checklist in thread-safety.md |
-| Function version not ACTIVE | Fewer than 3 execution environments ready | Wait for provisioning; check capacity provider status |
-| Unexpected 500 errors | Unhandled concurrent access to shared state | Add thread-safe patterns from migration-patterns.md |
-| CloudWatch logs missing | VPC egress not configured | Add NAT Gateway or CloudWatch Logs VPC endpoint |
-| High costs despite low traffic | Minimum 3 instances always running | Evaluate if standard Lambda is more cost-effective |
+| Issue                          | Cause                                            | Resolution                                                                          |
+| ------------------------------ | ------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| 429 throttles during scale-up  | Traffic doubled faster than 5-min scaling window | Increase MinExecutionEnvironments or lower TargetResourceUtilization                |
+| Function stuck in PENDING      | Capacity provider provisioning instances         | Wait several minutes; verify VPC subnets have IP capacity and IAM roles are correct |
+| Architecture mismatch error    | Function architecture ≠ capacity provider        | Align both to arm64 or x86_64                                                       |
+| Cannot terminate EC2 instances | LMI instances managed by capacity provider       | Delete capacity provider to destroy instances; cannot use EC2 console               |
+| High CPU, low throughput       | Concurrency too high for CPU-bound work          | Reduce PerExecutionEnvironmentMaxConcurrency to 1/vCPU                              |
+| Race conditions in production  | Code not thread-safe for multi-concurrency       | Review with checklist in thread-safety.md                                           |
+| Function version not ACTIVE    | Fewer than 3 execution environments ready        | Wait for provisioning; check capacity provider status                               |
+| Unexpected 500 errors          | Unhandled concurrent access to shared state      | Add thread-safe patterns from migration-patterns.md                                 |
+| CloudWatch logs missing        | VPC egress not configured                        | Add NAT Gateway or CloudWatch Logs VPC endpoint                                     |
+| High costs despite low traffic | Minimum 3 instances always running               | Evaluate if standard Lambda is more cost-effective                                  |
 
 ## Debugging Steps
 
