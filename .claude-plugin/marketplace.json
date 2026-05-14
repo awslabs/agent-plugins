@@ -80,6 +80,30 @@
       "version": "1.0.0"
     },
     {
+      "category": "migration",
+      "description": "Migrate, modernize, and upgrade codebases to AWS. Transforms .NET Framework to .NET 8/10, mainframe COBOL to Java, VMware VMs to EC2, SQL Server to Aurora, and upgrades Java/Python/Node.js versions and AWS SDKs.",
+      "keywords": [
+        "aws",
+        "aws-transform",
+        "migration",
+        "modernization",
+        "dotnet",
+        "mainframe",
+        "cobol",
+        "vmware",
+        "ec2",
+        "sql-server",
+        "aurora",
+        "java",
+        "python",
+        "sdk"
+      ],
+      "name": "aws-transform",
+      "source": "./plugins/aws-transform",
+      "tags": ["aws", "migration", "modernization", "transform"],
+      "version": "1.0.0"
+    },
+    {
       "category": "development",
       "description": "Analyze codebases to generate structured technical documentation with source-of-truth citations. Optimized for AWS workloads using CDK, CloudFormation, and Terraform.",
       "keywords": [
