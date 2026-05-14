@@ -58,11 +58,13 @@ When serving static content via CloudFront:
 
 | Component         | Default (Dev)                    | Default (Prod)                   |
 | ----------------- | -------------------------------- | -------------------------------- |
-| Fargate tasks     | Private subnet + NAT Gateway     | Private subnet + NAT Gateway     |
-| ALB               | Public subnet                    | Public subnet                    |
-| RDS/Aurora        | Private subnet (no public IP)    | Private subnet (no public IP)    |
-| Amazon DocumentDB | Private subnet (no public IP)    | Private subnet (no public IP)    |
-| Lambda            | VPC-attached if DB access needed | VPC-attached if DB access needed |
+| Fargate tasks      | Private subnet + NAT Gateway     | Private subnet + NAT Gateway     |
+| ALB                | Public subnet                    | Public subnet                    |
+| RDS/Aurora         | Private subnet (no public IP)    | Private subnet (no public IP)    |
+| Amazon DocumentDB  | Private subnet (no public IP)    | Private subnet (no public IP)    |
+| Lambda             | VPC-attached if DB access needed | VPC-attached if DB access needed |
+| EB web instances   | Private subnet + ALB in public   | Private subnet + ALB in public   |
+| EB worker instances | Private subnet + NAT Gateway    | Private subnet + NAT Gateway     |
 
 ### Why private subnets for compute
 
@@ -82,6 +84,8 @@ Use `awsknowledge` topic `vpc_patterns` for multi-AZ production layouts.
 | Service-linked roles | Use AWS-managed where available                  |
 | Cross-service access | Via IAM roles, never access keys                 |
 | Admin access         | Not created (user manages separately)            |
+| EB instance profile  | Least privilege (S3 for deploys, CloudWatch, ECR if Docker) |
+| EB service role      | AWS-managed (aws-elasticbeanstalk-service-role)  |
 
 ### Principle: Explicit grants only
 
@@ -95,11 +99,14 @@ Consult `awsiac` MCP for IAM policy patterns by service.
 
 | Component         | Default Inbound              | Default Outbound   |
 | ----------------- | ---------------------------- | ------------------ |
-| ALB               | 443 from 0.0.0.0/0           | Fargate SG only    |
-| Fargate           | ALB SG only (on app port)    | 443 (HTTPS), DB SG |
-| RDS/Aurora        | Fargate SG only (on DB port) | None               |
-| Amazon DocumentDB | Fargate SG only (port 27017) | None               |
-| Lambda (VPC)      | None                         | 443, DB SG         |
+| ALB                | 443 from 0.0.0.0/0              | Fargate SG only    |
+| Fargate            | ALB SG only (on app port)       | 443 (HTTPS), DB SG |
+| RDS/Aurora         | Fargate SG only (on DB port)    | None               |
+| Amazon DocumentDB  | Fargate SG only (port 27017)    | None               |
+| Lambda (VPC)       | None                            | 443, DB SG         |
+| EB ALB             | 443 from 0.0.0.0/0              | EB instances SG only |
+| EB web instances   | EB ALB SG only (on app port)    | 443 (HTTPS), DB SG |
+| EB worker instances | None (EB health agent is local) | 443 (HTTPS), DB SG |
 
 ### Why deny-by-default
 
@@ -165,6 +172,8 @@ Before deployment, run available checks:
 | RDS/Aurora logs        | Error log only         | Error + slow query + audit |
 | Amazon DocumentDB logs | Profiler (slow ops)    | Profiler + audit           |
 | S3 Access Logs         | Disabled               | Enabled                    |
+| EB application logs    | CloudWatch Logs agent  | CloudWatch Logs + enhanced health |
+| EB platform logs       | Disabled               | Enabled (CloudWatch Logs)  |
 
 ### Why minimal logging in dev
 

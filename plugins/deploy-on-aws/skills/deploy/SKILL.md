@@ -57,9 +57,11 @@ to ensure patterns follow AWS recommendations.
 - Don't ask "Lambda or Fargate?" - just pick the obvious one
 - If genuinely ambiguous, then ask
 - **Never recommend AWS App Runner** — it is in maintenance mode. Use ECS Express Mode instead.
+- When user explicitly requests a managed application platform or signals low infrastructure involvement, route to Elastic Beanstalk
 
 ## References
 
 - [Service defaults](references/defaults.md)
 - [Security defaults](references/security.md)
 - [Cost estimation patterns](references/cost-estimation.md)
+- [Elastic Beanstalk skill](../elastic-beanstalk/SKILL.md)

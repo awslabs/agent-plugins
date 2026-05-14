@@ -25,6 +25,7 @@ Use the **awspricing** MCP server to get accurate cost estimates before generati
 | Lambda            | `AWSLambda`         | Requests and duration                          |
 | DynamoDB          | `AmazonDynamoDB`    | On-demand or provisioned                       |
 | Secrets Manager   | `AWSSecretsManager` | Per secret per month                           |
+| Elastic Beanstalk | N/A (free service)  | No EB charge; query EC2, AWSELB for actual costs |
 
 ## Fargate Pricing
 
@@ -70,6 +71,19 @@ storage (GB-month), and I/O (standard config only).
 
 - ~$130-400/month depending on load
 
+## Elastic Beanstalk Pricing
+
+Elastic Beanstalk itself has no service fee. Cost equals the underlying AWS
+resources provisioned for the environment (EC2, ELB, EBS, CloudWatch).
+Query awspricing MCP server for region-accurate estimates. Approximate
+us-east-1 pricing:
+
+**Dev web (1x t3.small + ALB):** ~$35-40/month
+**Dev worker (1x t3.small, no ALB):** ~$15-20/month
+**Production web (4x t3.medium + ALB, Multi-AZ):** ~$150-200/month
+
+Include EBS volume costs (8GB gp3 default: ~$1/month per instance).
+
 ## Quick Reference Estimates
 
 **Small web app (Fargate + Aurora Serverless v2 + ALB):**
@@ -96,6 +110,16 @@ storage (GB-month), and I/O (standard config only).
 
 - Low traffic: ~$5-20/month
 - High traffic: scales with requests
+
+**Web app on Elastic Beanstalk:**
+
+- Dev (1 instance + ALB): ~$35-40/month
+- Production (load-balanced, Multi-AZ): ~$80-200/month
+
+**Web app on EB + Aurora Serverless v2:**
+
+- Dev: ~$80-130/month
+- Production: ~$200-400/month
 
 ## Presenting Estimates
 
