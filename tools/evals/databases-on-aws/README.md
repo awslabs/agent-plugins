@@ -165,9 +165,14 @@ including type coercion index bypass, subquery unnesting, OR-to-IN, GROUP BY pus
 DSQL-specific patterns (reltuples estimate, join splitting). Includes one negative case
 (OR across different columns — agent should decline).
 
-**Evaluation method:** Manual behavioural comparison. Run `claude -p` with skill loaded vs
+**Evaluation method:** Manual qualitative comparison (n=1). Run `claude -p` with skill loaded vs
 `claude -p --bare` from a clean directory. Results in `query_plan_rewrite_eval_results.md`.
 No automated runner script — this suite is manual-only.
+
+**Future direction:** Many of these rewrites are deterministic pattern transformations. A future
+iteration SHOULD implement them as a Python SQL converter script that parses and rewrites SQL
+directly, with the reference files serving as documentation for the converter's rules. This
+would move correctness-critical rewrites out of the LLM and into deterministic code.
 
 **What it checks** (11 eval prompts):
 

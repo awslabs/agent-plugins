@@ -1,7 +1,9 @@
 # Query Plan Rewrite Eval Results — With-Skill vs Baseline
 
 **Date:** 2026-05-08
-**Evaluation method:** Manual behavioral comparison — `claude -p` with skill loaded (from agent-plugins project root) vs `claude -p --bare` from clean directory. PASS/FAIL is a human assessment of transcripts against the expectations in `query_plan_rewrite_evals.json`.
+**Model:** Claude Opus 4.6 (global.anthropic.claude-opus-4-6-v1)
+**Runs per eval:** 1 (qualitative comparison, not variance-tested)
+**Evaluation method:** Manual qualitative comparison — `claude -p` with skill loaded (from agent-plugins project root) vs `claude -p --bare` from clean directory. n=1 per cell; PASS/FAIL is a single human transcript assessment. Results indicate directional improvement, not statistical significance. Re-run with n≥3 and majority vote for production confidence.
 
 ## Summary
 
