@@ -11,7 +11,8 @@
 7. [Hash Table Resizing](#hash-table-resizing)
 8. [High-Loop Storage Lookups](#high-loop-storage-lookups)
 9. [Anomalous Values](#anomalous-values)
-10. [Projections and Row Width](#projections-and-row-width)
+10. [Type Coercion and Index Bypass](#type-coercion-and-index-bypass)
+11. [Projections and Row Width](#projections-and-row-width)
 
 ---
 
@@ -194,14 +195,14 @@ Flag this condition when **all** of the following are true:
 1. An index exists whose leading column matches a WHERE predicate column
 2. The plan uses a Full Scan or Seq Scan on that table instead of an Index Scan
 3. The predicate literal's type differs from the indexed column's declared type
-4. The type pair is **not** in the implicit cast compatibility matrix below
+4. The `pg_amop` query in catalog-queries.md (B-Tree Cross-Type Operator Support) returns no row for the type pair
 
 ### Why It Happens
 
-DSQL (like PostgreSQL) can only use a B-Tree index when the comparison operator's input types match the index's operator class. When a predicate supplies a value of a different type:
+DSQL (like PostgreSQL) can only use a B-Tree index when a cross-type B-Tree operator is registered in `pg_amop` for the (predicate-type, column-type) pair. When a predicate supplies a value of a different type:
 
-- If an implicit cast exists from the predicate type to the column type, the planner applies it transparently and can still use the index
-- If no implicit cast exists, the planner must apply a per-row cast or comparison function that cannot use the index's ordering — resulting in a full scan
+- If a cross-type B-Tree operator is registered (verify via the `pg_amop` query in catalog-queries.md), the index can be used
+- If no cross-type operator is registered, the planner MUST apply a per-row cast or comparison function that cannot use the index's ordering — resulting in a full scan
 
 This is particularly surprising to users because the query returns correct results (the cast happens at execution time, row by row) but performance degrades dramatically on large tables.
 
@@ -211,7 +212,7 @@ Rather than relying on a static matrix, query `pg_amop` directly on the cluster 
 
 The key insight: DSQL's B-Tree access method (amopmethod `10003`) only supports index scans when a registered operator exists for the specific (left-type, right-type) pair. If no operator is registered for the pair, the index cannot be used — regardless of whether a general-purpose implicit cast exists in `pg_cast`.
 
-In practice, cross-type index support is limited to the integer family (smallint, integer, bigint — all combinations). All other indexed types (text, numeric, uuid, timestamp, date, boolean, etc.) require an exact type match between the predicate and the indexed column for the index to be usable.
+At time of writing, cross-type index support is limited to the integer family (smallint, integer, bigint — all combinations). All other indexed types (text, numeric, uuid, timestamp, date, boolean, etc.) require an exact type match. MUST verify via the `pg_amop` query in catalog-queries.md before asserting this to a user, as DSQL MAY add cross-type operator families in future releases.
 
 ### Quantifying Impact
 
@@ -238,7 +239,7 @@ To confirm this pattern, cross-reference:
 1. The column type from `pg_attribute` or `information_schema.columns` (see catalog-queries.md)
 2. The index definition from `pg_indexes`
 3. The predicate literal in the EXPLAIN output (visible in `Filter:` or `Index Cond:` lines)
-4. The implicit cast matrix above
+4. The `pg_amop` query in catalog-queries.md (B-Tree Cross-Type Operator Support)
 
 ## Projections and Row Width
 

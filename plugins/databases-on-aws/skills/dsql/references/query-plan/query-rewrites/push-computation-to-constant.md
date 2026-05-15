@@ -4,16 +4,16 @@ When a filter predicate applies invertible arithmetic to an indexed column, move
 
 **SHOULD apply when:** All operations on the column are mathematically invertible (addition, subtraction, multiplication/division by non-zero constant).
 
-**Skip when:** The computation involves non-invertible functions (substring, lower/upper, trigonometric functions) or moving the computation changes query semantics (precision loss, integer-division rounding).
+**SHOULD skip when:** The computation involves non-invertible functions (substring, lower/upper, trigonometric functions) or moving the computation changes query semantics (precision loss, integer-division rounding).
 
 ```sql
--- Original
-SELECT * FROM titles
-WHERE emp_no * 100 / 5 = 10001;
+-- Original (amount is NUMERIC)
+SELECT * FROM transactions
+WHERE amount * 100 / 5 = 2000.00;
 
 -- Rewritten
-SELECT * FROM titles
-WHERE emp_no = 10001 * 5 / 100;
+SELECT * FROM transactions
+WHERE amount = 2000.00 * 5 / 100;
 ```
 
 ```sql

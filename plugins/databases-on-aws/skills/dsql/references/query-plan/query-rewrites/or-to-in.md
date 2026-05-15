@@ -4,7 +4,7 @@ Rewrite multiple OR clauses comparing the same column to different constant valu
 
 **SHOULD apply when:** All OR comparisons target the same column using equality (`=`) with constant values.
 
-**Skip when:** OR clauses compare different columns or involve non-constant expressions.
+**SHOULD skip when:** OR clauses compare different columns or involve non-constant expressions.
 
 ```sql
 -- Original

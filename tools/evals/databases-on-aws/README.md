@@ -18,6 +18,8 @@ tools/evals/databases-on-aws/
     ├── trigger_evals.json           # Tier 1: triggering evals (31 test cases)
     ├── safe_query_evals.json        # Tier 3: safe_query enforcement (6 prompts, ~30 expectations)
     ├── query_explainability_evals.json  # Workflow 9: query plan diagnostics (9 prompts, 70 assertions)
+    ├── query_plan_rewrite_evals.json   # Query rewrites: type coercion, subquery unnesting, etc. (11 prompts, manual)
+    ├── query_plan_rewrite_eval_results.md  # Manual eval results — with-skill vs baseline comparison
     └── scripts/
         ├── run_functional_evals.py          # Runner/grader for Tier 2
         ├── run_query_explainability_evals.py # Runner/grader for Workflow 9
@@ -152,6 +154,36 @@ PYTHONPATH="<skill-creator-path>:$PYTHONPATH" python -m scripts.run_loop \
   --max-iterations 5 \
   --verbose
 ```
+
+---
+
+<<<<<<< HEAD
+### Query Plan Rewrite Evals (manual)
+
+Tests whether the agent recommends correct SQL rewrites for common performance anti-patterns,
+including type coercion index bypass, subquery unnesting, OR-to-IN, GROUP BY pushdown, and
+DSQL-specific patterns (reltuples estimate, join splitting). Includes one negative case
+(OR across different columns — agent should decline).
+
+**Evaluation method:** Manual behavioural comparison. Run `claude -p` with skill loaded vs
+`claude -p --bare` from a clean directory. Results in `query_plan_rewrite_eval_results.md`.
+No automated runner script — this suite is manual-only.
+
+**What it checks** (11 eval prompts):
+
+| Eval           | Focus                       | Key assertions                                               |
+| -------------- | --------------------------- | ------------------------------------------------------------ |
+| 200            | IN-subquery Full Scan       | Recommends EXISTS rewrite, checks type coercion              |
+| 201            | Type coercion index bypass  | Identifies string-vs-integer mismatch, references pg_amop    |
+| 202            | 12-table join ordering      | Identifies DP threshold, recommends CTE splitting            |
+| 203            | COUNT(*) timeout            | Recommends reltuples, warns about staleness                  |
+| 204            | Multiple OR to IN           | Recommends IN rewrite, checks type coercion                  |
+| 205            | GROUP BY after JOIN         | Recommends subquery aggregation                              |
+| 206            | LEFT JOIN null rejection    | Converts to INNER JOIN                                       |
+| 207            | Computation on indexed col  | Pushes arithmetic to constant side                           |
+| 208            | NOT IN with NULLs           | Recommends NOT EXISTS, warns about NULL semantics difference |
+| 209            | Nested UNION ALL            | Flattens to single-level UNION ALL                           |
+| 210 (negative) | OR across different columns | Does NOT recommend OR-to-IN                                  |
 
 ---
 

@@ -2,9 +2,9 @@
 
 When a query contains a scalar subquery in the SELECT clause computing an aggregate correlated by equality, rewrite it as a LEFT JOIN with GROUP BY. This reduces repeated subquery executions and enables better join planning.
 
-**SHOULD apply when:** The scalar subquery is correlated via equality and contains an aggregate function (MAX, MIN, COUNT, SUM).
+**SHOULD apply when:** The scalar subquery is correlated via equality and contains an aggregate function (MAX, MIN, COUNT, SUM). For COUNT and SUM, MUST wrap with `COALESCE(..., 0)` because the LEFT JOIN returns NULL (not 0) for unmatched rows — the scalar subquery returns 0.
 
-**Skip when:** The scalar subquery is uncorrelated.
+**SHOULD skip when:** The scalar subquery is uncorrelated.
 
 ```sql
 -- Original
@@ -38,11 +38,11 @@ SELECT
    WHERE S.owner_id = R.id) AS s_count
 FROM R;
 
--- Rewritten
+-- Rewritten (COALESCE required — COUNT returns 0, LEFT JOIN returns NULL)
 SELECT
   R.id,
   R.name,
-  Agg.s_count
+  COALESCE(Agg.s_count, 0) AS s_count
 FROM R
 LEFT JOIN (
   SELECT owner_id, COUNT(*) AS s_count

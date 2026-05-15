@@ -1,10 +1,10 @@
 # Rewrite: Subquery Unnesting — Uncorrelated
 
-When a query contains an uncorrelated `IN (SELECT ...)` subquery, rewrite it as an explicit JOIN. This enables better join order optimizations and index usage.
+When a query contains an uncorrelated `IN (SELECT ...)` subquery, rewrite it as an EXISTS (preferred, preserves semi-join semantics) or explicit JOIN. This enables better join order optimizations and index usage.
 
 **SHOULD apply when:** The subquery does not reference columns from the outer query.
 
-**Skip when:** The subquery is correlated (references outer query columns).
+**SHOULD skip when:** The subquery is correlated (references outer query columns).
 
 ```sql
 -- Original
@@ -15,7 +15,17 @@ WHERE R.a IN (
   FROM S
 );
 
--- Rewritten
+-- Rewritten (preferred — EXISTS preserves semi-join semantics)
+SELECT *
+FROM R
+WHERE EXISTS (
+  SELECT 1
+  FROM S
+  WHERE S.b = R.a
+);
+
+-- Alternative (JOIN form — apply only when S.b is unique,
+-- otherwise DISTINCT collapses pre-existing duplicates in R)
 SELECT DISTINCT R.*
 FROM R
 JOIN S
@@ -33,11 +43,14 @@ WHERE customer_id IN (
 );
 
 -- Rewritten
-SELECT DISTINCT orders.order_id
+SELECT order_id
 FROM orders
-JOIN customers
-  ON orders.customer_id = customers.customer_id
-WHERE customers.country = 'US';
+WHERE EXISTS (
+  SELECT 1
+  FROM customers
+  WHERE customers.customer_id = orders.customer_id
+    AND customers.country = 'US'
+);
 ```
 
 ```sql

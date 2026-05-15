@@ -7,11 +7,11 @@ Complete workflow for diagnosing DSQL query plan performance issues. Produces a 
 1. [Trigger Criteria](#trigger-criteria)
 2. [Context Disambiguation](#context-disambiguation)
 3. [Routing](#routing)
-4. [Phase 0 — Load Reference Material](#phase-0--load-reference-material)
-5. [Phase 1 — Capture the Plan](#phase-1--capture-the-plan)
-6. [Phase 2 — Gather Evidence](#phase-2--gather-evidence)
-7. [Phase 3 — Experiment (conditional)](#phase-3--experiment-conditional)
-8. [Phase 4 — Produce the Report, Invite Reassessment](#phase-4--produce-the-report-invite-reassessment)
+4. [Phase 0: Load Reference Material](#phase-0-load-reference-material)
+5. [Phase 1: Capture the Plan](#phase-1-capture-the-plan)
+6. [Phase 2: Gather Evidence](#phase-2-gather-evidence)
+7. [Phase 3: Experiment (conditional)](#phase-3-experiment-conditional)
+8. [Phase 4: Produce the Report, Invite Reassessment](#phase-4-produce-the-report-invite-reassessment)
 9. [Safety](#safety)
 
 ---
@@ -27,7 +27,7 @@ Enter this workflow if **ANY** of these signals are present:
 | User asks about a plan choice or scan type            | "why is it doing a full scan?", "why not use the index?"                      |
 | User pastes EXPLAIN / EXPLAIN ANALYZE output          | Raw plan text in the message                                                  |
 | User references a Query ID and asks about performance | "query abc-123 is slow"                                                       |
-| User says "reassess" / "re-run" / "I added the index" | Phase 5 re-entry for an existing report                                       |
+| User says "reassess" / "re-run" / "I added the index" | Reassessment re-entry — re-runs Phase 1–2 and appends an Addendum per Phase 4 |
 
 ---
 
@@ -57,7 +57,7 @@ Before entering the workflow, confirm the query targets DSQL:
 
 ---
 
-## Phase 0 — Load Reference Material
+## Phase 0: Load Reference Material
 
 MUST read these four files before starting — each has content later phases need verbatim (node-type math, exact catalog SQL, the `>30s` skip protocol, required report elements):
 
@@ -73,7 +73,7 @@ SHOULD also load these index files to identify applicable rewrites at Phase 2:
 
 ---
 
-## Phase 1 — Capture the Plan
+## Phase 1: Capture the Plan
 
 **ALWAYS** run `readonly_query("EXPLAIN ANALYZE VERBOSE …")` on the user's query verbatim (SELECT form) — **ALWAYS** capture a fresh plan from the cluster, even when the user describes the plan or reports an anomaly. **MAY** leverage `get_schema` or `information_schema` for schema sanity checks.
 
@@ -91,18 +91,18 @@ Extract: Query ID, Planning Time, Execution Time, DPU Estimate.
 
 ---
 
-## Phase 2 — Gather Evidence
+## Phase 2: Gather Evidence
 
 Using SQL from `catalog-queries.md`, query `pg_class`, `pg_stats`, `pg_indexes`, `COUNT(*)`, `COUNT(DISTINCT)`.
 
 1. Classify estimation errors per `plan-interpretation.md` (2x–5x minor, 5x–50x significant, 50x+ severe).
 2. Detect correlated predicates and data skew.
-3. When a Full Scan appears despite an apparently usable index, check for **type coercion index bypass**: retrieve indexed column types and compare against predicate literal types using the implicit cast compatibility matrix in `plan-interpretation.md`.
+3. When a Full Scan appears despite an apparently usable index, check for **type coercion index bypass**: retrieve indexed column types and compare against predicate literal types using the `pg_amop` query in `catalog-queries.md` (B-Tree Cross-Type Operator Support).
 4. Check whether any query rewrite from `query-rewrites-generic.md` or `query-rewrites-dsql-specific.md` applies to the query structure (e.g., OR-to-IN, subquery unnesting, NOT IN to NOT EXISTS, split large joins).
 
 ---
 
-## Phase 3 — Experiment (conditional)
+## Phase 3: Experiment (conditional)
 
 - **≤30s:** Run GUC experiments per `guc-experiments.md` (default + merge-join-only) plus optional redundant-predicate test.
 - **>30s:** Skip experiments, include the manual GUC testing SQL verbatim in the report, and do not re-run for redundant-predicate testing.
@@ -110,7 +110,7 @@ Using SQL from `catalog-queries.md`, query `pg_class`, `pg_stats`, `pg_indexes`,
 
 ---
 
-## Phase 4 — Produce the Report, Invite Reassessment
+## Phase 4: Produce the Report, Invite Reassessment
 
 Produce the full diagnostic report per the "Required Elements Checklist" in [report-format.md](report-format.md) — structure is non-negotiable.
 

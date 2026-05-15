@@ -6,7 +6,7 @@ This allows the PostgreSQL-based DSQL engine to apply dynamic-programming (DP) j
 
 **SHOULD apply when:** The total number of joined tables exceeds the DP threshold (`join_collapse_limit` or `from_collapse_limit`). Partition the join into CTEs each with table count at or below the threshold, push down relevant filters, and join the CTE results.
 
-**Skip when:** The total table count is at or below the threshold, or splitting would prevent necessary cross-block optimizations.
+**SHOULD skip when:** The total table count is at or below the threshold, or splitting would prevent necessary cross-block optimizations.
 
 ```sql
 -- Original

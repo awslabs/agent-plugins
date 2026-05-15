@@ -4,7 +4,9 @@ When a query performs `COUNT(*)` on a large table, rewrite to use the `reltuples
 
 **SHOULD apply when:** An approximate count is acceptable and the table is large enough that `COUNT(*)` is prohibitively expensive.
 
-**Skip when:** The application requires an exact count.
+**Staleness warning:** `reltuples` reflects the last `ANALYZE` or autovacuum run. MUST warn the user that the value MAY be stale on write-heavy or recently created tables. SHOULD recommend cross-checking `pg_stat_user_tables.last_analyze` when the count drives a decision.
+
+**SHOULD skip when:** The application requires an exact count.
 
 ```sql
 -- Original

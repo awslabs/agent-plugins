@@ -4,7 +4,7 @@ When a column is compared to a subquery using IN and the subquery may return man
 
 **SHOULD apply when:** The IN subquery returns a large or variable number of rows.
 
-**Skip when:** The IN list is a small static set of constants.
+**SHOULD skip when:** The IN list is a small static set of constants.
 
 ```sql
 -- Original

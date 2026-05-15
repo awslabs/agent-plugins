@@ -4,7 +4,7 @@ When a query aggregates after joining a fact table to a dimension table, push th
 
 **SHOULD apply when:** The aggregation is on the fact table and additional columns come from a dimension table joined on the grouping key.
 
-**Skip when:** No additional columns are needed beyond the grouping key.
+**SHOULD skip when:** No additional columns are needed beyond the grouping key.
 
 ```sql
 -- Original

@@ -4,7 +4,7 @@ When a query has an equality join condition and a filter predicate on one join a
 
 **SHOULD apply when:** The filter predicate is on a column involved in an equality join condition.
 
-**Skip when:** The predicate is on a non-join column.
+**SHOULD skip when:** The predicate is on a non-join column.
 
 ```sql
 -- Original

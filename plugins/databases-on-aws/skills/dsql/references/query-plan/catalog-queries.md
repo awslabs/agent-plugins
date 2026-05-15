@@ -9,7 +9,10 @@ Exact SQL for interrogating optimizer statistics and actual cardinalities agains
 3. [Index Definitions](#index-definitions)
 4. [Actual Row Counts](#actual-row-counts)
 5. [Actual Distinct Counts](#actual-distinct-counts)
-6. [Value Distribution Analysis](#value-distribution-analysis)
+6. [Column Types for Predicate Columns](#column-types-for-predicate-columns)
+7. [B-Tree Cross-Type Operator Support](#b-tree-cross-type-operator-support)
+8. [Indexed Column Types](#indexed-column-types)
+9. [Value Distribution Analysis](#value-distribution-analysis)
 
 ---
 
@@ -105,6 +108,8 @@ Compare against `pg_stats.n_distinct`:
 
 ## Column Types for Predicate Columns
 
+MUST substitute `'{schema}'`, `'{table}'`, and `'{col}'` placeholders in the queries below via `safe_query.build()` with `ident()` — see input-validation.md.
+
 Retrieve the declared types for columns used in WHERE predicates and JOIN conditions, to detect type coercion index bypass (see plan-interpretation.md):
 
 ```sql
@@ -120,7 +125,7 @@ WHERE c.table_schema = '{schema}'
   AND c.column_name IN ('{col1}', '{col2}');
 ```
 
-Cross-reference the column type against predicate literals visible in the EXPLAIN output. When the types differ, check the implicit cast compatibility matrix in plan-interpretation.md to determine whether the mismatch prevents index usage.
+Cross-reference the column type against predicate literals visible in the EXPLAIN output. When the types differ, use the B-Tree Cross-Type Operator Support query below to determine whether the mismatch prevents index usage.
 
 ## B-Tree Cross-Type Operator Support
 
@@ -133,6 +138,8 @@ SELECT DISTINCT
 FROM pg_amop ao
 JOIN pg_type lt ON lt.oid = ao.amoplefttype
 JOIN pg_type rt ON rt.oid = ao.amoprighttype
+-- 10003 is DSQL's B-Tree OID (PG mainline is 403).
+-- Verify with: SELECT oid FROM pg_am WHERE amname = 'btree'
 WHERE ao.amopmethod = 10003
   AND ao.amoplefttype != ao.amoprighttype
 ORDER BY lt.typname, rt.typname;
@@ -148,6 +155,7 @@ SELECT EXISTS (
   FROM pg_amop ao
   JOIN pg_type lt ON lt.oid = ao.amoplefttype
   JOIN pg_type rt ON rt.oid = ao.amoprighttype
+  -- 10003 = DSQL B-Tree OID; verify with: SELECT oid FROM pg_am WHERE amname = 'btree'
   WHERE ao.amopmethod = 10003
     AND lt.typname = '{predicate_type}'
     AND rt.typname = '{column_type}'

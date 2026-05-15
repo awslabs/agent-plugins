@@ -4,7 +4,7 @@ When a query contains UNION ALL nested inside another UNION ALL, flatten all bra
 
 **SHOULD apply when:** All set operations are UNION ALL (no deduplication).
 
-**Skip when:** Any branch uses UNION (deduplicating), which MUST remain distinct.
+**SHOULD skip when:** Any branch uses UNION (deduplicating), which MUST remain distinct.
 
 ```sql
 -- Original

@@ -1,10 +1,12 @@
 # Rewrite: Replace NOT IN with NOT EXISTS
 
-When a column is filtered with `NOT IN (subquery)`, rewrite as a correlated NOT EXISTS. This avoids building a large intermediate set and sidesteps NULL semantics issues with NOT IN.
+When a column is filtered with `NOT IN (subquery)`, rewrite as a correlated NOT EXISTS. This avoids building a large intermediate set.
 
-**SHOULD apply when:** The NOT IN subquery returns many rows or MAY contain NULLs.
+**Semantics warning:** NOT EXISTS does not preserve NOT IN's NULL-propagation behaviour. When the subquery MAY contain NULLs, `NOT IN` returns no rows while `NOT EXISTS` returns the non-matching rows — the rewrite changes results. MUST confirm intent with the user before applying when NULLs are possible.
 
-**Skip when:** The exclusion list is a small static set of constants.
+**SHOULD apply when:** The NOT IN subquery returns many rows and the subquery column is guaranteed NOT NULL (or the user confirms the changed NULL behaviour is acceptable).
+
+**SHOULD skip when:** The exclusion list is a small static set of constants.
 
 ```sql
 -- Original

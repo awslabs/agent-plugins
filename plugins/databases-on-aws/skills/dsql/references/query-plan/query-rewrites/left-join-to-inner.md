@@ -4,7 +4,7 @@ When a query uses LEFT JOIN but the WHERE clause rejects NULLs on the joined tab
 
 **SHOULD apply when:** The WHERE clause rejects NULLs from the right-hand side of a LEFT JOIN (e.g., `IS NOT NULL`, equality comparisons, or any predicate that cannot be true for NULL).
 
-**Skip when:** NULLs from the right-hand side are intentionally preserved in the result.
+**SHOULD skip when:** NULLs from the right-hand side are intentionally preserved in the result.
 
 ```sql
 -- Original
