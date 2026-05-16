@@ -1,0 +1,55 @@
+{
+  "skill_name": "dsql",
+  "evals": [
+    {
+      "id": 100,
+      "prompt": "I have this PostgreSQL schema from pg_dump. Can you check if it's compatible with DSQL and fix any issues?\n\nCREATE TABLE users (\n  id SERIAL PRIMARY KEY,\n  email VARCHAR(255) NOT NULL,\n  preferences JSON,\n  team_id INT REFERENCES teams(id)\n);\n\nCREATE INDEX idx_users_email ON users(email);",
+      "expected_output": "Calls dsql_lint with fix=true, presents diagnostics to user, shows the fixed SQL",
+      "files": [],
+      "expectations": [
+        "Calls the dsql_lint MCP tool with the provided SQL",
+        "Uses fix=true to get DSQL-compatible output",
+        "Surfaces each diagnostic (fixed, fixed_with_warning, unfixable) to the user before executing",
+        "For fixed_with_warning diagnostics, explains application-layer implications before proceeding",
+        "Does NOT execute the SQL before dsql_lint returns and diagnostics are presented"
+      ]
+    },
+    {
+      "id": 101,
+      "prompt": "I'm migrating my Django app to DSQL. Here's the output of `python manage.py sqlmigrate myapp 0001`:\n\nBEGIN;\nCREATE TABLE myapp_order (\n  id SERIAL PRIMARY KEY,\n  customer_id INT REFERENCES myapp_customer(id),\n  total DECIMAL(10,2),\n  metadata JSON\n);\nCREATE INDEX myapp_order_customer_idx ON myapp_order(customer_id);\nCOMMIT;",
+      "expected_output": "Calls dsql_lint with fix=true, identifies multi-DDL transaction issue, presents fixed SQL with each DDL in separate transaction",
+      "files": [],
+      "expectations": [
+        "Calls the dsql_lint MCP tool",
+        "Identifies that the SQL has compatibility issues",
+        "Splits the multi-DDL transaction into separate transact calls (one DDL per call), not a single transact with all statements",
+        "Warns the user about removed foreign key constraint requiring app-layer enforcement",
+        "Does NOT execute fixed_sql while any diagnostic has fix_result.status == unfixable"
+      ]
+    },
+    {
+      "id": 102,
+      "prompt": "Validate this SQL for DSQL compatibility but don't execute it yet:\n\nCREATE TABLE events (\n  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,\n  tenant_id VARCHAR(255) NOT NULL,\n  payload TEXT,\n  created_at TIMESTAMP DEFAULT now()\n);\n\nCREATE INDEX ASYNC idx_events_tenant ON events(tenant_id);",
+      "expected_output": "Calls dsql_lint, reports that the SQL is already DSQL-compatible (no issues), does NOT execute",
+      "files": [],
+      "expectations": [
+        "Calls the dsql_lint MCP tool to validate",
+        "Reports that the SQL is compatible (diagnostics array is empty, summary errors and warnings are zero)",
+        "Does NOT call transact (user explicitly said don't execute)"
+      ]
+    },
+    {
+      "id": 103,
+      "prompt": "I need to migrate this MySQL table to DSQL:\n\nCREATE TABLE products (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  name VARCHAR(100),\n  category_id INT,\n  tags SET('electronics','clothing','food'),\n  details JSON,\n  FOREIGN KEY (category_id) REFERENCES categories(id)\n) ENGINE=InnoDB PARTITION BY HASH(id) PARTITIONS 4;",
+      "expected_output": "Calls dsql_lint with fix=true, identifies multiple issues including unfixable ones (PARTITION BY), presents what can be auto-fixed vs what needs manual rewrite",
+      "files": [],
+      "expectations": [
+        "Calls the dsql_lint MCP tool with fix=true",
+        "Recognizes that the tool returned a parse_error diagnostic (the PostgreSQL parser short-circuits on AUTO_INCREMENT before reaching SET / ENGINE / PARTITION BY)",
+        "Does NOT claim all issues can be auto-fixed",
+        "Loads references/mysql-migrations/type-mapping.md and manually scans the source SQL for MySQL-specific syntax (AUTO_INCREMENT, SET column type, ENGINE=, PARTITION BY) rather than trusting a post-fix clean lint as sufficient",
+        "Proposes conversions for each MySQL-specific construct and offers to re-run dsql_lint on the converted SQL before executing"
+      ]
+    }
+  ]
+}
