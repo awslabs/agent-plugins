@@ -89,18 +89,6 @@
       "category": "Deployment"
     },
     {
-      "name": "migration-to-aws",
-      "source": {
-        "source": "local",
-        "path": "./plugins/migration-to-aws"
-      },
-      "policy": {
-        "installation": "AVAILABLE",
-        "authentication": "ON_INSTALL"
-      },
-      "category": "Migration"
-    },
-    {
       "name": "sagemaker-ai",
       "source": {
         "source": "local",
