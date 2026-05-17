@@ -7,6 +7,13 @@ metadata:
 
 # HyperPod SSM Access
 
+## Prerequisites
+
+- **`aws` CLI v2**, authenticated for the target account/Region.
+- **`session-manager-plugin`** — installed alongside the AWS CLI.
+- **`jq`** — the scripts build JSON payloads with it.
+- **`unbuffer`** (from the `expect` package) — wraps `aws ssm start-session` with a PTY so the session-manager-plugin flushes stdout instead of racing to close. Without it, calls intermittently return empty output with `Cannot perform start session: EOF` even when the command ran. Install with `sudo yum install expect`, `sudo apt install expect`, or `brew install expect`. `ssm-exec.sh` detects and uses it automatically; falls back with a warning if missing.
+
 ## SSM Target Format
 
 Target: `sagemaker-cluster:<CLUSTER_ID>_<GROUP_NAME>-<INSTANCE_ID>`
@@ -59,21 +66,22 @@ SSM `start-session` rate limit: **3 TPS** per account. Plan batch size and delay
 
 ## Manual SSM Commands
 
-When the scripts aren't suitable, use `aws ssm start-session` directly with `AWS-StartNonInteractiveCommand`:
+When the scripts aren't suitable, use `aws ssm start-session` directly with `AWS-StartNonInteractiveCommand`. Wrap every invocation in `unbuffer` — without it, stdout is intermittently empty (see Prerequisites).
 
 ```bash
 cat > /tmp/cmd.json << 'EOF'
 {"command": ["bash -c 'echo hello && whoami'"]}
 EOF
 
-aws ssm start-session \
+unbuffer aws ssm start-session \
   --target sagemaker-cluster:{CLUSTER_ID}_{GROUP_NAME}-{INSTANCE_ID} \
   --region REGION \
   --document-name AWS-StartNonInteractiveCommand \
   --parameters file:///tmp/cmd.json
 ```
 
-Always use a JSON file for `--parameters` — inline parameters break with special characters.
+- Always use a JSON file for `--parameters` — inline parameters break with special characters.
+- The document's `command` parameter is argv, not shell input. Wrap multi-statement scripts in `bash -c '...'` so pipes, semicolons, and redirects evaluate.
 
 ## Common Diagnostic Commands
 

@@ -41,6 +41,18 @@
       "category": "Development"
     },
     {
+      "name": "aws-transform",
+      "source": {
+        "source": "local",
+        "path": "./plugins/aws-transform"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Migration"
+    },
+    {
       "name": "codebase-documentor-for-aws",
       "source": {
         "source": "local",

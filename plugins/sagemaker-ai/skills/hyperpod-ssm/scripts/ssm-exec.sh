@@ -86,8 +86,26 @@ case "$MODE" in
     ;;
 esac
 
-aws ssm start-session \
-  --target "$TARGET" \
-  --region "$REGION" \
-  --document-name AWS-StartNonInteractiveCommand \
-  --parameters "file://$TMPFILE"
+# The session-manager-plugin races against stdout when it writes to a pipe:
+# under "Cannot perform start session: EOF" it closes before flushing, so the
+# caller intermittently sees empty stdout even when the command ran. Running
+# under `unbuffer` (expect) attaches a PTY, which forces line-buffered I/O
+# and eliminates the race. See https://github.com/aws/amazon-ssm-agent/issues/358.
+# If `unbuffer` isn't on PATH, fall back to the bare invocation.
+if command -v unbuffer >/dev/null 2>&1; then
+  exec unbuffer aws ssm start-session \
+    --target "$TARGET" \
+    --region "$REGION" \
+    --document-name AWS-StartNonInteractiveCommand \
+    --parameters "file://$TMPFILE"
+else
+  echo "Warning: 'unbuffer' (from the 'expect' package) is not installed." >&2
+  echo "         Without it, 'aws ssm start-session' will intermittently return empty" >&2
+  echo "         stdout with 'Cannot perform start session: EOF'." >&2
+  echo "         Install with: sudo yum install expect | sudo apt install expect | brew install expect" >&2
+  exec aws ssm start-session \
+    --target "$TARGET" \
+    --region "$REGION" \
+    --document-name AWS-StartNonInteractiveCommand \
+    --parameters "file://$TMPFILE"
+fi
