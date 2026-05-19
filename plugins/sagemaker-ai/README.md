@@ -3,24 +3,29 @@
 This plugin brings deep AWS AI/ML expertise directly into your coding assistant, covering the surface area of [Amazon SageMaker AI](https://aws.amazon.com/sagemaker/ai/); currently, skills are provided to assist with the following capability areas:
 
 - **Model Customization** — End-to-end guided workflows for fine-tuning foundation models, from use case definition through data preparation, training, evaluation, and deployment on Amazon SageMaker AI.
-- **HyperPod Cluster Operations** — Remote command execution on nodes via SSM, version checking, and diagnostic reporting for SageMaker HyperPod training clusters.
+- **HyperPod Cluster Operations** — Remote command execution on nodes via SSM, version checking, diagnostic reporting, and deep debugging for SageMaker HyperPod training clusters.
 
 ## Agent Skills
 
-| #  | Skill                      | Description                                                                                                              | Documentation                                        |
-| -- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
-| 1  | `planning`                 | Builds a dynamic, step-by-step plan tailored to your intents                                                             | [SKILL.md](skills/planning/SKILL.md)                 |
-| 2  | `directory-management`     | Manages project directory setup, artifact organization, and plan association for new or existing projects                | [SKILL.md](skills/directory-management/SKILL.md)     |
-| 3  | `use-case-specification`   | Guided, conversational process to define your model customization use case goals, key stakeholders, and success criteria | [SKILL.md](skills/use-case-specification/SKILL.md)   |
-| 4  | `dataset-evaluation`       | Dataset quality validation, format detection, and data requirements analysis                                             | [SKILL.md](skills/dataset-evaluation/SKILL.md)       |
-| 5  | `dataset-transformation`   | Dataset format conversion and preparation for SageMaker-compatible training formats                                      | [SKILL.md](skills/dataset-transformation/SKILL.md)   |
-| 6  | `finetuning-setup`         | Fine-tuning technique selection (SFT, DPO, RLVR, etc.) and base model selection                                          | [SKILL.md](skills/finetuning-setup/SKILL.md)         |
-| 7  | `finetuning`               | Hyperparameter configuration and training job execution                                                                  | [SKILL.md](skills/finetuning/SKILL.md)               |
-| 8  | `model-evaluation`         | Evaluation design, benchmark selection, LLM-as-a-judge, and model comparison                                             | [SKILL.md](skills/model-evaluation/SKILL.md)         |
-| 9  | `model-deployment`         | Deployment configuration and endpoint setup (SageMaker or Bedrock)                                                       | [SKILL.md](skills/model-deployment/SKILL.md)         |
-| 10 | `hyperpod-ssm`             | Remote command execution and file transfer on HyperPod cluster nodes via SSM                                             | [SKILL.md](skills/hyperpod-ssm/SKILL.md)             |
-| 11 | `hyperpod-version-checker` | Check and compare software component versions across HyperPod cluster nodes                                              | [SKILL.md](skills/hyperpod-version-checker/SKILL.md) |
-| 12 | `hyperpod-issue-report`    | Generate diagnostic reports for HyperPod troubleshooting and support cases                                               | [SKILL.md](skills/hyperpod-issue-report/SKILL.md)    |
+| #  | Skill                           | Description                                                                                                              | Documentation                                             |
+| -- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| 1  | `planning`                      | Builds a dynamic, step-by-step plan tailored to your intents                                                             | [SKILL.md](skills/planning/SKILL.md)                      |
+| 2  | `directory-management`          | Manages project directory setup, artifact organization, and plan association for new or existing projects                | [SKILL.md](skills/directory-management/SKILL.md)          |
+| 3  | `use-case-specification`        | Guided, conversational process to define your model customization use case goals, key stakeholders, and success criteria | [SKILL.md](skills/use-case-specification/SKILL.md)        |
+| 4  | `dataset-evaluation`            | Dataset quality validation, format detection, and data requirements analysis                                             | [SKILL.md](skills/dataset-evaluation/SKILL.md)            |
+| 5  | `dataset-transformation`        | Dataset format conversion and preparation for SageMaker-compatible training formats                                      | [SKILL.md](skills/dataset-transformation/SKILL.md)        |
+| 6  | `finetuning-setup`              | Fine-tuning technique selection (SFT, DPO, RLVR, etc.) and base model selection                                          | [SKILL.md](skills/finetuning-setup/SKILL.md)              |
+| 7  | `finetuning`                    | Hyperparameter configuration and training job execution                                                                  | [SKILL.md](skills/finetuning/SKILL.md)                    |
+| 8  | `model-evaluation`              | Evaluation design, benchmark selection, LLM-as-a-judge, and model comparison                                             | [SKILL.md](skills/model-evaluation/SKILL.md)              |
+| 9  | `model-deployment`              | Deployment configuration and endpoint setup (SageMaker or Bedrock)                                                       | [SKILL.md](skills/model-deployment/SKILL.md)              |
+| 10 | `hyperpod-ssm`                  | Remote command execution and file transfer on HyperPod cluster nodes via SSM                                             | [SKILL.md](skills/hyperpod-ssm/SKILL.md)                  |
+| 11 | `hyperpod-version-checker`      | Check and compare software component versions across HyperPod cluster nodes                                              | [SKILL.md](skills/hyperpod-version-checker/SKILL.md)      |
+| 12 | `hyperpod-issue-report`         | Generate diagnostic reports for HyperPod troubleshooting and support cases                                               | [SKILL.md](skills/hyperpod-issue-report/SKILL.md)         |
+| 13 | `hyperpod-cluster-debugger`     | Diagnose cluster-wide HyperPod problems — creation failures, EFA health, lifecycle scripts, capacity                     | [SKILL.md](skills/hyperpod-cluster-debugger/SKILL.md)     |
+| 14 | `hyperpod-nccl`                 | Diagnose NCCL failures — training hangs, AllReduce timeouts, EFA errors, rendezvous failures                             | [SKILL.md](skills/hyperpod-nccl/SKILL.md)                 |
+| 15 | `hyperpod-node-debugger`        | Diagnose per-node issues — GPU hardware, EFA, disk/memory pressure, container runtime                                    | [SKILL.md](skills/hyperpod-node-debugger/SKILL.md)        |
+| 16 | `hyperpod-performance-debugger` | Diagnose performance issues — uneven NCCL bandwidth, filesystem throughput, straggler nodes                              | [SKILL.md](skills/hyperpod-performance-debugger/SKILL.md) |
+| 17 | `hyperpod-slurm-debugger`       | Diagnose Slurm scheduler issues — nodes stuck down/drain, jobs pending, GRES miscounts, auto-resume                      | [SKILL.md](skills/hyperpod-slurm-debugger/SKILL.md)       |
 
 ## MCP Servers
 
@@ -99,12 +104,22 @@ The HyperPod skills provide operational tooling for Amazon SageMaker HyperPod AI
 - **`hyperpod-ssm`** — Run commands and transfer files on cluster nodes via AWS Systems Manager (SSM), without needing direct SSH access.
 - **`hyperpod-version-checker`** — Check and compare software component versions (drivers, libraries, frameworks) across cluster nodes to identify drift or incompatibilities.
 - **`hyperpod-issue-report`** — Generate comprehensive issue reports that collect system state, logs, and configuration details for troubleshooting or support case submission.
+- **`hyperpod-cluster-debugger`** — Diagnose cluster-wide problems including creation/deployment failures, EFA health checks, lifecycle script errors, and capacity issues.
+- **`hyperpod-nccl`** — Diagnose NCCL failures and training-pod issues such as AllReduce timeouts, EFA/libfabric errors, rendezvous failures, and container OOM.
+- **`hyperpod-node-debugger`** — Diagnose per-node issues including GPU hardware faults (XID, ECC, NVLink), EFA, disk/memory pressure, and container runtime problems.
+- **`hyperpod-performance-debugger`** — Diagnose performance bottlenecks such as uneven NCCL bandwidth across nodes, filesystem throughput issues, and straggler nodes.
+- **`hyperpod-slurm-debugger`** — Diagnose Slurm scheduler and node-daemon issues including nodes stuck in down/drain, jobs pending, GRES miscounts, and auto-resume failures.
 
 ### Examples
 
 - "Check the GPU memory usage on all nodes in my HyperPod cluster using SSM"
 - "Check driver versions on my HyperPod cluster"
 - "Generate an issue report for my HyperPod cluster"
+- "My HyperPod cluster creation failed, help me debug it"
+- "Training is hanging with NCCL timeout errors"
+- "A node in my cluster is unhealthy, diagnose it"
+- "My training is slower than expected across nodes"
+- "Slurm jobs are stuck pending even though nodes show idle"
 
 ## Supported Environments
 
