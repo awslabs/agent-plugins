@@ -132,7 +132,10 @@ Apply these automatically:
 - Web server instances in private subnets behind ALB
 - Worker instances in private subnets with NAT Gateway for outbound
 - HTTPS via ACM certificate on ALB (web server environments)
-- IAM instance profile with least-privilege permissions
+- IAM instance profile with least-privilege permissions — scan source code for
+  AWS SDK client usage to determine required actions (e.g.,
+  `AmazonBedrockRuntimeClient` → `bedrock:InvokeModel`,
+  `AmazonS3Client` → `s3:GetObject`/`s3:PutObject` on specific buckets)
 - Enhanced health reporting enabled
 - Managed platform updates enabled
 - Security groups: ALB accepts 443, instances accept only from ALB
