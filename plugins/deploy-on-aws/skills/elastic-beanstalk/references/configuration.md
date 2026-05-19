@@ -75,12 +75,12 @@ console) — not coupled to the EB environment lifecycle.
 
 ## Deployment Policies
 
-| Policy | Use Case | Downtime |
-| --- | --- | --- |
-| All at once | Dev environments | Yes |
-| Rolling | Production, cost-sensitive | No (partial capacity) |
-| Rolling with additional batch | Production, full capacity | No |
-| Immutable | Production, safest | No |
+| Policy                        | Use Case                   | Downtime              |
+| ----------------------------- | -------------------------- | --------------------- |
+| All at once                   | Dev environments           | Yes                   |
+| Rolling                       | Production, cost-sensitive | No (partial capacity) |
+| Rolling with additional batch | Production, full capacity  | No                    |
+| Immutable                     | Production, safest         | No                    |
 
 Default: All at once for dev, Rolling with additional batch for production.
 

@@ -57,15 +57,15 @@ This skill handles EB-specific configuration:
 
 ## Defaults
 
-| Setting | Dev | Production |
-| --- | --- | --- |
-| Environment type (web) | Load-balanced (min=1, max=1) | Load-balanced, Multi-AZ |
+| Setting                   | Dev                               | Production                        |
+| ------------------------- | --------------------------------- | --------------------------------- |
+| Environment type (web)    | Load-balanced (min=1, max=1)      | Load-balanced, Multi-AZ           |
 | Environment type (worker) | Auto Scaling group (min=1, max=1) | Auto Scaling group (min=2, max=4) |
-| Instance | t3.small | t3.medium or larger |
-| Deployments | All-at-once | Rolling with additional batch |
-| Health reporting | Enhanced | Enhanced |
-| Managed updates | Enabled (weekly) | Enabled (maintenance window) |
-| HTTPS (web only) | ACM certificate + ALB | ACM certificate + ALB |
+| Instance                  | t3.small                          | t3.medium or larger               |
+| Deployments               | All-at-once                       | Rolling with additional batch     |
+| Health reporting          | Enhanced                          | Enhanced                          |
+| Managed updates           | Enabled (weekly)                  | Enabled (maintenance window)      |
+| HTTPS (web only)          | ACM certificate + ALB             | ACM certificate + ALB             |
 
 Default to **dev** unless user says "production" or "prod."
 
@@ -81,11 +81,11 @@ are scaled via Auto Scaling group settings.
 
 ## Environment Types
 
-| Signal in Codebase | Environment Type |
-| --- | --- |
-| HTTP listener, web framework, API routes | Web server |
-| Queue-based consumer, SQS processing, no HTTP serving | Worker |
-| HTTP serving + queue-based background processing | Web server + separate Worker environment |
+| Signal in Codebase                                    | Environment Type                         |
+| ----------------------------------------------------- | ---------------------------------------- |
+| HTTP listener, web framework, API routes              | Web server                               |
+| Queue-based consumer, SQS processing, no HTTP serving | Worker                                   |
+| HTTP serving + queue-based background processing      | Web server + separate Worker environment |
 
 Worker environments receive work via an SQS queue managed by Elastic Beanstalk.
 EB's SQS daemon sends HTTP POST requests to the application at a configurable
@@ -146,11 +146,11 @@ Elastic Beanstalk has no service fee. Cost = underlying AWS resources.
 Query the awspricing MCP server for region-accurate estimates. Approximate
 us-east-1 pricing:
 
-| Configuration | Estimated Monthly Cost |
-| --- | --- |
-| Dev web (1x t3.small + ALB) | ~$35-40 |
-| Dev worker (1x t3.small, no ALB) | ~$15-20 |
-| Production web (4x t3.medium + ALB, Multi-AZ) | ~$150-200 |
+| Configuration                                 | Estimated Monthly Cost |
+| --------------------------------------------- | ---------------------- |
+| Dev web (1x t3.small + ALB)                   | ~$35-40                |
+| Dev worker (1x t3.small, no ALB)              | ~$15-20                |
+| Production web (4x t3.medium + ALB, Multi-AZ) | ~$150-200              |
 
 Add RDS/Aurora costs separately if database is included.
 

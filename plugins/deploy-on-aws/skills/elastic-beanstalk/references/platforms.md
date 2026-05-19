@@ -7,17 +7,17 @@ Detect the application's language and framework, then map to an EB platform bran
 
 ## Platform Detection
 
-| Signal in Codebase | EB Platform | Notes |
-| --- | --- | --- |
-| `requirements.txt`, `Pipfile`, `pyproject.toml` | Python on AL2023 | Django, Flask, FastAPI |
-| `package.json` (backend Node.js) | Node.js on AL2023 | Express, NestJS, Fastify, Hono |
-| `pom.xml`, `build.gradle`, `.jar`/`.war` | Corretto on AL2023 | Spring Boot, Quarkus |
-| `Gemfile`, `config.ru` | Ruby on AL2023 | Rails, Sinatra |
-| `go.mod` | Go on AL2023 | Any Go HTTP server |
-| `*.csproj`, `*.sln` (ASP.NET Core) | .NET on AL2023 | ASP.NET Core on Linux |
-| `*.csproj`, `*.sln` (.NET Framework) | .NET on Windows Server | IIS, .NET Framework 4.x |
-| `composer.json` | PHP on AL2023 | Laravel, Symfony |
-| `Dockerfile` | Docker on AL2023 | Any containerized app |
+| Signal in Codebase                              | EB Platform            | Notes                          |
+| ----------------------------------------------- | ---------------------- | ------------------------------ |
+| `requirements.txt`, `Pipfile`, `pyproject.toml` | Python on AL2023       | Django, Flask, FastAPI         |
+| `package.json` (backend Node.js)                | Node.js on AL2023      | Express, NestJS, Fastify, Hono |
+| `pom.xml`, `build.gradle`, `.jar`/`.war`        | Corretto on AL2023     | Spring Boot, Quarkus           |
+| `Gemfile`, `config.ru`                          | Ruby on AL2023         | Rails, Sinatra                 |
+| `go.mod`                                        | Go on AL2023           | Any Go HTTP server             |
+| `*.csproj`, `*.sln` (ASP.NET Core)              | .NET on AL2023         | ASP.NET Core on Linux          |
+| `*.csproj`, `*.sln` (.NET Framework)            | .NET on Windows Server | IIS, .NET Framework 4.x        |
+| `composer.json`                                 | PHP on AL2023          | Laravel, Symfony               |
+| `Dockerfile`                                    | Docker on AL2023       | Any containerized app          |
 
 ## Platform Selection Rules
 
@@ -35,10 +35,10 @@ Detect the application's language and framework, then map to an EB platform bran
 
 ## Supported Deployment Artifacts
 
-| Platform | Accepted Input |
-| --- | --- |
-| Language platforms | Source bundle (zip of source code) |
-| Docker | Source bundle containing Dockerfile |
+| Platform           | Accepted Input                                        |
+| ------------------ | ----------------------------------------------------- |
+| Language platforms | Source bundle (zip of source code)                    |
+| Docker             | Source bundle containing Dockerfile                   |
 | Docker (pre-built) | Dockerfile with `FROM` referencing ECR/registry image |
 
 ## Worker Platform Considerations

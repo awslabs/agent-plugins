@@ -4,14 +4,14 @@ Default AWS service selections. Override only when user explicitly requests alte
 
 ## Compute
 
-| App Pattern                                           | Default              | Override Trigger                         |
-| ----------------------------------------------------- | -------------------- | ---------------------------------------- |
-| Web framework (Django, Rails, Express, FastAPI, etc.) | Fargate + ALB        | "serverless" → Lambda + API Gateway; "managed platform" or "Elastic Beanstalk" → Elastic Beanstalk |
-| Static site / SPA                                     | Amplify Hosting      | "S3" or "more control" → S3 + CloudFront |
+| App Pattern                                           | Default              | Override Trigger                                                                                      |
+| ----------------------------------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------- |
+| Web framework (Django, Rails, Express, FastAPI, etc.) | Fargate + ALB        | "serverless" → Lambda + API Gateway; "managed platform" or "Elastic Beanstalk" → Elastic Beanstalk    |
+| Static site / SPA                                     | Amplify Hosting      | "S3" or "more control" → S3 + CloudFront                                                              |
 | Background workers                                    | Fargate              | Short tasks (<15min) → Lambda; "managed platform" or "Elastic Beanstalk" → Elastic Beanstalk (Worker) |
-| Scheduled jobs                                        | EventBridge + Lambda | Long-running → EventBridge + Fargate     |
-| API-only (no web UI)                                  | Fargate + ALB        | "serverless" → API Gateway + Lambda; "managed platform" or "Elastic Beanstalk" → Elastic Beanstalk |
-| Existing Heroku/Render/Railway app migrating to AWS   | Elastic Beanstalk    | "container orchestration" or "ECS" → Fargate + ALB; "serverless" → Lambda |
+| Scheduled jobs                                        | EventBridge + Lambda | Long-running → EventBridge + Fargate                                                                  |
+| API-only (no web UI)                                  | Fargate + ALB        | "serverless" → API Gateway + Lambda; "managed platform" or "Elastic Beanstalk" → Elastic Beanstalk    |
+| Existing Heroku/Render/Railway app migrating to AWS   | Elastic Beanstalk    | "container orchestration" or "ECS" → Fargate + ALB; "serverless" → Lambda                             |
 
 > **⚠️ App Runner is in maintenance mode** — AWS has moved App Runner to maintenance mode. Do **not** recommend App Runner for new workloads. Use **ECS Express Mode** instead.
 
@@ -89,13 +89,13 @@ type safety without requiring Python/Java knowledge. If user's repo already has
 
 ## Sizing (Dev vs Production)
 
-| Component         | Dev           | Production     |
-| ----------------- | ------------- | -------------- |
-| Fargate                    | 0.5 vCPU, 1GB  | 1+ vCPU, 2+ GB             |
-| Aurora Serverless          | 0.5-2 ACU      | 2-16+ ACU                  |
-| ALB                        | Single AZ OK   | Multi-AZ                   |
+| Component                  | Dev               | Production                     |
+| -------------------------- | ----------------- | ------------------------------ |
+| Fargate                    | 0.5 vCPU, 1GB     | 1+ vCPU, 2+ GB                 |
+| Aurora Serverless          | 0.5-2 ACU         | 2-16+ ACU                      |
+| ALB                        | Single AZ OK      | Multi-AZ                       |
 | Elastic Beanstalk (web)    | 1x t3.small + ALB | 2-4x t3.medium + ALB, Multi-AZ |
-| Elastic Beanstalk (worker) | 1x t3.small    | 2-4x t3.medium             |
+| Elastic Beanstalk (worker) | 1x t3.small       | 2-4x t3.medium                 |
 
 Default to **dev sizing** unless user says "production", "prod", or "production-ready".
 
