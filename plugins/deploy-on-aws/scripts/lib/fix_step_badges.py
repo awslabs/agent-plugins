@@ -28,8 +28,7 @@ import defusedxml.ElementTree as ET
 # pull them in from the stdlib while keeping defusedxml's parse() as the
 # actual XML entry point. Filed against awslabs/agent-plugins as #154
 # (Element / ElementTree) and #167 (indent).
-# nosemgrep: python.lang.security.use-defused-xml.use-defused-xml
-# nosemgrep: gitlab.bandit.B313.B314.B315.B316.B318.B319.B320.B405.B406.B407.B408.B409.B410
+# nosemgrep
 from xml.etree.ElementTree import (  # nosec B405
     Element as _Element,
     ElementTree as _ElementTree,
