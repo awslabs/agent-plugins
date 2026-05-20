@@ -21,6 +21,21 @@ import argparse
 import math
 import re
 import defusedxml.ElementTree as ET
+# defusedxml.ElementTree re-exports the secure parsing helpers
+# (parse, fromstring) but does NOT re-export the type aliases Element /
+# ElementTree, nor the indent() pretty-printer added in Python 3.9. This
+# script's annotations and pretty-print step both reach for those, so we
+# pull them in from the stdlib while keeping defusedxml's parse() as the
+# actual XML entry point. Filed against awslabs/agent-plugins as #154
+# (Element / ElementTree) and #167 (indent).
+from xml.etree.ElementTree import (  # nosec B405 — type aliases + indent only, no parsing; defusedxml stays the parser
+    Element as _Element,
+    ElementTree as _ElementTree,
+    indent as _indent,
+)
+ET.Element = _Element  # type: ignore[attr-defined]
+ET.ElementTree = _ElementTree  # type: ignore[attr-defined]
+ET.indent = _indent  # type: ignore[attr-defined]
 from dataclasses import dataclass
 
 
