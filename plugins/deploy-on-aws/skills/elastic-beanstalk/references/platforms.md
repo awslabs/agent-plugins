@@ -21,10 +21,8 @@ Detect the application's language and framework, then map to an EB platform bran
 
 ## Platform Selection Rules
 
-1. If `Dockerfile` exists AND a language runtime is also detected, prefer the
-   language platform unless the Dockerfile adds system dependencies not available
-   in the managed platform.
-2. If multiple languages detected, prefer Docker platform.
+1. If `Dockerfile` exists AND a language runtime is also detected, ask the user for an explicit selection.
+2. If multiple languages detected, ask the user for an explicit selection.
 3. Always use Amazon Linux 2023 unless the app requires Windows (.NET Framework,
    IIS dependencies).
 4. For Java apps: if `.war` file, deploy to Tomcat platform. If `.jar` with
@@ -38,8 +36,14 @@ Detect the application's language and framework, then map to an EB platform bran
 | Platform           | Accepted Input                                        |
 | ------------------ | ----------------------------------------------------- |
 | Language platforms | Source bundle (zip of source code)                    |
+| .NET               | Published output (`dotnet publish` zip, not source)   |
+| Java (.jar)        | Built artifact (fat jar or exploded directory)        |
 | Docker             | Source bundle containing Dockerfile                   |
 | Docker (pre-built) | Dockerfile with `FROM` referencing ECR/registry image |
+
+.NET and Java platforms require pre-built artifacts. Run `dotnet publish` or
+`mvn package`/`gradle build` before zipping. Other language platforms (Python,
+Node.js, Ruby, Go, PHP) accept raw source and build on-instance.
 
 ## Worker Platform Considerations
 

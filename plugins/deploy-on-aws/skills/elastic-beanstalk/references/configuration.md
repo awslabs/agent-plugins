@@ -17,6 +17,38 @@ tasks. Use `.ebextensions/` for option settings and resource declarations.
 See [Configuration options precedence](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/command-options.html#configuration-options-precedence)
 for full details.
 
+## Option Settings Format
+
+When using `--option-settings` with the AWS CLI, pass a JSON array:
+
+```json
+[
+  {
+    "Namespace": "aws:autoscaling:launchconfiguration",
+    "OptionName": "InstanceType",
+    "Value": "t3.small"
+  },
+  {
+    "Namespace": "aws:autoscaling:launchconfiguration",
+    "OptionName": "IamInstanceProfile",
+    "Value": "bedrock-chatbot-instance-profile"
+  },
+  {
+    "Namespace": "aws:elasticbeanstalk:environment",
+    "OptionName": "LoadBalancerType",
+    "Value": "application"
+  },
+  {
+    "Namespace": "aws:elasticbeanstalk:environment:process:default",
+    "OptionName": "HealthCheckPath",
+    "Value": "/health"
+  }
+]
+```
+
+See [Configuration options namespaces](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/command-options-general.html)
+for the full list of namespaces and option names.
+
 ## Key Patterns
 
 ### Run commands on deploy
@@ -60,7 +92,7 @@ option_settings:
 Never hardcode secrets in `.ebextensions/` or source code. Provision databases
 and secrets as separate resources — not coupled to the EB environment lifecycle.
 
-See [Environment secrets](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/configuration-envvars.html#configuration-envvars-secrets)
+See [Environment secrets](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/AWSHowTo.secrets.env-vars.html)
 for supported secret sources.
 
 ## Deployment Policies
@@ -76,6 +108,16 @@ Default: All at once for dev, Rolling with additional batch for production.
 
 See [Deployment policies and settings](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/using-features.rolling-version-deploy.html)
 for configuration details.
+
+## Reverse Proxy Port
+
+EB language platforms use nginx as a reverse proxy. Default proxy port varies:
+
+- .NET: 5000
+- Node.js, Python, Ruby, Go, PHP: 8080
+
+If the application listens on a different port, set the `PORT` environment
+property to match. Mismatched ports result in 502 Bad Gateway from nginx.
 
 ## Health Check
 
@@ -97,6 +139,6 @@ When migrating from Heroku/Render/Railway, audit for these patterns:
 - `DATABASE_URL` → Provision RDS/Aurora separately, pass via environment secrets
 - `REDIS_URL` → Provision ElastiCache, pass endpoint via environment properties
 - Add-on env vars (e.g., `SENDGRID_API_KEY`) → Store in Secrets Manager
-- `PORT` → EB sets this automatically, no change needed
+- `PORT` → Settings applied directly via console/CLI/API
 - `Procfile` → Works as-is (same format)
 - Explicit AWS credentials → Remove; use IAM instance profile instead

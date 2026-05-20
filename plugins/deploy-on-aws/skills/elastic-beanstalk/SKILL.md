@@ -52,8 +52,8 @@ This skill handles EB-specific configuration:
 
 1. **Map to platform** - Select the EB platform branch (see [platforms](references/platforms.md))
 2. **Configure** - Environment type (web server or worker), instance size, scaling
-3. **Generate** - EB CLI project, CDK, or Terraform (see IaC section below)
-4. **Deploy** - `eb create` or CDK/Terraform deploy with user confirmation
+3. **Generate** - AWS CLI commands, CDK, or Terraform (see IaC section below)
+4. **Deploy** - Execute with user confirmation
 
 ## Defaults
 
@@ -100,30 +100,37 @@ a single web server environment is sufficient — do not create a separate Worke
 
 ## IaC Generation
 
-**Default: EB CLI** when the user wants the fastest path to production or has no
-existing IaC project:
+**Default: AWS CLI** — no extra tooling to install. The agent orchestrates
+the multi-step workflow:
 
-- `eb init --region <region>` (creates `.elasticbeanstalk/config.yml`)
-- `eb create --elb-type application` (web server environments)
-- `eb create --tier worker` (worker environments)
-- Subsequent deployments: `eb deploy`
-- `.ebextensions/` and platform hooks for customization
+1. `aws elasticbeanstalk create-storage-location` → returns the S3 bucket
+2. `aws elasticbeanstalk create-application`
+3. Zip source bundle, upload to the bucket from step 1
+4. `aws elasticbeanstalk create-application-version`
+5. `aws elasticbeanstalk create-environment` with `--option-settings` (web:
+   `--tier Name=WebServer,Type=Standard`, worker: `--tier Name=Worker,Type=SQS/HTTP`)
+6. `aws elasticbeanstalk wait environment-updated`
+7. Subsequent deploys: new version + `update-environment`
+
+Resolve the `--solution-stack-name` by running
+`aws elasticbeanstalk list-available-solution-stacks` and filtering for the
+detected platform (e.g., ".NET" + "Amazon Linux 2023").
+
+Use `.ebextensions/` and platform hooks for customization.
+
+See [AWS CLI EB reference](https://docs.aws.amazon.com/cli/latest/reference/elasticbeanstalk/)
+for full command documentation.
 
 **Override: CDK (TypeScript)** when the user has an existing CDK project, wants
 repeatable IaC, or explicitly requests it:
 
-- `CfnApplication`
-- `CfnEnvironment`
-- `CfnConfigurationTemplate`
+- `CfnApplication`, `CfnEnvironment`, `CfnConfigurationTemplate`
 
 **Override: Terraform** when the user's repo already has Terraform:
 
-- `aws_elastic_beanstalk_application`
-- `aws_elastic_beanstalk_environment`
+- `aws_elastic_beanstalk_application`, `aws_elastic_beanstalk_environment`
 
 CDK and Terraform templates are scannable by `cfn-nag`/`checkov` pre-deploy.
-EB CLI deployments enforce security via the option settings configured in
-`.ebextensions/` and the defaults in this skill.
 
 ## Security
 
