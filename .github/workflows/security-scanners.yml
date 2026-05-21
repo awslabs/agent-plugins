@@ -394,7 +394,7 @@ jobs:
           --url "http://localhost:9000/api/projects/create?project=my-project&name=MyProject" \
           --header 'Authorization: Bearer ${{ env.SONAR_TOKEN }}'
 
-    - uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602 # v6.0.0
+    - uses: SonarSource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0
       id: sonarqube-scan-action
       env:
         SONAR_HOST_URL: http://localhost:9000
