@@ -19,3 +19,13 @@ uv.lock
 .gitleaks-baseline.json
 .bandit-baseline.json
 .semgrepignore
+
+# draw.io fixer scripts — defusedxml does the actual parsing, but each
+# script also borrows Element / ElementTree / indent from xml.etree for
+# type hints and pretty-printing. The `import xml` Semgrep pattern fires
+# on the borrow regardless of how it's written, and inline `# nosemgrep`
+# is not honored in GHAS mode. Suppress at the file level.
+plugins/deploy-on-aws/scripts/lib/fix_icon_colors.py
+plugins/deploy-on-aws/scripts/lib/fix_nesting.py
+plugins/deploy-on-aws/scripts/lib/fix_step_badges.py
+plugins/deploy-on-aws/scripts/lib/post_process_drawio.py
