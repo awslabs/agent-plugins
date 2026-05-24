@@ -21,19 +21,16 @@ import argparse
 import math
 import re
 import defusedxml.ElementTree as ET
-# defusedxml.ElementTree re-exports the secure parsing helpers
-# (parse, fromstring) but does NOT re-export the type aliases Element /
-# ElementTree, nor the indent() pretty-printer added in Python 3.9. This
-# script's annotations and pretty-print step both reach for those, so we
-# pull them in from the stdlib while keeping defusedxml's parse() as the
-# actual XML entry point. Filed against awslabs/agent-plugins as #154
-# (Element / ElementTree) and #167 (indent).
-# nosemgrep
-from xml.etree.ElementTree import (  # nosec B405
-    Element as _Element,
-    ElementTree as _ElementTree,
-    indent as _indent,
-)
+# defusedxml.ElementTree re-exports the secure parsing helpers (parse,
+# fromstring) but NOT the Element / ElementTree type aliases, nor the
+# indent() pretty-printer (Python 3.9+). We borrow those names from the
+# stdlib while keeping defusedxml's parse() as the actual XML entry
+# point — defusedxml is what protects against XXE / billion-laughs.
+# Filed as awslabs/agent-plugins#154 (Element / ElementTree) and #167
+# (indent). Inline-suppressed because Semgrep matches the inner AST
+# nodes of a multi-line `from ... import (...)`, so a directive on the
+# preceding line does not propagate to lines 2-N of the block.
+from xml.etree.ElementTree import Element as _Element, ElementTree as _ElementTree, indent as _indent  # nosec B405  # nosemgrep
 ET.Element = _Element  # type: ignore[attr-defined]
 ET.ElementTree = _ElementTree  # type: ignore[attr-defined]
 ET.indent = _indent  # type: ignore[attr-defined]
