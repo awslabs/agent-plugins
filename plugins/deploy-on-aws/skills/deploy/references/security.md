@@ -97,16 +97,16 @@ Consult `awsiac` MCP for IAM policy patterns by service.
 
 ## Security Groups
 
-| Component           | Default Inbound                 | Default Outbound     |
-| ------------------- | ------------------------------- | -------------------- |
-| ALB                 | 443 from 0.0.0.0/0              | Fargate SG only      |
-| Fargate             | ALB SG only (on app port)       | 443 (HTTPS), DB SG   |
-| RDS/Aurora          | Fargate SG only (on DB port)    | None                 |
-| Amazon DocumentDB   | Fargate SG only (port 27017)    | None                 |
-| Lambda (VPC)        | None                            | 443, DB SG           |
-| EB ALB              | 443 from 0.0.0.0/0              | EB instances SG only |
-| EB web instances    | EB ALB SG only (on app port)    | 443 (HTTPS), DB SG   |
-| EB worker instances | None (EB health agent is local) | 443 (HTTPS), DB SG   |
+| Component           | Default Inbound                | Default Outbound     |
+| ------------------- | ------------------------------ | -------------------- |
+| ALB                 | 443 from 0.0.0.0/0             | Fargate SG only      |
+| Fargate             | ALB SG only (on app port)      | 443 (HTTPS), DB SG   |
+| RDS/Aurora          | Fargate SG only (on DB port)   | None                 |
+| Amazon DocumentDB   | Fargate SG only (port 27017)   | None                 |
+| Lambda (VPC)        | None                           | 443, DB SG           |
+| EB ALB              | 443 from 0.0.0.0/0             | EB instances SG only |
+| EB web instances    | EB ALB SG only (on app port)   | 443 (HTTPS), DB SG   |
+| EB worker instances | None (SQS daemon on localhost) | 443 (HTTPS), DB SG   |
 
 ### Why deny-by-default
 

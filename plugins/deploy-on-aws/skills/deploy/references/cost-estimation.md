@@ -113,7 +113,7 @@ Include EBS volume costs (8GB gp3 default: ~$1/month per instance).
 
 **Web app on Elastic Beanstalk:**
 
-- Dev (1 instance + ALB): ~$35-40/month
+- Dev (1x t3.small + ALB): ~$35-40/month
 - Production (load-balanced, Multi-AZ): ~$80-200/month
 
 **Web app on EB + Aurora Serverless v2:**

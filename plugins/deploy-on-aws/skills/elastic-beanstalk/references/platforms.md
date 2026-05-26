@@ -11,7 +11,8 @@ Detect the application's language and framework, then map to an EB platform bran
 | ----------------------------------------------- | ---------------------- | ------------------------------ |
 | `requirements.txt`, `Pipfile`, `pyproject.toml` | Python on AL2023       | Django, Flask, FastAPI         |
 | `package.json` (backend Node.js)                | Node.js on AL2023      | Express, NestJS, Fastify, Hono |
-| `pom.xml`, `build.gradle`, `.jar`/`.war`        | Corretto on AL2023     | Spring Boot, Quarkus           |
+| `pom.xml`, `build.gradle`, `.jar`               | Corretto on AL2023     | Spring Boot, Quarkus           |
+| `pom.xml`, `build.gradle`, `.war`               | Tomcat on AL2023       | WAR-based Java web apps        |
 | `Gemfile`, `config.ru`                          | Ruby on AL2023         | Rails, Sinatra                 |
 | `go.mod`                                        | Go on AL2023           | Any Go HTTP server             |
 | `*.csproj`, `*.sln` (ASP.NET Core)              | .NET on AL2023         | ASP.NET Core on Linux          |

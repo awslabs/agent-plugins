@@ -67,7 +67,7 @@ This skill handles EB-specific configuration:
 | Managed updates           | Enabled (weekly)                  | Enabled (maintenance window)      |
 | HTTPS (web only)          | ACM certificate + ALB             | ACM certificate + ALB             |
 
-Default to **dev** unless user says "production" or "prod."
+Default to **dev** unless user says "production" or "prod".
 
 Always use load-balanced environments for web server types. This ensures
 instances stay in private subnets behind an ALB, HTTPS terminates via ACM
@@ -104,6 +104,7 @@ a single web server environment is sufficient — do not create a separate Worke
 the multi-step workflow:
 
 1. `aws elasticbeanstalk create-storage-location` → returns the S3 bucket
+   (idempotent — returns existing bucket if already created)
 2. `aws elasticbeanstalk create-application`
 3. Zip source bundle, upload to the bucket from step 1
 4. `aws elasticbeanstalk create-application-version`
@@ -114,7 +115,8 @@ the multi-step workflow:
 
 Resolve the `--solution-stack-name` by running
 `aws elasticbeanstalk list-available-solution-stacks` and filtering for the
-detected platform (e.g., ".NET" + "Amazon Linux 2023").
+detected platform (e.g., ".NET" + "Amazon Linux 2023"). Alternatively, use
+`--platform-arn` from `aws elasticbeanstalk list-platform-versions`.
 
 Use `.ebextensions/` and platform hooks for customization.
 

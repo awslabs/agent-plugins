@@ -89,6 +89,9 @@ option_settings:
     DB_PASSWORD: arn:aws:secretsmanager:us-east-1:123456789:secret:myapp/db
 ```
 
+The `environmentsecrets` namespace requires platform versions released March
+2025 or later. Verify via `aws elasticbeanstalk list-available-solution-stacks`.
+
 Never hardcode secrets in `.ebextensions/` or source code. Provision databases
 and secrets as separate resources — not coupled to the EB environment lifecycle.
 
@@ -103,6 +106,7 @@ for supported secret sources.
 | Rolling                       | Production, cost-sensitive | No (partial capacity) |
 | Rolling with additional batch | Production, full capacity  | No                    |
 | Immutable                     | Production, safest         | No                    |
+| Traffic splitting             | Canary testing             | No                    |
 
 Default: All at once for dev, Rolling with additional batch for production.
 
@@ -111,13 +115,10 @@ for configuration details.
 
 ## Reverse Proxy Port
 
-EB language platforms use nginx as a reverse proxy. Default proxy port varies:
-
-- .NET: 5000
-- Node.js, Python, Ruby, Go, PHP: 8080
-
-If the application listens on a different port, set the `PORT` environment
-property to match. Mismatched ports result in 502 Bad Gateway from nginx.
+AL2023 platforms use nginx as a reverse proxy, forwarding to port 5000 by
+default. If the application listens on a different port, set the `PORT`
+environment property to match. Mismatched ports result in 502 Bad Gateway
+from nginx.
 
 ## Health Check
 
@@ -139,6 +140,6 @@ When migrating from Heroku/Render/Railway, audit for these patterns:
 - `DATABASE_URL` → Provision RDS/Aurora separately, pass via environment secrets
 - `REDIS_URL` → Provision ElastiCache, pass endpoint via environment properties
 - Add-on env vars (e.g., `SENDGRID_API_KEY`) → Store in Secrets Manager
-- `PORT` → Settings applied directly via console/CLI/API
+- `PORT` → See Reverse Proxy Port section above; set if app doesn't use 5000
 - `Procfile` → Works as-is (same format)
 - Explicit AWS credentials → Remove; use IAM instance profile instead
