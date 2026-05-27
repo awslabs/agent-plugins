@@ -37,7 +37,7 @@ For standard Lambda development, see [aws-lambda skill](../aws-lambda/). For SAM
 | Cold starts    | Unacceptable (LMI eliminates for provisioned capacity; scale-out may have brief delays) | Tolerable or mitigated by SnapStart                    |
 | Compute        | Latest CPUs, specific families, high network bandwidth                                  | Standard Lambda memory/CPU sufficient                  |
 | Isolation      | Dedicated EC2 instances in your account, full VPC control                               | Shared Firecracker micro-VMs acceptable                |
-| Scale-to-zero  | Not needed (min 3 instances always run)                                                 | Required (pay nothing when idle)                       |
+| Scale-to-zero  | Not needed (execution environments always running)                                      | Required (pay nothing when idle)                       |
 | Code readiness | Thread-safe (Node.js/Java/.NET) or any Python code                                      | Non-thread-safe Node.js/Java/.NET, expensive to change |
 
 ## Instructions
@@ -69,13 +69,13 @@ For discount analysis (Savings Plans, Reserved Instances), refer users to the [A
 
 ### Step 3: Configure the Deployment
 
-**Instance families** (400+ types, .large and up): C-series (compute), M-series (general), R-series (memory). ARM (Graviton) for best price-performance.
+**Instance families** (~450 types): C-series (compute, .xlarge+), M-series (general, .large+), R-series (memory, .large+). ARM (Graviton) for best price-performance.
 
 **Memory-to-vCPU ratios**: 2:1 (compute), 4:1 (general, default), 8:1 (memory). Min 2 GB, max 32 GB.
 
 **Multi-concurrency defaults/vCPU**: Node.js 64, Java 32, .NET 32, Python 16.
 
-**Scaling**: MinExecutionEnvironments (default 3), MaxVCpuCount (required), TargetResourceUtilization.
+**Scaling**: MinExecutionEnvironments (default 3), MaxVCpuCount (default 400), TargetResourceUtilization.
 
 See [references/configuration-guide.md](references/configuration-guide.md) for decision trees and detailed tuning.
 
@@ -95,7 +95,7 @@ See [references/thread-safety.md](references/thread-safety.md) for the review ch
 ### Step 5: Set Up Infrastructure
 
 1. Create two IAM roles: execution role (for the function) and operator role (for capacity provider EC2 management)
-2. Configure VPC with subnets across 3+ AZs
+2. Configure VPC with subnets across multiple AZs (recommended 3+ for resiliency)
 3. Create capacity provider with VPC config and scaling limits
 4. Create or update function with capacity provider attachment
 5. Publish a version (triggers instance provisioning)
@@ -118,7 +118,7 @@ See [references/infrastructure-setup.md](references/infrastructure-setup.md) for
 - Do: Use ARM (Graviton) unless x86 dependencies exist
 - Do: Let Lambda choose instance types unless specific hardware needed
 - Do: Set MaxVCpuCount to control cost ceiling
-- Don't: Set MinExecutionEnvironments below 3 (breaks AZ resiliency)
+- Don't: Set MinExecutionEnvironments below 3 without understanding AZ trade-offs (Lambda distributes execution environments across AZs automatically; fewer than 3 reduces multi-AZ coverage)
 - Don't: Over-restrict instance types (lowers availability)
 
 ### Migration
@@ -134,7 +134,6 @@ See [references/infrastructure-setup.md](references/infrastructure-setup.md) for
 ### Operations
 
 - Do: Set CloudWatch alarms on throttle rate > 1% and CPU > 80%
-- Do: Plan for 14-day instance rotation (automatic)
 - Don't: Manually terminate LMI EC2 instances (delete the capacity provider instead)
 - Don't: Forget to publish a version — unpublished functions cannot run on LMI
 
@@ -143,12 +142,10 @@ See [references/infrastructure-setup.md](references/infrastructure-setup.md) for
 | Resource          | Limit                                     |
 | ----------------- | ----------------------------------------- |
 | Memory            | 2 GB min, 32 GB max                       |
-| Instances         | 3 minimum (AZ resiliency)                 |
-| Instance lifespan | 14 days (auto-replaced)                   |
 | Concurrency/vCPU  | 64 (Node.js), 32 (Java/.NET), 16 (Python) |
 | Runtimes          | Node.js, Java, .NET, Python               |
-| Instance families | C, M, R (.large and up)                   |
-| Scaling           | Absorbs 50% spike; doubles within 5 min   |
+| Instance families | C (.xlarge+), M (.large+), R (.large+)    |
+| Scaling           | Doubles within 5 min without throttles    |
 
 ## Troubleshooting Quick Reference
 

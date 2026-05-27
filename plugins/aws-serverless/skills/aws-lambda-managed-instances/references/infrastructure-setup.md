@@ -130,9 +130,9 @@ The `ec2:ManagedResourceOperator` condition ensures RunInstances/CreateTags only
 
 LMI runs functions on EC2 instances inside the VPC. These instances need VPC endpoints or NAT to reach AWS services.
 
-- 3+ subnets across different AZs (for default 3-instance fleet)
+- Subnets across multiple AZs recommended (minimum 1 required; 3+ for multi-AZ resiliency)
 - Security groups: HTTPS egress (port 443) for AWS API calls; no ingress needed
-- Required VPC endpoints:
+- VPC endpoints (if no NAT gateway) for AWS service access:
 
 | Endpoint              | Type      | Purpose               |
 | --------------------- | --------- | --------------------- |

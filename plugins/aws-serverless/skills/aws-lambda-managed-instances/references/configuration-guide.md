@@ -44,9 +44,9 @@ Total capacity = MinExecutionEnvironments × PerExecutionEnvironmentMaxConcurren
 
 | Control                   | Default       | Guidance                                      |
 | ------------------------- | ------------- | --------------------------------------------- |
-| MinExecutionEnvironments  | 3             | Increase for baseline capacity; never below 3 |
+| MinExecutionEnvironments  | 3             | Increase for baseline capacity; below 3 reduces multi-AZ coverage |
 | MaxExecutionEnvironments  | —             | Set based on cost budget                      |
-| MaxVCpuCount              | Required      | Start at 30, adjust by load                   |
+| MaxVCpuCount              | 400           | Set to control cost ceiling; adjust by load   |
 | TargetResourceUtilization | ~50% headroom | Raise for cost savings (less burst tolerance) |
 | AllowedInstanceTypes      | All           | Restrict only for specific hardware needs     |
 | ExcludedInstanceTypes     | None          | Exclude expensive types in dev/test           |

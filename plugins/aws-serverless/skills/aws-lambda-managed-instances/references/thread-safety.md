@@ -12,7 +12,7 @@ When reviewing a function for LMI readiness, check each item:
 - [ ] Logging includes request ID (for tracing concurrent requests)
 - [ ] **Node.js/Java/.NET only:** No global/static mutable variables (use immutable or request-local state)
 - [ ] **Node.js/Java/.NET only:** Thread-safe libraries only (check DB drivers, HTTP clients, caching libs)
-- [ ] **Node.js/Java/.NET only:** No request state in global scope (use AsyncLocalStorage, contextvars, ThreadLocal)
+- [ ] **Node.js/Java/.NET only:** No request state in global scope (use AsyncLocalStorage for Node.js, ThreadLocal for Java, AsyncLocal for .NET)
 - [ ] **Node.js/Java/.NET only:** No environment variable mutation during requests
 - [ ] **Python only:** Memory budget accounts for per-process multiplication (memory × concurrency)
 

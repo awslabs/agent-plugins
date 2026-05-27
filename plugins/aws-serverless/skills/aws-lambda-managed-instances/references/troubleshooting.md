@@ -13,7 +13,7 @@
 | Function version not ACTIVE    | Fewer than 3 execution environments ready        | Wait for provisioning; check capacity provider status                               |
 | Unexpected 500 errors          | Unhandled concurrent access to shared state      | Add thread-safe patterns from migration-patterns.md                                 |
 | CloudWatch logs missing        | VPC egress not configured                        | Add NAT Gateway or CloudWatch Logs VPC endpoint                                     |
-| High costs despite low traffic | Minimum 3 instances always running               | Evaluate if standard Lambda is more cost-effective                                  |
+| High costs despite low traffic | Minimum execution environments always running    | Evaluate if standard Lambda is more cost-effective                                  |
 
 ## Debugging Steps
 
@@ -22,7 +22,7 @@
 1. Check capacity provider status: `aws lambda get-capacity-provider --capacity-provider-name <name>`
 2. Verify subnets span 3+ AZs with available IPs
 3. Confirm security group allows necessary egress
-4. Check operator role has `AWSLambdaManagedEC2ResourceOperator` policy
+4. Check operator role has required permissions (see infrastructure-setup.md for least-privilege policy)
 5. Look for `Operator` field in EC2 DescribeInstances or `aws:lambda:capacity-provider` tag
 
 ### Performance Issues
