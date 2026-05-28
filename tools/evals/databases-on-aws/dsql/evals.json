@@ -107,6 +107,44 @@
         "Recommends retrying the backup after cluster is ACTIVE"
       ],
       "llm_judge": true
+    },
+    {
+      "id": 10,
+      "prompt": "My aurora-dsql-loader run is stuck at about 3000 records per second and won't go faster. I'm loading 50 million rows into a fresh table. Host CPU is only at 20%. What's wrong?",
+      "expected_output": "Identifies this as partition-constrained behavior on a fresh table. Explains that DSQL starts with a single partition at ~3-4K rec/s and splits under sustained pressure. Advises to keep the load running.",
+      "files": [],
+      "expectations": [
+        "Identifies the cause as partition-constrained (fresh table, single partition)",
+        "Explains that throughput will accelerate as DSQL splits partitions",
+        "Does NOT recommend increasing loader concurrency or workers as a fix",
+        "Mentions that sustained write pressure drives splits (10-20 minutes)"
+      ],
+      "llm_judge": true
+    },
+    {
+      "id": 11,
+      "prompt": "My DSQL loader crashed halfway through a 200M row load and now I can't resume — the manifest is gone. I was using the default settings. How do I recover and prevent this next time?",
+      "expected_output": "Identifies that the default manifest directory is /tmp (tmpfs on AL2023), explains why the manifest was lost, recommends --on-conflict do-nothing for recovery and --manifest-dir for prevention.",
+      "files": [],
+      "expectations": [
+        "Identifies that the default manifest directory /tmp is tmpfs and lost on crash",
+        "Recommends --on-conflict do-nothing to skip already-loaded rows on re-run",
+        "Recommends setting --manifest-dir to a persistent path for future loads",
+        "Does NOT tell the user they need to truncate the table and start over"
+      ],
+      "llm_judge": true
+    },
+    {
+      "id": 12,
+      "prompt": "I'm loading a CSV with a header row into DSQL and getting 'invalid input syntax for type integer: \"user_id\"' on the first batch. The rest of the data loads fine. What's happening?",
+      "expected_output": "Identifies the missing --header flag as the cause. Explains the loader treats every row as data by default and is trying to insert the header row's column names as data values.",
+      "files": [],
+      "expectations": [
+        "Identifies the missing --header flag as the root cause",
+        "Explains the loader defaults to treating every row as data (no header skip)",
+        "Recommends adding --header to the loader invocation"
+      ],
+      "llm_judge": true
     }
   ]
 }

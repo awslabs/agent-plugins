@@ -52,6 +52,18 @@
     "should_trigger": true
   },
   {
+    "query": "I need to load a 500MB CSV file into my Aurora DSQL table. What's the fastest way?",
+    "should_trigger": true
+  },
+  {
+    "query": "my aurora-dsql-loader run is stuck at 3000 records per second and won't go faster no matter how many workers I add",
+    "should_trigger": true
+  },
+  {
+    "query": "bulk load parquet data from S3 into DSQL — about 200 million rows across 50 files",
+    "should_trigger": true
+  },
+  {
     "query": "I need to set up an Aurora Serverless v2 PostgreSQL cluster with read replicas for my analytics workload",
     "should_trigger": false
   },
@@ -101,6 +113,14 @@
   },
   {
     "query": "I want to use Amazon Neptune for a social network graph with friend-of-friend queries",
+    "should_trigger": false
+  },
+  {
+    "query": "How do I use COPY FROM to bulk load a CSV into my RDS PostgreSQL table?",
+    "should_trigger": false
+  },
+  {
+    "query": "Load my parquet files from S3 into Redshift using COPY command",
     "should_trigger": false
   }
 ]
