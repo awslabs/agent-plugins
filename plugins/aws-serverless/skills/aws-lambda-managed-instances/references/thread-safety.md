@@ -7,6 +7,7 @@ LMI runs multiple invocations concurrently in the same execution environment. Th
 When reviewing a function for LMI readiness, check each item:
 
 - [ ] No shared `/tmp` paths (use request ID in filenames, clean up after — shared across ALL runtimes)
+- [ ] Estimate total `/tmp` usage under max concurrency (concurrent requests × per-request file size)
 - [ ] Database connections use pools (initialized outside handler, not per-invocation)
 - [ ] SDK clients outside handler (module-level singletons are fine — they are thread-safe)
 - [ ] Logging includes request ID (for tracing concurrent requests)

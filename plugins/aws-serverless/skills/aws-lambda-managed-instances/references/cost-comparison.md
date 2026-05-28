@@ -6,7 +6,7 @@ When building a cost comparison for a user, gather: region, runtime, requests/mo
 
 ## When LMI is NOT Cheaper
 
-- < 50M req/month (fixed minimum execution environment cost exceeds Lambda)
+- Lambda spend below ~$1,000/month (fixed minimum execution environment cost exceeds Lambda)
 - Very short functions (< 100ms duration)
 - Highly bursty, unpredictable traffic
 - Workloads needing scale-to-zero

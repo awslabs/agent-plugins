@@ -42,14 +42,14 @@ Total capacity = MinExecutionEnvironments × PerExecutionEnvironmentMaxConcurren
 
 ## Capacity Provider Scaling Controls
 
-| Control                   | Default       | Guidance                                                          |
-| ------------------------- | ------------- | ----------------------------------------------------------------- |
-| MinExecutionEnvironments  | 3             | Increase for baseline capacity; below 3 reduces multi-AZ coverage |
-| MaxExecutionEnvironments  | —             | Set based on cost budget                                          |
-| MaxVCpuCount              | 400           | Set to control cost ceiling; adjust by load                       |
-| TargetResourceUtilization | ~50% headroom | Raise for cost savings (less burst tolerance)                     |
-| AllowedInstanceTypes      | All           | Restrict only for specific hardware needs                         |
-| ExcludedInstanceTypes     | None          | Exclude expensive types in dev/test                               |
+| Control                   | Default       | Guidance                                              |
+| ------------------------- | ------------- | ----------------------------------------------------- |
+| MinExecutionEnvironments  | 3             | Min 1 (non-prod); 3+ recommended for prod AZ coverage |
+| MaxExecutionEnvironments  | —             | Set based on cost budget                              |
+| MaxVCpuCount              | 400           | Set to control cost ceiling; adjust by load           |
+| TargetResourceUtilization | ~50% headroom | Raise for cost savings (less burst tolerance)         |
+| AllowedInstanceTypes      | All           | Restrict only for specific hardware needs             |
+| ExcludedInstanceTypes     | None          | Exclude expensive types in dev/test                   |
 
 ## Monitoring Thresholds
 

@@ -63,7 +63,7 @@ REQUIRED: Present a cost comparison before recommending LMI. Compare at minimum:
 | Lambda on-demand | Low volume, bursty traffic  |
 | LMI on-demand    | High volume, steady traffic |
 
-Rule of thumb: LMI becomes cost-competitive at 50-100M+ req/month with steady traffic.
+Rule of thumb: LMI becomes cost-competitive when your Lambda spend exceeds ~$1,000/month with steady traffic.
 
 For discount analysis (Savings Plans, Reserved Instances), refer users to the [AWS Pricing Calculator](https://calculator.aws/) and [references/cost-comparison.md](references/cost-comparison.md) for formulas and worked examples. Discount recommendations require workload-specific forecasting beyond this skill's scope.
 
@@ -118,7 +118,7 @@ See [references/infrastructure-setup.md](references/infrastructure-setup.md) for
 - Do: Use ARM (Graviton) unless x86 dependencies exist
 - Do: Let Lambda choose instance types unless specific hardware needed
 - Do: Set MaxVCpuCount to control cost ceiling
-- Don't: Set MinExecutionEnvironments below 3 without understanding AZ trade-offs (Lambda distributes execution environments across AZs automatically; fewer than 3 reduces multi-AZ coverage)
+- Don't: Set MinExecutionEnvironments below 3 in production (reduces multi-AZ coverage). Non-prod environments can use 1 as the minimum.
 - Don't: Over-restrict instance types (lowers availability)
 
 ### Migration
@@ -128,6 +128,7 @@ See [references/infrastructure-setup.md](references/infrastructure-setup.md) for
 - Do: Use weighted aliases for gradual traffic shift
 - Do: Include request IDs in all log statements
 - Do: Initialize DB pools and SDK clients outside the handler
+- Do: Estimate total `/tmp` usage under max concurrency
 - Don't: Write to hardcoded `/tmp` paths without request-unique naming
 - Don't: Skip cost comparison — LMI is not always cheaper
 
@@ -143,6 +144,8 @@ See [references/infrastructure-setup.md](references/infrastructure-setup.md) for
 | ----------------- | ----------------------------------------- |
 | Memory            | 2 GB min, 32 GB max                       |
 | Concurrency/vCPU  | 64 (Node.js), 32 (Java/.NET), 16 (Python) |
+| Instance lifespan | ~12 hours (auto-replaced by Lambda)       |
+| EE lifespan       | ~4 hours (auto-replaced by Lambda)        |
 | Runtimes          | Node.js, Java, .NET, Python               |
 | Instance families | C (.xlarge+), M (.large+), R (.large+)    |
 | Scaling           | Doubles within 5 min without throttles    |
@@ -169,7 +172,9 @@ REQUIRED: AWS credentials configured on the host machine.
 
 ### Regional Availability
 
-Check the [Lambda Managed Instances documentation](https://docs.aws.amazon.com/lambda/latest/dg/lambda-managed-instances.html) for current regional availability.
+Currently available: us-east-1, us-east-2, us-west-2, ap-northeast-1, eu-west-1. Expanding to all commercial regions soon.
+
+Check the [Lambda Managed Instances documentation](https://docs.aws.amazon.com/lambda/latest/dg/lambda-managed-instances.html) for the latest regional availability.
 
 ## Language Selection
 
