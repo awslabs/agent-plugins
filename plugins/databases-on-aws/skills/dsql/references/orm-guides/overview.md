@@ -1,8 +1,7 @@
 # ORM Migration Quick Reference
 
-Adapter names and key gotchas per framework. General ORM patterns (UUIDs for PKs, disable FK constraints) are assumed knowledge
-(UUIDField for PKs, disable FK constraints). This file provides DSQL-specific adapter
-names and configuration that the model cannot infer.
+Adapter names and key gotchas per framework. This file provides DSQL-specific adapter
+names and configuration not available in general documentation.
 
 ## Adapters
 

@@ -151,7 +151,6 @@
         "Converts TSVECTOR to text and notes FTS must move to external service",
         "Removes or converts the GIN index (not supported)",
         "Handles the partial index (WHERE status = 'active') \u2014 removes WHERE or adds status to composite index",
-        "Converts the PL/pgSQL trigger function (or explains it must move to app layer)",
         "Omits per-column COLLATE \"C\" (DSQL uses C collation database-wide; per-column clause is not supported)",
         "Uses CREATE INDEX ASYNC for all indexes"
       ],

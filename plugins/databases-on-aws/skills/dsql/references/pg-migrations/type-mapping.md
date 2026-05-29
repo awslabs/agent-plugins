@@ -65,26 +65,26 @@ CREATE TABLE t (val NUMERIC(20,10));
 
 ## JSON and JSONB
 
-Both `json` and `jsonb` are natively supported stored types in DSQL. All standard JSON/JSONB
-operators work (`->`, `->>`, `@>`, `?`, `#>`, `#>>`).
+`json` is a storable column type. `jsonb` is **runtime-only** — store data as `json` and
+cast to `::jsonb` at query time for JSONB operators. `CREATE TABLE t (col JSONB)` is
+rejected by DSQL.
 
-| PostgreSQL Type | DSQL Column Type | Notes                            |
-| --------------- | ---------------- | -------------------------------- |
-| JSON            | json             | All JSON operators work natively |
-| JSONB           | jsonb            | Natively supported stored type   |
+| PostgreSQL Type | DSQL Column Type | Notes                                        |
+| --------------- | ---------------- | -------------------------------------------- |
+| JSON            | json             | Storable, all JSON operators work            |
+| JSONB           | json             | Store as json, cast to ::jsonb for operators |
 
 ```sql
--- Both types work directly
 CREATE TABLE config (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  settings jsonb,
+  settings json,       -- NOT jsonb
   raw_payload json
 );
 
--- JSONB operators work natively
-SELECT settings -> 'key' FROM config;
-SELECT settings @> '{"a":1}' FROM config;
-SELECT settings ? 'key' FROM config;
+-- Cast to jsonb at query time for JSONB operators
+SELECT settings::jsonb -> 'key' FROM config;
+SELECT settings::jsonb @> '{"a":1}' FROM config;
+SELECT settings::jsonb ? 'key' FROM config;
 ```
 
 ---
@@ -124,7 +124,7 @@ CREATE TABLE users (
     email varchar(255) NOT NULL,
     name text,
     balance numeric(19,4),
-    preferences jsonb,
+    preferences json,    -- cast to ::jsonb at query time
     tags json,
     ip_address text,
     created_at timestamptz DEFAULT now()
