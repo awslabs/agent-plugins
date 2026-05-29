@@ -1,6 +1,6 @@
 ---
 name: dsql
-description: "Build with Aurora DSQL — manage schemas, execute queries, handle migrations, diagnose query plans, load data, and develop applications with a serverless, distributed SQL database. Covers IAM auth, multi-tenant patterns, MySQL-to-DSQL migration, DDL operations, query plan explainability, SQL compatibility validation, and bulk data loading. Triggers on phrases like: DSQL, Aurora DSQL, create DSQL table, DSQL schema, migrate to DSQL, distributed SQL database, serverless PostgreSQL-compatible database, DSQL query plan, DSQL EXPLAIN ANALYZE, why is my DSQL query slow, aurora-dsql-loader, bulk load DSQL, DSQL data loading, load CSV into DSQL."
+description: "Build with Aurora DSQL — manage schemas, execute queries, handle migrations, diagnose query plans, load data, and develop applications with a serverless, distributed SQL database. Covers IAM auth, multi-tenant patterns, MySQL-to-DSQL migration, DDL operations, query plan explainability, SQL compatibility validation, and bulk data loading. Triggers on phrases like: DSQL, Aurora DSQL, create DSQL table, DSQL schema, migrate to DSQL, distributed SQL database, serverless PostgreSQL-compatible database, DSQL query plan, DSQL EXPLAIN ANALYZE, why is my DSQL query slow, aurora-dsql-loader, load CSV into DSQL."
 license: Apache-2.0
 metadata:
   tags: aws, aurora, dsql, distributed-sql, distributed, distributed-database, database, serverless, serverless-database, postgresql, postgres, sql, schema, migration, multi-tenant, iam-auth, aurora-dsql, mcp, orm, data-loading
@@ -54,7 +54,7 @@ sampled in [.mcp.json](../../.mcp.json)
 
 ### [data-loading.md](references/data-loading.md)
 
-**When:** Load when planning or running bulk loads with `aurora-dsql-loader`, or diagnosing loads that come in slower than expected.
+**When:** Load when planning or running bulk loads with `aurora-dsql-loader`, or diagnosing slow load times.
 **Contains:** Fresh-vs-warm partition behavior, resume/retry mechanics (`--manifest-dir`, `--resume-job-id`), `--on-conflict do-nothing` semantics, schema inference caveats, index-count throughput impact, diagnostic decision tree
 
 ### [onboarding.md](references/onboarding.md)

@@ -189,8 +189,8 @@ def grade_eval(eval_item: dict, run_result: dict) -> dict:
         evidence = ""
         exp_lower = expectation_text.lower()
 
-        # --- Assertion: Reads all four Workflow 8 references ---
-        # Workflow 8 Phase 0 requires loading plan-interpretation, catalog-queries,
+        # --- Assertion: Reads all four Workflow 9 references ---
+        # Workflow 9 Phase 0 requires loading plan-interpretation, catalog-queries,
         # guc-experiments, and report-format before producing the report.
         if "reads all four" in exp_lower and "reference" in exp_lower:
             required = {
@@ -207,7 +207,7 @@ def grade_eval(eval_item: dict, run_result: dict) -> dict:
             missing = required - loaded
             if not missing:
                 passed = True
-                evidence = "All four Workflow 8 references loaded"
+                evidence = "All four Workflow 9 references loaded"
             else:
                 evidence = f"Missing reference reads: {sorted(missing)}"
 

@@ -99,7 +99,6 @@ aurora-dsql-loader load \
   --dry-run
 ```
 
-### Going Deeper
+### When to load the full reference
 
-For advanced loader operations (resume/retry, conflict handling, throughput tuning), see
-[data-loading.md](../data-loading.md).
+Load [data-loading.md](../data-loading.md) when diagnosing slow loads, configuring resume/retry, or tuning conflict handling.

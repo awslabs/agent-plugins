@@ -17,10 +17,10 @@ tools/evals/databases-on-aws/
     ├── evals.json                   # Tier 2: functional evals (9 prompts, 31 assertions)
     ├── trigger_evals.json           # Tier 1: triggering evals (31 test cases)
     ├── safe_query_evals.json        # Tier 3: safe_query enforcement (6 prompts, ~30 expectations)
-    ├── query_explainability_evals.json  # Workflow 8: query plan diagnostics (9 prompts, 70 assertions)
+    ├── query_explainability_evals.json  # Workflow 9: query plan diagnostics (9 prompts, 70 assertions)
     └── scripts/
         ├── run_functional_evals.py          # Runner/grader for Tier 2
-        ├── run_query_explainability_evals.py # Runner/grader for Workflow 8
+        ├── run_query_explainability_evals.py # Runner/grader for Workflow 9
         └── test_safe_query.py               # Unit tests for safe_query.py module
 ```
 
@@ -79,7 +79,7 @@ python tools/evals/databases-on-aws/dsql/scripts/run_functional_evals.py \
   --verbose
 ```
 
-**What it checks** (12 eval prompts, 43 assertions total):
+**What it checks** (12 eval prompts, 42 assertions total):
 
 | Eval                           | Focus                 | Grader    | Key assertions                                                                                            |
 | ------------------------------ | --------------------- | --------- | --------------------------------------------------------------------------------------------------------- |
@@ -155,7 +155,7 @@ PYTHONPATH="<skill-creator-path>:$PYTHONPATH" python -m scripts.run_loop \
 
 ---
 
-### Query Plan Explainability Functional Evals (Workflow 8)
+### Query Plan Explainability Functional Evals (Workflow 9)
 
 Tests the full diagnostic workflow: EXPLAIN ANALYZE execution, catalog queries, cardinality checks, report generation.
 Triggering is covered by the main `trigger_evals.json` (explainability prompts included there).
