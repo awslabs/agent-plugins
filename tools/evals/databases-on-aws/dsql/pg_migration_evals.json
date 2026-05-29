@@ -1,6 +1,6 @@
 {
   "skill_name": "dsql",
-  "focus": "PostgreSQL schema conversion — does the agent use skill knowledge to handle conversions beyond dsql_lint?",
+  "focus": "PostgreSQL schema conversion \u2014 does the agent use skill knowledge to handle conversions beyond dsql_lint?",
   "evals": [
     {
       "id": 200,
@@ -186,7 +186,7 @@
       "id": 207,
       "name": "full-schema-conversion",
       "prompt": "Convert this complete PostgreSQL schema to DSQL-compatible DDL:\n\nCREATE TYPE status AS ENUM ('active','inactive','suspended');\n\nCREATE TABLE organizations (\n  id SERIAL PRIMARY KEY,\n  name VARCHAR(200) UNIQUE\n);\n\nCREATE TABLE users (\n  id SERIAL PRIMARY KEY,\n  org_id INT REFERENCES organizations(id) ON DELETE CASCADE,\n  email VARCHAR(255) NOT NULL,\n  status status DEFAULT 'active',\n  preferences JSONB,\n  search_tokens TSVECTOR\n);\n\nCREATE INDEX idx_users_search ON users USING gin(search_tokens);\nCREATE INDEX idx_users_active ON users (email) WHERE status = 'active';\n\nCREATE FUNCTION update_search() RETURNS TRIGGER AS $$\nBEGIN\n  NEW.search_tokens = to_tsvector(NEW.email);\n  RETURN NEW;\nEND;\n$$ LANGUAGE plpgsql;",
-      "expected_output": "Comprehensive conversion: SERIAL→IDENTITY, ENUM→CHECK, FK→removed+validation function, JSONB→json, TSVECTOR→text, GIN→removed, partial index→full or composite, PL/pgSQL→removed with guidance",
+      "expected_output": "Comprehensive conversion: SERIAL\u2192IDENTITY, ENUM\u2192CHECK, FK\u2192removed+validation function, JSONB\u2192json, TSVECTOR\u2192text, GIN\u2192removed, partial index\u2192full or composite, PL/pgSQL\u2192removed with guidance",
       "files": [],
       "expectations": [
         "Converts SERIAL to IDENTITY or sequence-based approach",
@@ -195,10 +195,82 @@
         "Converts JSONB to json with cast guidance",
         "Converts TSVECTOR to text and notes FTS must move to external service",
         "Removes or converts the GIN index (not supported)",
-        "Handles the partial index (WHERE status = 'active') — removes WHERE or adds status to composite index",
+        "Handles the partial index (WHERE status = 'active') \u2014 removes WHERE or adds status to composite index",
         "Converts the PL/pgSQL trigger function (or explains it must move to app layer)",
         "Omits per-column COLLATE \"C\" (DSQL uses C collation database-wide; per-column clause is not supported)",
         "Uses CREATE INDEX ASYNC for all indexes"
+      ],
+      "llm_judge": true
+    },
+    {
+      "id": 300,
+      "name": "collate-trap",
+      "prompt": "I'm migrating this PostgreSQL table to DSQL. The original uses en_US.UTF-8 locale. I want case-insensitive text sorting. Here's my schema:\n\nCREATE TABLE products (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  name VARCHAR(200) NOT NULL,\n  category VARCHAR(50)\n);\n\nHow should I handle collation in DSQL to get proper text sorting?",
+      "expected_output": "States that per-column COLLATE is NOT supported in DSQL (rejected with error). Explains DSQL uses C collation database-wide. For case-insensitive sorting, use lower() or a computed column.",
+      "files": [],
+      "expectations": [
+        "States that per-column COLLATE clauses are NOT supported in DSQL (causes DDL error)",
+        "Explains DSQL uses C collation database-wide (no need to specify it)",
+        "Does NOT recommend adding COLLATE \"C\" to columns",
+        "Suggests lower() or a computed column for case-insensitive sorting",
+        "Warns that C collation sorts uppercase before lowercase (Banana before apple)"
+      ],
+      "llm_judge": true
+    },
+    {
+      "id": 301,
+      "name": "async-index-monitoring",
+      "prompt": "I just created 5 indexes on my DSQL table using CREATE INDEX ASYNC. My application is about to go live. How do I know when the indexes are ready to use? Can I start querying immediately?",
+      "expected_output": "Explains that async indexes are not immediately usable. Must poll pg_index.indisvalid to check readiness. Queries work but won't use the index until indisvalid = true.",
+      "files": [],
+      "expectations": [
+        "States that async indexes are NOT immediately ready after CREATE INDEX ASYNC returns",
+        "Provides the pg_index query to check indisvalid status (SELECT from pg_index WHERE NOT indisvalid)",
+        "Explains that queries still work but fall back to sequential scan until index is valid",
+        "Does NOT claim indexes are ready immediately after the DDL succeeds",
+        "Recommends waiting for indisvalid = true before relying on index performance"
+      ],
+      "llm_judge": true
+    },
+    {
+      "id": 302,
+      "name": "multi-region-ddl-trap",
+      "prompt": "I have a multi-region DSQL cluster (us-east-1 + eu-west-1). I need to add a new table and index. Should I run the DDL against both region endpoints to ensure consistency, or is there a better approach?",
+      "expected_output": "States that DDL MUST be executed against only ONE region. Schema propagates automatically to all regions. Running DDL in both regions would cause conflicts.",
+      "files": [],
+      "expectations": [
+        "States that DDL MUST be executed against only ONE region endpoint",
+        "Explains that schema changes propagate automatically to all regions",
+        "Does NOT recommend running DDL against both endpoints",
+        "Does NOT suggest a migration script that connects to each region separately"
+      ],
+      "llm_judge": true
+    },
+    {
+      "id": 303,
+      "name": "identity-cache-trap",
+      "prompt": "I'm migrating a high-throughput table from PostgreSQL to DSQL. The original uses SERIAL (auto-increment). I expect 50,000 inserts/second across multiple application instances. What's the correct IDENTITY configuration for DSQL?",
+      "expected_output": "Recommends CACHE 65536 (not CACHE 1) for high-throughput. Explains that DSQL only supports CACHE 1 or CACHE >= 65536. CACHE 1 would serialize all inserts.",
+      "files": [],
+      "expectations": [
+        "Recommends GENERATED BY DEFAULT AS IDENTITY with CACHE 65536 (or higher)",
+        "Explains that DSQL only supports CACHE values of 1 or >= 65536",
+        "Does NOT recommend CACHE 1 for high-throughput (would serialize inserts)",
+        "Does NOT recommend intermediate CACHE values like 100 or 1000 (not supported in DSQL)"
+      ],
+      "llm_judge": true
+    },
+    {
+      "id": 304,
+      "name": "occ-retry-with-connector",
+      "prompt": "I'm writing a Python app that does concurrent updates to the same rows in DSQL. I'm getting SQLSTATE 40001 errors. I'm currently using raw psycopg2. What's the recommended approach for handling this in DSQL?",
+      "expected_output": "Recommends the DSQL Python Connector (aurora-dsql-python-connector) which handles OCC retries automatically. Explains that OCC conflicts are validated at COMMIT time, not at statement execution.",
+      "files": [],
+      "expectations": [
+        "Recommends the DSQL Python Connector (aurora-dsql-python-connector or aurora_dsql_psycopg) as the primary solution",
+        "Explains that OCC validation happens at COMMIT time (not at individual statement execution)",
+        "Does NOT only suggest manual retry loops as the primary solution when a connector exists",
+        "Mentions that the connector handles retries automatically with proper backoff"
       ],
       "llm_judge": true
     }
