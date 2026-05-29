@@ -18,21 +18,6 @@
       "llm_judge": true
     },
     {
-      "id": 201,
-      "name": "plpgsql-trigger-conversion",
-      "prompt": "I need to migrate this PostgreSQL trigger to DSQL:\n\nCREATE FUNCTION set_updated_at() RETURNS TRIGGER AS $$\nBEGIN\n  NEW.updated_at = now();\n  RETURN NEW;\nEND;\n$$ LANGUAGE plpgsql;\n\nCREATE TRIGGER trg_users_updated BEFORE UPDATE ON users\n  FOR EACH ROW EXECUTE FUNCTION set_updated_at();",
-      "expected_output": "Converts PL/pgSQL trigger to a SQL function that the application calls after UPDATE, or suggests inlining updated_at = now() in the UPDATE statement",
-      "files": [],
-      "expectations": [
-        "Identifies this as a SET_COLUMN pattern (Pattern 1)",
-        "Generates a replacement SQL function using LANGUAGE sql (not plpgsql)",
-        "Drops the CREATE TRIGGER statement",
-        "Explains that the application must call the function after UPDATE (or inline the logic)",
-        "Does NOT claim triggers work in DSQL"
-      ],
-      "llm_judge": true
-    },
-    {
       "id": 202,
       "name": "fk-validation-generation",
       "prompt": "My PostgreSQL schema has:\n\nCREATE TABLE orders (\n  id UUID PRIMARY KEY,\n  customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,\n  product_id UUID REFERENCES products(id)\n);\n\nConvert this for DSQL and generate the FK replacement code.",
@@ -74,21 +59,6 @@
         "Uses exponential backoff with jitter",
         "Has a max retry limit (typically 5)",
         "Includes BEGIN/COMMIT/ROLLBACK transaction management"
-      ],
-      "llm_judge": true
-    },
-    {
-      "id": 205,
-      "name": "uuid-generate-replacement",
-      "prompt": "My PostgreSQL schema uses uuid_generate_v4() and lastval() extensively. What do I need to change for DSQL?\n\nCREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";\nCREATE TABLE events (id UUID DEFAULT uuid_generate_v4() PRIMARY KEY);\n-- Later in app code: SELECT lastval();",
-      "expected_output": "Replaces uuid_generate_v4() with gen_random_uuid(), removes CREATE EXTENSION, replaces lastval() with currval('explicit_sequence_name')",
-      "files": [],
-      "expectations": [
-        "Removes the CREATE EXTENSION statement",
-        "Replaces uuid_generate_v4() with gen_random_uuid()",
-        "Explains that gen_random_uuid() is built-in (no extension needed)",
-        "Replaces lastval() with currval() using an explicit sequence name",
-        "Explains why lastval() is not supported (must reference specific sequence)"
       ],
       "llm_judge": true
     },
@@ -164,21 +134,6 @@
         "Preserves the GRANT statements (GRANT/REVOKE are supported)",
         "Explains that authentication uses IAM tokens (not passwords)",
         "Mentions dsql:DbConnect IAM action or IAM-to-database-role mapping"
-      ],
-      "llm_judge": true
-    },
-    {
-      "id": 212,
-      "name": "copy-to-batched-insert",
-      "prompt": "I currently load data into PostgreSQL using COPY:\n\nCOPY users (id, email, name, created_at) FROM '/data/users.csv' WITH (FORMAT csv, HEADER);\n\nThe file has about 50,000 rows. How do I do this in DSQL?",
-      "expected_output": "Explains COPY is not supported, recommends batched INSERT with 500-1000 rows per transaction, provides a script or pattern for loading CSV data",
-      "files": [],
-      "expectations": [
-        "States that COPY command is not supported in DSQL",
-        "Recommends batched INSERT statements as the replacement",
-        "Specifies a batch size under 3,000 rows (typically 500-1000)",
-        "Mentions that each batch should be its own transaction",
-        "Provides or describes a script/pattern for reading CSV and inserting in batches"
       ],
       "llm_judge": true
     },

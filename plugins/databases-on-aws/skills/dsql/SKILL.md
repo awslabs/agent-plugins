@@ -55,23 +55,19 @@ Load these files as needed for detailed guidance:
 
 ### PostgreSQL Migrations:
 
-| Reference                                                                                     | When to Load                                                     | Contains                                           |
-| --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------- |
-| [pg-migrations/type-mapping.md](references/pg-migrations/type-mapping.md)                     | MUST load for PG → DSQL type questions                           | C collation rules, NUMERIC precision, JSON/JSONB   |
-| [pg-migrations/plpgsql-patterns.md](references/pg-migrations/plpgsql-patterns.md)             | MUST load for PL/pgSQL or trigger conversion                     | 10 transpilation patterns, detection signals       |
-| [pg-migrations/fk-replacement.md](references/pg-migrations/fk-replacement.md)                 | MUST load for FK validation code generation                      | validate_fk_*() templates, cascade functions       |
-| [pg-migrations/index-conversion.md](references/pg-migrations/index-conversion.md)             | MUST load for unfixable index diagnostics                        | GIN/GiST/BRIN → btree, partial, expression indexes |
-| [pg-migrations/schema-objects.md](references/pg-migrations/schema-objects.md)                 | MUST load for ENUM, materialized views, extensions, multi-schema | ENUM → CHECK, views, role/IAM mapping              |
-| [pg-migrations/function-compatibility.md](references/pg-migrations/function-compatibility.md) | Checking PG function support or replacements                     | uuid_generate_v4, lastval, COPY replacements       |
-| [pg-migrations/multi-region.md](references/pg-migrations/multi-region.md)                     | Multi-region, active-active, or HA questions                     | Architecture, geographic partitioning              |
+| Reference                                                                         | When to Load                                                     | Contains                                           |
+| --------------------------------------------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------- |
+| [pg-migrations/type-mapping.md](references/pg-migrations/type-mapping.md)         | MUST load for PG → DSQL type questions                           | C collation rules, NUMERIC precision, JSON/JSONB   |
+| [pg-migrations/fk-replacement.md](references/pg-migrations/fk-replacement.md)     | MUST load for FK validation code generation                      | Tenant-scoped validate_fk_*() template, cascade    |
+| [pg-migrations/index-conversion.md](references/pg-migrations/index-conversion.md) | MUST load for unfixable index diagnostics                        | GIN/GiST/BRIN → btree, partial, expression indexes |
+| [pg-migrations/schema-objects.md](references/pg-migrations/schema-objects.md)     | MUST load for ENUM, materialized views, extensions, multi-schema | ENUM → CHECK, views, role/IAM mapping              |
+| [pg-migrations/multi-region.md](references/pg-migrations/multi-region.md)         | Multi-region, active-active, or HA questions                     | Architecture, geographic partitioning              |
 
 ### ORM Guides:
 
-| Reference                                                     | When to Load                       | Contains                                   |
-| ------------------------------------------------------------- | ---------------------------------- | ------------------------------------------ |
-| [orm-guides/django.md](references/orm-guides/django.md)       | Migrating Django to DSQL           | aurora-dsql-django adapter, model changes  |
-| [orm-guides/hibernate.md](references/orm-guides/hibernate.md) | Migrating Java/Spring Boot to DSQL | Hibernate dialect, Spring Retry, Liquibase |
-| [orm-guides/rails.md](references/orm-guides/rails.md)         | Migrating Rails to DSQL            | IAM initializer, associations without FK   |
+| Reference                                                   | When to Load              | Contains                                                         |
+| ----------------------------------------------------------- | ------------------------- | ---------------------------------------------------------------- |
+| [orm-guides/overview.md](references/orm-guides/overview.md) | Migrating any ORM to DSQL | Adapter names, key gotchas for Django/Hibernate/Rails/SQLAlchemy |
 
 ### Query Plan Explainability:
 
@@ -289,7 +285,7 @@ MUST load [pg-migrations/type-mapping.md](references/pg-migrations/type-mapping.
 
 ### Workflow 10: ORM Migration (Django/Hibernate/Rails)
 
-Load the appropriate guide: [orm-guides/django.md](references/orm-guides/django.md), [orm-guides/hibernate.md](references/orm-guides/hibernate.md), or [orm-guides/rails.md](references/orm-guides/rails.md).
+Load [orm-guides/overview.md](references/orm-guides/overview.md) for adapter names and framework-specific gotchas.
 
 ## Error Scenarios
 
