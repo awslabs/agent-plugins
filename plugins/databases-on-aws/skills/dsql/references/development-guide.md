@@ -55,6 +55,7 @@ effortless scaling, multi-region viability, among other advantages.
 
 - MUST verify column types via `awsknowledge`: `aurora dsql supported data types` or the [DSQL supported data types list](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-supported-data-types.html)
 - MUST serialize arrays as JSONB; expand at query time via `jsonb_array_elements_text(data)`
+- **MUST NOT** add per-column `COLLATE` clauses — DSQL uses C collation database-wide and rejects `COLLATE "C"` in DDL. Run `dsql-lint` to strip COLLATE from migrated schemas.
 - ALWAYS include tenant_id in tables for multi-tenant isolation
 - SHOULD create async indexes for tenant_id and common query patterns
 
@@ -65,6 +66,7 @@ effortless scaling, multi-region viability, among other advantages.
 - MUST use **`CREATE INDEX ASYNC`:** No synchronous creation (verify limits via `awsknowledge`: `aurora dsql index limits`)
   - MAXIMUM: **24 indexes per table**
   - MAXIMUM: **8 columns per index**
+  - **MUST** verify index is ready before relying on it: `SELECT indisvalid FROM pg_index WHERE indexrelid = 'index_name'::regclass` — queries work but skip the index until `indisvalid = true`
 - **Asynchronous Execution:** DDL ALWAYS runs asynchronously
 - To add a column with DEFAULT or NOT NULL:
   1. MUST issue ADD COLUMN specifying only the column name and data type
