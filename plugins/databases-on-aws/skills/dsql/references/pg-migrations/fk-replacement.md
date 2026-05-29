@@ -2,7 +2,7 @@
 
 `dsql-lint` removes FK declarations. Use application-layer referential integrity instead.
 
-The model already knows the basic pattern (check-then-insert in a transaction). This file
+The basic pattern (check-then-insert in a transaction) is assumed knowledge. This file
 provides the **tenant-scoped template** that ensures FK validation is scoped to the same
 tenant — the key DSQL-specific pattern.
 

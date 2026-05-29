@@ -273,7 +273,7 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO app_reader;
 
 ## Multi-Schema Handling
 
-DSQL supports up to 10 schemas per database.
+DSQL supports up to 10 schemas per database (DSQL service limit).
 
 ### ≤10 Schemas: Direct Migration
 

@@ -47,7 +47,7 @@ Warn users that ORDER BY behavior changes for mixed-case or non-ASCII data.
 
 ## NUMERIC Precision
 
-PostgreSQL allows unbounded NUMERIC. DSQL enforces max precision 38, scale 37.
+PostgreSQL allows unbounded NUMERIC. DSQL enforces max precision 38, scale 37 (DSQL service limit).
 
 Specify precision explicitly to avoid surprises:
 

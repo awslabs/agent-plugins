@@ -2,7 +2,7 @@
 
 DSQL uses Optimistic Concurrency Control (OCC). Write transactions are validated at
 COMMIT time — if another transaction modified the same rows, COMMIT fails with
-`SQLSTATE 40001` (serialization failure). Every application **MUST** implement retry logic.
+`SQLSTATE 40001` (serialization failure). Every application MUST implement retry logic.
 
 ## Table of Contents
 
@@ -17,11 +17,11 @@ COMMIT time — if another transaction modified the same rows, COMMIT fails with
 ## Retry Strategy
 
 ```
-Max retries: 5
-Base delay: 50ms
+Max retries: 5 (balances recovery vs infinite-loop risk)
+Base delay: 50ms (allows concurrent transaction to commit)
 Backoff: exponential with jitter
 Formula: delay = min(base * 2^attempt + random(0, base), max_delay)
-Max delay: 5000ms
+Max delay: 5000ms (stays under DSQL's 5-minute transaction timeout)
 Retryable: SQLSTATE 40001 only
 Non-retryable: all other errors (raise immediately)
 ```
@@ -31,7 +31,7 @@ Non-retryable: all other errors (raise immediately)
 ## DSQL Connectors (Preferred)
 
 The DSQL Connectors handle OCC retry, IAM token generation, and connection management
-automatically. **SHOULD** use these instead of manual retry logic:
+automatically. Applications SHOULD use these instead of manual retry logic:
 
 | Language                            | Connector                    | Repository                                                                                                              |
 | ----------------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
@@ -85,21 +85,21 @@ for Java, Go, Node.js, and Rust implementations.
 
 ## Conflict Mitigation
 
-| Scenario                         | Conflict Risk | Mitigation                                |
-| -------------------------------- | ------------- | ----------------------------------------- |
-| Counter/balance updates          | High          | Shard counters, use CACHE 65536 sequences |
-| Status field updates (same row)  | High          | Keep transactions short                   |
-| Batch updates overlapping rows   | Medium        | Smaller batches, randomize order          |
-| Long-running transactions        | Medium        | Break into smaller units (<5 min)         |
-| Cross-region writes to same rows | High          | Geographic partitioning                   |
-| INSERT-only workloads            | Low           | UUID PKs distribute writes                |
+| Scenario                         | Conflict Risk | Mitigation                                                                   |
+| -------------------------------- | ------------- | ---------------------------------------------------------------------------- |
+| Counter/balance updates          | High          | Shard counters, use CACHE 65536 sequences (DSQL minimum for high-throughput) |
+| Status field updates (same row)  | High          | Keep transactions short                                                      |
+| Batch updates overlapping rows   | Medium        | Smaller batches, randomize order                                             |
+| Long-running transactions        | Medium        | Break into smaller units — DSQL transaction timeout is 5 min                 |
+| Cross-region writes to same rows | High          | Geographic partitioning                                                      |
+| INSERT-only workloads            | Low           | UUID PKs distribute writes                                                   |
 
 **Key strategies:**
 
 - Keep transactions short — fewer rows, less time = less conflict window
 - Use UUID primary keys — random distribution avoids hot spots
 - Design idempotent operations — safe to retry without side effects
-- Batch writes in small groups (100–500 rows, not 3,000)
+- Batch writes in small groups (100–500 rows) — reduces conflict surface vs using the full 3,000-row limit
 
 ---
 
