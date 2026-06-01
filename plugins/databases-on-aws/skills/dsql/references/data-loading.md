@@ -21,16 +21,9 @@ For installation and basic invocation, see [connectivity-tools.md](auth/connecti
 
 ## Fresh-vs-Warm Partition Behavior
 
-A DSQL table starts on a single partition. DSQL splits partitions under sustained write heat — no client tuning bypasses this.
+DSQL tables start on a single partition and auto-split under sustained write heat. Fresh tables absorb a few thousand rec/s regardless of client concurrency — this is normal, not a problem to fix. Throughput accelerates as partitions split. See [Primary keys in Aurora DSQL](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-primary-keys.html) for partition distribution guidelines.
 
-- A fresh table absorbs a few thousand rec/s from a single client. Adding concurrency does not help — writes serialize against the single partition.
-- Throughput grows as `partitions × per-partition-rate` until the client saturates.
-- Splits require **sustained** write volume (10-20 minutes), not bursts.
-- Random keys (UUIDs) spread heat; monotonic/sequential keys concentrate it and delay parallelism.
-
-**Key insight:** throughput stuck at a few thousand rec/s on a fresh table is normal. Keep the load running — throughput accelerates as DSQL splits.
-
-For latency-sensitive large loads, run a low-concurrency pre-pass to drive splits before the formal load.
+**Agent guidance:** when a user reports low throughput on a fresh table, do NOT recommend adding workers. Advise them to keep the load running or run a pre-pass to drive splits.
 
 ---
 
@@ -80,8 +73,6 @@ The agent **MUST** verify these preconditions before recommending `--on-conflict
 2. The load **MUST** be idempotent — the same source row produces the same target row, so skipping duplicates yields the correct final state.
 3. The source data **MUST NOT** have changed since the original run if using `do-nothing` for crash recovery. Changed source rows are silently kept at their old values.
 
-**Common pitfall:** duplicate-PK rows in the source are silently dropped — `count(*)` on the target will be lower than the loader's "Records loaded" figure.
-
 ---
 
 ## CSV/TSV Header Handling
@@ -109,7 +100,7 @@ aurora-dsql-loader load \
 
 > **These produce successful loads with no error or warning.** You **MUST** validate with `--dry-run` against any new table.
 
-Schema inference works well for homogeneous, well-typed inputs but silently produces wrong types for:
+Schema inference silently produces wrong types for:
 
 - **Mixed nullability across files** — column infers as `TEXT` instead of numeric/date.
 - **Numeric-looking identifiers** (ZIP codes, phone numbers with leading zeros) — infers as integer, losing leading characters.
@@ -128,10 +119,6 @@ If the inferred schema is wrong, create the table explicitly and re-run without 
 ---
 
 ## Index Count Affects Throughput
-
-Each row written costs `1 + num_indexes` index-entry writes. Tables with many secondary indexes load noticeably slower — and the partition-warming curve is correspondingly slower.
-
-Practical guidance:
 
 - For large loads, **SHOULD** create secondary indexes **after** the bulk load using `CREATE INDEX ASYNC`.
 - For tables queried during ingestion, keep indexes in place — throughput cost is preferable to incorrect query results.
