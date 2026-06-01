@@ -42,13 +42,15 @@ This plugin brings deep AWS AI/ML expertise directly into your coding assistant,
 Run in your terminal:
 
 ```
-claude plugin install sagemaker-ai@claude-plugins-official
+claude plugins marketplace add awslabs/agent-plugins
+claude plugins install sagemaker-ai@agent-plugins-for-aws
 ```
 
 Or if you're already inside Claude Code, run:
 
 ```
-/plugin install sagemaker-ai@claude-plugins-official
+/plugin marketplace add awslabs/agent-plugins
+/plugin install sagemaker-ai@agent-plugins-for-aws
 ```
 
 ### Cursor

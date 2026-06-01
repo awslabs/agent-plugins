@@ -1,6 +1,6 @@
 ---
 name: model-evaluation
-description: Generates python code that evaluates SageMaker models. Supports two evaluation types: LLM-as-Judge and Custom Scorer. Use when the user says "evaluate my model", "test model performance", "how did my model perform", "compare models", or other similar requests.
+description: 'Generates python code that evaluates SageMaker models. Supports two evaluation types: LLM-as-Judge and Custom Scorer. Use when the user says "evaluate my model", "test model performance", "how did my model perform", "compare models", or other similar requests.'
 metadata:
   version: "2.0.0"
 ---
