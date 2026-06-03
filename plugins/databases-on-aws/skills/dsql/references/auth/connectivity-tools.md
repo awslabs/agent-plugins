@@ -98,3 +98,7 @@ aurora-dsql-loader load \
   --table my_table \
   --dry-run
 ```
+
+### When to load the full reference
+
+Load [data-loading.md](../data-loading.md) when diagnosing slow loads, configuring resume/retry, or tuning conflict handling.

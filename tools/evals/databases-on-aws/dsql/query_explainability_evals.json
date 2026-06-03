@@ -7,7 +7,7 @@
       "expected_output": "Executes EXPLAIN ANALYZE VERBOSE, interprets the plan, interrogates pg_class/pg_stats, checks actual cardinalities, identifies estimation errors and correlated predicates, produces a structured diagnostic report",
       "files": [],
       "expectations": [
-        "Reads all four Workflow 8 reference files before producing the report",
+        "Reads all four Workflow 9 reference files before producing the report",
         "Executes EXPLAIN ANALYZE VERBOSE via readonly_query tool",
         "Extracts and reports the Query ID from the plan output",
         "Identifies estimation errors where actual rows diverge significantly from estimated rows",

@@ -1,22 +1,14 @@
 ---
 name: dsql
-description: "Build with Aurora DSQL — manage schemas, execute queries, handle migrations, diagnose query plans, and develop applications with a serverless, distributed SQL database. Covers IAM auth, multi-tenant patterns, MySQL-to-DSQL migration, DDL operations, query plan explainability, and SQL compatibility validation. Triggers on phrases like: DSQL, Aurora DSQL, create DSQL table, DSQL schema, migrate to DSQL, distributed SQL database, serverless PostgreSQL-compatible database, DSQL query plan, DSQL EXPLAIN ANALYZE, why is my DSQL query slow."
+description: "Build with Aurora DSQL — manage schemas, execute queries, handle migrations, diagnose query plans, load data, and develop applications with a serverless, distributed SQL database. Covers IAM auth, multi-tenant patterns, MySQL-to-DSQL migration, DDL operations, query plan explainability, SQL compatibility validation, and bulk data loading. Triggers on phrases like: DSQL, Aurora DSQL, create DSQL table, DSQL schema, migrate to DSQL, distributed SQL database, serverless PostgreSQL-compatible database, DSQL query plan, DSQL EXPLAIN ANALYZE, why is my DSQL query slow, aurora-dsql-loader, load CSV into DSQL."
 license: Apache-2.0
 metadata:
-  tags: aws, aurora, dsql, distributed-sql, distributed, distributed-database, database, serverless, serverless-database, postgresql, postgres, sql, schema, migration, multi-tenant, iam-auth, aurora-dsql, mcp, orm
+  tags: aws, aurora, dsql, distributed-sql, distributed, distributed-database, database, serverless, serverless-database, postgresql, postgres, sql, schema, migration, multi-tenant, iam-auth, aurora-dsql, mcp, orm, data-loading
 ---
 
 # Amazon Aurora DSQL Skill
 
-Aurora DSQL is a serverless, PostgreSQL-compatible distributed SQL database. This skill provides direct database interaction via MCP tools, schema management, migration support, and multi-tenant patterns.
-
-**Key capabilities:**
-
-- Direct query execution via MCP tools
-- Schema management with DSQL constraints
-- Migration support and safe schema evolution
-- Multi-tenant isolation patterns
-- IAM-based authentication
+Aurora DSQL is a serverless, PostgreSQL-compatible distributed SQL database. This skill covers direct query execution via MCP tools, schema management, migrations, multi-tenant isolation, IAM auth, and bulk data loading via `aurora-dsql-loader`.
 
 ---
 
@@ -59,6 +51,11 @@ sampled in [.mcp.json](../../.mcp.json)
 
 **When:** Load when debugging errors or unexpected behavior. SHOULD always consult for OCC errors, connection failures, or unexpected query results.
 **Contains:** Common pitfalls, error messages, solutions
+
+### [data-loading.md](references/data-loading.md)
+
+**When:** Load when planning or running bulk loads with `aurora-dsql-loader`, or diagnosing slow load times.
+**Contains:** Fresh-vs-warm partition behavior, resume/retry mechanics (`--manifest-dir`, `--resume-job-id`), `--on-conflict do-nothing` semantics, schema inference caveats, index-count throughput impact, diagnostic decision tree
 
 ### [onboarding.md](references/onboarding.md)
 
@@ -111,7 +108,7 @@ sampled in [.mcp.json](../../.mcp.json)
 
 ### Query Plan Explainability (modular):
 
-**When:** MUST load all four at Workflow 8 Phase 0 — [query-plan/plan-interpretation.md](references/query-plan/plan-interpretation.md), [query-plan/catalog-queries.md](references/query-plan/catalog-queries.md), [query-plan/guc-experiments.md](references/query-plan/guc-experiments.md), [query-plan/report-format.md](references/query-plan/report-format.md)
+**When:** MUST load all four at Workflow 9 Phase 0 — [query-plan/plan-interpretation.md](references/query-plan/plan-interpretation.md), [query-plan/catalog-queries.md](references/query-plan/catalog-queries.md), [query-plan/guc-experiments.md](references/query-plan/guc-experiments.md), [query-plan/report-format.md](references/query-plan/report-format.md)
 **Contains:** DSQL node types + Node Duration math + estimation-error bands, pg_class/pg_stats/pg_indexes SQL + correlated-predicate verification, GUC experiment procedures + 30-second skip protocol, required report structure + element checklist + support request template
 
 ### SQL Compatibility Validation:
@@ -182,6 +179,7 @@ See [scripts/README.md](../../scripts/README.md) for usage and hook configuratio
 1. **Explore:** Use `readonly_query` with `information_schema` to list tables. Use `get_schema` for table structure.
 2. **Query:** Use `readonly_query` for SELECT queries. **MUST** include `tenant_id` in WHERE for multi-tenant apps. **MUST** build SQL with `safe_query.build()`.
 3. **Schema changes:** Use `transact` with one DDL per transaction. **MUST** batch DML under 3,000 rows. **MUST** use `CREATE INDEX ASYNC` in a separate call. Use `dsql_lint` to validate first.
+4. **Bulk load data:** Use `aurora-dsql-loader` for CSV/TSV/Parquet. Load [data-loading.md](references/data-loading.md) for details. Use `--dry-run` first.
 
 ---
 
@@ -217,13 +215,22 @@ Every DDL statement generated in this workflow MUST be validated with `dsql_lint
 
 **Recovery — batch fails midway:** Rows already updated keep their new value (each batch committed independently). Resume by filtering on the unset state (`WHERE new_column IS NULL`) and continue. Re-running is safe because the filter naturally excludes completed rows.
 
-### Workflow 3: Application-Layer Referential Integrity
+### Workflow 3: Bulk Data Loading
+
+Use `aurora-dsql-loader` for CSV, TSV, or Parquet loads. MUST load [data-loading.md](references/data-loading.md) before advising on throughput or diagnosing slow loads.
+
+1. Validate with `--dry-run` first
+2. Run with `--manifest-dir` on persistent storage (not `/tmp` — tmpfs on AL2023, lost on crash) and `--header` if file has a header row
+3. On failure: resume with `--resume-job-id`; for duplicates use `--on-conflict do-nothing`
+4. For large tables: create secondary indexes after load using `CREATE INDEX ASYNC`
+
+### Workflow 4: Application-Layer Referential Integrity
 
 **INSERT:** MUST validate parent exists with readonly_query → throw error if not found → insert child with transact.
 
 **DELETE:** MUST check dependents with readonly_query COUNT → return error if dependents exist → delete with transact if safe.
 
-### Workflow 4: Query with Tenant Isolation
+### Workflow 5: Query with Tenant Isolation
 
 1. **MUST** authorize the caller against the tenant — format validation does not establish authorization
 2. **MUST** build SQL with [`safe_query.build()`](mcp/tools/safe_query.py) — use `allow()`/`regex()` for
@@ -231,17 +238,17 @@ Every DDL statement generated in this workflow MUST be validated with `dsql_lint
    See [input-validation.md](mcp/tools/input-validation.md)
 3. **MUST** include `tenant_id` in the WHERE clause; reject cross-tenant access at the application layer
 
-### Workflow 5: Set Up Scoped Database Roles
+### Workflow 6: Set Up Scoped Database Roles
 
 MUST load [access-control.md](references/access-control.md) for role setup, IAM mapping, and schema permissions.
 
-### Workflow 6: Table Recreation DDL Migration
+### Workflow 7: Table Recreation DDL Migration
 
 DSQL does NOT support direct `ALTER COLUMN TYPE`, `DROP COLUMN`, `DROP CONSTRAINT`, or `MODIFY PRIMARY KEY`. These require the **Table Recreation Pattern**. This is a destructive workflow that requires user confirmation at each step. Every generated DDL in the pattern (CREATE new, INSERT ... SELECT, DROP old, RENAME) MUST be validated with `dsql_lint(sql=..., fix=true)` before execution.
 
 MUST load [ddl-migrations/overview.md](references/ddl-migrations/overview.md) before attempting any of these operations.
 
-### Workflow 7: Validate and Migrate to DSQL
+### Workflow 8: Validate and Migrate to DSQL
 
 MUST load [dsql-lint.md](references/dsql-lint.md) before running `dsql_lint` — it defines diagnostic handling, the three `fix_result.status` values (`fixed`, `fixed_with_warning`, `unfixable`), and user-confirmation gates.
 
@@ -250,7 +257,7 @@ Run `dsql_lint(sql=source_sql, fix=true)` to validate and auto-convert PostgreSQ
 - For MySQL-origin SQL, MUST cross-check the source against [mysql-migrations/type-mapping.md](references/mysql-migrations/type-mapping.md) even when lint returns clean — `ENGINE=` clauses and `SET(...)` column types can pass silently through the PostgreSQL parser.
 - On `parse_error`, fall back to [mysql-migrations/type-mapping.md](references/mysql-migrations/type-mapping.md) for manual conversion, then re-run `dsql_lint` on the converted output before executing.
 
-### Workflow 8: Query Plan Explainability
+### Workflow 9: Query Plan Explainability
 
 Explains why the DSQL optimizer chose a particular plan. Triggered by slow queries, high DPU, unexpected Full Scans, or plans the user doesn't understand. **REQUIRES a structured Markdown diagnostic report is the deliverable** beyond conversation — run the workflow end-to-end before answering. Use the `aurora-dsql` MCP when connected; fall back to raw `psql` with a generated IAM token (see the fallback block below) otherwise.
 
@@ -278,8 +285,6 @@ PGPASSWORD="$TOKEN" psql "host=$HOST port=5432 user=admin dbname=postgres sslmod
 
 **Safety.** Plan capture uses `readonly_query` exclusively — it rejects INSERT/UPDATE/DELETE/DDL at the MCP layer. Rewrite DML to SELECT (Phase 1) rather than asking `transact --allow-writes` to run it; write-mode `transact` bypasses all MCP safety checks. **MUST NOT** run arbitrary DDL/DML or pl/pgsql.
 
----
-
 ## Error Scenarios
 
 - **`awsknowledge` returns no results:** Use the default limits in the table above and note that limits should be verified against [DSQL documentation](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/).
@@ -288,11 +293,7 @@ PGPASSWORD="$TOKEN" psql "host=$HOST port=5432 user=admin dbname=postgres sslmod
 - **Transaction exceeds limits:** Split into batches under 3,000 rows — see [batched-migration.md](references/ddl-migrations/batched-migration.md).
 - **Token expiration mid-operation:** Generate a fresh IAM token — see [authentication-guide.md](references/auth/authentication-guide.md). See [troubleshooting.md](references/troubleshooting.md) for other issues.
 
----
-
 ## Additional Resources
 
 - [Aurora DSQL Documentation](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/)
 - [Code Samples Repository](https://github.com/aws-samples/aurora-dsql-samples)
-- [PostgreSQL Compatibility](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility.html)
-- [CloudFormation Resource](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-dsql-cluster.html)
