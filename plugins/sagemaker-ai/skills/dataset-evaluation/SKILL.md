@@ -29,11 +29,14 @@ Follow the workflow shown below. Locate the dataset, check the file type, and re
 4. **Summarize Results**: Tell the user if their data is ready
    - Examine the output of format_detector and compare to the known strategy and model
    - **Important: training datasets and evaluation datasets have different format requirements.**
-     - **Training datasets** must match the fine-tuning strategy format (SFT, DPO, RLVR) per `references/strategy_data_requirements.md`
+     - **Training datasets** must match the fine-tuning strategy format (SFT, DPO, RLVR, or MTRL) per `references/strategy_data_requirements.md`
      - **Evaluation datasets** (for model evaluation) must match one of the [SageMaker evaluation dataset formats](https://docs.aws.amazon.com/sagemaker/latest/dg/model-customize-evaluation-dataset-formats.html).
    - Report back to the user if their current dataset is valid for its intended purpose
    - Warn the user if their dataset is valid, but for a different strategy or model
    - Warn the user if their dataset is not valid for any strategy/model pair
+   - **MTRL warning rules** (apply in addition to the warnings above):
+     - WHEN format_detector reports `mtrl_parquet` (or otherwise classifies the dataset as MTRL-compatible) AND the selected technique is not `mtrl`: warn the user that the dataset matches the MTRL format and ask whether they intended to use MTRL. Do not proceed until the user confirms the technique.
+     - WHEN format_detector reports a non-MTRL format AND the selected technique is `mtrl`: warn the user that the dataset does not match the MTRL format (a `prompt`-column Parquet file is preferred; JSONL/JSON/CSV with a `prompt` column are also accepted) and offer to invoke the `dataset-transformation` skill to convert it. If the user accepts, hand off to `dataset-transformation` with the MTRL target format.
 
 ## Messages to the User
 

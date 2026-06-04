@@ -17,6 +17,7 @@ When generating:
 
 - The dataset transformation function should: **ONLY transform the input DataFrame into the target output format. No I/O, no side effects.**
 - The dataset transformation execution script should: **ORCHESTRATE the full pipeline: load the dataset using `load_dataset_from`, apply the transformation function, and write the output using `output_dataset_to`.**
+- For most target formats the output writer uses `df.to_json(local_output, orient="records", lines=True)` (JSONL). For the **MTRL** target format the writer uses `df.to_parquet(local_output, index=False)` and the output filename ends in `.parquet` instead of `.jsonl` (see "MTRL Target Format" below).
 - The script must work in two execution contexts:
   - **Local execution**: paths may be S3 URIs or local file paths
   - **SageMaker Processing Job**: inputs are mounted at `/opt/ml/processing/input/` and outputs go to `/opt/ml/processing/output/`
@@ -133,3 +134,59 @@ print(status)
 ```
 
 Call `describe_transformation_job` repeatedly (every ~30 seconds) until `status` is `Completed`, `Failed`, or `Stopped`.
+
+
+## MTRL Target Format
+
+When the target format is **MTRL** (Multi-Turn Reinforcement Learning), the
+output rules differ from the default JSONL pathway:
+
+- **Output extension**: `.parquet` (not `.jsonl`). Filenames follow the same
+  `{original_name}_{target_format}.{ext}` pattern, with `target_format = "mtrl"`
+  and `ext = "parquet"` (e.g., `gen_qa_100k_mtrl.parquet`).
+- **Output schema**: a single string column named `prompt`. The MTRL service
+  uses the column literally named `prompt`; if no such column exists the
+  first column is used. To make data resilient to that fallback, always emit
+  a column literally named `prompt`.
+- **Structured prompts**: when the source records contain structured task
+  data (e.g., conversation history, tool configs, environment metadata),
+  JSON-encode the entire structure into a single string per record:
+
+  ```python
+  import json
+  data = {"prompt": [json.dumps(task_data) for task_data in records]}
+  ```
+
+  The service forwards the prompt verbatim to the agent environment, which
+  is responsible for parsing it.
+
+### Function skeleton (MTRL)
+
+The transformation function still has the same `transform_dataset(df) -> pd.DataFrame`
+signature; only the *output* schema changes. Example:
+
+```python
+import json
+import pandas as pd
+
+def transform_dataset(df: pd.DataFrame) -> pd.DataFrame:
+    # Build a single-column DataFrame whose values are the JSON-encoded
+    # prompts forwarded to the MTRL agent environment.
+    prompts = [json.dumps(record) for record in df.to_dict(orient="records")]
+    return pd.DataFrame({"prompt": prompts})
+```
+
+### Execution script (MTRL)
+
+Replace the JSONL writer with a Parquet writer. Everything else (loading,
+arg parsing, S3 vs local I/O) is unchanged:
+
+```python
+# 4. Write transformed output locally as Parquet
+local_output = "/tmp/output_dataset.parquet"
+df.to_parquet(local_output, index=False)
+```
+
+The execution script's `--input` / `--output` arguments still accept S3 URIs
+or local paths. For S3 outputs, ensure the destination path also ends in
+`.parquet`.

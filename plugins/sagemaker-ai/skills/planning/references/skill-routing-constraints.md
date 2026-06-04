@@ -29,4 +29,15 @@
 - All dataset format changes MUST go through dataset-transformation.
   Do not write inline transformation code in other skills' notebooks.
 - All model/technique selection MUST go through finetuning-setup.
-  Do not resolve model IDs or select techniques ad-hoc.
+  Do not resolve model IDs or select techniques ad-hoc. This applies
+  equally to MTRL: MTRL technique selection MUST go through
+  finetuning-setup, consistent with SFT/DPO/RLVR.
+- Agent-environment configuration for MTRL is part of the `finetuning`
+  skill (and is reused by `model-evaluation` for base-model
+  evaluation). Do not split it into a separate plan step.
+
+## Evaluation Recommendations
+
+- When the training step is MTRL, recommend MTRL Evaluation
+  (`MultiTurnRLEvaluator`) rather than LLM-as-Judge or Custom Scorer.
+  See the model-evaluation skill for details.

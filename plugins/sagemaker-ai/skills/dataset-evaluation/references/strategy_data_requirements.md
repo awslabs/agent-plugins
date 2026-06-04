@@ -171,3 +171,31 @@ The format is the same as SFT for the first N-1 turns. The final assistant turn 
   }
 }
 ```
+
+## MTRL Data Format
+
+MTRL (Multi-Turn Reinforcement Learning) datasets define the prompts that drive rollouts against your agent environment. The dataset only needs to provide prompts; rewards come from the environment, not the dataset.
+
+### Required column
+
+- A `prompt` column containing string values. The service uses the column literally named `prompt`. If no `prompt` column exists, the first column is treated as the prompt column (per the SageMaker SDK).
+
+### Supported file formats
+
+In order of preference:
+
+1. Parquet (`.parquet`) — preferred
+2. JSONL (`.jsonl`)
+3. JSON array (`.json`)
+4. CSV (`.csv`)
+
+### Format-agnostic prompt content
+
+The service does not parse the prompt string. Whatever you put into the `prompt` column is forwarded verbatim to your agent environment, which is responsible for parsing. For structured or agentic prompts (conversation history, tool configs, environment metadata), JSON-encode the structure into one string per record:
+
+```python
+import json
+
+task_data = {"prompt": [...], "env_class": "search", ...}
+data = {"prompt": [json.dumps(task_data)]}
+```

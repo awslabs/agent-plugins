@@ -1,6 +1,6 @@
 ---
 name: finetuning-setup
-description: Selects a base model and fine-tuning technique (SFT, DPO, or RLVR) for the user's use case by querying SageMaker Hub. Use when the user asks which model or technique to use, wants to start fine-tuning, or mentions a model name or family (e.g., "Llama", "Mistral") — always activate even for known model names because the exact Hub model ID must be resolved. Queries available models, validates technique compatibility, and confirms selections.
+description: Selects a base model and fine-tuning technique (SFT, DPO, RLVR, or MTRL) for the user's use case by querying SageMaker Hub. Use when the user asks which model or technique to use, wants to start fine-tuning, or mentions a model name or family (e.g., "Llama", "Mistral") — always activate even for known model names because the exact Hub model ID must be resolved. Queries available models, validates technique compatibility, and confirms selections.
 metadata:
   version: "1.0.0"
 ---
@@ -49,12 +49,14 @@ If you already know the model the user wants to use (from conversation context o
 
 ### Step 3: Determine Finetuning Technique
 
-1. Consult `references/finetune_technique_selection_guide.md` and recommend the best-fit technique (SFT, DPO, or RLVR) for the use case. Present the recommendation and reasoning to the user.
-2. Ask the user if they'd like to go with the recommendation or prefer a different technique.
+1. Consult `references/finetune_technique_selection_guide.md` and recommend the best-fit technique (SFT, DPO, RLVR, or MTRL) for the use case. Present the recommendation and reasoning to the user.
+   - Recommend **MTRL** when the use case involves multi-turn agent interaction, tool use, autonomous decision-making across multiple steps, or rewards that depend on the outcome of an agent rollout (not a single response). MTRL also requires an agent environment to exist (Bedrock AgentCore runtime or a Lambda-fronted custom agent) — mention this so the user knows additional setup is needed inside the `finetuning` skill.
+   - Do NOT recommend MTRL for single-turn input/output use cases that have no agent environment.
+2. Ask the user if they'd like to go with the recommendation or prefer a different technique. If the user explicitly asks for MTRL, respect that choice and proceed even if the use case appears non-agentic.
 3. Once the user confirms a technique, retrieve the finetuning techniques available for the selected model by running: `python finetuning-setup/scripts/get_recipes.py <model-name> <hub-name>`
-   - This returns only the techniques the model actually supports, filtered to SFT, DPO, and RLVR. Only these three techniques are supported — ignore any other techniques even if the model's recipes include them.
+   - This returns only the techniques the model actually supports, filtered to SFT, DPO, RLVR, and MTRL. Only these four techniques are supported — ignore any other techniques even if the model's recipes include them.
 4. If the chosen technique is available for the model, proceed to Step 4.
-5. If the chosen technique is not available for the model, explain that the selected model does not support it on SageMaker and offer to go back to Step 2 to pick a different model that supports the chosen technique.
+5. If the chosen technique is not available for the model, explain that the selected model does not support it on SageMaker and offer to go back to Step 2 to pick a different model that supports the chosen technique. (For MTRL specifically: if the user picked MTRL but the model has no MTRL recipe, state that MTRL is not supported for that model and offer to choose a different model.)
 
 ### Step 4: Confirm Selections
 
@@ -63,7 +65,7 @@ Present a summary to the user:
 ```
 Here's what we've selected:
 - Base model: [model name]
-- Fine-tuning technique: [SFT/DPO/RLVR]
+- Fine-tuning technique: [SFT/DPO/RLVR/MTRL]
 ```
 
 ## References

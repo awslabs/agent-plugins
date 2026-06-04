@@ -1,8 +1,8 @@
 ---
 name: model-evaluation
-description: Generates python code that evaluates SageMaker models. Supports two evaluation types: LLM-as-Judge and Custom Scorer. Use when the user says "evaluate my model", "test model performance", "how did my model perform", "compare models", or other similar requests.
+description: Generates python code that evaluates SageMaker models. Supports three evaluation types: LLM-as-Judge, Custom Scorer, and MTRL Evaluation. Use when the user says "evaluate my model", "test model performance", "how did my model perform", "compare models", or other similar requests.
 metadata:
-  version: "2.0.0"
+  version: "2.1.0"
 ---
 
 # Model Evaluation
@@ -28,10 +28,11 @@ If the user requests help evaluating a different type of model, explain to them 
 
 ## Evaluation Types
 
-There are two evaluation types that can be used to evaluate a model:
+There are three evaluation types that can be used to evaluate a model:
 
 - **LLM-as-Judge** — an LLM grades your model's responses.
 - **Custom Scorer** — programmatic evaluation via Lambda function (includes built-in math and code scorers).
+- **MTRL Evaluation** — multi-turn agent rollout against an agent environment, using `MultiTurnRLEvaluator`. Available for MTRL-trained models, and for base JumpStart models that support MTRL when an explicit `agent_config` is provided.
 
 ## Workflow
 
@@ -41,7 +42,13 @@ There are two evaluation types that can be used to evaluate a model:
 
 Check conversation history, plan.md, workflow_state.json, or anything else you've already read.
 
-**If yes:** confirm with the user.
+**Auto-select rule (MTRL).** If you have access to the source training job's tags (from earlier steps in the conversation, plan.md, or via `list-tags` on the training job ARN), call the deterministic helper `scripts/eval_type_selector.py::auto_select_eval_type(training_job_tags)`. If it returns `"MTRL Evaluation"`, default to MTRL Evaluation and confirm with the user before moving to Step 2:
+
+> "It looks like this model was trained with MTRL, so MTRL Evaluation (multi-turn agent rollout) is the natural fit. Want to go with that?"
+
+⏸ Wait for confirmation. If confirmed → go to Step 2. If the user declines, fall through to the manual selection below.
+
+**If you already know from prior context (non-MTRL):** confirm with the user.
 
 > "It sounds like you want to run [evaluation type]. Is that right?"
 
@@ -53,6 +60,7 @@ Check conversation history, plan.md, workflow_state.json, or anything else you'v
 >
 > 1. **LLM-as-Judge** — an LLM grades your model's responses
 > 2. **Custom Scorer** — programmatic scoring (math, code, or your own logic)
+> 3. **MTRL Evaluation** — multi-turn agent rollout against an agent environment (for MTRL-trained models, or base JumpStart models that support MTRL with an explicit `agent_config`)
 >
 > Pick one, or say 'help me decide' if you're not sure."
 
@@ -78,6 +86,16 @@ Before reading the reference file, validate that the chosen evaluation type is c
 
 1. **Does the user have an evaluation dataset?** Custom Scorer requires one. (No model type restriction — works with Nova.)
 
+#### MTRL Evaluation validation
+
+1. **Does the user have an evaluation dataset (Parquet preferred, with a `prompt` column)?** Required (R7.7) — MTRL evaluation runs prompts through the agent environment, so without a dataset there is nothing to evaluate. If the user has no dataset, inform them and stop:
+
+   > "MTRL evaluation requires a dataset of prompts. I can't generate the evaluation cells without one."
+
+2. **Was the model trained with MTRL, or is the user evaluating a base JumpStart model that supports MTRL?**
+   - **Trained with MTRL** → use the trainer-resolved path. The evaluator will re-attach to the training job (`MultiTurnRLTrainer.attach(job_name=...)`) and pass `model=trainer`. No `agent_config` is needed — the evaluator auto-resolves both the output model package and the agent environment from the trainer.
+   - **Base JumpStart model** → require an `agent_config` (AgentCore ARN or Lambda ARN). If the user does not already have one, delegate to the finetuning skill's agent-environment-setup sub-flow at `agent-plugins/plugins/sagemaker-ai/skills/finetuning/references/agent_environment_setup.md`. Capture the resulting `AGENT_ENV` value and use it as `agent_config`.
+
 ---
 
 If validation fails, tell the user which requirement(s) aren't met and offer alternatives:
@@ -96,9 +114,10 @@ If they say they do want help choosing a different eval type → read `reference
 
 If validation passes, read the corresponding reference file:
 
-| User chose    | Read                                     |
-| ------------- | ---------------------------------------- |
-| LLM-as-Judge  | `references/llmaaj-evaluation.md`        |
-| Custom Scorer | `references/custom-scorer-evaluation.md` |
+| User chose       | Read                                     |
+| ---------------- | ---------------------------------------- |
+| LLM-as-Judge     | `references/llmaaj-evaluation.md`        |
+| Custom Scorer    | `references/custom-scorer-evaluation.md` |
+| MTRL Evaluation  | `references/mtrl-evaluation.md`          |
 
 Follow the reference file's instructions from the beginning.

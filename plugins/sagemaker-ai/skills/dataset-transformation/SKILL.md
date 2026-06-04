@@ -1,6 +1,6 @@
 ---
 name: dataset-transformation
-description: Generates a Jupyter notebook that transforms datasets between ML schemas for model training or evaluation. Use when the user says "transform", "convert", "reformat", "change the format", or when a dataset's schema needs to change to match the target format — always use this skill for format changes rather than writing inline transformation code. Supports OpenAI chat, SageMaker SFT/DPO/RLVR, HuggingFace preference, Bedrock Nova, VERL, and custom JSONL formats from local files or S3.
+description: Generates a Jupyter notebook that transforms datasets between ML schemas for model training or evaluation. Use when the user says "transform", "convert", "reformat", "change the format", or when a dataset's schema needs to change to match the target format — always use this skill for format changes rather than writing inline transformation code. Supports OpenAI chat, SageMaker SFT/DPO/RLVR/MTRL, HuggingFace preference, Bedrock Nova, VERL, and custom JSONL/Parquet formats from local files or S3.
 metadata:
   version: "1.0.0"
 ---
@@ -24,7 +24,7 @@ Transforms a data set provided by the user into their desired format. All transf
 5. **No repetition.** If you said something before a tool call, don't repeat it after. Only share new information.
 6. **Do not deviate from the Workflow.** The steps listed in the workflow should be followed exactly as described. Progress from Step 1 to Step 11 to complete the task. Do not deviate from the workflow!
 7. **Always end with a question.** Whenever you pause for user input, acknowledgment, or feedback, your response must end with a question. Never leave the user with a statement and expect them to know they need to respond.
-8. **Default output format is JSONL.** Unless the user explicitly requests a different file format, the transformed dataset should be written as `.jsonl` (JSON Lines — one JSON object per line).
+8. **Default output format is JSONL.** Unless the user explicitly requests a different file format, the transformed dataset should be written as `.jsonl` (JSON Lines — one JSON object per line). **Exception:** when the target format is MTRL, the output is `.parquet` instead — see the MTRL section of `references/dataset_transformation_code.md`.
 
 ## Known Dataset Formats Reference
 
@@ -32,7 +32,9 @@ This skill supports two transformation purposes — **training data** and **eval
 
 ### Training Data Formats
 
-When the transformation is for **model training**, resolve the target format using the reference file `../dataset-evaluation/references/strategy_data_requirements.md`. The required format depends on both the **model type** (Open Weights like Llama/Qwen vs Nova) and the **finetuning technique** (SFT, DPO, RLVR) — make sure to match on both dimensions. If either the model type or technique is not yet known, ask the user before resolving the format.
+When the transformation is for **model training**, resolve the target format using the reference file `../dataset-evaluation/references/strategy_data_requirements.md`. The required format depends on both the **model type** (Open Weights like Llama/Qwen vs Nova) and the **finetuning technique** (SFT, DPO, RLVR, MTRL) — make sure to match on both dimensions. If either the model type or technique is not yet known, ask the user before resolving the format.
+
+For **MTRL** specifically, the target format is a Parquet file with a single string column named `prompt` (see the "MTRL Data Format" section in `strategy_data_requirements.md`). The output extension is `.parquet`, not `.jsonl`. See "MTRL Target Format" in `references/dataset_transformation_code.md` for the function and execution-script skeletons.
 
 ### Evaluation Data Formats
 
@@ -75,7 +77,7 @@ If you know this already, skip this step. If not, ask the user:
 
 Resolve the target format based on the purpose determined in Step 1:
 
-- **If training data**: Ask the user for the finetuning technique (SFT, DPO, RLVR) and model type (Open Weights like Llama/Qwen vs Nova) if not already known. Then look up the required format from the "Training Data Formats" section in the Known Dataset Formats Reference above.
+- **If training data**: Ask the user for the finetuning technique (SFT, DPO, RLVR, MTRL) and model type (Open Weights like Llama/Qwen vs Nova) if not already known. Then look up the required format from the "Training Data Formats" section in the Known Dataset Formats Reference above.
 - **If evaluation data**: If the user mentions a well-known format name (e.g., "OpenAI format", "SageMaker format"), fetch the schema from the live documentation as described in the "Evaluation Data Formats" section above. If a well-known format is fetched, confirm with the user:
 
 > "I've found a SageMaker dataset format: {sagemaker-dataset-format-name} with schema: {sagemaker-dataset-format-schema}. Is this what you were referring to?"
@@ -108,7 +110,7 @@ If you already know where the dataset is supposed to be output to, skip this ste
 
 > "Where should I output your transformed dataset to? Either a local directory or S3 location works!"
 
-If the user provides a directory (not a full file path), construct the output filename using the pattern `{original_name}_{target_format}.jsonl` (e.g., `gen_qa_100k_openai.jsonl`).
+If the user provides a directory (not a full file path), construct the output filename using the pattern `{original_name}_{target_format}.jsonl` (e.g., `gen_qa_100k_openai.jsonl`). **For the MTRL target format**, use `.parquet` as the extension (e.g., `gen_qa_100k_mtrl.parquet`).
 
 ⏸ Wait for user.
 

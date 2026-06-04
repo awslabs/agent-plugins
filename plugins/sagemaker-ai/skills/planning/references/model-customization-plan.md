@@ -3,7 +3,8 @@
 A typical model customization workflow follows these steps in order:
 
 1. **Define Use Case** — Capture the business problem, users, and success criteria. _(Skill: use-case-specification)_
-2. **Finetuning Setup** — Choose a fine-tuning technique (SFT, DPO, or RLVR) and base model. _(Skill: finetuning-setup)_
+2. **Finetuning Setup** — Choose a fine-tuning technique (SFT, DPO, RLVR, or MTRL) and base model. _(Skill: finetuning-setup)_
+   - **MTRL note:** MTRL (Multi-Turn Reinforcement Learning) requires an agent environment (Bedrock AgentCore runtime or a custom Lambda-fronted agent). The agent environment is configured inside the `finetuning` skill during notebook generation — not in a separate plan step.
 3. **Evaluate Dataset** — Assess data quality, completeness, and format. _(Skill: dataset-evaluation)_
 4. **Transform Dataset** — Convert the dataset to the required format for the selected fine-tuning technique and base model. _(Skill: dataset-transformation)_
 5. **Fine-Tune Model** — Train a custom model using SageMaker. _(Skill: finetuning)_

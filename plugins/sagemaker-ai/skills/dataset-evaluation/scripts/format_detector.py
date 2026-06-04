@@ -2,9 +2,14 @@
 
 This module provides functionality to detect and validate JSONL file formats
 stored in S3. It samples the first 1MB of a file to determine the format type
-across 11 supported formats: Nova SFT, Nova DPO, Nova RLVR, GPT-OSS SFT,
+across 12 supported formats: Nova SFT, Nova DPO, Nova RLVR, GPT-OSS SFT,
 GPT-OSS DPO, Open Weights SFT, Open Weights SFT Conv, Open Weights DPO,
-Verl, Verl Legacy, and SageMaker Eval.
+Verl, Verl Legacy, SageMaker Eval, and MTRL Parquet.
+
+The ``MTRL_PARQUET`` label is the unified identifier for any MTRL-compatible
+container (Parquet, JSONL, JSON, or CSV) that carries the agentic multi-turn
+RL schema. Downstream skills only need to ask "is this MTRL-shaped data?" so
+a single label is used regardless of the underlying file extension.
 
 Usage:
     result = detect_format("s3://my-bucket/data.jsonl")
@@ -15,6 +20,8 @@ Usage:
 from dataclasses import dataclass
 from enum import Enum
 import boto3
+import csv
+import io
 import json
 import logging
 
@@ -36,6 +43,7 @@ class FormatType(Enum):
     VERL = "verl"
     VERL_LEGACY = "verl_legacy"
     SAGEMAKER_EVAL = "sagemaker_eval"
+    MTRL_PARQUET = "mtrl_parquet"
     UNKNOWN = "unknown"
 
 
@@ -156,6 +164,498 @@ def _sample_s3_file(s3_uri: str, sample_size_bytes: int, s3_client=None) -> list
     lines = [line for line in complete_text.split("\n") if line]
     
     return lines
+
+
+def _read_first_4_bytes_local(file_path: str) -> bytes:
+    """Read the first 4 bytes of a local file.
+
+    Args:
+        file_path: Path to local file
+
+    Returns:
+        First 4 bytes of the file (may be shorter if the file is smaller)
+
+    Raises:
+        FileNotFoundError: If the file doesn't exist
+        IOError: If the file can't be read
+    """
+    logger.debug("Reading first 4 bytes of local file: %s", file_path)
+    with open(file_path, "rb") as f:
+        return f.read(4)
+
+
+def _read_last_4_bytes_local(file_path: str) -> bytes:
+    """Read the last 4 bytes of a local file.
+
+    Used as a Parquet footer sanity check; valid Parquet containers end in
+    the 4-byte magic ``PAR1``.
+
+    Args:
+        file_path: Path to local file
+
+    Returns:
+        Last 4 bytes of the file (may be shorter if the file is smaller
+        than 4 bytes)
+
+    Raises:
+        FileNotFoundError: If the file doesn't exist
+        IOError: If the file can't be read
+    """
+    logger.debug("Reading last 4 bytes of local file: %s", file_path)
+    with open(file_path, "rb") as f:
+        f.seek(0, 2)  # Seek to end
+        file_size = f.tell()
+        if file_size < 4:
+            f.seek(0)
+            return f.read()
+        f.seek(file_size - 4)
+        return f.read(4)
+
+
+def _read_first_4_bytes_s3(s3_uri: str, s3_client=None) -> bytes:
+    """Read the first 4 bytes of an S3 object via a Range GET.
+
+    Args:
+        s3_uri: S3 URI in format ``s3://bucket/key``
+        s3_client: Optional boto3 S3 client to reuse
+
+    Returns:
+        First 4 bytes of the object (may be shorter if the object is smaller)
+
+    Raises:
+        ValueError: If the S3 URI is invalid
+        botocore.exceptions.ClientError: If S3 access fails
+    """
+    logger.debug("Reading first 4 bytes of S3 object: %s", s3_uri)
+    if not s3_uri.startswith("s3://"):
+        raise ValueError(f"Invalid S3 URI: must start with 's3://' (got: {s3_uri})")
+
+    uri_without_prefix = s3_uri[5:]
+    parts = uri_without_prefix.split("/", 1)
+    if len(parts) != 2 or not parts[0] or not parts[1]:
+        raise ValueError(f"Invalid S3 URI: must contain bucket and key (got: {s3_uri})")
+
+    bucket, key = parts
+    client = s3_client or boto3.client("s3")
+    response = client.get_object(Bucket=bucket, Key=key, Range="bytes=0-3")
+    return response["Body"].read()
+
+
+def _detect_parquet(file_path: str, s3_client=None) -> FormatDetectionResult:
+    """Detect a Parquet file by checking the ``PAR1`` magic bytes.
+
+    Reads the first four bytes (via a local read or an S3 ``Range`` GET) and
+    compares them to ``b"PAR1"``. For local files, also verifies the trailing
+    four bytes as a sanity check, since valid Parquet containers end with the
+    same magic.
+
+    Args:
+        file_path: S3 URI (``s3://bucket/key``) or local file path
+        s3_client: Optional boto3 S3 client to reuse (ignored for local files)
+
+    Returns:
+        FormatDetectionResult with ``format_type=MTRL_PARQUET``. ``is_valid``
+        is ``True`` when the magic bytes match (and, for local files, the
+        footer also matches); otherwise ``False`` with a single
+        ``invalid_structure`` error.
+    """
+    is_s3 = file_path.startswith("s3://")
+
+    if is_s3:
+        header = _read_first_4_bytes_s3(file_path, s3_client=s3_client)
+    else:
+        header = _read_first_4_bytes_local(file_path)
+
+    # Empty-file handling: a 0-byte file cannot be a valid Parquet container.
+    if not header:
+        logger.debug("Parquet detection: empty file %s", file_path)
+        return FormatDetectionResult(
+            format_type=FormatType.MTRL_PARQUET,
+            is_valid=False,
+            lines_sampled=0,
+            errors=[ValidationError(
+                line_number=0,
+                error_type="invalid_structure",
+                message="File has .parquet extension but is empty",
+            )],
+            confidence=ConfidenceLevel.NONE,
+        )
+
+    if header != b"PAR1":
+        logger.debug("Parquet detection: header mismatch for %s (got %r)", file_path, header)
+        return FormatDetectionResult(
+            format_type=FormatType.MTRL_PARQUET,
+            is_valid=False,
+            lines_sampled=0,
+            errors=[ValidationError(
+                line_number=0,
+                error_type="invalid_structure",
+                message="File has .parquet extension but does not start with PAR1 magic bytes",
+            )],
+            confidence=ConfidenceLevel.NONE,
+        )
+
+    # For local files, sanity-check the trailing PAR1 footer.
+    if not is_s3:
+        footer = _read_last_4_bytes_local(file_path)
+        if footer != b"PAR1":
+            logger.debug("Parquet detection: footer mismatch for %s (got %r)", file_path, footer)
+            return FormatDetectionResult(
+                format_type=FormatType.MTRL_PARQUET,
+                is_valid=False,
+                lines_sampled=0,
+                errors=[ValidationError(
+                    line_number=0,
+                    error_type="invalid_structure",
+                    message="File starts with PAR1 magic bytes but does not end with PAR1; not a valid Parquet container",
+                )],
+                confidence=ConfidenceLevel.NONE,
+            )
+
+    logger.debug("Parquet detection: valid PAR1 container at %s", file_path)
+    return FormatDetectionResult(
+        format_type=FormatType.MTRL_PARQUET,
+        is_valid=True,
+        lines_sampled=0,
+        errors=[],
+        confidence=ConfidenceLevel.HIGH,
+    )
+
+
+def _read_text_sample_local(file_path: str, sample_size: int) -> str:
+    """Read up to ``sample_size`` bytes from a local file and decode as UTF-8.
+
+    Unlike ``_sample_local_file``, no newline truncation is applied, so the
+    sample can be fed directly into ``json.loads`` or ``csv.reader``.
+
+    Args:
+        file_path: Path to local file
+        sample_size: Maximum bytes to read
+
+    Returns:
+        Decoded UTF-8 text (may be empty if the file is empty)
+
+    Raises:
+        FileNotFoundError: If the file doesn't exist
+        IOError: If the file can't be read
+        UnicodeDecodeError: If the bytes are not valid UTF-8
+    """
+    logger.debug("Reading raw text sample from local file: %s", file_path)
+    with open(file_path, "rb") as f:
+        data = f.read(sample_size)
+    return data.decode("utf-8") if data else ""
+
+
+def _read_text_sample_s3(s3_uri: str, sample_size_bytes: int, s3_client=None) -> str:
+    """Read up to ``sample_size_bytes`` from an S3 object and decode as UTF-8.
+
+    Args:
+        s3_uri: S3 URI in format ``s3://bucket/key``
+        sample_size_bytes: Number of bytes to sample
+        s3_client: Optional boto3 S3 client to reuse
+
+    Returns:
+        Decoded UTF-8 text (may be empty if the object is empty)
+
+    Raises:
+        ValueError: If the S3 URI is invalid
+        botocore.exceptions.ClientError: If S3 access fails
+    """
+    logger.debug("Reading raw text sample from S3 object: %s (%d bytes)", s3_uri, sample_size_bytes)
+    if not s3_uri.startswith("s3://"):
+        raise ValueError(f"Invalid S3 URI: must start with 's3://' (got: {s3_uri})")
+
+    uri_without_prefix = s3_uri[5:]
+    parts = uri_without_prefix.split("/", 1)
+    if len(parts) != 2 or not parts[0] or not parts[1]:
+        raise ValueError(f"Invalid S3 URI: must contain bucket and key (got: {s3_uri})")
+
+    bucket, key = parts
+    client = s3_client or boto3.client("s3")
+    range_header = f"bytes=0-{sample_size_bytes - 1}"
+    response = client.get_object(Bucket=bucket, Key=key, Range=range_header)
+    data = response["Body"].read()
+    return data.decode("utf-8") if data else ""
+
+
+def _read_text_sample(file_path: str, sample_size_bytes: int, s3_client=None) -> str:
+    """Read raw text from either a local path or an S3 URI."""
+    if file_path.startswith("s3://"):
+        return _read_text_sample_s3(file_path, sample_size_bytes, s3_client=s3_client)
+    return _read_text_sample_local(file_path, sample_size_bytes)
+
+
+def _is_mtrl_jsonl_record(record) -> bool:
+    """Return True iff ``record`` is a single-key dict whose key is ``prompt``.
+
+    Per design Property 2 / R3.3, an MTRL-compatible JSONL record has exactly
+    one key, that key is exactly ``"prompt"``, and the value is a string. This
+    is intentionally narrow so that any JSONL file that classifies as one of
+    the existing 11 formats is left untouched (R11.2).
+    """
+    if not isinstance(record, dict):
+        return False
+    if len(record) != 1:
+        return False
+    if "prompt" not in record:
+        return False
+    return isinstance(record["prompt"], str)
+
+
+def _detect_json_array(file_path: str, sample_size_bytes: int, s3_client=None) -> FormatDetectionResult:
+    """Detect an MTRL-compatible JSON-array file.
+
+    Classifies as ``MTRL_PARQUET`` when ``json.loads`` returns a non-empty list
+    whose first element is a dict containing a ``prompt`` key, or a dict with
+    exactly one string-typed column (the "first column is the prompt column"
+    fallback per the SageMaker SDK).
+    """
+    try:
+        text = _read_text_sample(file_path, sample_size_bytes, s3_client=s3_client)
+    except UnicodeDecodeError as e:
+        return FormatDetectionResult(
+            format_type=FormatType.MTRL_PARQUET,
+            is_valid=False,
+            lines_sampled=0,
+            errors=[ValidationError(
+                line_number=0,
+                error_type="parse_error",
+                message=f"File has .json extension but is not valid UTF-8: {e}",
+            )],
+            confidence=ConfidenceLevel.NONE,
+        )
+
+    if not text:
+        return FormatDetectionResult(
+            format_type=FormatType.MTRL_PARQUET,
+            is_valid=False,
+            lines_sampled=0,
+            errors=[ValidationError(
+                line_number=0,
+                error_type="invalid_structure",
+                message="File has .json extension but is empty",
+            )],
+            confidence=ConfidenceLevel.NONE,
+        )
+
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError as primary_error:
+        # Tolerant retry: when ``sample_size_bytes`` is smaller than the file,
+        # the slice may end mid-array. Try once with a trailing ``]`` to close
+        # an open list. If that also fails, surface the original parse error.
+        try:
+            parsed = json.loads(text + "]")
+        except json.JSONDecodeError:
+            return FormatDetectionResult(
+                format_type=FormatType.MTRL_PARQUET,
+                is_valid=False,
+                lines_sampled=0,
+                errors=[ValidationError(
+                    line_number=0,
+                    error_type="parse_error",
+                    message=f"Invalid JSON: {primary_error}",
+                )],
+                confidence=ConfidenceLevel.NONE,
+            )
+
+    if not isinstance(parsed, list):
+        return FormatDetectionResult(
+            format_type=FormatType.MTRL_PARQUET,
+            is_valid=False,
+            lines_sampled=0,
+            errors=[ValidationError(
+                line_number=0,
+                error_type="invalid_structure",
+                message=f"JSON file must contain a top-level array, got {type(parsed).__name__}",
+            )],
+            confidence=ConfidenceLevel.NONE,
+        )
+
+    if not parsed:
+        return FormatDetectionResult(
+            format_type=FormatType.MTRL_PARQUET,
+            is_valid=False,
+            lines_sampled=0,
+            errors=[ValidationError(
+                line_number=0,
+                error_type="invalid_structure",
+                message="JSON array is empty",
+            )],
+            confidence=ConfidenceLevel.NONE,
+        )
+
+    first = parsed[0]
+    if not isinstance(first, dict) or not first:
+        return FormatDetectionResult(
+            format_type=FormatType.MTRL_PARQUET,
+            is_valid=False,
+            lines_sampled=len(parsed),
+            errors=[ValidationError(
+                line_number=1,
+                error_type="invalid_structure",
+                message="First record in JSON array must be a non-empty object",
+            )],
+            confidence=ConfidenceLevel.NONE,
+        )
+
+    # Accept either an explicit ``prompt`` column with a string value, or a
+    # single-column object whose value is a string (treated as the prompt
+    # column per the SageMaker SDK's fallback).
+    has_prompt_string = isinstance(first.get("prompt"), str)
+    is_single_string_column = len(first) == 1 and isinstance(next(iter(first.values())), str)
+
+    if has_prompt_string or is_single_string_column:
+        logger.debug("JSON array detection: MTRL-compatible at %s", file_path)
+        return FormatDetectionResult(
+            format_type=FormatType.MTRL_PARQUET,
+            is_valid=True,
+            lines_sampled=len(parsed),
+            errors=[],
+            confidence=ConfidenceLevel.HIGH,
+        )
+
+    return FormatDetectionResult(
+        format_type=FormatType.MTRL_PARQUET,
+        is_valid=False,
+        lines_sampled=len(parsed),
+        errors=[ValidationError(
+            line_number=1,
+            error_type="schema_mismatch",
+            message="JSON array's first record has no string 'prompt' column and is not a single-string-column object",
+        )],
+        confidence=ConfidenceLevel.NONE,
+    )
+
+
+def _detect_csv(file_path: str, sample_size_bytes: int, s3_client=None) -> FormatDetectionResult:
+    """Detect an MTRL-compatible CSV file.
+
+    Classifies as ``MTRL_PARQUET`` when the header row has at least one column
+    AND either contains a ``prompt`` column, or (when no ``prompt`` column
+    exists) the first column's first data value is a string (per the
+    SageMaker SDK's "first column is the prompt column" fallback).
+    """
+    try:
+        text = _read_text_sample(file_path, sample_size_bytes, s3_client=s3_client)
+    except UnicodeDecodeError as e:
+        return FormatDetectionResult(
+            format_type=FormatType.MTRL_PARQUET,
+            is_valid=False,
+            lines_sampled=0,
+            errors=[ValidationError(
+                line_number=0,
+                error_type="parse_error",
+                message=f"File has .csv extension but is not valid UTF-8: {e}",
+            )],
+            confidence=ConfidenceLevel.NONE,
+        )
+
+    if not text:
+        return FormatDetectionResult(
+            format_type=FormatType.MTRL_PARQUET,
+            is_valid=False,
+            lines_sampled=0,
+            errors=[ValidationError(
+                line_number=0,
+                error_type="invalid_structure",
+                message="File has .csv extension but is empty",
+            )],
+            confidence=ConfidenceLevel.NONE,
+        )
+
+    try:
+        reader = csv.reader(io.StringIO(text))
+        rows = list(reader)
+    except csv.Error as e:
+        return FormatDetectionResult(
+            format_type=FormatType.MTRL_PARQUET,
+            is_valid=False,
+            lines_sampled=0,
+            errors=[ValidationError(
+                line_number=0,
+                error_type="parse_error",
+                message=f"Failed to parse CSV: {e}",
+            )],
+            confidence=ConfidenceLevel.NONE,
+        )
+
+    if not rows:
+        return FormatDetectionResult(
+            format_type=FormatType.MTRL_PARQUET,
+            is_valid=False,
+            lines_sampled=0,
+            errors=[ValidationError(
+                line_number=0,
+                error_type="invalid_structure",
+                message="CSV file is empty",
+            )],
+            confidence=ConfidenceLevel.NONE,
+        )
+
+    header = rows[0]
+    if not header or all(not col.strip() for col in header):
+        return FormatDetectionResult(
+            format_type=FormatType.MTRL_PARQUET,
+            is_valid=False,
+            lines_sampled=len(rows),
+            errors=[ValidationError(
+                line_number=1,
+                error_type="invalid_structure",
+                message="CSV header row has no columns",
+            )],
+            confidence=ConfidenceLevel.NONE,
+        )
+
+    has_prompt_column = "prompt" in header
+    if has_prompt_column:
+        logger.debug("CSV detection: MTRL-compatible (prompt column) at %s", file_path)
+        return FormatDetectionResult(
+            format_type=FormatType.MTRL_PARQUET,
+            is_valid=True,
+            lines_sampled=len(rows),
+            errors=[],
+            confidence=ConfidenceLevel.HIGH,
+        )
+
+    # No ``prompt`` column: fall back to "first column is the prompt column"
+    # per the SageMaker SDK. The first column's first data value must be a
+    # non-empty string for the file to be MTRL-compatible.
+    if len(rows) < 2:
+        return FormatDetectionResult(
+            format_type=FormatType.MTRL_PARQUET,
+            is_valid=False,
+            lines_sampled=len(rows),
+            errors=[ValidationError(
+                line_number=1,
+                error_type="invalid_structure",
+                message="CSV has no data rows; cannot infer prompt column from first row",
+            )],
+            confidence=ConfidenceLevel.NONE,
+        )
+
+    first_data_row = rows[1]
+    if not first_data_row or not isinstance(first_data_row[0], str) or not first_data_row[0]:
+        return FormatDetectionResult(
+            format_type=FormatType.MTRL_PARQUET,
+            is_valid=False,
+            lines_sampled=len(rows),
+            errors=[ValidationError(
+                line_number=2,
+                error_type="invalid_structure",
+                message="CSV has no 'prompt' column and the first column's first value is not a non-empty string",
+            )],
+            confidence=ConfidenceLevel.NONE,
+        )
+
+    logger.debug("CSV detection: MTRL-compatible (first-column fallback) at %s", file_path)
+    return FormatDetectionResult(
+        format_type=FormatType.MTRL_PARQUET,
+        is_valid=True,
+        lines_sampled=len(rows),
+        errors=[],
+        confidence=ConfidenceLevel.HIGH,
+    )
 
 
 def _classify_nova_format(record: dict) -> FormatType:
@@ -579,6 +1079,22 @@ def detect_format(file_path: str, sample_size_bytes: int = 1_048_576, s3_client=
     Returns:
         FormatDetectionResult with format type, validation status, and any errors
     """
+    # Parquet short-circuit: detect by ``.parquet`` extension and PAR1 magic
+    # bytes before the JSONL line-sampling path runs.
+    if file_path.endswith(".parquet"):
+        return _detect_parquet(file_path, s3_client=s3_client)
+
+    # MTRL-compatible CSV files: a header with at least one column, where
+    # either a ``prompt`` column is present or the first column is
+    # string-typed (per design Property 2 / R3.3).
+    if file_path.endswith(".csv"):
+        return _detect_csv(file_path, sample_size_bytes, s3_client=s3_client)
+
+    # MTRL-compatible JSON-array files: a non-empty top-level array whose
+    # first element has a ``prompt`` column or a single string column.
+    if file_path.endswith(".json"):
+        return _detect_json_array(file_path, sample_size_bytes, s3_client=s3_client)
+
     if file_path.startswith("s3://"):
         lines = _sample_s3_file(file_path, sample_size_bytes, s3_client=s3_client)
     else:
@@ -613,7 +1129,25 @@ def detect_format(file_path: str, sample_size_bytes: int = 1_048_576, s3_client=
     
     # Classify schema using first successfully parsed record
     format_type = _classify_schema(parsed_records)
-    
+
+    # MTRL JSONL relabel: when the existing 11-format classifier returns
+    # UNKNOWN AND the first record is a single-key dict whose key is exactly
+    # ``prompt`` with a string value, relabel as MTRL_PARQUET. The existing
+    # 11 known formats win first (R11.2): if any of them matched, this branch
+    # is never taken, so no JSONL file that classified previously is touched.
+    if format_type == FormatType.UNKNOWN and _is_mtrl_jsonl_record(parsed_records[0]):
+        logger.debug("JSONL detection: relabelling UNKNOWN single-prompt record as MTRL_PARQUET at %s", file_path)
+        return FormatDetectionResult(
+            format_type=FormatType.MTRL_PARQUET,
+            is_valid=True,
+            lines_sampled=len(lines),
+            # Preserve any parse errors (e.g., bad lines later in the sample)
+            # but drop the schema-mismatch noise that would have come from
+            # _validate_samples on UNKNOWN.
+            errors=[err for err in errors if err.error_type == "parse_error"],
+            confidence=ConfidenceLevel.HIGH if not errors else ConfidenceLevel.LOW,
+        )
+
     # Validate all parsed records against detected format
     is_valid, validation_errors = _validate_samples(parsed_records, format_type, line_numbers)
     errors.extend(validation_errors)

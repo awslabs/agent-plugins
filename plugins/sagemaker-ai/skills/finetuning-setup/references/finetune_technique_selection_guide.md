@@ -1,6 +1,6 @@
 # Finetuning Technique Selection Guide
 
-Not all models support all techniques. Always validate technique availability against the selected model's recipes before recommending. Only SFT, DPO, and RLVR are supported.
+Not all models support all techniques. Always validate technique availability against the selected model's recipes before recommending. Only SFT, DPO, RLVR, and MTRL are supported.
 
 ## Technique Overview
 
@@ -35,3 +35,19 @@ Not all models support all techniques. Always validate technique availability ag
 
 - SFT: Model learns to imitate gold responses directly
 - RLVR: Model learns to maximize rewards (can be gold similarity or verification-based)
+
+### MTRL (Multi-Turn Reinforcement Learning)
+
+**Use when:**
+
+- Task involves multi-turn agent interaction (tool use, reasoning chains, autonomous decision-making across multiple steps)
+- Reward depends on the outcome of an agent rollout, not on a single response
+- An agent environment exists (Bedrock AgentCore runtime or a custom agent reachable through a Lambda forwarder)
+- Building agentic workflows where the model must plan, call tools, observe results, and decide next steps
+
+**Key difference from RLVR:**
+
+- RLVR: model produces one response, a Lambda computes a reward on it.
+- MTRL: model interacts with an environment over many turns; reward is on the whole trajectory.
+
+**Additional setup**: MTRL training requires an agent environment to be configured. The `finetuning` skill walks you through choosing between Bedrock AgentCore and a custom Lambda-fronted agent during notebook generation.

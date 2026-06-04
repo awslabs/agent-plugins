@@ -137,6 +137,9 @@ Choose the trainer class matching the user's technique for this round:
 | SFT       | `from sagemaker.train.sft_trainer import SFTTrainer`   |
 | DPO       | `from sagemaker.train.dpo_trainer import DPOTrainer`   |
 | RLVR      | `from sagemaker.train.rlvr_trainer import RLVRTrainer` |
+| MTRL      | `from sagemaker.train.multi_turn_rl_trainer import MultiTurnRLTrainer` |
+
+For MTRL specifically, continuous customization must repeat `agent_env=AGENT_ENV` in the trainer call exactly as in the initial training cell. The other parameters in the cell follow the same pattern as for SFT/DPO/RLVR continuous customization.
 
 #### Code (SFT example — swap trainer class for DPO/RLVR)
 

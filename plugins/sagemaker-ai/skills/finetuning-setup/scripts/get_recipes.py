@@ -18,8 +18,8 @@ detail = sm_client.describe_hub_content(
 
 keywords = detail.get("HubContentSearchKeywords", [])
 
-# Only include SFT, DPO, and RLVR techniques
-supported = {"sft", "dpo", "rlvr"}
+# Only include SFT, DPO, RLVR, and MTRL techniques
+supported = {"sft", "dpo", "rlvr", "mtrl"}
 techniques = sorted(
     t.replace("@recipe:finetuning_", "").split("_")[0]
     for t in keywords

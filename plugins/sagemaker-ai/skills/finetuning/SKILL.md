@@ -1,6 +1,6 @@
 ---
 name: finetuning
-description: Generates a Jupyter notebook that fine-tunes a base model using SageMaker serverless training jobs. Use when the user says "start training", "fine-tune my model", "I'm ready to train", or when the plan reaches the finetuning step. Supports SFT, DPO, and RLVR trainers, including RLVR Lambda reward function creation.
+description: Generates a Jupyter notebook that fine-tunes a base model using SageMaker serverless training jobs. Use when the user says "start training", "fine-tune my model", "I'm ready to train", or when the plan reaches the finetuning step. Supports SFT, DPO, RLVR, and MTRL trainers, including RLVR Lambda reward function creation and MTRL agent-environment setup.
 metadata:
   version: "1.0.0"
 ---
@@ -13,7 +13,7 @@ Before starting this workflow, verify:
    - If missing: Activate the `use-case-specification` skill first, then resume
    - DON'T EVER offer to create a use case spec without activating the use-case-specification skill.
 
-2. A fine-tuning technique (SFT, DPO, or RLVR) and base model have already been selected
+2. A fine-tuning technique (SFT, DPO, RLVR, or MTRL) and base model have already been selected
    - If missing: Activate the `finetuning-setup` skill to collect what's missing, then resume
    - Don't make recommendations on the spot. You MUST activate the finetuning-setup skill.
 
@@ -67,6 +67,7 @@ Read the example notebook matching the finetuning strategy:
 - SFT → `references/sft_example.md`
 - DPO → `references/dpo_example.md`
 - RLVR → `references/rlvr_example.md`
+- MTRL → `references/mtrl_example.md`
 
 ### 1.3 Copy Notebook Structure
 
@@ -95,6 +96,14 @@ Read the example notebook matching the finetuning strategy:
 
 3. Save notebook
 
+## 1A. Agent Environment Setup (MTRL only)
+
+> **Skip this section** if `technique != "mtrl"`. SFT/DPO/RLVR runs do not need an agent environment.
+
+If `technique == "mtrl"`: read `references/agent_environment_setup.md` and follow the workflow there. Capture the resolved `AGENT_ENV` value (string ARN, runtime ID, or `CustomAgentLambda` object) for use in Cell 3 of `mtrl_example.md`. After the value is captured, replace the three Cell 3 shapes (3a / 3b / 3c) in the notebook with the single shape that matches the user's choice and the resolved `AGENT_ENV`.
+
+The validator referenced by the workflow lives at `scripts/agent_env_validator.py::validate_agent_env(value) -> (bool, str)` — invoke it for any string value the user supplies. The `CustomAgentLambda` object case (Step 3b in `agent_environment_setup.md`) does not need string validation because the SDK constructor produces the value directly.
+
 ## 2. RLVR Reward Function (for RLVR only, skip this section if technique is SFT or DPO)
 
 ### 2.1 Check Reward Function Status
@@ -118,6 +127,8 @@ Read the example notebook matching the finetuning strategy:
 3. Check if the selected base model is a Meta/Llama model (model ID starts with `meta-`)
    - **If Meta/Llama**: Tell the user they must read and agree to the EULA before using this model. Ask them to manually change `ACCEPT_EULA` to `True` in the notebook after reviewing the license. **NEVER set ACCEPT_EULA to True yourself for Meta/Llama models.**
    - **If non-Meta**: Inform the user of the license for their awareness. No code-level action needed — the `ACCEPT_EULA` variable and `accept_eula` parameter should already be omitted from the notebook (see Step 1.3).
+
+**MTRL note:** MTRL participates in this same Meta vs non-Meta EULA flow exactly like SFT/DPO/RLVR. The MTRL example notebook at `references/mtrl_example.md` already keeps `accept_eula=ACCEPT_EULA` commented in Cell 5 for Meta models — no Cell 5 code change is needed; the agent simply follows the rule above.
 
 ## 4. Notebook Execution
 
@@ -145,4 +156,7 @@ If the user wants to finetune a model they had already customized, follow the in
 - `sft_example.md` - Complete notebook template for Supervised Fine-Tuning
 - `dpo_example.md` - Complete notebook template for Direct Preference Optimization
 - `rlvr_example.md` - Complete notebook template for Reinforcement Learning from Verifiable Rewards
+- `mtrl_example.md` - Complete notebook template for Multi-Turn Reinforcement Learning
+- `agent_environment_setup.md` - Agent environment setup workflow for MTRL (Section 1A)
+- `templates/mtrl_lambda_forwarder_template.py` - Lambda forwarder source template for MTRL custom-agent environments
 - `continuous_customization.md` - Instructions on fine-tuning an already fine-tuned model.

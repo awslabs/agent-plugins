@@ -4,19 +4,34 @@ Help the user decide which evaluation type to use based on their goals and const
 
 ## Evaluation types at a glance
 
-| Type          | What it does                                                                                                         | Eval dataset? | Cost   | Supported models |
-| ------------- | -------------------------------------------------------------------------------------------------------------------- | ------------- | ------ | ---------------- |
-| LLM-as-Judge  | An LLM scores your model's responses on subjective qualities like helpfulness, correctness, coherence, and safety.   | Yes           | Higher | OSS only         |
-| Custom Scorer | Your own scoring logic (or a built-in scorer) evaluates outputs programmatically — exact/near match, pattern checks. | Yes           | Lower  | All              |
+| Type            | What it does                                                                                                         | Eval dataset?  | Cost   | Supported models                  |
+| --------------- | -------------------------------------------------------------------------------------------------------------------- | -------------- | ------ | --------------------------------- |
+| LLM-as-Judge    | An LLM scores your model's responses on subjective qualities like helpfulness, correctness, coherence, and safety.   | Yes            | Higher | OSS only                          |
+| Custom Scorer   | Your own scoring logic (or a built-in scorer) evaluates outputs programmatically — exact/near match, pattern checks. | Yes            | Lower  | All                               |
+| MTRL Evaluation | An LLM agent runs an end-to-end multi-turn rollout against an agent environment. Score = success of the rollout.    | Yes (prompts)  | Higher | Models that support MTRL          |
 
 **When to use which — in short:**
 
+- The model was trained with MTRL → **MTRL Evaluation** (auto-recommended).
 - To assess subjective qualities like tone, helpfulness, coherence, or faithfulness → **LLM-as-Judge**
 - When a programmatic approach can give a meaningful signal about output quality → **Custom Scorer**
+- The task is multi-turn / agentic and you want to measure end-to-end rollout success → **MTRL Evaluation**
 
 ## Decision flow
 
 Work through the steps below in order. For each, use what you already know from conversation history, plan.md, workflow_state.json, or other files you've read. Only ask the user if you genuinely don't know.
+
+### Step 0: Was the model trained with MTRL?
+
+Before walking through the rest of the decision flow, check whether the model under evaluation was trained with MTRL. If you have access to the source training job (name, ARN, or its tags from prior conversation), call the deterministic helper `scripts/eval_type_selector.py::auto_select_eval_type(training_job_tags)`.
+
+If it returns `"MTRL Evaluation"` — i.e., the recipe / technique tag indicates MTRL — recommend MTRL Evaluation directly:
+
+> "This model was trained with MTRL, so MTRL Evaluation (multi-turn agent rollout) is the natural fit. Want to go with that?"
+
+⏸ Wait for the user. If confirmed, return to the main SKILL.md workflow (Step 2: Validate and hand off) with MTRL Evaluation. If the user declines, continue with Step 1 below to choose between the other evaluation types.
+
+If you do not have training-job tags, or the helper returns `None`, continue to Step 1.
 
 ### Step 1: Check for evaluation dataset
 

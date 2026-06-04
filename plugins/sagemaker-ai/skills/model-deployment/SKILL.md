@@ -11,13 +11,13 @@ Identifies the correct deployment pathway based on model characteristics and gen
 
 ## Scope
 
-This skill supports deploying Nova and OSS models that were fine-tuned through **SageMaker Serverless Model Customization** only.
+This skill supports deploying Nova, OSS, and MTRL-trained models that were fine-tuned through **SageMaker Serverless Model Customization** only.
 
 **Not supported:**
 
 - Base models (not fine-tuned)
 - Models fine-tuned through other processes
-- Full Fine-Tuning (FFT) — only LoRA fine-tuned models are supported
+- Full Fine-Tuning (FFT) — only LoRA fine-tuned models are supported. This restriction also applies to MTRL-trained models — only LoRA fine-tuned MTRL models are supported (R8.8).
 
 ## Principles
 
@@ -41,11 +41,13 @@ Once you have the training job name or ARN, use the AWS MCP tool to look it up:
    - **Region**
 2. Use the AWS MCP tool `list-tags` on the training job ARN and extract:
    - **Model ID** from the `sagemaker-studio:jumpstart-model-id` tag
+   - **Recipe / training technique** from the `sagemaker:training_recipe`, `sagemaker-studio:hyperparameters:training_recipe`, or `sagemaker-studio:training-technique` tag (whichever is present)
 3. Determine the **model type** from the model ID:
    - Contains "nova" (nova-micro, nova-lite, nova-pro) → **Nova**
    - Llama, Mistral, Qwen, GPT-OSS, DeepSeek, etc. → **OSS**
+4. Determine whether the model was **MTRL-trained** by checking the recipe / technique tag from step 2. If the tag value contains `mtrl` (case-insensitive), the model is MTRL-trained. The deterministic helper `scripts/eval_type_selector.py::auto_select_eval_type(training_job_tags)` (in the model-evaluation skill) encodes the same rule (it returns `"MTRL Evaluation"` when the tags indicate MTRL); the model-deployment skill reuses the same detection. Record the MTRL flag alongside the model type — both feed Step 5's pathway selection.
 
-**Unsupported models:** This skill only supports OSS and Nova models that were LoRA fine-tuned through SageMaker Serverless Model Customization. If the model doesn't match, tell the user this skill can't help and suggest the finetuning skill.
+**Unsupported models:** This skill only supports OSS, Nova, and MTRL-trained models that were LoRA fine-tuned through SageMaker Serverless Model Customization. If the model doesn't match, tell the user this skill can't help and suggest the finetuning skill.
 
 ### Step 2: Determine Eligible Deployment Targets
 
@@ -55,6 +57,7 @@ Use the following table:
 | ---------- | ------------------ |
 | OSS        | SageMaker, Bedrock |
 | Nova       | SageMaker, Bedrock |
+| MTRL       | SageMaker, Bedrock |
 
 If only one target is eligible, confirm it with the user. Use details from Step 5.
 
@@ -99,12 +102,14 @@ Before proceeding to deployment, display the model's license or service terms to
 
 Read the reference file for the selected pathway and follow its instructions.
 
-| Model Type | Deployment Target | Reference                             |
-| ---------- | ----------------- | ------------------------------------- |
-| OSS        | SageMaker         | `references/deploy-oss-sagemaker.md`  |
-| OSS        | Bedrock           | `references/deploy-oss-bedrock.md`    |
-| Nova       | SageMaker         | `references/deploy-nova-sagemaker.md` |
-| Nova       | Bedrock           | `references/deploy-nova-bedrock.md`   |
+| Model Type | Deployment Target | Reference                              |
+| ---------- | ----------------- | -------------------------------------- |
+| OSS        | SageMaker         | `references/deploy-oss-sagemaker.md`   |
+| OSS        | Bedrock           | `references/deploy-oss-bedrock.md`     |
+| Nova       | SageMaker         | `references/deploy-nova-sagemaker.md`  |
+| Nova       | Bedrock           | `references/deploy-nova-bedrock.md`    |
+| MTRL       | SageMaker         | `references/deploy-mtrl-sagemaker.md`  |
+| MTRL       | Bedrock           | `references/deploy-mtrl-bedrock.md`    |
 
 ### Step 6: Post-Deployment Summary
 
