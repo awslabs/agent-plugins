@@ -46,3 +46,62 @@ If the user doesn't have one:
 ## After resolution
 
 Once you have the evaluator ARN, return to the main Custom Scorer workflow.
+
+---
+
+## Lambda input/output contracts
+
+### Lambda return format
+
+The Lambda must return:
+
+```python
+def lambda_handler(event, context):
+    # ... scoring logic ...
+    return {
+        "statusCode": 200,
+        "body": json.dumps([  # MUST be json.dumps() — a JSON string, not a Python list.
+            {
+                "id": sample_id,
+                "aggregate_reward_score": 0.85,  # Overall score for this sample
+                "metrics_list": [
+                    {"name": "metric_name", "value": 0.75, "type": "Metric"}
+                ]
+            }
+        ])
+    }
+```
+
+**Critical:** `body` must be a JSON string (`json.dumps([result])`), NOT a parsed Python list. The evaluation container rejects lists with: `Lambda response body must be a JSON string, got <class 'list'>`.
+
+### Lambda input format
+
+```json
+[{
+  "id": "hash",
+  "model_response": "model's generated text",
+  "query": "the prompt",
+  "response": "the gold answer from dataset",
+  "reference_answer": { "text": "the gold answer from dataset" },
+  "metadata": {},
+  "processor_config": {}
+}]
+```
+
+### Evaluator registration
+
+`CustomScorerEvaluator` requires a **Hub Content ARN** (registered via `Evaluator.create()`), NOT a raw Lambda ARN.
+
+```python
+from sagemaker.ai_registry.evaluator import Evaluator
+from sagemaker.ai_registry.air_constants import REWARD_FUNCTION
+
+evaluator = Evaluator.create(
+    name="my-reward-function",
+    source="path/to/reward_function.py",
+    type=REWARD_FUNCTION
+)
+# Use evaluator.arn as the evaluator parameter
+```
+
+Using a raw Lambda ARN (e.g., `arn:aws:lambda:...`) will fail with `Invalid HubContentArn format`.

@@ -59,7 +59,7 @@ If the evaluation dataset was already validated via the **dataset-evaluation** s
 
 Otherwise, activate the **dataset-evaluation** skill to validate it. If it fails, offer to activate the **dataset-transformation** skill to convert it. Do not proceed until the dataset is valid.
 
-**Note for scorer type:** Some scorer types have specific dataset format requirements. Be sure to consider this when you activate dataset-evaluation.
+**Note for scorer type:** The dataset must match the format required by the chosen scorer. When activating dataset-evaluation, communicate the scorer type (Prime Math, Prime Code, or Custom Lambda) so it can validate against the correct schema in `references/custom-scorer-evaluation-dataset-formats.md`.
 
 ### Step 6: Determine evaluation scope
 
@@ -164,13 +164,17 @@ Summarize everything and ask for approval:
 
 ⏸ Wait for user approval.
 
-### Step 14: Generate notebook
+### Step 14: Generate code
 
-If you already know which notebook to write to (e.g., the user has been appending to an existing notebook throughout this workflow), confirm and proceed. Otherwise, ask if they have an existing notebook to add evaluation cells to, or want a new one. If new, check if a project directory already exists. If not, suggest activating the **directory-management** skill to set up a project structure. Then suggest a name like `<project-name>/notebooks/<project-name>_custom-scorer-evaluation.ipynb`.
+Read `../references/code_output_guide.md` for output format rules.
 
-Read `scripts/custom_scorer_evaluator.py`, substitute the collected values into the placeholders, and write the cells.
+If no project directory exists, activate the **directory-management** skill to set one up.
 
-### Step 15: Provide run instructions
+Read `code_templates/custom_scorer_evaluator.py`, substitute the collected values into the placeholders, and write the cells. The template uses `# Cell N: Label` markers — each marker starts a new notebook cell, with everything between one marker and the next becoming that cell's content.
+
+### Step 15: Post-generation
+
+**Notebook mode:**
 
 ```
 To run:
@@ -179,6 +183,31 @@ To run:
 3. Cell 3 — polls status automatically (~25-60 min)
 4. Cell 4 — show results
 ```
+
+**Script mode:**
+
+Evaluation can take hours depending on your dataset. Present the user with options:
+
+> "Would you like me to:
+>
+> 1. Leave it to you — run with `python scripts/[script_name]`
+> 2. Run it and wait until it's done
+> 3. Start it but don't wait — we can check status later"
+
+- **Option 1:** Done. Wait for user to come back.
+- **Option 2:** Execute the script as-is. `execution.wait()` polls until complete. Report results.
+- **Option 3:** Remove the `execution.wait()` call, execute, report the evaluation ARN.
+
+Note: `evaluate()` does not accept a `wait` parameter. It always returns immediately. Blocking is done via `execution.wait(target_status="Succeeded")`.
+
+**Checking status:**
+
+- `describe-pipeline-execution --pipeline-execution-arn ARN` → `PipelineExecutionStatus`
+- `list-pipeline-execution-steps --pipeline-execution-arn ARN` → per-step `StepStatus`, `FailureReason`
+
+**Showing results after completion:**
+
+- Run: `EvaluationPipelineExecution.get(arn=ARN).show_results()`
 
 ## FAQ
 

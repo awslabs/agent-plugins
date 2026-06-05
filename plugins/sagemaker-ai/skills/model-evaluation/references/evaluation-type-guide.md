@@ -122,3 +122,21 @@ Present your recommendation with a brief reason:
 ⏸ Wait for user to confirm.
 
 Once the user confirms, return to the main SKILL.md workflow (Step 2: Validate and hand off).
+
+---
+
+## Custom Scorer: choosing the right scorer type
+
+If the user chose Custom Scorer, use this logic to recommend the specific scorer:
+
+| Scorer        | Recommend when                                                                |
+| ------------- | ----------------------------------------------------------------------------- |
+| Prime Math    | Task involves mathematical reasoning with verifiable numeric/symbolic answers |
+| Prime Code    | Task involves code generation that can be tested against input/output pairs   |
+| Custom Lambda | Any task with custom scoring logic that doesn't fit Prime Math or Prime Code  |
+
+**Decision logic:**
+
+1. If task is **math with verifiable answers** → recommend **Prime Math**.
+2. If task is **code generation with testable I/O** → recommend **Prime Code**.
+3. Otherwise → recommend **Custom Lambda**.

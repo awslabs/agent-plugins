@@ -122,7 +122,7 @@ For **base model only** (option 2): you need a JumpStart model ID (e.g., `meta-t
 
 > "What's the JumpStart model ID of the base model you'd like to evaluate?"
 
-<!-- TODO: Add guidance for helping the user find their JumpStart model ID (e.g., list_hub_contents API, or looking at training job tags). See finetuning-setup skill for patterns. -->
+<!-- TODO: Add guidance for helping the user find their JumpStart model ID (e.g., list_hub_contents API, or looking at training job tags). See model-selection skill for patterns. -->
 
 ### Step 11: Select judge model
 
@@ -214,20 +214,17 @@ Before generating the notebook, present the following agreement language:
 
 ⏸ **Hard stop.** Wait for the user to explicitly confirm. Acceptable responses include "yes", "I agree", "proceed", "ok", or similar affirmative statements. If the user asks questions about the terms, answer them, then re-ask for confirmation. Do NOT generate the notebook until the user has confirmed.
 
-### Step 18: Generate notebook
+### Step 18: Generate code
+
+Read `../references/code_output_guide.md` for output format rules.
 
 If a project directory already exists (from earlier in the workflow), use it. Otherwise, activate the **directory-management** skill to set one up.
 
-Check if the project notebook already exists at `<project-dir>/notebooks/<project-name>.ipynb`.
+Read `code_templates/llmaaj_evaluator.py`, substitute the collected values into the placeholders, and write the cells. The template uses `# Cell N: Label` markers — each marker starts a new notebook cell, with everything between one marker and the next becoming that cell's content. `BUILTIN_METRICS` must be a Python list of strings, e.g. `["Faithfulness", "Correctness"]`.
 
-- If it exists → ask: _"Would you like me to append the evaluation cells to the existing notebook, or create a new one?"_
-- If it doesn't exist → create it
+### Step 19: Post-generation
 
-When appending, add a markdown header cell `## Model Evaluation` as a section divider before the new cells.
-
-Read `scripts/llmaaj_evaluator.py`, substitute the collected values into the placeholders, and write the cells.
-
-### Step 19: Provide run instructions
+**Notebook mode:**
 
 ```
 To run:
@@ -236,6 +233,31 @@ To run:
 3. Cell 3 — polls status automatically (~25-60 min)
 4. Cell 4 — show results
 ```
+
+**Script mode:**
+
+Evaluation can take hours depending on your dataset. Present the user with options:
+
+> "Would you like me to:
+>
+> 1. Leave it to you — run with `python scripts/[script_name]`
+> 2. Run it and wait until it's done
+> 3. Start it but don't wait — we can check status later"
+
+- **Option 1:** Done. Wait for user to come back.
+- **Option 2:** Execute the script as-is. `execution.wait()` polls until complete. Report results.
+- **Option 3:** Remove the `execution.wait()` call, execute, report the evaluation ARN.
+
+Note: `evaluate()` does not accept a `wait` parameter. It always returns immediately. Blocking is done via `execution.wait(target_status="Succeeded")`.
+
+**Checking status:**
+
+- `describe-pipeline-execution --pipeline-execution-arn ARN` → `PipelineExecutionStatus`
+- `list-pipeline-execution-steps --pipeline-execution-arn ARN` → per-step `StepStatus`, `FailureReason`
+
+**Showing results after completion:**
+
+- Run: `EvaluationPipelineExecution.get(arn=ARN).show_results()`
 
 ## FAQ
 

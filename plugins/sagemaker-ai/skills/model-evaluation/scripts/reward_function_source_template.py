@@ -140,18 +140,22 @@ def reward_function(sample: Dict[str, Any], index: int) -> Dict[str, Any]:
     # TODO: UPDATE logic to parse the input as per YOUR use case
     # Note the below lines of code are examples and will not work for your use case
     # You MUST update them to match YOUR use case
-    # Extract the response and reference
-    messages = sample.get('messages', sample.get('prompt', []))
-    reference_answer = sample.get('reference_answer', {}).get('text', '') or sample.get('reward_model', {}).get('ground_truth', '')
+    #
+    # The evaluation framework sends each sample with these fields:
+    #   model_response: str — the model's generated text
+    #   query: str — the original prompt sent to the model
+    #   response: str — ground truth from the dataset
+    #   reference_answer: dict {"text": str} OR str — ground truth (type varies)
+    #   id: str — unique sample identifier
+    response = sample.get('model_response', '')
+    question = sample.get('query', '')
 
-    # Get the question and assistant's response
-    question = ""
-    response = ""
-    for msg in messages:
-        if msg.get('role') == 'user':
-            question = msg.get('content', '')
-        elif msg.get('role') == 'assistant':
-            response = msg.get('content', '')
+    # reference_answer may be a dict or a plain string — handle both
+    ref_answer = sample.get('reference_answer', '')
+    if isinstance(ref_answer, dict):
+        reference_answer = ref_answer.get('text', '') or sample.get('response', '')
+    else:
+        reference_answer = ref_answer or sample.get('response', '')
 
     # Extract numerical answers
     predicted = extract_number(response)
@@ -208,40 +212,31 @@ def reward_function(sample: Dict[str, Any], index: int) -> Dict[str, Any]:
     # You MUST update them to match YOUR use case
 
     return {
-        'id': str(sample.get('my_key', f'sample-{index:03d}')),  # Use formatted index as fallback
+        'id': str(sample.get('id', f'sample-{index:03d}')),  # Use the id from the evaluation framework
         'aggregate_reward_score': float(aggregate_reward),
         'metrics_list': metrics
     }
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
-    AWS Lambda Handler for reward function
+    AWS Lambda Handler for reward function.
+    The evaluation framework invokes this once per sample.
+    Event is a list containing a single sample dict.
     """
     try:
-        # Extract batch from event
-        batch = event.get('input', event) if isinstance(event, dict) else event
-        if 'batch' in event:
-            batch = event.get('batch', [])
-        elif 'body' in event:
-            body = json.loads(event.get('body', '{}'))
-            batch = body.get('batch', [])
+        # The framework sends a list with one sample: [{...}]
+        samples = event if isinstance(event, list) else [event]
+        sample = samples[0]
 
-        if not batch:
-            return {"error":"Missing or empty batch"}
+        result = reward_function(sample, 0)
 
-        # Process each sample
-        results = []
-        for i, sample in enumerate(batch):
-            try:
-                result = reward_function(sample, i)
-                results.append(result)
-            except Exception as e:
-                return {"error": str(e)}
-
+        # body MUST be a JSON string (not a parsed list).
+        # The container rejects lists with:
+        #   "Lambda response body must be a JSON string, got <class 'list'>"
         return {
             'statusCode': 200,
             'headers': {'Content-Type': 'application/json'},
-            'body': json.dumps(results)
+            'body': json.dumps([result])
         }
     except Exception as e:
         return {
