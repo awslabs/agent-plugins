@@ -1,6 +1,6 @@
 ---
 name: model-deployment
-description: Generates a Jupyter notebook that deploys fine-tuned models from SageMaker Serverless Model Customization to SageMaker endpoints or Bedrock. Use when the user says "deploy my model", "create an endpoint", "make it available", or asks about deployment options. Identifies the correct deployment pathway (Nova vs OSS), generates deployment code, and handles endpoint configuration.
+description: Generates code that deploys fine-tuned models from SageMaker Serverless Model Customization to SageMaker endpoints or Bedrock. Use when the user says "deploy my model", "create an endpoint", "make it available", or asks about deployment options. Identifies the correct deployment pathway (Nova vs OSS), generates deployment code, and handles endpoint configuration.
 metadata:
   version: "1.0.0"
 ---
@@ -11,13 +11,39 @@ Identifies the correct deployment pathway based on model characteristics and gen
 
 ## Scope
 
-This skill supports deploying Nova and OSS models that were fine-tuned through **SageMaker Serverless Model Customization** only.
+This skill supports deploying Nova and OSS models.
 
-**Not supported:**
+**OSS models:** Deploys models fine-tuned through **SageMaker Serverless Model Customization** only. Only LoRA fine-tuned models are supported. Not supported: base models (not fine-tuned), models fine-tuned through other processes, Full Fine-Tuning (FFT).
 
-- Base models (not fine-tuned)
-- Models fine-tuned through other processes
-- Full Fine-Tuning (FFT) — only LoRA fine-tuned models are supported
+**Nova models:** Deploys models fine-tuned through the **Nova Forge SDK**. Supports deployment to SageMaker endpoints and Bedrock Provisioned Throughput, plus batch inference and inference recommendation.
+
+## Prerequisites
+
+- The SDK environment has been verified (SDK version, region, execution role). If not done, activate the `sdk-getting-started` skill first.
+
+## Model Path Dispatch
+
+Determine the model family from the training job or conversation context.
+
+**If the model is Nova** →
+
+1. **Display AWS Service Terms:** Read `references/model-licenses.md`, look up the Nova model, and display the service terms to the user. Wait for the user to confirm acceptance before proceeding.
+2. **Read the appropriate Nova reference** and follow its workflow:
+
+| Need                                                              | Reference                                     |
+| ----------------------------------------------------------------- | --------------------------------------------- |
+| Deploy to SageMaker or Bedrock                                    | `references/nova-deployment-inference.md`     |
+| Deploy enums (DeployPlatform, DeploymentMode)                     | `references/nova-deploy-enums.md`             |
+| Training enums (Model, TrainingMethod)                            | `../finetuning/references/nova-enums.md`      |
+| Choose instance type / estimate cost                              | `references/nova-inference-recommendation.md` |
+| Review benchmark data                                             | `references/nova-inference-benchmarks.md`     |
+| Understand optimization toggles (RAI, speculative decoding, etc.) | `references/nova-inference-optimizations.md`  |
+
+The Nova path uses the Forge SDK's `ForgeDeployer` and `ForgeInference`. Read `references/code_output_guide.md` for mode selection (notebook vs script) and formatting rules. Construct the code from the Nova references, then write it to a file following `code_output_guide.md` conventions.
+
+**If the model is OSS** → Follow the OSS deployment workflow below.
+
+---
 
 ## Principles
 
@@ -25,7 +51,6 @@ This skill supports deploying Nova and OSS models that were fine-tuned through *
 2. **Confirm before proceeding.** Wait for the user to agree before moving on. But don't re-ask questions already answered in the conversation — use what you know.
 3. **Don't read files until you need them.** Only read pathway references after the pathway is confirmed.
 4. **Use what you know.** If conversation history or artifacts already answer a question, confirm your understanding instead of asking again.
-5. **Notebook writing.** Write notebooks using your standard file write tool to create the `.ipynb` file with the complete notebook JSON, OR use notebook MCP tools (e.g., `create_notebook`, `add_cell`) if available. Do NOT use bash commands, shell scripts, or `echo`/`cat` piping to generate notebooks.
 
 ## Workflow
 
@@ -99,12 +124,11 @@ Before proceeding to deployment, display the model's license or service terms to
 
 Read the reference file for the selected pathway and follow its instructions.
 
-| Model Type | Deployment Target | Reference                             |
-| ---------- | ----------------- | ------------------------------------- |
-| OSS        | SageMaker         | `references/deploy-oss-sagemaker.md`  |
-| OSS        | Bedrock           | `references/deploy-oss-bedrock.md`    |
-| Nova       | SageMaker         | `references/deploy-nova-sagemaker.md` |
-| Nova       | Bedrock           | `references/deploy-nova-bedrock.md`   |
+| Model Type | Deployment Target | Reference                                                                      |
+| ---------- | ----------------- | ------------------------------------------------------------------------------ |
+| OSS        | SageMaker         | `references/deploy-oss-sagemaker.md`                                           |
+| OSS        | Bedrock           | `references/deploy-oss-bedrock.md`                                             |
+| Nova       | Any               | `references/nova-deployment-inference.md` (handles both SageMaker and Bedrock) |
 
 ### Step 6: Post-Deployment Summary
 

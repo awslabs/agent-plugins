@@ -25,7 +25,7 @@ Copy the selected template as `lambda_function.py` into the project's scripts di
 
 - Read the `directory-management` skill to determine the correct directory for storing scripts.
 
-### Step 2: Generate Notebook Cell
+### Step 2: Generate Code
 
 Create a single notebook cell that registers the local file as a SageMaker Hub Evaluator. Set `reward_function_path` to the path where `lambda_function.py` was saved in Step 1.
 
