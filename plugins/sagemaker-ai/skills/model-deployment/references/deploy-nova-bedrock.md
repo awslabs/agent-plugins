@@ -62,20 +62,15 @@ The region was identified in Step 1 of the main workflow. Nova → Bedrock deplo
 
 ⏸ Wait for user approval.
 
-### Step 6: Generate Notebook
+### Step 6: Generate Code
+
+Read `../references/code_output_guide.md` for output format rules.
 
 If a project directory already exists (from earlier in the workflow), use it. Otherwise, activate the **directory-management** skill to set one up.
 
-Check if the project notebook already exists at `<project-dir>/notebooks/<project-name>.ipynb`.
-
-- If it exists → ask: _"Would you like me to append the deployment cells to the existing notebook, or create a new one?"_
-- If it doesn't exist → create it
-
-When appending, add a markdown header cell `## Model Deployment — Bedrock` as a section divider before the new cells.
-
 ⏸ Wait for user.
 
-## Notebook Structure
+## Code Structure
 
 ### Markdown Header
 
@@ -91,7 +86,7 @@ When appending, add a markdown header cell `## Model Deployment — Bedrock` as 
 
 ### Cells
 
-Each cell's content comes from `../scripts/deploy-nova-bedrock.py`, split on the `# Cell N:` comments.
+Each cell's content comes from `../code_templates/deploy-nova-bedrock.py`, split on the `# Cell N:` comments. Each marker starts a new notebook cell — everything between one marker and the next becomes that cell's content.
 
 - **Cell 1**: Setup (pip install)
 - **Cell 2**: Configuration (env vars, imports, placeholders)

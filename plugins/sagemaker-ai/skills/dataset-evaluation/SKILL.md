@@ -7,9 +7,25 @@ metadata:
 
 # Workflow Instruction
 
-Follow the workflow shown below. Locate the dataset, check the file type, and resolve any issues with missing files or wrong file types. Determine the fine-tuning model and fine-tuning strategy. Run scripts/format_detector.py to evaluate whether the file is formatted correctly for the currently selected model and strategy. Summarize the results: is the dataset ready for fine-tuning?
+Follow the workflow shown below. Locate the dataset, check the file type, and resolve any issues with missing files or wrong file types. Determine the fine-tuning model and fine-tuning strategy. Run the appropriate validation based on the model family. Summarize the results: is the dataset ready for fine-tuning?
 
-## Workflow
+## Prerequisites
+
+- The SDK environment has been verified (SDK version, region, execution role). If not done, activate the `sdk-getting-started` skill first.
+
+## Model Path Dispatch
+
+Determine the model family from the model-selection results or conversation context.
+
+**If the selected model is Nova** (Nova Micro, Lite, Lite 2, Pro) → Read `references/nova-data-validation.md` and follow the Nova data validation workflow. Nova uses the Forge SDK's `DatasetLoader.validate()` method with `ValidateMethod.INVALID_RECORDS`. The Nova path does NOT use `scripts/format_detector.py`.
+
+**Nova path prerequisite:** The Nova Forge SDK must be installed (`pip install amzn-nova-forge`). If not installed, instruct the user to complete the `sdk-getting-started` skill first.
+
+**If the selected model is OSS** (Llama, Mistral, Qwen, etc.) → Follow the OSS workflow below using `scripts/format_detector.py`.
+
+---
+
+## OSS Workflow
 
 1. **Locate Dataset**:
    - The full path may be a local file path, or an S3 URI
@@ -17,8 +33,9 @@ Follow the workflow shown below. Locate the dataset, check the file type, and re
 
 2. **Determine strategy and model**:
    - File formatting depends on the currently selected fine-tuning strategy and fine-tuning base model.
-   - If the strategy and model are already known from the conversation context (e.g., selected via the finetuning-setup skill), use them.
-   - If not available in context, activate the finetuning-setup skill to determine them before proceeding.
+   - If the strategy and model are already known from the conversation context (e.g., selected via the model-selection and finetuning-technique skills), use them.
+   - If not available in context, activate the model-selection and/or finetuning-technique skills to determine them before proceeding.
+   - **Exception:** If the user is validating an evaluation dataset (not a training dataset), neither model nor technique is required — the format detector can validate eval format (query/response structure) independently. Do not block on model-selection or finetuning-technique for eval dataset validation.
 
 3. **Check File Formatting**: Run the tool format_detector.py to make sure the file conforms to formatting requirements.
    - Send the full path directly to the format_detector script as an argument
@@ -29,11 +46,14 @@ Follow the workflow shown below. Locate the dataset, check the file type, and re
 4. **Summarize Results**: Tell the user if their data is ready
    - Examine the output of format_detector and compare to the known strategy and model
    - **Important: training datasets and evaluation datasets have different format requirements.**
-     - **Training datasets** must match the fine-tuning strategy format (SFT, DPO, RLVR) per `references/strategy_data_requirements.md`
+     - **Training datasets** must match the fine-tuning strategy format per `references/strategy_data_requirements.md`
      - **Evaluation datasets** (for model evaluation) must match one of the [SageMaker evaluation dataset formats](https://docs.aws.amazon.com/sagemaker/latest/dg/model-customize-evaluation-dataset-formats.html).
+     - **Custom Scorer evaluation datasets** have scorer-specific requirements. If the dataset is intended for Custom Scorer evaluation (Prime Math, Prime Code, or Custom Lambda), read `references/custom-scorer-evaluation-dataset-formats.md` and validate against the scorer-specific schema. The scorer type should be known from conversation context (determined in the model-evaluation skill).
    - Report back to the user if their current dataset is valid for its intended purpose
    - Warn the user if their dataset is valid, but for a different strategy or model
    - Warn the user if their dataset is not valid for any strategy/model pair
+   - If the user plans to finetune a model with the evaluated dataset, it needs to be uploaded to an S3 bucket in the same region as the planned training job (usually the default region). Warn the user if this is NOT the case.
+   - If the dataset is NOT in the necessary format, recommend transforming it using the dataset-transformation skill, wait for user confirmation, and update the plan based on their response
 
 ## Messages to the User
 
@@ -43,14 +63,20 @@ Follow the workflow shown below. Locate the dataset, check the file type, and re
 # Resources
 
 - scripts/format_detector.py is self-contained format validation script that can be run independently
-- finetuning-setup skill should have already determined the fine-tuning strategy and base model
+- model-selection and finetuning-technique skills should have already determined the base model and fine-tuning strategy
 - references/strategy_data_requirements.md contains data format requirements per strategy
 
 ## Script Details
 
-- scripts/format_detector.py is self-contained format validation script that can be run independently:
+- scripts/format_detector.py is self-contained format validation script that can be run independently (OSS path only):
 
 ```bash
 # With the file path argument identified in workflow step 1
 python scripts/format_detector.py local_path/to/dataset
 ```
+
+## References
+
+- `scripts/format_detector.py` — Self-contained format validation script (OSS path)
+- `references/strategy_data_requirements.md` — Data format requirements per strategy (OSS path)
+- `references/nova-data-validation.md` — Nova Forge SDK data validation guide (Nova path)
