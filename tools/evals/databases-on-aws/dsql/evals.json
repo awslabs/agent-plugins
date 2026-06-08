@@ -67,7 +67,7 @@
       "expected_output": "Recommends JSONB (preferred for queryable structured data) or JSON as the column type. Shows JSONB operator usage (preferences->>'key', preferences @> '{...}'::jsonb) for querying.",
       "files": [],
       "expectations": [
-        "Recommends JSONB (or JSON) as the column type — DSQL supports both natively",
+        "Recommends JSONB (or JSON) as the column type",
         "Demonstrates JSONB operator usage for querying fields inside the column"
       ],
       "llm_judge": true
