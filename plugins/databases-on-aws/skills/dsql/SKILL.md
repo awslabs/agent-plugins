@@ -279,11 +279,11 @@ MUST load all four reference files at Phase 0: [query-plan/plan-interpretation.m
 
 **Safety.** Plan capture uses `readonly_query` exclusively. Rewrite DML to SELECT for plan capture. **MUST NOT** use `transact --allow-writes` for plan capture.
 
-### Workflow 9: Full PostgreSQL → DSQL Schema Migration
+### Workflow 10: Full PostgreSQL → DSQL Schema Migration
 
 MUST load [pg-migrations/type-mapping.md](references/pg-migrations/type-mapping.md) and [pg-migrations/schema-objects.md](references/pg-migrations/schema-objects.md). Run `dsql-lint(fix=true)` first for mechanical fixes, then apply semantic conversions from the pg-migrations references for unfixable diagnostics and patterns the linter cannot handle. Re-lint the final output before deploying.
 
-### Workflow 10: ORM Migration (Django/Hibernate/Rails)
+### Workflow 11: ORM Migration (Django/Hibernate/Rails)
 
 Load [orm-guides/overview.md](references/orm-guides/overview.md) for adapter names and framework-specific gotchas.
 
