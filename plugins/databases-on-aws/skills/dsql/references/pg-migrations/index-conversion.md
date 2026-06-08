@@ -32,7 +32,7 @@ Sources:
 GIN indexes are used for full-text search, JSONB containment, and array operations.
 DSQL uses btree indexes exclusively — convert GIN to btree where possible.
 
-### JSONB GIN → No Index (Query-Time Cast)
+### JSONB GIN → btree on Extracted Key
 
 ```sql
 -- PostgreSQL: GIN index on JSONB column
@@ -41,23 +41,24 @@ CREATE INDEX idx_users_prefs ON users USING gin (preferences);
 
 -- DSQL: No equivalent index. JSONB operators work at runtime without index.
 -- The query still works, just without index acceleration:
-SELECT * FROM users WHERE preferences::jsonb @> '{"theme":"dark"}';
+SELECT * FROM users WHERE preferences @> '{"theme":"dark"}';
 
 -- If you need indexed lookup on a specific JSON key, extract to a column:
 ALTER TABLE users ADD COLUMN pref_theme text;
--- Backfill: UPDATE users SET pref_theme = preferences::jsonb->>'theme';
+-- Backfill: UPDATE users SET pref_theme = preferences->>'theme';
 CREATE INDEX ASYNC idx_users_pref_theme ON users (pref_theme);
 -- Query: SELECT * FROM users WHERE pref_theme = 'dark';
 ```
 
-### Array GIN → JSON + Extracted Column
+### Array GIN → Join Table
 
 ```sql
 -- PostgreSQL: GIN index on array column
 CREATE INDEX idx_posts_tags ON posts USING gin (tags);
 -- Used for: tags @> ARRAY['database']
 
--- DSQL: Store tags as json, extract to separate table for indexed lookup
+-- DSQL: Array column types not supported. Normalize tags into a join table for
+-- indexed lookup, or store as jsonb if indexed lookup isn't needed.
 CREATE TABLE post_tags (
   post_id uuid NOT NULL,
   tag text NOT NULL
@@ -216,7 +217,7 @@ CREATE INDEX idx_users_city ON users ((preferences->>'city'));
 
 -- DSQL: Computed column + index
 ALTER TABLE users ADD COLUMN pref_city text
-  GENERATED ALWAYS AS (preferences::jsonb->>'city') STORED;
+  GENERATED ALWAYS AS (preferences->>'city') STORED;
 CREATE INDEX ASYNC idx_users_city ON users (pref_city);
 -- Query: WHERE pref_city = 'Seattle'
 ```

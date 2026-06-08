@@ -65,27 +65,30 @@ CREATE TABLE t (val NUMERIC(20,10));
 
 ## JSON and JSONB
 
-`json` is a storable column type. `jsonb` is **runtime-only** — store data as `json` and
-cast to `::jsonb` at query time for JSONB operators. `CREATE TABLE t (col JSONB)` is
-rejected by DSQL.
+Both `json` and `jsonb` are storable column types in DSQL. Prefer `jsonb` for queryable
+structured data — it stores parsed binary form, is faster for `->`/`->>`/`@>` operators, and
+deduplicates keys. Use `json` only when you need to preserve exact input formatting and key
+ordering.
 
-| PostgreSQL Type | DSQL Column Type | Notes                                        |
-| --------------- | ---------------- | -------------------------------------------- |
-| JSON            | json             | Storable, all JSON operators work            |
-| JSONB           | json             | Store as json, cast to ::jsonb for operators |
+| PostgreSQL Type | DSQL Column Type | Notes                                                                |
+| --------------- | ---------------- | -------------------------------------------------------------------- |
+| JSON            | json or jsonb    | Prefer `jsonb` for queryable data; keep `json` if exact text matters |
+| JSONB           | jsonb            | Direct equivalent                                                    |
 
 ```sql
 CREATE TABLE config (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  settings json,       -- NOT jsonb
-  raw_payload json
+  settings jsonb,
+  raw_payload jsonb
 );
 
--- Cast to jsonb at query time for JSONB operators
-SELECT settings::jsonb -> 'key' FROM config;
-SELECT settings::jsonb @> '{"a":1}' FROM config;
-SELECT settings::jsonb ? 'key' FROM config;
+SELECT settings -> 'key' FROM config;
+SELECT settings @> '{"a":1}' FROM config;
+SELECT settings ? 'key' FROM config;
 ```
+
+**Arrays:** DSQL does not support array column types (e.g. `text[]`, `int[]`). Serialize
+arrays as `jsonb` and use `jsonb_array_elements_text(col)` to expand at query time.
 
 ---
 
@@ -124,8 +127,8 @@ CREATE TABLE users (
     email varchar(255) NOT NULL,
     name text,
     balance numeric(19,4),
-    preferences json,    -- cast to ::jsonb at query time
-    tags json,
+    preferences jsonb,
+    tags jsonb,          -- array column types not supported; serialize as jsonb
     ip_address text,
     created_at timestamptz DEFAULT now()
 );
