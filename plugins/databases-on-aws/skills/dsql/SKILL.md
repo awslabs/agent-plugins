@@ -195,7 +195,7 @@ See [scripts/README.md](../../scripts/README.md) for usage and hook configuratio
 - MUST include tenant_id in all tables
 - MUST use `CREATE INDEX ASYNC` exclusively
 - MUST issue each DDL in its own transact call: `transact(["CREATE TABLE ..."])`
-- MUST serialize arrays as JSONB (DSQL does not support array column types); expand at query time with `jsonb_array_elements_text(data)`
+- MUST serialize arrays as JSONB; expand at query time with `jsonb_array_elements_text(data)`
 
 ### Workflow 2: Safe Data Migration
 

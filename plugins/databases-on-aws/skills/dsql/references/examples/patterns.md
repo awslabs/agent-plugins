@@ -129,11 +129,11 @@ INSERT INTO distributors VALUES (nextval('order_seq'), 'nothing');
 
 ---
 
-## Runtime-Only Types
+## Arrays and Structured Data
 
-Arrays and `INET` are [runtime-only](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-supported-data-types.html#working-with-postgresql-compatibility-query-runtime) — not valid as column types. `JSON` and `JSONB` ARE supported as column types; prefer `JSONB` for queryable structured data.
+Arrays and `INET` are [runtime-only](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-supported-data-types.html#working-with-postgresql-compatibility-query-runtime) — not valid as column types. For structured data, prefer `JSONB` over `JSON` for queryable fields.
 
-- **MUST** serialize arrays as `JSONB` — DSQL does not support array column types like `TEXT[]`
+- **MUST** serialize arrays as `JSONB`
 - **MAY** use `jsonb_array_elements_text(data)` to expand a JSONB array at query time
 
 ```javascript
