@@ -42,24 +42,26 @@ This plugin brings deep AWS AI/ML expertise directly into your coding assistant,
 Run in your terminal:
 
 ```
-claude plugins marketplace add awslabs/agent-plugins
+claude plugins marketplace add "https://github.com/awslabs/agent-plugins#sagemaker-ai-nova-forge-beta"
 claude plugins install sagemaker-ai@agent-plugins-for-aws
 ```
 
 Or if you're already inside Claude Code, run:
 
 ```
-/plugin marketplace add awslabs/agent-plugins
+/plugin marketplace add https://github.com/awslabs/agent-plugins#sagemaker-ai-nova-forge-beta
 /plugin install sagemaker-ai@agent-plugins-for-aws
 ```
 
 ### Cursor
 
-Install from the [Cursor Marketplace](https://cursor.com/marketplace/aws/sagemaker-ai) by selecting **Add to Cursor**, or run within Cursor:
+Install using the [Skills CLI](https://github.com/vercel-labs/skills):
 
 ```
-/add-plugin sagemaker-ai
+npx skills add https://github.com/awslabs/agent-plugins/tree/sagemaker-ai-nova-forge-beta/plugins/sagemaker-ai/skills --all --agent cursor --copy
 ```
+
+Then copy .mcp.json to your project root for the MCP server.
 
 ### Other Agents
 
@@ -68,7 +70,7 @@ For other agents (Kiro, etc.), install the skills and MCP server manually.
 **Install skills** using the [Skills CLI](https://github.com/vercel-labs/skills). For example, to install for Kiro:
 
 ```
-npx skills add https://github.com/awslabs/agent-plugins/tree/main/plugins/sagemaker-ai/skills --all --agent kiro-cli --copy
+npx skills add https://github.com/awslabs/agent-plugins/tree/sagemaker-ai-nova-forge-beta/plugins/sagemaker-ai/skills --all --agent kiro-cli --copy
 ```
 
 Replace `kiro-cli` with your agent if different. See [Skills supported agents](https://github.com/vercel-labs/skills#supported-agents).
