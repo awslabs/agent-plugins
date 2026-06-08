@@ -331,11 +331,12 @@ def reward_function(sample: Dict[str, Any], index: int) -> Dict[str, Any]:
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     AWS Lambda Handler for reward function.
-    SageMaker Nova RLVR invokes this with a bare list of samples and expects
-    a bare list of {id, aggregate_reward_score, ...} dicts in return.
+    SageMaker Nova evaluation invokes this with a list of samples.
+    Each sample has 'messages' (with assistant turn = model output) and 'reference_answer'.
+    Must return {"statusCode": 200, "body": [results]} where body is a parsed list.
     """
-    # Event is a bare list of samples
-    batch = event if isinstance(event, list) else []
+    # Event may be a list of samples or a single sample dict
+    batch = event if isinstance(event, list) else [event]
 
     results = []
     for i, sample in enumerate(batch):
@@ -349,4 +350,8 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'metrics_list': []
             })
 
-    return results
+    return {
+        'statusCode': 200,
+        'headers': {'Content-Type': 'application/json'},
+        'body': results  # Must be a parsed list, NOT json.dumps()
+    }

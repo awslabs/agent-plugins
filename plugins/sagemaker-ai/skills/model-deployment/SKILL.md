@@ -1,6 +1,6 @@
 ---
 name: model-deployment
-description: Generates a Jupyter notebook that deploys fine-tuned models from SageMaker Serverless Model Customization to SageMaker endpoints or Bedrock. Use when the user says "deploy my model", "create an endpoint", "make it available", or asks about deployment options. Identifies the correct deployment pathway (Nova vs OSS), generates deployment code, and handles endpoint configuration.
+description: Generates code that deploys fine-tuned models from SageMaker Serverless Model Customization to SageMaker endpoints or Bedrock. Use when the user says "deploy my model", "create an endpoint", "make it available", or asks about deployment options. Identifies the correct deployment pathway (Nova vs OSS), generates deployment code, and handles endpoint configuration.
 metadata:
   version: "1.0.0"
 ---
@@ -19,13 +19,18 @@ This skill supports deploying Nova and OSS models that were fine-tuned through *
 - Models fine-tuned through other processes
 - Full Fine-Tuning (FFT) — only LoRA fine-tuned models are supported
 
+## Prerequisites
+
+- The SDK environment has been verified (SDK version, region, execution role). If not done, activate the `sdk-getting-started` skill first.
+
+---
+
 ## Principles
 
 1. **One thing at a time.** Each response advances exactly one decision.
 2. **Confirm before proceeding.** Wait for the user to agree before moving on. But don't re-ask questions already answered in the conversation — use what you know.
 3. **Don't read files until you need them.** Only read pathway references after the pathway is confirmed.
 4. **Use what you know.** If conversation history or artifacts already answer a question, confirm your understanding instead of asking again.
-5. **Notebook writing.** Write notebooks using your standard file write tool to create the `.ipynb` file with the complete notebook JSON, OR use notebook MCP tools (e.g., `create_notebook`, `add_cell`) if available. Do NOT use bash commands, shell scripts, or `echo`/`cat` piping to generate notebooks.
 
 ## Workflow
 

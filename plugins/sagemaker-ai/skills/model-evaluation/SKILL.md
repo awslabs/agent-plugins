@@ -1,13 +1,17 @@
 ---
 name: model-evaluation
-description: 'Generates python code that evaluates SageMaker models. Supports two evaluation types: LLM-as-Judge and Custom Scorer. Use when the user says "evaluate my model", "test model performance", "how did my model perform", "compare models", or other similar requests.'
+description: Generates python code that evaluates SageMaker models. Supports two evaluation types: LLM-as-Judge and Custom Scorer. Use when the user says "evaluate my model", "run a benchmark", "test model performance", "how did my model perform", "compare models", or other similar requests.
 metadata:
-  version: "2.0.0"
+  version: "3.0.0"
 ---
 
 # Model Evaluation
 
 Generate code that evaluates a SageMaker model.
+
+## Prerequisites
+
+- The SDK environment has been verified (SDK version, region, execution role). If not done, activate the `sdk-getting-started` skill first.
 
 ## Principles
 
@@ -16,22 +20,24 @@ Generate code that evaluates a SageMaker model.
 3. **Don't read files until you need them.** Only read reference files when you've reached the step that requires them.
 4. **Don't ask what you already know.** If the answer is in conversation history, workflow_state.json, plan.md, or any file you've already read — use it. Confirm if unsure, but don't re-ask.
 5. **No narration.** Share outcomes and ask questions. Keep responses short.
-6. **Notebook writing.** Write notebooks using your standard file write tool to create the `.ipynb` file with the complete notebook JSON, OR use notebook MCP tools (e.g., `create_notebook`, `add_cell`) if available. Do NOT use bash commands, shell scripts, or `echo`/`cat` piping to generate notebooks.
+6. **No repetition.** If you said something before a tool call, don't repeat it after.
 
-## Limitations
+## Scope
 
-This skill supports the evaluation feature for Sagemaker Serverless Model Customization. Thus it can help evaluate any Sagemaker Jumpstart models that are supported by sagemaker serverless model customization. Tell this to the user when the skill is activated:
+This skill supports the evaluation feature for SageMaker Serverless Model Customization. It can evaluate any base or fine-tuned model supported by SageMaker serverless model customization — both OSS models (Llama, Mistral, Qwen, etc.) and Nova models.
 
-> "This skill can help us evaluate any base or finetuned model that is supported by sagemaker serverless model customization"
+Tell the user when the skill is activated:
 
-If the user requests help evaluating a different type of model, explain to them that this is not supported by the skill.
+> "I can help evaluate any base or fine-tuned model supported by SageMaker serverless model customization."
+
+If the user requests help evaluating a model that isn't supported by SageMaker serverless model customization, explain that it is not supported by this skill.
 
 ## Evaluation Types
 
-There are two evaluation types that can be used to evaluate a model:
+There are two evaluation types:
 
-- **LLM-as-Judge** — an LLM grades your model's responses.
-- **Custom Scorer** — programmatic evaluation via Lambda function (includes built-in math and code scorers).
+- **LLM-as-Judge** — an LLM grades your model's responses. (OSS models only — not supported for Nova.)
+- **Custom Scorer** — programmatic evaluation via Lambda function (includes built-in math and code scorers). Works with both OSS and Nova models.
 
 ## Workflow
 
@@ -76,7 +82,7 @@ Before reading the reference file, validate that the chosen evaluation type is c
 
 #### Custom Scorer validation
 
-1. **Does the user have an evaluation dataset?** Custom Scorer requires one. (No model type restriction — works with Nova.)
+1. **Does the user have an evaluation dataset?** Custom Scorer requires one. (Works with both OSS and Nova models, though for Nova only custom lambdas are supported.)
 
 ---
 

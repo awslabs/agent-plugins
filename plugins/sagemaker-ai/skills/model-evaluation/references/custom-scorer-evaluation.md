@@ -40,7 +40,13 @@ If you know this already, skip this step. If not, ask the user:
 
 For this step, you need to know **which scorer to use.**
 
-If you already know from context, confirm and move on. Otherwise, ask:
+**If the model is Nova:** built-in scorers (Prime Math, Prime Code) are not supported for Nova models. Inform the user and proceed with Custom Lambda:
+
+> "For Nova models, only Custom Lambda scoring is supported. Built-in scorers (Prime Math, Prime Code) won't produce results. Let's set up a Custom Lambda scorer."
+
+Then read `references/custom-lambda-scorer.md` and follow its instructions. Return here and proceed to Step 5.
+
+**If the model is OSS:** ask if you don't already know from context:
 
 > "Which type of scorer would you like to use?
 >
@@ -55,11 +61,9 @@ If you already know from context, confirm and move on. Otherwise, ask:
 
 ### Step 5: Validate dataset format
 
-If the evaluation dataset was already validated via the **dataset-evaluation** skill — either earlier in this conversation, or in a previous session (as recorded in plan.md) — skip this step.
+IMPORTANT: you MUST validate that dataset, to ensure that it is the correct format. Note that there are precise requirements based on model and evaluation type, so you cannot skip this step.
 
-Otherwise, activate the **dataset-evaluation** skill to validate it. If it fails, offer to activate the **dataset-transformation** skill to convert it. Do not proceed until the dataset is valid.
-
-**Note for scorer type:** Some scorer types have specific dataset format requirements. Be sure to consider this when you activate dataset-evaluation.
+Reference the **dataset-evaluation** skill to perform this validation.
 
 ### Step 6: Determine evaluation scope
 
@@ -144,7 +148,11 @@ If you already know this from context, confirm and move on. If not, the name sho
 
 Perform this step quietly. The user does not need to know about this. This is to make sure their results are viewable alongside other experimental work they're doing.
 
-### Step 13: Confirm configuration
+### Step 13: Final Checks
+
+IMPORTANT: Before moving on, you MUST think through every step of this workflow. Did you complete it, or did you have a good reason for skipping? If not, please complete it now. In particular, make sure you have carefully validated the dataset and the lambda against the correct requirements.
+
+### Step 14: Confirm configuration
 
 Summarize everything and ask for approval:
 
@@ -164,13 +172,17 @@ Summarize everything and ask for approval:
 
 ⏸ Wait for user approval.
 
-### Step 14: Generate notebook
+### Step 15: Generate code
 
-If you already know which notebook to write to (e.g., the user has been appending to an existing notebook throughout this workflow), confirm and proceed. Otherwise, ask if they have an existing notebook to add evaluation cells to, or want a new one. If new, check if a project directory already exists. If not, suggest activating the **directory-management** skill to set up a project structure. Then suggest a name like `<project-name>/notebooks/<project-name>_custom-scorer-evaluation.ipynb`.
+Read `../references/code_output_guide.md` for output format rules.
 
-Read `scripts/custom_scorer_evaluator.py`, substitute the collected values into the placeholders, and write the cells.
+If no project directory exists, activate the **directory-management** skill to set one up.
 
-### Step 15: Provide run instructions
+Read `code_templates/custom_scorer_evaluator.py`, substitute the collected values into the placeholders, and write the cells. The template uses `# Cell N: Label` markers — each marker starts a new notebook cell, with everything between one marker and the next becoming that cell's content.
+
+### Step 16: Post-generation
+
+**Notebook mode:**
 
 ```
 To run:
@@ -179,6 +191,31 @@ To run:
 3. Cell 3 — polls status automatically (~25-60 min)
 4. Cell 4 — show results
 ```
+
+**Script mode:**
+
+Evaluation can take hours depending on your dataset. Present the user with options:
+
+> "Would you like me to:
+>
+> 1. Leave it to you — run with `python scripts/[script_name]`
+> 2. Run it and wait until it's done
+> 3. Start it but don't wait — we can check status later"
+
+- **Option 1:** Done. Wait for user to come back.
+- **Option 2:** Execute the script as-is. `execution.wait()` polls until complete. Report results.
+- **Option 3:** Remove the `execution.wait()` call, execute, report the evaluation ARN.
+
+Note: `evaluate()` does not accept a `wait` parameter. It always returns immediately. Blocking is done via `execution.wait(target_status="Succeeded")`.
+
+**Checking status:**
+
+- `describe-pipeline-execution --pipeline-execution-arn ARN` → `PipelineExecutionStatus`
+- `list-pipeline-execution-steps --pipeline-execution-arn ARN` → per-step `StepStatus`, `FailureReason`
+
+**Showing results after completion:**
+
+- Run: `EvaluationPipelineExecution.get(arn=ARN).show_results()`
 
 ## FAQ
 
@@ -190,3 +227,7 @@ A: Yes — if using a custom Lambda scorer, the IAM role needs `lambda:InvokeFun
 
 **Q: Can I create a new reward function through this skill?**
 A: Yes — if you choose Custom Lambda and don't have an existing evaluator, the agent will walk you through creating one from a template and registering it via `Evaluator.create`.
+
+## Nova Model Notes
+
+Custom Scorer evaluation works with Nova models via Custom Lambda. Built-in scorers (Prime Math, Prime Code) are not supported — the pipeline will run without error, but the scorer will not execute.

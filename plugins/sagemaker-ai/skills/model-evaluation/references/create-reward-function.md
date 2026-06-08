@@ -25,7 +25,7 @@ Copy the selected template as `lambda_function.py` into the project's scripts di
 
 - Read the `directory-management` skill to determine the correct directory for storing scripts.
 
-### Step 2: Generate Notebook Cell
+### Step 2: Generate Code
 
 Create a single notebook cell that registers the local file as a SageMaker Hub Evaluator. Set `reward_function_path` to the path where `lambda_function.py` was saved in Step 1.
 
@@ -47,12 +47,14 @@ Remember to set an appropriate name for the Evaluator by yourself in the above c
 - Format: lowercase, alphanumeric with hyphens only, 1-20 characters
 - Pattern: `[a-zA-Z0-9](-*[a-zA-Z0-9]){0,20}`
 
-### Step 3: Inform User About TODOs
+### Step 3: Customize the Lambda
 
-After copying the template and generating the notebook cell, inform the user that `lambda_function.py` contains `TODO` sections that they
-must customize for their use case before running the notebook. The sections that need customization include helper functions,
-reward logic, input parsing, score computation, and the return statement. Direct the user to edit `lambda_function.py` directly.
-Wait for the user's acknowledgment before proceeding.
+After copying the template and generating the notebook cell, inform the user that `lambda_function.py` contains `TODO` sections that need customization for their use case. Ask:
+
+> "The reward function template has placeholder scoring logic that needs to be customized for your task. Would you like me to fill in the TODOs based on what I know about your use case, or would you prefer to do it yourself?"
+
+- If the user wants you to do it: customize the helper functions, reward logic, input parsing, score computation, and return statement based on the task context. Then present the result and warn: "Please review the Lambda code before running — especially the scoring logic. I may have made incorrect assumptions about your requirements."
+- If the user wants to do it: direct them to edit `lambda_function.py` directly and wait for their acknowledgment before proceeding.
 
 ## Output
 

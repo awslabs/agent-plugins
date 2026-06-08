@@ -1,34 +1,41 @@
 ---
 name: planning
-description: Discovers user intent and generates a structured, step-by-step plan for SageMaker AI model customization workflows (fine-tuning, data preparation, evaluation, deployment). Activate when the user's request relates to these areas or when the user asks to modify the current plan. Handles intent discovery, plan generation, plan iteration, and mid-execution plan alterations.
+description: Discovers user intent and generates a structured, step-by-step plan for model customization workflows. This skill must always be activated alongside any other skill when the user's request relates to model customization — including fine-tuning, training, building, customizing, reviewing data, or getting advice on approach, regardless of domain. Do not skip this skill even if the immediate ask is narrow (e.g., reviewing data format or a single workflow step), because planning discovers the full scope of work needed. Also activate when the user wants to resume, continue, or modify an existing plan.
 metadata:
-  version: "1.0.0"
+  version: "2.0.0"
 ---
 
-# Planning
+## Principles
 
-Implements dynamic planning for flexible user journeys. Instead of forcing a rigid workflow, this skill discovers what the user wants, proposes a plan, and adapts as needed.
+- **One question at a time.** Each question should resolve a branching decision in the plan. Avoid generic or out-of-domain questions.
+- **Surface constraints early.** If a user decision would constrain downstream options, flag it before the plan is finalized.
+- **Keep plans short.** Only include tasks that are necessary for the user's stated goal.
+- **Don't ask what you already know.** Check conversation history and project files before asking the user.
 
 ---
 
 ## Phase 1: Brainstorming
 
-**Goal:** Understand what the user wants to accomplish.
+**Goal:** Understand what the user wants to accomplish and identify which skills belong in the plan.
 
-**First message rules:**
+Read `references/input-output-contracts.md`, `references/model-customization-plan.md`, and `references/evaluate-first-plan.md` to:
 
-- If the user describes a goal, ask one clarifying question at most — then move to Phase 2.
-- Do NOT list capabilities, pipeline steps, or menus unprompted.
-- Do NOT read files or run tools unless the user asks.
+- Identify which skills could be relevant to the user's stated goal.
+- Check whether the user has the necessary input artifacts for each skill. If not, find the skills that generate those inputs and add them first.
+- Order skills to allow a smooth transition from one to the next and avoid dead ends.
+- Check if a recommended workflow matches the user's needs. If not, assess what modifications are needed and verify they are possible against the contracts table.
+- Decide which skills in a matching workflow can be skipped.
+- Surface limitations early — if a user decision (model choice, region, evaluation method) would constrain downstream options, mention it proactively, get user feedback, and adapt the plan accordingly.
 
 **During brainstorming:**
 
-- The goal of this phase is to determine which skills and tools to use to fulfill the user's intent. Every question you ask should help you decide whether a specific skill or tool belongs in the plan.
-- Before asking questions, review the name, description, and details of each skill in your context (do not actually load the full SKILL.md files yet), as well as the available MCP tools. Identify what information you'd need from the user to decide if each skill/tool is relevant.
-- Ask only questions whose answers would include or exclude a skill or tool from the plan. Do not ask generic or open-ended questions. Each question should map to a planning and skill-selection decision.
-- Do NOT ask the user about base model selection or preferences. Model selection is handled exclusively by the finetuning-setup skill.
-- When evaluating whether to include a skill, check if ALL of the skill's responsibilities are satisfied, not just the primary one. If a skill handles multiple decisions (e.g., technique selection AND model selection), include it if any of those decisions remain unresolved.
-- Move to Phase 2 as soon as you can determine which skills and tools the plan needs. Don't over-ask — 1 to 3 targeted questions should be sufficient in most cases.
+- **Workflow choice gate:** Before generating any plan, determine whether the user wants the evaluate-first workflow or the direct fine-tuning workflow. If the user has explicitly chosen (e.g., "evaluate first", "skip evaluation", "already evaluated the base model"), proceed with their choice. Otherwise, present both options with brief pros/cons and ask the user to choose. Saying "fine-tune" or naming a technique alone is NOT an explicit choice to skip evaluation — the user may not know evaluate-first is an option. Do NOT present a plan until the user has chosen a path. After they choose, read ONLY the corresponding reference plan.
+- Use the Restrictions column of the contracts table to flag constraints as soon as the relevant decision is made. Examples (non-comprehensive list, check contracts table for the full picture):
+  - User picks a Nova model → alert that deployment regions are limited.
+  - User picks a region → alert if it conflicts with model availability.
+- If a restriction applies, check whether it requires changes to other steps in the plan.
+- Do NOT ask the user about base model selection or preferences. Model selection is handled exclusively by the `model-selection` skill.
+- Move to Phase 2 as soon as you can determine which skills and tools the plan needs.
 
 ---
 
@@ -56,14 +63,12 @@ Does this plan look right, or would you like to change anything?
 
 **Rules for plan generation:**
 
-- Before presenting a plan, always read `references/skill-routing-constraints.md` and validate the plan against it.
-- Draw tasks from the skills available in your context. Use each skill's name and description to determine relevance.
-- Only offer capabilities that are covered by an available skill. Do not offer, suggest, or imply the ability to help with tasks that no skill supports. If the user needs something outside the available skills, explain that it is not supported.
-- Not every plan needs every skill. Tailor the plan to the user's actual intent.
-- If the user already has artifacts (e.g., a trained model), skip the steps that produce them.
-- Keep plans short. Only include tasks that are necessary.
+- Infer ordering from the Prerequisites column in the contracts table — a skill cannot appear before its prerequisites. If unsure, consult `references/skill-routing-constraints.md`.
+- Only offer capabilities covered by an available skill. If the user needs something no skill supports, say so.
+- Tailor the plan to the user's actual intent. Not every plan needs every skill.
+- If the user already has input artifacts (e.g., a trained model), skip the steps that produce them.
 
-When the user approves the plan, write it to `PLAN.md` using the following format. Save the file under the project directory structure defined by the directory-management skill, if available.
+When the user approves the plan, write it to `PLAN.md` and save it under the project directory structure defined by the directory-management skill.
 
 ```markdown
 # Plan
@@ -88,7 +93,7 @@ Update `PLAN.md` whenever a task's status changes.
 **Goal:** Refine the plan until the user approves it.
 
 - If the user suggests changes, regenerate the plan incorporating their feedback.
-- If the user approves (e.g., "looks good", "let's go", "yes"), begin execution by handing off to the first task's skill.
+- If the user approves, begin execution by handing off to the first task's skill.
 
 ---
 
@@ -99,9 +104,18 @@ Once the plan is approved:
 1. Before starting a task, update its status in `PLAN.md` to 🔄 (In Progress).
 2. If the task maps to a skill, load that skill's full SKILL.md before doing any work. Do not attempt the task from general knowledge — always defer to the skill's instructions.
 3. Execute the task by following the loaded skill's workflow.
-4. When the task completes, update its status in `PLAN.md` to ✅ (Completed), then briefly confirm completion and move to the next task.
+4. When the task completes:
+   - Update its status in `PLAN.md` to ✅ (Completed). If the task generated output files (scripts, notebooks, manifests), record the file paths under the completed task:
+
+     ```
+     - [x] Fine-tune model
+       - Output: `scripts/01_sft_finetuning.py`
+       - Output: `manifests/sft-llama-20260515.json`
+     ```
+
+   - Briefly confirm completion and move to the next task.
 5. If the user interrupts with a new request mid-execution:
-   - Completed tasks are immutable — DO NOT ever modify completed tasks in the plan. You are allowed to only modify tasks that are in progress or not started.
+   - Completed tasks are immutable — do NOT modify them.
    - Regenerate the remaining tasks to incorporate the user's new input.
    - Present the updated remainder for approval before continuing.
 
@@ -110,6 +124,7 @@ Once the plan is approved:
 ## Plan Completion
 
 When all tasks in the plan are done:
+Present to the user:
 
 > "We've completed everything in the plan. What would you like to do next?"
 
@@ -119,7 +134,9 @@ This re-enters Phase 1 (Brainstorming) for a new goal. There is no terminal stat
 
 ## References
 
-Always load the corresponding reference plan based on the customer intent to learn about what a typical plan looks like, and then adjust based on customer's needs.
+Load the reference plan that matches the customer's intent, then adjust based on their needs.
 
-- `references/model-customization-plan.md` — A typical end-to-end model customization/finetuning plan for reference when generating plans.
-- `references/skill-routing-constraints.md` — Mandatory inclusion rules, ordering constraints, and skill boundary rules. Always consult when generating or modifying a plan.
+- `references/evaluate-first-plan.md` — The evaluate-first workflow: evaluate a base model before deciding whether to fine-tune.
+- `references/model-customization-plan.md` — The direct fine-tuning plan. Use when the user has explicitly committed to fine-tuning.
+- `references/input-output-contracts.md` - A table showing all skills, required inputs, produced outputs, prerequisites, and constraints.
+- `references/skill-routing-constraints.md` — Optional supplemental resource about Mandatory inclusion rules, ordering constraints, and skill boundary rules.
