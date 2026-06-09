@@ -5,6 +5,8 @@
 **dsql-lint version:** 0.1.4
 **Evaluation method:** Manual behavioral comparison — subagent run with skill loaded vs. subagent run without skill. Automated grading for these evals is not yet wired into `run_functional_evals.py`; PASS/FAIL is a human assessment of transcripts against the expectations in `dsql_lint_evals.json`.
 
+> **Historical note:** This eval was run when DSQL did not support `JSONB` as a column type, so the skill's "JSON → TEXT" rewrite was correct at the time and the baseline's `JSONB` recommendation was a hallucination. DSQL has since added native `JSON` and `JSONB` support; later `dsql-lint` versions accept both. The pass/fail judgments here are preserved as-is to keep the snapshot accurate.
+
 ## Summary
 
 | Eval | Scenario                  | With Skill | Baseline        | Delta                                                           |

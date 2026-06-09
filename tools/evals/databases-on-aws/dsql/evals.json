@@ -64,22 +64,22 @@
     {
       "id": 6,
       "prompt": "I need to store a JSON preferences blob per user in my DSQL users table. How should I model that column, and how do I query fields inside it?",
-      "expected_output": "Recommends either JSON or TEXT as a valid column type. Explains that JSONB is runtime-only and must be cast (preferences::jsonb->>'key') at query time for JSONB operators.",
+      "expected_output": "Recommends JSONB (preferred for queryable structured data) or JSON as the column type. Shows JSONB operator usage (preferences->>'key', preferences @> '{...}'::jsonb) for querying.",
       "files": [],
       "expectations": [
-        "Mentions casting to jsonb at query time for JSONB operators",
-        "Does NOT claim JSONB is a valid column type (JSONB is runtime-only)"
+        "Recommends JSONB (or JSON) as the column type",
+        "Demonstrates JSONB operator usage for querying fields inside the column"
       ],
       "llm_judge": true
     },
     {
       "id": 7,
       "prompt": "I want to store a tags array per project in DSQL (e.g. ['backend','database','api']). Can I use TEXT[] for that?",
-      "expected_output": "Indicates TEXT[] / array column type is not supported in DSQL. Recommends storing arrays as TEXT (comma-separated) or inside a JSON column.",
+      "expected_output": "Indicates TEXT[] / array column type is not supported in DSQL. Recommends storing the array as a JSONB column, with jsonb_array_elements_text() to expand it at query time.",
       "files": [],
       "expectations": [
         "Indicates TEXT[] or array column type is not supported in DSQL",
-        "Recommends storing arrays as TEXT (comma-separated) or inside a JSON column"
+        "Recommends storing arrays as JSONB (and ideally mentions jsonb_array_elements_text for query-time expansion)"
       ],
       "llm_judge": true
     },

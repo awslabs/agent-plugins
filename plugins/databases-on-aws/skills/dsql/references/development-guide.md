@@ -13,8 +13,7 @@ effortless scaling, multi-region viability, among other advantages.
 - **REQUIRED: Follow DDL Guidelines** - Refer to [DDL Rules](#schema-ddl-rules)
 - **SHALL repeatedly generate fresh tokens** - Refer to [Connection Limits](auth/authentication-guide.md#connection-rules)
 - **ALWAYS use ASYNC indexes** - `CREATE INDEX ASYNC` is mandatory
-- **MUST serialize arrays as TEXT or JSON** - see [Schema Design Rules](#schema-design-rules)
-- **MUST cast to `JSONB` at query time** for JSONB operators — see [Supported Data Types](#supported-data-types)
+- **MUST serialize arrays as JSONB** - see [Schema Design Rules](#schema-design-rules)
 - **ALWAYS Batch within row limit** - maintain transaction limits (verify via `awsknowledge`: `aurora dsql transaction limits`)
 - **REQUIRED: Build and sanitize all SQL with `safe_query.build()`** - See [Input Validation](../mcp/tools/input-validation.md#required-pattern)
 - **MUST follow correct Application Layer Patterns** - when multi-tenant isolation or application referential integrity are required; refer to [Application Layer Patterns](#application-layer-patterns)
@@ -55,7 +54,8 @@ effortless scaling, multi-region viability, among other advantages.
 ### Schema Design Rules
 
 - MUST verify column types via `awsknowledge`: `aurora dsql supported data types` or the [DSQL supported data types list](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-supported-data-types.html)
-- MUST serialize arrays as TEXT or JSON; cast back at query time via `string_to_array(text, ',')` or `jsonb_array_elements_text(json::jsonb)`
+- MUST serialize arrays as JSONB; expand at query time via `jsonb_array_elements_text(data)`
+- **MUST NOT** add per-column `COLLATE` clauses — DSQL uses C collation database-wide and rejects `COLLATE "C"` in DDL. Run `dsql-lint` to strip COLLATE from migrated schemas.
 - ALWAYS include tenant_id in tables for multi-tenant isolation
 - SHOULD create async indexes for tenant_id and common query patterns
 
@@ -66,6 +66,7 @@ effortless scaling, multi-region viability, among other advantages.
 - MUST use **`CREATE INDEX ASYNC`:** No synchronous creation (verify limits via `awsknowledge`: `aurora dsql index limits`)
   - MAXIMUM: **24 indexes per table**
   - MAXIMUM: **8 columns per index**
+  - **MUST** verify index is ready before relying on it: `SELECT indisvalid FROM pg_index WHERE indexrelid = 'index_name'::regclass` — queries work but skip the index until `indisvalid = true`
 - **Asynchronous Execution:** DDL ALWAYS runs asynchronously
 - To add a column with DEFAULT or NOT NULL:
   1. MUST issue ADD COLUMN specifying only the column name and data type
@@ -126,7 +127,7 @@ UPDATE table SET c = 'default' WHERE c IS NULL;        ← AFTER ADD COLUMN
 
 **MUST verify** column types against the [DSQL supported data types docs](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-supported-data-types.html) or via `awsknowledge`: `aurora dsql supported data types` — the supported set evolves, so do not treat any static list as exhaustive.
 
-`JSONB`, arrays, and `INET` are **[runtime-only](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-supported-data-types.html#working-with-postgresql-compatibility-query-runtime)** — cast at query time
+Arrays and `INET` are **[runtime-only](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-supported-data-types.html#working-with-postgresql-compatibility-query-runtime)** — cast at query time. For structured data, prefer `JSONB` over `JSON` for queryable fields.
 
 ### Supported Key
 

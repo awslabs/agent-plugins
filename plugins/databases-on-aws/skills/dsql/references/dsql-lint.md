@@ -1,6 +1,6 @@
 # DSQL Lint — SQL Compatibility Validation
 
-`dsql_lint` is an MCP tool that validates SQL for Aurora DSQL compatibility and auto-fixes
+`dsql-lint` is an MCP tool that validates SQL for Aurora DSQL compatibility and auto-fixes
 common issues. It provides deterministic, rule-based analysis — more reliable than heuristic
 reasoning for catching DSQL-specific constraints.
 
@@ -107,7 +107,7 @@ Only diagnostics with `fix_result.status == "unfixable"` need user-confirmed rew
 | `add_column_constraint`      | ADD COLUMN with name + type only, then backfill via UPDATE. If NOT NULL/DEFAULT required, use Table Recreation Pattern. |
 | `index_expression`           | Create a computed column, then index that column                                                                        |
 | `index_partial`              | Create a full index; filter at query time                                                                               |
-| `set_transaction`            | Omit — DSQL uses Repeatable Read (fixed); `SET TRANSACTION ISOLATION LEVEL` is not supported                            |
+| `set_transaction`            | Omit — DSQL uses Repeatable Read (fixed); remove `SET TRANSACTION ISOLATION LEVEL`                                      |
 
 Other rules such as `temp_table`, `inherits`, `index_using`, and `transaction_isolation` are emitted as `fixed` or `fixed_with_warning` — follow the Fix Result Statuses table rather than rewriting manually.
 

@@ -30,7 +30,7 @@ Hot keys (frequently accessed rows) create bottlenecks. For detailed analysis, s
 
 - **PREFER UUIDs for primary keys** - UUIDs are the recommended default identifier because they avoid coordination; use `gen_random_uuid()` for distributed writes
   - **Sequences and IDENTITY columns are available** when compact, human-readable integer identifiers are needed (e.g., account numbers, reference IDs). CACHE must be specified explicitly as either 1 or >= 65536. See [Choosing Identifier Types](#choosing-identifier-types)
-  - **ALWAYS use `GENERATED { ALWAYS | BY DEFAULT } AS IDENTITY`** for auto-incrementing columns (SERIAL is not supported)
+  - **ALWAYS use `GENERATED { ALWAYS | BY DEFAULT } AS IDENTITY`** for auto-incrementing columns (replaces SERIAL)
 - **SHOULD avoid aggregate update patterns** - Year-to-date totals and running counters create hot keys via read-modify-write
   - **RECOMMENDED: Compute aggregates via queries** - Calculate totals with SELECT when needed; eventual consistency often acceptable
 - **Accept contention only for genuine constraints** - Inventory management and account balances justify contention; sequential numbering and visit tracking are better served by coordination-free approaches
@@ -41,7 +41,7 @@ Aurora DSQL supports both UUID-based identifiers and integer values generated us
 
 - **UUIDs** can be generated without coordination and are recommended as the default identifier type, especially for primary keys where scalability is important and strict ordering is not required
 - **Sequences and IDENTITY columns** generate compact integer values convenient for human-readable identifiers, reporting, and external interfaces. When numeric identifiers are preferred, we recommend using a sequence or IDENTITY column in combination with UUID-based primary keys
-- **ALWAYS use `GENERATED { ALWAYS | BY DEFAULT } AS IDENTITY`** for auto-incrementing columns (SERIAL is not supported)
+- **ALWAYS use `GENERATED { ALWAYS | BY DEFAULT } AS IDENTITY`** for auto-incrementing columns (replaces SERIAL)
 
 #### Choosing a CACHE Size
 
