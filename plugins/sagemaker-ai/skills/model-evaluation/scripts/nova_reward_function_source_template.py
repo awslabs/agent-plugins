@@ -344,6 +344,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             result = reward_function(sample, i)
             results.append(result)
         except Exception as e:
+            print(f"[ERROR] reward_function failed for sample {i}: {e}")
             results.append({
                 'id': str(sample.get('id', f'sample-{i:03d}') if isinstance(sample, dict) else f'sample-{i:03d}'),
                 'aggregate_reward_score': 0.0,

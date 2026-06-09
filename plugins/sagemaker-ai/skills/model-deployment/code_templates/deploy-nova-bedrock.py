@@ -7,6 +7,7 @@
 # Cell 2: Configuration
 
 import os
+import json
 import boto3
 
 os.environ["AWS_DEFAULT_REGION"] = "[REGION]"

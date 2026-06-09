@@ -4,7 +4,7 @@
 
 # Cell 1: Install Dependencies
 
-%pip install --upgrade 'sagemaker>=3.7.1' boto3 -q  # NOTEBOOK_ONLY
+%pip install --upgrade 'sagemaker>=3.7.1,<4.0' boto3 -q  # NOTEBOOK_ONLY
 
 # Cell 2: Setup & Credentials
 

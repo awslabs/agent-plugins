@@ -4,6 +4,8 @@
 
 # Set AWS region before importing SageMaker SDK
 import os
+import json
+from pathlib import Path
 REGION = "[REGION]"
 os.environ['AWS_DEFAULT_REGION'] = REGION
 

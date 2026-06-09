@@ -81,8 +81,7 @@ while True:
         print(f"Model ARN: {model_arn}")
         break
     elif status in ("Failed", "Stopped"):
-        print(f"\nImport failed: {resp.get('failureMessage', 'Unknown error')}")
-        break
+        raise RuntimeError(f"Import {status}: {resp.get('failureMessage', 'Unknown error')}")
 
     time.sleep(30)
 
@@ -116,6 +115,6 @@ manifest_dir = Path("[PROJECT_DIR]") / "manifests"
 manifest_dir.mkdir(parents=True, exist_ok=True)
 manifest_path = manifest_dir / f"deploy-{TRAINING_JOB_NAME}.json"
 manifest_path.write_text(json.dumps({
-    "model_id": model_id,
+    "model_id": model_arn,
 }, indent=2))
 print(f"Manifest saved: {manifest_path}")
