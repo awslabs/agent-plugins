@@ -12,9 +12,9 @@ Sources:
 
 ## Overview
 
-| Configuration | Availability | Regions                                                                                          |
-| ------------- | ------------ | ------------------------------------------------------------------------------------------------ |
-| Single-Region | 99.99%       | 1                                                                                                |
+| Configuration | Availability | Regions                                                                                         |
+| ------------- | ------------ | ----------------------------------------------------------------------------------------------- |
+| Single-Region | 99.99%       | 1                                                                                               |
 | Multi-Region  | 99.999%      | Two peered clusters in two Regions plus one shared witness Region (the witness has no endpoint) |
 
 **Key properties:**
@@ -69,8 +69,8 @@ contention across regions — partition data by geography where possible.
 
 ## Quotas
 
-| Quota                             | Value                  |
-| --------------------------------- | ---------------------- |
-| Multi-region clusters per account | 5 (increasable)                                                                            |
+| Quota                             | Value                                                                                     |
+| --------------------------------- | ----------------------------------------------------------------------------------------- |
+| Multi-region clusters per account | 5 (increasable)                                                                           |
 | Cluster topology                  | Two peered clusters in two endpoint Regions, plus one shared witness Region (no endpoint) |
-| Storage per cluster               | 10 TiB (up to 256 TiB)                                                                     |
+| Storage per cluster               | 10 TiB (up to 256 TiB)                                                                    |

@@ -71,18 +71,18 @@ Load these files as needed for detailed guidance:
 
 ### Data Loading:
 
-| Reference                                       | When to Load                                                          | Contains                                                                                    |
-| ----------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| [data-loading.md](references/data-loading.md)   | Planning or running bulk loads with `aurora-dsql-loader`              | Fresh-vs-warm partitions, resume/retry, `--on-conflict` semantics, throughput diagnostics   |
+| Reference                                     | When to Load                                             | Contains                                                                                  |
+| --------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| [data-loading.md](references/data-loading.md) | Planning or running bulk loads with `aurora-dsql-loader` | Fresh-vs-warm partitions, resume/retry, `--on-conflict` semantics, throughput diagnostics |
 
 ### Query Plan Explainability:
 
-| Reference                                                                       | When to Load                              | Contains                                                                                                  |
-| ------------------------------------------------------------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| [query-plan/plan-interpretation.md](references/query-plan/plan-interpretation.md) | MUST load at Workflow 9 Phase 0           | DSQL node types, Node Duration math, estimation-error bands                                               |
-| [query-plan/catalog-queries.md](references/query-plan/catalog-queries.md)       | MUST load at Workflow 9 Phase 0           | `pg_class`/`pg_stats`/`pg_indexes` SQL, correlated-predicate verification                                 |
-| [query-plan/guc-experiments.md](references/query-plan/guc-experiments.md)       | MUST load at Workflow 9 Phase 0           | GUC experiment procedures, 30-second skip protocol                                                        |
-| [query-plan/report-format.md](references/query-plan/report-format.md)           | MUST load at Workflow 9 Phase 0           | Required report structure, element checklist, support request template                                   |
+| Reference                                                                         | When to Load                    | Contains                                                                  |
+| --------------------------------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------- |
+| [query-plan/plan-interpretation.md](references/query-plan/plan-interpretation.md) | MUST load at Workflow 9 Phase 0 | DSQL node types, Node Duration math, estimation-error bands               |
+| [query-plan/catalog-queries.md](references/query-plan/catalog-queries.md)         | MUST load at Workflow 9 Phase 0 | `pg_class`/`pg_stats`/`pg_indexes` SQL, correlated-predicate verification |
+| [query-plan/guc-experiments.md](references/query-plan/guc-experiments.md)         | MUST load at Workflow 9 Phase 0 | GUC experiment procedures, 30-second skip protocol                        |
+| [query-plan/report-format.md](references/query-plan/report-format.md)             | MUST load at Workflow 9 Phase 0 | Required report structure, element checklist, support request template    |
 
 ---
 

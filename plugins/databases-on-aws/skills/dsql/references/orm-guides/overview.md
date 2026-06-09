@@ -5,12 +5,12 @@ names and configuration not available in general documentation.
 
 ## Adapters
 
-| Framework  | Adapter                            | Install                                              |
-| ---------- | ---------------------------------- | ---------------------------------------------------- |
-| Django     | `aurora_dsql_django`               | `pip install aurora-dsql-django boto3`               |
+| Framework  | Adapter                            | Install                                                      |
+| ---------- | ---------------------------------- | ------------------------------------------------------------ |
+| Django     | `aurora_dsql_django`               | `pip install aurora-dsql-django boto3`                       |
 | Hibernate  | `aurora-dsql-hibernate-dialect`    | `software.amazon.dsql:aurora-dsql-hibernate-dialect` (Maven) |
-| Rails      | Standard `pg` gem + `aws-sdk-dsql` | `gem 'pg'` + `gem 'aws-sdk-dsql'`                    |
-| SQLAlchemy | `aurora_dsql_sqlalchemy`           | `pip install aurora-dsql-sqlalchemy boto3`           |
+| Rails      | Standard `pg` gem + `aws-sdk-dsql` | `gem 'pg'` + `gem 'aws-sdk-dsql'`                            |
+| SQLAlchemy | `aurora_dsql_sqlalchemy`           | `pip install aurora-dsql-sqlalchemy boto3`                   |
 
 ## Key Gotchas Per Framework
 
@@ -27,13 +27,13 @@ names and configuration not available in general documentation.
 
 ### Hibernate
 
-| Issue          | Fix                                                      |
-| -------------- | -------------------------------------------------------- |
-| Dialect        | Provided by `aurora-dsql-hibernate-dialect` (auto-registered)                                                                                |
-| ID generation  | `@GeneratedValue(strategy = GenerationType.UUID)`                                                                                            |
+| Issue          | Fix                                                                                                                                                                                                                                                                                         |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dialect        | Provided by `aurora-dsql-hibernate-dialect` (auto-registered)                                                                                                                                                                                                                               |
+| ID generation  | `@GeneratedValue(strategy = GenerationType.UUID)`                                                                                                                                                                                                                                           |
 | OCC retry      | Prefer the [aurora-dsql-jdbc-connector](https://github.com/awslabs/aurora-dsql-connectors/tree/main/java/jdbc) — built-in retry for SQLSTATE 40001. For manual `@Retryable`, match on `SQLException` and check `getSQLState() == "40001"` (Hibernate's class-40 mapping varies by version). |
-| FK constraints | `@ForeignKey(value = ConstraintMode.NO_CONSTRAINT)`      |
-| DDL generation | `hibernate.hbm2ddl.auto = none` — manage DDL manually    |
+| FK constraints | `@ForeignKey(value = ConstraintMode.NO_CONSTRAINT)`                                                                                                                                                                                                                                         |
+| DDL generation | `hibernate.hbm2ddl.auto = none` — manage DDL manually                                                                                                                                                                                                                                       |
 
 ### Rails
 
