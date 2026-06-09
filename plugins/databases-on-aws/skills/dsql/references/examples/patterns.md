@@ -129,37 +129,32 @@ INSERT INTO distributors VALUES (nextval('order_seq'), 'nothing');
 
 ---
 
-## Runtime-Only Types
+## Arrays and Structured Data
 
-`JSONB`, arrays, and `INET` are [runtime-only](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-supported-data-types.html#working-with-postgresql-compatibility-query-runtime) — not valid as column types.
+Arrays and `INET` are [runtime-only](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-supported-data-types.html#working-with-postgresql-compatibility-query-runtime) — not valid as column types. For structured data, prefer `JSONB` over `JSON` for queryable fields.
 
-- **MUST** serialize arrays as `TEXT` or `JSON` — use `TEXT` (comma-separated) for homogeneous short strings; use `JSON` when elements may contain commas or aren't homogeneous
-- **MUST** cast back at query time — `string_to_array(text, ',')` for TEXT, `jsonb_array_elements_text(json::jsonb)` for JSON
+- **MUST** serialize arrays as `JSONB`
+- **MAY** use `jsonb_array_elements_text(data)` to expand a JSONB array at query time
 
 ```javascript
-function toTextArray(values) {
-  return values.join(',');
-}
-
-function fromTextArray(textValue) {
-  return textValue ? textValue.split(',').map(v => v.trim()) : [];
-}
-
-const categoriesText = toTextArray(['backend', 'api', 'database']);
-await pool.query('INSERT INTO projects (project_id, categories) VALUES ($1, $2)', [projectId, categoriesText]);
+const categories = ['backend', 'api', 'database'];
+await pool.query(
+  'INSERT INTO projects (project_id, categories) VALUES ($1, $2::jsonb)',
+  [projectId, JSON.stringify(categories)],
+);
 
 await pool.query(
-  'INSERT INTO user_settings (user_id, preferences) VALUES ($1, $2)',
-  [userId, { theme: 'dark', notifications: true }],
+  'INSERT INTO user_settings (user_id, preferences) VALUES ($1, $2::jsonb)',
+  [userId, JSON.stringify({ theme: 'dark', notifications: true })],
 );
 ```
 
 Query-time operations:
 
 ```sql
-SELECT user_id, preferences::jsonb->>'theme' AS theme
+SELECT user_id, preferences->>'theme' AS theme
 FROM user_settings
-WHERE preferences::jsonb->>'notifications' = 'true';
+WHERE preferences->>'notifications' = 'true';
 
-SELECT project_id, string_to_array(categories, ',') AS category_array FROM projects;
+SELECT project_id, jsonb_array_elements_text(categories) AS category FROM projects;
 ```

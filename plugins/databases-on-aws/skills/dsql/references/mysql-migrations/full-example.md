@@ -45,7 +45,7 @@ transact([
      price DECIMAL(10,2) NOT NULL,
      category VARCHAR(255) DEFAULT 'other' CHECK (category IN ('electronics', 'clothing', 'food', 'other')),
      tags TEXT,
-     metadata JSON,
+     metadata JSONB,
      stock INTEGER DEFAULT 0 CHECK (stock >= 0),
      is_active BOOLEAN DEFAULT true,
      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -70,7 +70,7 @@ transact(["CREATE INDEX ASYNC idx_products_category ON products(tenant_id, categ
 | `MEDIUMTEXT`                  | `TEXT`                                                                                                                                                     |
 | `ENUM(...)`                   | `VARCHAR(255)` with `CHECK` constraint                                                                                                                     |
 | `SET(...)`                    | `TEXT` (comma-separated)                                                                                                                                   |
-| `JSON`                        | `JSON`                                                                                                                                                     |
+| `JSON`                        | `JSONB` (preferred) or `JSON` — `JSONB` for queryable structured data; `JSON` preserves key order and whitespace                                           |
 | `UNSIGNED`                    | `CHECK (col >= 0)`                                                                                                                                         |
 | `TINYINT(1)`                  | `BOOLEAN`                                                                                                                                                  |
 | `DATETIME`                    | `TIMESTAMP`                                                                                                                                                |

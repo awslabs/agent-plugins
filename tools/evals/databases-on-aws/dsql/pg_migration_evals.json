@@ -1,0 +1,232 @@
+{
+  "skill_name": "dsql",
+  "focus": "PostgreSQL schema conversion \u2014 does the agent use skill knowledge to handle conversions beyond dsql_lint?",
+  "evals": [
+    {
+      "id": 200,
+      "name": "enum-to-check",
+      "prompt": "Convert this PostgreSQL schema to DSQL:\n\nCREATE TYPE priority_level AS ENUM ('low', 'medium', 'high', 'critical');\n\nCREATE TABLE tickets (\n  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,\n  title TEXT NOT NULL,\n  priority priority_level DEFAULT 'medium'\n);",
+      "expected_output": "Converts ENUM type to CHECK constraint inline in CREATE TABLE, drops the CREATE TYPE statement",
+      "files": [],
+      "expectations": [
+        "Drops the CREATE TYPE ... AS ENUM statement",
+        "Converts the priority column to varchar or text with a CHECK constraint listing the enum values",
+        "CHECK constraint contains all original enum values: low, medium, high, critical",
+        "Omits per-column COLLATE \"C\" (DSQL uses C collation database-wide; per-column COLLATE clause is not supported)",
+        "Preserves the DEFAULT 'medium'"
+      ],
+      "llm_judge": true
+    },
+    {
+      "id": 202,
+      "name": "fk-validation-generation",
+      "prompt": "My PostgreSQL schema has:\n\nCREATE TABLE orders (\n  id UUID PRIMARY KEY,\n  customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,\n  product_id UUID REFERENCES products(id)\n);\n\nConvert this for DSQL and generate the FK replacement code.",
+      "expected_output": "Removes FK constraints, generates validate_fk functions for both FKs, generates a cascade_delete function for the ON DELETE CASCADE",
+      "files": [],
+      "expectations": [
+        "Removes both FOREIGN KEY constraints from the CREATE TABLE",
+        "Generates a validate_fk_orders_customer_id() function that checks customers table",
+        "Generates a validate_fk_orders_product_id() function that checks products table",
+        "Generates a cascade function for the ON DELETE CASCADE (deletes orders when customer is deleted)",
+        "Explains when to call each function (validate before INSERT, cascade before DELETE)"
+      ],
+      "llm_judge": true
+    },
+    {
+      "id": 203,
+      "name": "gin-index-conversion",
+      "prompt": "How do I convert this PostgreSQL GIN index to work in DSQL?\n\nCREATE INDEX idx_users_prefs ON users USING gin (preferences jsonb_path_ops);\n\nThe index is used for queries like: SELECT * FROM users WHERE preferences @> '{\"theme\":\"dark\"}'",
+      "expected_output": "Explains GIN is not supported, suggests extracting the queried JSON key to a computed column with a btree index, or accepting unindexed runtime jsonb queries",
+      "files": [],
+      "expectations": [
+        "States that GIN indexes are not supported in DSQL",
+        "Does NOT just say 'use btree' without explaining the semantic difference",
+        "Suggests extracting frequently-queried JSON keys to a separate column (computed or regular)",
+        "Shows CREATE INDEX ASYNC with btree on the extracted column",
+        "Mentions that jsonb containment (@>) still works at runtime without an index"
+      ],
+      "llm_judge": true
+    },
+    {
+      "id": 204,
+      "name": "occ-retry-generation",
+      "prompt": "Generate OCC retry logic for my Python application connecting to DSQL. I'm using psycopg2.",
+      "expected_output": "Generates a retry wrapper function with exponential backoff that catches SQLSTATE 40001",
+      "files": [],
+      "expectations": [
+        "Generates a Python function with retry logic",
+        "Catches psycopg2 SerializationFailure or checks for SQLSTATE/pgcode 40001",
+        "Uses exponential backoff with jitter",
+        "Has a max retry limit (typically 5)",
+        "Includes BEGIN/COMMIT/ROLLBACK transaction management"
+      ],
+      "llm_judge": true
+    },
+    {
+      "id": 206,
+      "name": "django-migration-guidance",
+      "prompt": "I'm migrating my Django app to DSQL. What adapter do I use and what model changes are needed? I currently have ForeignKey fields and ArrayField.",
+      "expected_output": "Recommends aurora-dsql-django adapter, explains ForeignKey replacement with plain fields + validation, ArrayField replacement with JSONField",
+      "files": [],
+      "expectations": [
+        "Recommends aurora-dsql-django as the database ENGINE",
+        "Explains that ForeignKey fields must be replaced with BigIntegerField or UUIDField",
+        "Suggests adding clean() or signal-based FK validation",
+        "Explains that ArrayField is not supported and should use JSONField",
+        "Mentions OCC retry logic is needed (SQLSTATE 40001)"
+      ],
+      "llm_judge": true
+    },
+    {
+      "id": 208,
+      "name": "expression-index-to-computed-column",
+      "prompt": "I have this PostgreSQL expression index:\n\nCREATE INDEX idx_users_email_lower ON users (lower(email));\n\nIt's used for case-insensitive email lookups: SELECT * FROM users WHERE lower(email) = lower('User@Example.com');\n\nHow do I convert this for DSQL?",
+      "expected_output": "Creates a GENERATED ALWAYS AS STORED computed column with lower(email), then creates a btree ASYNC index on that column",
+      "files": [],
+      "expectations": [
+        "States that expression indexes are not supported in DSQL",
+        "Suggests creating a computed column using GENERATED ALWAYS AS (lower(email)) STORED",
+        "Creates a btree index with CREATE INDEX ASYNC on the computed column",
+        "Shows how to rewrite the query to use the new computed column",
+        "Does NOT suggest just removing the index without a replacement"
+      ],
+      "llm_judge": true
+    },
+    {
+      "id": 209,
+      "name": "materialized-view-to-regular-view",
+      "prompt": "I have this PostgreSQL materialized view that I refresh every hour:\n\nCREATE MATERIALIZED VIEW monthly_revenue AS\n  SELECT date_trunc('month', created_at) AS month,\n         tenant_id,\n         SUM(amount) AS total_revenue,\n         COUNT(*) AS order_count\n  FROM orders\n  GROUP BY 1, 2;\n\nCREATE UNIQUE INDEX idx_monthly_rev ON monthly_revenue (month, tenant_id);\n\nHow do I migrate this to DSQL?",
+      "expected_output": "Converts to a regular VIEW (no materialization), removes REFRESH, suggests application-layer caching if performance is a concern",
+      "files": [],
+      "expectations": [
+        "Converts CREATE MATERIALIZED VIEW to CREATE VIEW (regular view)",
+        "Explains that materialized views are not supported in DSQL",
+        "Removes or addresses the UNIQUE INDEX on the materialized view (indexes on views not applicable)",
+        "Suggests application-layer caching (Redis/ElastiCache) or a summary table if query performance is a concern",
+        "Does NOT suggest REFRESH MATERIALIZED VIEW (not applicable to regular views)"
+      ],
+      "llm_judge": true
+    },
+    {
+      "id": 210,
+      "name": "multi-schema-flattening",
+      "prompt": "My PostgreSQL database has 14 schemas:\n- public, billing, support, analytics, reporting, notifications, auth, payments, inventory, shipping, marketing, hr, compliance, audit\n\nEach schema has 20-50 tables. How do I handle this in DSQL which only supports 10 schemas?",
+      "expected_output": "Explains the 10 schema limit, recommends keeping the most important schemas and consolidating overflow schemas into existing ones with table name prefixes",
+      "files": [],
+      "expectations": [
+        "States that DSQL has a limit of 10 schemas per database",
+        "Recommends keeping the most critical/largest schemas as-is",
+        "Suggests consolidating overflow schemas using table name prefixes (e.g., hr_employees instead of hr.employees)",
+        "Mentions that application code references need to be updated for consolidated tables",
+        "Does NOT suggest creating multiple DSQL clusters as the primary solution (though may mention it as an alternative)"
+      ],
+      "llm_judge": true
+    },
+    {
+      "id": 211,
+      "name": "roles-grant-iam-mapping",
+      "prompt": "My PostgreSQL database has these roles and grants:\n\nCREATE ROLE app_readonly WITH LOGIN PASSWORD 'secret123';\nCREATE ROLE app_writer WITH LOGIN PASSWORD 'writer456';\nGRANT SELECT ON ALL TABLES IN SCHEMA public TO app_readonly;\nGRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_writer;\n\nHow do I migrate this to DSQL?",
+      "expected_output": "Removes passwords (IAM-based auth), keeps CREATE ROLE and GRANT statements, explains IAM role mapping with dsql:DbConnect",
+      "files": [],
+      "expectations": [
+        "Removes WITH LOGIN PASSWORD from CREATE ROLE (DSQL uses IAM tokens, not passwords)",
+        "Preserves the CREATE ROLE statements (roles are supported in DSQL)",
+        "Preserves the GRANT statements (GRANT/REVOKE are supported)",
+        "Explains that authentication uses IAM tokens (not passwords)",
+        "Mentions dsql:DbConnect IAM action or IAM-to-database-role mapping"
+      ],
+      "llm_judge": true
+    },
+    {
+      "id": 207,
+      "name": "full-schema-conversion",
+      "prompt": "Convert this complete PostgreSQL schema to DSQL-compatible DDL:\n\nCREATE TYPE status AS ENUM ('active','inactive','suspended');\n\nCREATE TABLE organizations (\n  id SERIAL PRIMARY KEY,\n  name VARCHAR(200) UNIQUE\n);\n\nCREATE TABLE users (\n  id SERIAL PRIMARY KEY,\n  org_id INT REFERENCES organizations(id) ON DELETE CASCADE,\n  email VARCHAR(255) NOT NULL,\n  status status DEFAULT 'active',\n  preferences JSONB,\n  search_tokens TSVECTOR\n);\n\nCREATE INDEX idx_users_search ON users USING gin(search_tokens);\nCREATE INDEX idx_users_active ON users (email) WHERE status = 'active';\n\nCREATE FUNCTION update_search() RETURNS TRIGGER AS $$\nBEGIN\n  NEW.search_tokens = to_tsvector(NEW.email);\n  RETURN NEW;\nEND;\n$$ LANGUAGE plpgsql;",
+      "expected_output": "Comprehensive conversion: SERIAL\u2192IDENTITY, ENUM\u2192CHECK, FK\u2192removed+validation function, JSONB kept as JSONB, TSVECTOR\u2192text, GIN\u2192removed, partial index\u2192full or composite, PL/pgSQL\u2192removed with guidance",
+      "files": [],
+      "expectations": [
+        "Converts SERIAL to IDENTITY or sequence-based approach",
+        "Converts ENUM to CHECK constraint",
+        "Removes the FOREIGN KEY and generates a validate_fk function or cascade function",
+        "Keeps JSONB as a stored column type (does NOT convert it to json or text)",
+        "Converts TSVECTOR to text and notes FTS must move to external service",
+        "Removes or converts the GIN index (not supported)",
+        "Handles the partial index (WHERE status = 'active') \u2014 removes WHERE or adds status to composite index",
+        "Omits per-column COLLATE \"C\" (DSQL uses C collation database-wide; per-column clause is not supported)",
+        "Uses CREATE INDEX ASYNC for all indexes"
+      ],
+      "llm_judge": true
+    },
+    {
+      "id": 300,
+      "name": "collate-trap",
+      "prompt": "I'm migrating this PostgreSQL table to DSQL. The original uses en_US.UTF-8 locale. I want case-insensitive text sorting. Here's my schema:\n\nCREATE TABLE products (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  name VARCHAR(200) NOT NULL,\n  category VARCHAR(50)\n);\n\nHow should I handle collation in DSQL to get proper text sorting?",
+      "expected_output": "States that per-column COLLATE is NOT supported in DSQL (rejected with error). Explains DSQL uses C collation database-wide. For case-insensitive sorting, use lower() or a computed column.",
+      "files": [],
+      "expectations": [
+        "States that per-column COLLATE clauses are NOT supported in DSQL (causes DDL error)",
+        "Explains DSQL uses C collation database-wide (no need to specify it)",
+        "Does NOT recommend adding COLLATE \"C\" to columns",
+        "Suggests lower() or a computed column for case-insensitive sorting",
+        "Warns that C collation sorts uppercase before lowercase (Banana before apple)"
+      ],
+      "llm_judge": true
+    },
+    {
+      "id": 301,
+      "name": "async-index-monitoring",
+      "prompt": "I just created 5 indexes on my DSQL table using CREATE INDEX ASYNC. My application is about to go live. How do I know when the indexes are ready to use? Can I start querying immediately?",
+      "expected_output": "Explains that async indexes are not immediately usable. Must poll pg_index.indisvalid to check readiness. Queries work but won't use the index until indisvalid = true.",
+      "files": [],
+      "expectations": [
+        "States that async indexes are NOT immediately ready after CREATE INDEX ASYNC returns",
+        "Provides the pg_index query to check indisvalid status (SELECT from pg_index WHERE NOT indisvalid)",
+        "Explains that queries still work but fall back to sequential scan until index is valid",
+        "Does NOT claim indexes are ready immediately after the DDL succeeds",
+        "Recommends waiting for indisvalid = true before relying on index performance"
+      ],
+      "llm_judge": true
+    },
+    {
+      "id": 302,
+      "name": "multi-region-ddl-trap",
+      "prompt": "I have a multi-region DSQL cluster (us-east-1 + eu-west-1). I need to add a new table and index. Should I run the DDL against both region endpoints to ensure consistency, or is there a better approach?",
+      "expected_output": "States that DDL MUST be executed against only ONE region. Schema propagates automatically to all regions. Running DDL in both regions would cause conflicts.",
+      "files": [],
+      "expectations": [
+        "States that DDL MUST be executed against only ONE region endpoint",
+        "Explains that schema changes propagate automatically to all regions",
+        "Does NOT recommend running DDL against both endpoints",
+        "Does NOT suggest a migration script that connects to each region separately"
+      ],
+      "llm_judge": true
+    },
+    {
+      "id": 303,
+      "name": "identity-cache-trap",
+      "prompt": "I'm migrating a high-throughput table from PostgreSQL to DSQL. The original uses SERIAL (auto-increment). I expect 50,000 inserts/second across multiple application instances. What's the correct IDENTITY configuration for DSQL?",
+      "expected_output": "Recommends CACHE 65536 (not CACHE 1) for high-throughput. Explains that DSQL only supports CACHE 1 or CACHE >= 65536. CACHE 1 would serialize all inserts.",
+      "files": [],
+      "expectations": [
+        "Recommends GENERATED BY DEFAULT AS IDENTITY with CACHE 65536 (or higher)",
+        "Explains that DSQL only supports CACHE values of 1 or >= 65536",
+        "Does NOT recommend CACHE 1 for high-throughput (would serialize inserts)",
+        "Does NOT recommend intermediate CACHE values like 100 or 1000 (not supported in DSQL)"
+      ],
+      "llm_judge": true
+    },
+    {
+      "id": 304,
+      "name": "occ-retry-with-connector",
+      "prompt": "I'm writing a Python app that does concurrent updates to the same rows in DSQL. I'm getting SQLSTATE 40001 errors. I'm currently using raw psycopg2. What's the recommended approach for handling this in DSQL?",
+      "expected_output": "Recommends the DSQL Python Connector (aurora-dsql-python-connector) which handles OCC retries automatically. Explains that OCC conflicts are validated at COMMIT time, not at statement execution.",
+      "files": [],
+      "expectations": [
+        "Recommends the DSQL Python Connector (aurora-dsql-python-connector or aurora_dsql_psycopg) as the primary solution",
+        "Explains that OCC validation happens at COMMIT time (not at individual statement execution)",
+        "Does NOT only suggest manual retry loops as the primary solution when a connector exists",
+        "Mentions that the connector handles retries automatically with proper backoff"
+      ],
+      "llm_judge": true
+    }
+  ]
+}

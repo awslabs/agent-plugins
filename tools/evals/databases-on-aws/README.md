@@ -88,8 +88,8 @@ python tools/evals/databases-on-aws/dsql/scripts/run_functional_evals.py \
 | 3. Index limits                | MCP delegation        | regex     | Calls `awsknowledge`, cites 24 index limit, suggests alternatives                                         |
 | 4. Python connection           | Language routing      | regex     | Recommends DSQL Python Connector, IAM auth, 15-min token expiry, SSL                                      |
 | 5. Column type change          | DDL migration routing | regex     | Table Recreation Pattern, DROP TABLE warning, batching, user confirmation                                 |
-| 6. JSON column storage         | Type guidance         | LLM judge | Explains `::jsonb` cast, does not recommend `JSONB` as a column type                                      |
-| 7. Array storage               | Type guidance         | LLM judge | Flags `TEXT[]` / array column as unsupported, recommends TEXT or `JSON` column                            |
+| 6. JSON column storage         | Type guidance         | LLM judge | Recommends `JSONB` (or `JSON`) as the column type for queryable structured data                           |
+| 7. Array storage               | Type guidance         | LLM judge | Flags `TEXT[]` / array column as unsupported, recommends storing the array as `JSONB`                     |
 | 8. INACTIVE cluster error      | Troubleshooting       | LLM judge | Identifies INACTIVE state, uses `aws dsql get-cluster` to poll until `ACTIVE`, retries afterwards         |
 | 9. Backup on IDLE/INACTIVE     | Troubleshooting       | LLM judge | Identifies `FailedPrecondition`, connects to wake cluster to ACTIVE, retries backup                       |
 | 10. Loader stuck at 3K rec/s   | Data loading          | LLM judge | Identifies partition-constrained fresh table, advises to keep running, does NOT recommend more workers    |
