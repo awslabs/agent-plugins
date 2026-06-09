@@ -251,7 +251,7 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO app_reader;
 - Authentication is always IAM token-based (no `WITH LOGIN PASSWORD`)
 - Use explicit GRANT per object (no `ALTER DEFAULT PRIVILEGES`)
 - Implement Row-Level Security (RLS) in the application layer
-- Remove `SECURITY DEFINER` from function definitions — after removal the function executes as the caller. Audit table-level GRANTs to every role that calls the function: a missing GRANT silently returns empty/partial results instead of raising, converting a definer-enforced boundary into a silent permission bypass.
+- Remove `SECURITY DEFINER` from function definitions — after removal the function executes as the caller's role. Audit table-level GRANTs to every role that calls the function: missing GRANTs cause `permission denied` at runtime where the definer previously succeeded. Where the function gated row visibility (e.g., callers had no direct table GRANT and relied on the function's filter), removing `SECURITY DEFINER` requires re-granting access — typically via a view + RLS-in-application, since DSQL has no `SECURITY DEFINER` substitute.
 - Admin role is predefined and immutable
 
 **IAM mapping:**

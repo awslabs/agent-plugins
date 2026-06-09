@@ -66,7 +66,8 @@ the tenant-scoping MUST clause above. DSQL only supports `LANGUAGE sql` for func
 application layer, in the same transaction as the child INSERT/UPDATE.
 
 ```python
-# psycopg example — validate then insert in one transaction
+# psycopg3 example — validate then insert in one transaction.
+# psycopg2 has no `conn.transaction()`; use `with conn:` (commits on exit) instead.
 with conn.transaction():
     cur.execute(
         "SELECT validate_fk_orders_customer_id(%s, %s)",
@@ -80,5 +81,7 @@ with conn.transaction():
     )
 ```
 
-The validation and INSERT MUST share a transaction so OCC rejects the commit if a
-concurrent transaction deletes the parent row between the check and the insert.
+The validation and INSERT MUST share a transaction. Because DSQL uses snapshot
+isolation with OCC, the SELECT adds the parent row to the transaction's read
+set; if a concurrent transaction deletes that parent and commits first, this
+transaction's commit is rejected with SQLSTATE 40001.
