@@ -14,11 +14,11 @@
 
 | Eval | Scenario                 | With Skill | Baseline   | Delta                                     |
 | ---- | ------------------------ | ---------- | ---------- | ----------------------------------------- |
-| 300  | JSONB + GIN index        | 5/5 ✅     | 5/5 ✅     | Both correct                              |
-| 301  | COLLATE "C" on columns   | **5/5 ✅** | **1/5 ❌** | **Baseline hallucinates; skill corrects** |
-| 302  | Synchronous CREATE INDEX | 4/4 ✅     | 4/4 ✅     | Both correctly convert to ASYNC           |
+| 400  | JSONB + GIN index        | 5/5 ✅     | 5/5 ✅     | Both correct                              |
+| 401  | COLLATE "C" on columns   | **5/5 ✅** | **1/5 ❌** | **Baseline hallucinates; skill corrects** |
+| 402  | Synchronous CREATE INDEX | 4/4 ✅     | 4/4 ✅     | Both correctly convert to ASYNC           |
 
-## Critical Finding: Eval 301 (COLLATE Hallucination)
+## Critical Finding: Eval 401 (COLLATE Hallucination)
 
 The baseline agent **actively recommends adding `COLLATE "C"` to every string column** — this produces a DDL error in DSQL (`COLLATE clause not supported`). The skill-guided agent correctly states "do not add COLLATE" and produces valid DDL.
 
@@ -45,7 +45,7 @@ The model's training data contains older DSQL documentation that recommended exp
 
 ## Detailed Results
 
-### Eval 301 Expectations
+### Eval 401 Expectations
 
 | Expectation                                | With Skill | Baseline                           |
 | ------------------------------------------ | ---------- | ---------------------------------- |

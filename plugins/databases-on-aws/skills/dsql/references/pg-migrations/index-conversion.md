@@ -1,9 +1,9 @@
 # Index Conversion for DSQL
 
-Run `dsql-lint(fix=true)` first — it handles most index conversions automatically (ASYNC,
+Run `dsql_lint(fix=true)` first — it handles most index conversions automatically (ASYNC,
 USING gin/gist/brin/hash → btree, CONCURRENTLY removal, INCLUDE preservation, sort order).
 
-This file covers only the patterns `dsql-lint` flags as **unfixable** and cannot auto-convert:
+This file covers only the patterns `dsql_lint` flags as **unfixable** and cannot auto-convert:
 
 - Partial indexes (WHERE clause) — `index_partial`
 - Expression indexes — `index_expression`
@@ -43,9 +43,12 @@ CREATE INDEX idx_users_prefs ON users USING gin (preferences);
 -- The query still works, just without index acceleration:
 SELECT * FROM users WHERE preferences @> '{"theme":"dark"}';
 
--- If you need indexed lookup on a specific JSON key, extract to a column:
-ALTER TABLE users ADD COLUMN pref_theme text;
--- Backfill: UPDATE users SET pref_theme = preferences->>'theme';
+-- If you need indexed lookup on a specific JSON key, extract to a STORED generated column.
+-- Use GENERATED ALWAYS AS (...) STORED so the column is always populated — an
+-- ADD COLUMN + UPDATE backfill would leave rows inserted between the two statements
+-- with NULL and the index would silently miss them.
+ALTER TABLE users ADD COLUMN pref_theme text
+  GENERATED ALWAYS AS (preferences->>'theme') STORED;
 CREATE INDEX ASYNC idx_users_pref_theme ON users (pref_theme);
 -- Query: SELECT * FROM users WHERE pref_theme = 'dark';
 ```
@@ -159,7 +162,7 @@ CREATE INDEX ASYNC idx_logs_tenant_created ON logs (tenant_id, created_at DESC);
 
 ## Partial Index Conversion
 
-`dsql-lint` flags partial indexes (`index_partial`) as unfixable. The conversion is to
+`dsql_lint` flags partial indexes (`index_partial`) as unfixable. The conversion is to
 remove the WHERE clause and create a full index.
 
 ```sql
@@ -186,7 +189,7 @@ column is better.
 
 ## Expression Index Conversion
 
-`dsql-lint` flags expression indexes (`index_expression`) as unfixable. The conversion is to
+`dsql_lint` flags expression indexes (`index_expression`) as unfixable. The conversion is to
 create a computed column (GENERATED ALWAYS AS STORED) and index that column.
 
 ```sql

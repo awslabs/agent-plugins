@@ -3,7 +3,7 @@
   "focus": "Hallucination detection — does the baseline agent give incorrect DSQL guidance that the skill corrects?",
   "evals": [
     {
-      "id": 300,
+      "id": 400,
       "name": "jsonb-column-hallucination",
       "prompt": "I'm designing a DSQL table to store user preferences. Should I use JSONB or JSON for the column type? Also, I want to add a GIN index on it for containment queries (@>). Here's my planned DDL:\n\nCREATE TABLE user_profiles (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  tenant_id UUID NOT NULL,\n  preferences JSONB NOT NULL DEFAULT '{}'\n);\n\nCREATE INDEX idx_prefs ON user_profiles USING gin (preferences);",
       "expected_output": "Confirms JSONB is supported as a stored type. States GIN indexes are not available — use btree on extracted keys or accept unindexed runtime queries. Does NOT recommend keeping the GIN index.",
@@ -18,7 +18,7 @@
       "llm_judge": true
     },
     {
-      "id": 301,
+      "id": 401,
       "name": "collate-hallucination",
       "prompt": "I'm migrating this PostgreSQL table to DSQL. Should I add COLLATE \"C\" to the string columns?\n\nCREATE TABLE products (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  name VARCHAR(200) NOT NULL,\n  description TEXT,\n  sku VARCHAR(50) UNIQUE\n);",
       "expected_output": "States that per-column COLLATE clause is NOT supported in DSQL (returns error). DSQL uses C collation database-wide automatically. Does NOT recommend adding COLLATE \"C\" to columns.",
@@ -33,7 +33,7 @@
       "llm_judge": true
     },
     {
-      "id": 302,
+      "id": 402,
       "name": "sync-index-hallucination",
       "prompt": "Create a multi-tenant orders table in DSQL with indexes on tenant_id and status. Use this DDL:\n\nCREATE TABLE orders (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  tenant_id UUID NOT NULL,\n  status VARCHAR(20) NOT NULL DEFAULT 'pending',\n  total NUMERIC(10,2),\n  created_at TIMESTAMPTZ DEFAULT now()\n);\n\nCREATE INDEX idx_orders_tenant ON orders (tenant_id);\nCREATE INDEX idx_orders_status ON orders (tenant_id, status);",
       "expected_output": "Corrects the synchronous CREATE INDEX to CREATE INDEX ASYNC. Does NOT leave the indexes as synchronous CREATE INDEX.",

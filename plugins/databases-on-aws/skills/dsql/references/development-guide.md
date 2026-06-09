@@ -55,7 +55,7 @@ effortless scaling, multi-region viability, among other advantages.
 
 - MUST verify column types via `awsknowledge`: `aurora dsql supported data types` or the [DSQL supported data types list](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-supported-data-types.html)
 - MUST serialize arrays as JSONB; expand at query time via `jsonb_array_elements_text(data)`
-- **MUST NOT** add per-column `COLLATE` clauses — DSQL uses C collation database-wide and rejects `COLLATE "C"` in DDL. Run `dsql-lint` to strip COLLATE from migrated schemas.
+- **MUST NOT** add per-column `COLLATE` clauses — DSQL uses C collation database-wide and rejects `COLLATE "C"` in DDL. `dsql_lint(fix=true)` auto-strips `COLLATE` clauses from migrated schemas (rule `collation`, fix status `fixed`).
 - ALWAYS include tenant_id in tables for multi-tenant isolation
 - SHOULD create async indexes for tenant_id and common query patterns
 

@@ -1,6 +1,6 @@
 # Schema Object Conversion for DSQL
 
-Conversion patterns for PostgreSQL schema objects that `dsql-lint` either doesn't handle
+Conversion patterns for PostgreSQL schema objects that `dsql_lint` either doesn't handle
 or flags as unfixable. Covers ENUM types, materialized views, extensions, roles/grants,
 multi-schema flattening, and other structural conversions.
 
@@ -251,7 +251,7 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO app_reader;
 - Authentication is always IAM token-based (no `WITH LOGIN PASSWORD`)
 - Use explicit GRANT per object (no `ALTER DEFAULT PRIVILEGES`)
 - Implement Row-Level Security (RLS) in the application layer
-- Remove `SECURITY DEFINER` from function definitions
+- Remove `SECURITY DEFINER` from function definitions — after removal the function executes as the caller. Audit table-level GRANTs to every role that calls the function: a missing GRANT silently returns empty/partial results instead of raising, converting a definer-enforced boundary into a silent permission bypass.
 - Admin role is predefined and immutable
 
 **IAM mapping:**
@@ -394,4 +394,4 @@ CREATE TABLE hot_data (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), data jsonb
 - [ ] Find all `WITH (fillfactor=...)` → remove storage parameters
 - [ ] Audit roles/grants → remove passwords, map to IAM
 - [ ] Count schemas → consolidate if >10
-- [ ] Run `dsql-lint` to strip COLLATE clauses from all string columns
+- [ ] Run `dsql_lint(fix=true)` — auto-strips COLLATE clauses from all string columns
