@@ -1,6 +1,6 @@
 ---
 name: directory-management
-description: Manages project directory setup and artifact organization. Use when starting a new project, resuming an existing one, or when a PLAN.md needs to be associated with a project directory. Creates the project folder structure (specs/, scripts/, notebooks/) and resolves project naming.
+description: Manages project directory setup and artifact organization. Use when starting a new project, resuming an existing one, or when a PLAN.md needs to be associated with a project directory. Creates the project folder structure (specs/, scripts/, notebooks/, manifests/, agent_memory/) and resolves project naming.
 metadata:
   version: "1.0.0"
 ---
@@ -29,6 +29,9 @@ When working with the agent, all generated files are organized under an project 
 │   ├── PLAN.md             # Your customization plan
 ├── scripts/                # Generated Python scripts
 │   ├── <project-name>_transform_fn.py
-└── notebooks/              # Generated Jupyter notebooks
-    ├── <project-name>.ipynb
+├── notebooks/              # Generated Jupyter notebooks
+│   ├── <project-name>.ipynb
+├── manifests/              # Machine-readable outputs (JSON)
+└── agent_memory/           # Session persistence (git-ignored)
+    └── session-notes.md    # Progress, artifacts, next steps
 ```

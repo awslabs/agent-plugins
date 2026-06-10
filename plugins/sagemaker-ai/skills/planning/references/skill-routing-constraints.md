@@ -14,19 +14,47 @@
   customization plan unless the user explicitly declines or has an
   existing spec.
 
+## Evaluate-First Path
+
+When the user chooses to evaluate the base model before fine-tuning:
+
+- model-selection MUST run before sdk-getting-started and
+  dataset-evaluation.
+- sdk-getting-started MUST run after model-selection and before
+  dataset-evaluation.
+- model-selection runs before model-evaluation.
+- finetuning-technique is NOT required. It only enters the plan if
+  the user decides to fine-tune after the decision gate.
+
+## Direct Fine-Tuning Path
+
+When the user chooses to go straight to fine-tuning:
+
+- model-selection MUST run before sdk-getting-started.
+- sdk-getting-started MUST run after model-selection and before
+  dataset-evaluation.
+- model-selection MUST run before finetuning-technique.
+- finetuning-technique MUST run before dataset-evaluation (for
+  training data) and finetuning. The technique must be known before
+  training data can be validated or training can begin.
+- dataset-evaluation should run after finetuning-technique and before
+  finetuning, to catch format issues before training.
+
 ## Ordering Constraints
 
-- finetuning-setup MUST run before dataset-evaluation and finetuning.
-  The base model and technique must be known before data can be
-  validated or training can begin. If the user asks to evaluate data
-  first, explain that model and technique selection is needed first
-  and propose reordering.
-- dataset-evaluation should run after finetuning-setup and before
-  finetuning, to catch format issues before training.
+- model-selection MUST run before sdk-getting-started.
+- sdk-getting-started MUST run after model-selection and before the
+  first task that runs scripts or makes AWS API calls requiring an
+  execution role (e.g., dataset-evaluation, finetuning,
+  model-evaluation, model-deployment). It is not needed before
+  conversational-only tasks like use-case-specification or
+  model-selection.
 
 ## Skill Boundaries
 
 - All dataset format changes MUST go through dataset-transformation.
   Do not write inline transformation code in other skills' notebooks.
-- All model/technique selection MUST go through finetuning-setup.
-  Do not resolve model IDs or select techniques ad-hoc.
+- All model selection MUST go through model-selection.
+  Do not resolve model IDs ad-hoc.
+- All technique selection MUST go through finetuning-technique.
+  Do not select techniques ad-hoc.
