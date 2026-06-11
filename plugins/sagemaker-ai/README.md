@@ -68,7 +68,7 @@ For other agents (Kiro, etc.), install the skills and MCP server manually.
 **Install skills** using the [Skills CLI](https://github.com/vercel-labs/skills). For example, to install for Kiro:
 
 ```
-npx skills add https://github.com/awslabs/agent-plugins/tree/main/plugins/sagemaker-ai/skills --all --agent kiro-cli --copy
+npx skills add https://github.com/awslabs/agent-plugins/tree/main/plugins/sagemaker-ai/skills --skill * --agent kiro-cli --copy
 ```
 
 Replace `kiro-cli` with your agent if different. See [Skills supported agents](https://github.com/vercel-labs/skills#supported-agents).
