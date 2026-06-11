@@ -33,11 +33,12 @@ Non-retryable: all other errors (raise immediately)
 The DSQL Connectors handle OCC retry, IAM token generation, and connection management
 automatically. Applications SHOULD use these instead of manual retry logic:
 
-| Language                            | Connector                    | Repository                                                                                                              |
-| ----------------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Java (JDBC)                         | aurora-dsql-jdbc-connector   | [aurora-dsql-connectors/java/jdbc](https://github.com/awslabs/aurora-dsql-connectors/tree/main/java/jdbc)               |
-| Python (psycopg/psycopg2/asyncpg)   | aurora-dsql-python-connector | [aurora-dsql-connectors/python/connector](https://github.com/awslabs/aurora-dsql-connectors/tree/main/python/connector) |
-| Node.js (node-postgres/Postgres.js) | aurora-dsql-node-connector   | [aurora-dsql-connectors/node](https://github.com/awslabs/aurora-dsql-connectors/tree/main/node)                         |
+| Language | Driver                         | Connector package                          | Repository                                                                                                                  |
+| -------- | ------------------------------ | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| Java     | JDBC                           | `aurora-dsql-jdbc-connector`               | [aurora-dsql-connectors/java/jdbc](https://github.com/awslabs/aurora-dsql-connectors/tree/main/java/jdbc)                   |
+| Python   | `psycopg`/`psycopg2`/`asyncpg` | `aurora-dsql-python-connector`             | [aurora-dsql-connectors/python/connector](https://github.com/awslabs/aurora-dsql-connectors/tree/main/python/connector)     |
+| Node.js  | `pg`                           | `@aws/aurora-dsql-node-postgres-connector` | [aurora-dsql-connectors/node/node-postgres](https://github.com/awslabs/aurora-dsql-connectors/tree/main/node/node-postgres) |
+| Node.js  | `Postgres.js`                  | `@aws/aurora-dsql-postgresjs-connector`    | [aurora-dsql-connectors/node/postgres-js](https://github.com/awslabs/aurora-dsql-connectors/tree/main/node/postgres-js)     |
 
 See [connectivity-tools.md](auth/connectivity-tools.md) for setup details.
 
