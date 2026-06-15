@@ -1,14 +1,34 @@
-# AWS Step Functions Testing
+# Validation and Testing
 
-## TestState API
+## Local ASL Validation
 
-TestState API enables unit and integration testing of Step Functions without deployment. Key capabilities:
+Files saved with the `.asl.json` extension get automatic validation from the AWS Toolkit Extension. If the extension is not installed, suggest the user install it (https://open-vsx.org/extension/amazonwebservices/aws-toolkit-vscode). Use your diagnostics tool on any `.asl.json` file to catch structural errors instantly. The State Machine definition must be saved as `.asl.json` to work with local validation.
+
+---
+
+## Testing with TestState API
+
+The TestState API enables unit and integration testing of Step Functions without deployment. Key capabilities:
 
 - **Mock service integrations** — Test without invoking real services
 - **Advanced states** — Map, Parallel, Activity, `.sync`, `.waitForTaskToken` (require mocks)
 - **Control execution** — Simulate retries, Map iterations, error scenarios
 - **Chain tests** — Use output→input to test execution paths
 - **Optional IAM** — When mocking, `roleArn` optional
+
+### Before Accessing AWS
+
+Before calling the TestState API, follow this sequence:
+
+1. Ask the user to grant you permission to use the TestState API in their AWS account.
+2. Check for AWS credentials: run `aws sts get-caller-identity` and verify the response.
+3. If credentials are available, confirm the IAM role ARN to use for execution (or omit if using mocks).
+4. If credentials are unavailable, help the user construct the CLI/SDK call to run manually.
+5. Never assume AWS access — always ask before making any AWS API call.
+
+### Required IAM Permissions
+
+The calling identity needs `states:TestState`. If not using mocks, it also needs `iam:PassRole` for the execution role. For HTTP Task with `revealSecrets`, add `states:RevealSecrets`.
 
 ```bash
 aws stepfunctions test-state \
@@ -20,11 +40,11 @@ aws stepfunctions test-state \
 
 ## Inspection Levels
 
-| Level     | Returns                                                                         | Use Case            |
-| --------- | ------------------------------------------------------------------------------- | ------------------- |
-| **INFO**  | `output`, `status`, `nextState`                                                 | Quick validation    |
-| **DEBUG** | + `afterInputPath`, `afterParameters`, `afterResultSelector`, `afterResultPath` | Data flow debugging |
-| **TRACE** | + HTTP `request`/`response` (use `--reveal-secrets` for auth)                   | HTTP Task debugging |
+| Level     | Returns                                                       | Use Case            |
+| --------- | ------------------------------------------------------------- | ------------------- |
+| **INFO**  | `output`, `status`, `nextState`                               | Quick validation    |
+| **DEBUG** | + `afterArguments`, `result`, `variables`                     | Data flow debugging |
+| **TRACE** | + HTTP `request`/`response` (use `--reveal-secrets` for auth) | HTTP Task debugging |
 
 ## Critical: Service-Specific Mock Structure
 
@@ -72,8 +92,8 @@ Tests Map's **input/output processing**, not iterations inside. Mock = entire Ma
 aws stepfunctions test-state \
   --definition '{
     "Type":"Map",
-    "ItemsPath":"$.items",
-    "ItemSelector":{"value.$":"$$.Map.Item.Value"},
+    "Items":"{% $states.input.items %}",
+    "ItemSelector":{"value":"{% $states.context.Map.Item.Value %}"},
     "ItemProcessor":{"ProcessorConfig":{"Mode":"INLINE"},...},
     "End":true
   }' \
@@ -82,11 +102,11 @@ aws stepfunctions test-state \
   --inspection-level DEBUG
 ```
 
-**DEBUG returns:** `afterItemsPath`, `afterItemSelector`, `afterItemBatcher`, `toleratedFailureCount`, `maxConcurrency`
+**DEBUG returns:** `afterItemSelector`, `afterItemBatcher`, `toleratedFailureCount`, `maxConcurrency`
 
 **Distributed Map:** Provide data in input (as if read from S3)\
 **Failure threshold testing:** Use `--state-configuration '{"mapIterationFailureCount":N}'`\
-**Testing state within Map:** `--state-name` auto-populates `$$.Map.Item.Index`, `$$.Map.Item.Value`
+**Testing state within Map:** `--state-name` auto-populates `$states.context.Map.Item.Index`, `$states.context.Map.Item.Value`
 
 ## Testing Parallel States
 
@@ -115,7 +135,7 @@ Response includes: `status:"RETRIABLE"`, `retryBackoffIntervalSeconds`, `retryIn
 --inspection-level DEBUG
 ```
 
-Response includes: `status:"CAUGHT_ERROR"`, `nextState`, `catchIndex`, error in `output` via `ResultPath`
+Response includes: `status:"CAUGHT_ERROR"`, `nextState`, `catchIndex`, error in `output`
 
 ### Error Propagation in Map/Parallel
 
@@ -262,20 +282,4 @@ aws stepfunctions test-state --definition "$(cat sm.json)" --state-name "MyState
 --mock '{"fieldValidationMode":"STRICT|PRESENT|NONE","result":"..."}'
 ```
 
-## Step Functions Local (Docker)
-
-Run a local emulator for integration testing. Note it is unsupported and does not have full feature parity with the cloud service:
-
-```bash
-docker run -p 8083:8083 amazon/aws-stepfunctions-local
-
-# Run alongside sam local start-lambda for Lambda-integrated tests
-sam local start-lambda &
-docker run -p 8083:8083 \
-  -e LAMBDA_ENDPOINT=http://host.docker.internal:3001 \
-  amazon/aws-stepfunctions-local
-```
-
-Then use the AWS CLI with `--endpoint-url http://localhost:8083` to create and execute state machines locally.
-
-For most use cases, the TestState API (above) is preferred — it tests against real AWS service behavior without requiring Docker or a local emulator.
+---
