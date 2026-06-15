@@ -616,10 +616,12 @@ void shouldProcessItemsConcurrently() {
     var result = runner.runUntilComplete(new MyInput(List.of(1, 2, 3, 4, 5)));
     assertEquals(ExecutionStatus.SUCCEEDED, result.getStatus());
 
-    var mapOp = result.getOperation("process-items");
-    assertEquals(OperationType.MAP, mapOp.getType());
+    // The map operation runs each item in its own named child CONTEXT.
+    // (OperationType has EXECUTION, CONTEXT, STEP, WAIT, CALLBACK, CHAINED_INVOKE - there is no MAP.)
+    var mapContext = result.getOperation("process-items");
+    assertEquals(OperationType.CONTEXT, mapContext.getType());
 
-    // Check an individual item operation (map items run in named child contexts)
+    // Check an individual item's step operation inside the map
     var item0 = result.getOperation("process-0");
     assertEquals(OperationStatus.SUCCEEDED, item0.getStatus());
 }
