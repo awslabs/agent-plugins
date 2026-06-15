@@ -157,6 +157,7 @@ lambda_client.send_durable_execution_callback_success(
 **SDK (Java):**
 
 ```java
+import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.lambda.LambdaClient;
 import software.amazon.awssdk.services.lambda.model.SendDurableExecutionCallbackSuccessRequest;
 
@@ -164,7 +165,7 @@ LambdaClient client = LambdaClient.create();
 client.sendDurableExecutionCallbackSuccess(
     SendDurableExecutionCallbackSuccessRequest.builder()
         .callbackId(callbackId)
-        .payload("{\"status\":\"approved\"}")
+        .result(SdkBytes.fromUtf8String("{\"status\":\"approved\"}"))
         .build()
 );
 ```
