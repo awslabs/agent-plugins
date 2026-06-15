@@ -490,6 +490,65 @@ var result = ctx.step("process-order", Order.class, stepCtx -> {
 });
 ```
 
+## Java SDK Configuration
+
+The Java SDK is configured per-handler by overriding `createConfiguration()` on
+`DurableHandler` and returning a `DurableConfig`. This is the Java-specific entry point for
+tuning serialization, the concurrency executor, and checkpoint batching. (TypeScript and
+Python expose equivalent configuration through their own SDK options.)
+
+> **Note:** The virtual-thread executor below requires **Java 21+**
+> (`Executors.newVirtualThreadPerTaskExecutor()`). The SDK itself targets Java 17+; on
+> Java 17 use a platform-thread pool such as `Executors.newFixedThreadPool(n)` instead.
+
+**Java:**
+
+```java
+import java.time.Duration;
+import java.util.concurrent.Executors;
+import software.amazon.lambda.durable.DurableConfig;
+import software.amazon.lambda.durable.DurableContext;
+import software.amazon.lambda.durable.DurableFuture;
+import software.amazon.lambda.durable.DurableHandler;
+
+public class ManyStepsHandler extends DurableHandler<BatchInput, Integer> {
+
+    @Override
+    protected DurableConfig createConfiguration() {
+        return DurableConfig.builder()
+            // Virtual threads scale to large numbers of concurrent async operations
+            // (Java 21+). Recommended when a handler fans out into many
+            // stepAsync / map / parallel branches.
+            .withExecutorService(Executors.newVirtualThreadPerTaskExecutor())
+            // A small checkpoint delay batches checkpoint requests together, reducing
+            // overall latency when there are many concurrent operations.
+            .withCheckpointDelay(Duration.ofMillis(10))
+            .build();
+    }
+
+    @Override
+    public Integer handleRequest(BatchInput event, DurableContext ctx) {
+        // Fan out into many async steps - executed on the virtual-thread pool above
+        var futures = new java.util.ArrayList<DurableFuture<Integer>>();
+        for (int i = 0; i < event.getCount(); i++) {
+            int index = i;
+            futures.add(ctx.stepAsync("compute-" + i, Integer.class, s -> index * 2));
+        }
+
+        // Collect all results in order
+        var results = DurableFuture.allOf(futures);
+        return results.stream().mapToInt(Integer::intValue).sum();
+    }
+}
+```
+
+**When to use these settings:**
+
+| Setting | Use when |
+| --- | --- |
+| `withExecutorService(Executors.newVirtualThreadPerTaskExecutor())` | The handler creates many concurrent operations (`stepAsync`, `map`, `parallel`); virtual threads (Java 21+) scale far better than a fixed thread pool |
+| `withCheckpointDelay(Duration.ofMillis(...))` | Many concurrent operations checkpoint at once; a small delay batches the checkpoint API calls and lowers latency |
+
 ## Nested Workflows
 
 ### Parent-Child Workflow Pattern
