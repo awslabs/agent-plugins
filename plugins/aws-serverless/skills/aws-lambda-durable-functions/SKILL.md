@@ -24,6 +24,7 @@ Before using AWS Lambda durable functions, verify:
 2. **Runtime environment** is ready:
    - For TypeScript/JavaScript: Node.js 22+ (`node --version`)
    - For Python: Python 3.11+ (`python --version`. Note that currently only Lambda runtime environments 3.13+ come with the Durable Execution SDK pre-installed. 3.11 is the min supported Python version by the Durable SDK itself, however, you could use OCI to bring your own container image with your own Python runtime + Durable SDK.)
+   - For Java: Java 17+ (`java --version`)
 
 3. **Deployment capability** exists (one of):
    - AWS SAM CLI (`sam --version`) 1.153.1 or higher
@@ -40,6 +41,7 @@ Override syntax:
 
 - "use Python" → Generate Python code
 - "use JavaScript" → Generate JavaScript code
+- "use Java" → Generate Java code
 
 When not specified, ALWAYS use TypeScript
 
@@ -90,6 +92,24 @@ pip install aws-durable-execution-sdk-python
 pip install aws-durable-execution-sdk-python-testing
 ```
 
+**For Java (Maven):**
+
+Add the dependencies to your `pom.xml`, pinning to a specific released `VERSION` (see [Maven Central](https://mvnrepository.com/artifact/software.amazon.lambda.durable/aws-durable-execution-sdk-java)):
+
+```xml
+<dependency>
+  <groupId>software.amazon.lambda.durable</groupId>
+  <artifactId>aws-durable-execution-sdk-java</artifactId>
+  <version>VERSION</version>
+</dependency>
+<dependency>
+  <groupId>software.amazon.lambda.durable</groupId>
+  <artifactId>aws-durable-execution-sdk-java-testing</artifactId>
+  <version>VERSION</version>
+  <scope>test</scope>
+</dependency>
+```
+
 ## When to Load Reference Files
 
 Load the appropriate reference file based on what the user is working on:
@@ -132,6 +152,21 @@ def handler(event: dict, context: DurableContext) -> dict:
     return result
 ```
 
+**Java:**
+
+```java
+import software.amazon.lambda.durable.DurableHandler;
+import software.amazon.lambda.durable.DurableContext;
+
+public class MyHandler extends DurableHandler<MyInput, MyOutput> {
+    @Override
+    public MyOutput handleRequest(MyInput event, DurableContext ctx) {
+        var result = ctx.step("process", ProcessResult.class, stepCtx -> processData(event));
+        return result;
+    }
+}
+```
+
 ### Critical Rules
 
 1. **All non-deterministic code MUST be in steps** (Date.now, Math.random, API calls)
@@ -147,6 +182,19 @@ The Python SDK differs from TypeScript in several key areas:
 - **Wait**: `context.wait(duration=Duration.from_seconds(n), name='...')`
 - **Exceptions**: `ExecutionError` (permanent), `InvocationError` (transient), `CallbackError` (callback failures)
 - **Testing**: Use `DurableFunctionTestRunner` class directly - instantiate with handler, use context manager, call `run(input=...)`
+
+### Java API Differences
+
+The Java SDK uses a class-based, type-safe approach:
+
+- **Handler**: Extend `DurableHandler<TInput, TOutput>` and implement `handleRequest(TInput, DurableContext)`
+- **Steps**: `ctx.step("name", ResultType.class, stepCtx -> operation())` — a name and result type are always required
+- **Generic types**: Use `TypeToken` for generics like `List<T>`: `ctx.step("name", new TypeToken<List<User>>() {}, stepCtx -> ...)`
+- **Wait**: `ctx.wait("name", Duration.ofSeconds(n))`
+- **Async operations**: `stepAsync()`, `invokeAsync()`, `waitAsync()`, `mapAsync()` return `DurableFuture<T>`; combine with `DurableFuture.allOf(...)` / `DurableFuture.anyOf(...)`
+- **Parallel**: `ctx.parallel("name", config)` returns a `ParallelDurableFuture` (AutoCloseable); register branches with `parallel.branch(...)`
+- **Exceptions**: `StepFailedException`, `StepInterruptedException`, `CallbackTimeoutException`, `CallbackFailedException`, `WaitForConditionFailedException`, `InvokeFailedException`, `InvokeTimedOutException`, `UnrecoverableDurableExecutionException`, with `DurableExecutionException` as the base class
+- **Testing**: Use `LocalDurableTestRunner` (local) or `CloudDurableTestRunner` (cloud) from the testing SDK
 
 ### Invocation Requirements
 
@@ -201,4 +249,5 @@ Access to sensitive data (like Lambda and API Gateway logs) is **not** enabled b
 - [AWS Lambda durable functions Documentation](https://docs.aws.amazon.com/lambda/latest/dg/durable-functions.html)
 - [JavaScript SDK Repository](https://github.com/aws/aws-durable-execution-sdk-js)
 - [Python SDK Repository](https://github.com/aws/aws-durable-execution-sdk-python)
+- [Java SDK Repository](https://github.com/aws/aws-durable-execution-sdk-java)
 - [IAM Policy Reference](https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AWSLambdaBasicDurableExecutionRolePolicy.html)

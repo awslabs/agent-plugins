@@ -32,6 +32,23 @@ context.wait(duration=Duration.from_days(7))
 context.wait(duration=Duration.from_seconds(60), name='rate-limit-delay')
 ```
 
+**Java:**
+
+```java
+import java.time.Duration;
+
+// Synchronous wait (blocks execution)
+ctx.wait("delay", Duration.ofSeconds(30));
+ctx.wait("rate-limit-delay", Duration.ofMinutes(5));
+ctx.wait("long-delay", Duration.ofHours(1));
+ctx.wait("very-long-delay", Duration.ofDays(7));
+
+// Async wait (returns DurableFuture)
+var future = ctx.waitAsync("async-delay", Duration.ofHours(1));
+// ... do other work ...
+future.get();
+```
+
 **Max wait duration:** Up to 1 year
 
 ## Wait for Callback
@@ -79,6 +96,29 @@ result = context.wait_for_callback(
 )
 ```
 
+**Java:**
+
+```java
+import software.amazon.lambda.durable.config.WaitForCallbackConfig;
+import software.amazon.lambda.durable.config.CallbackConfig;
+
+var result = ctx.waitForCallback("wait-for-approval", ApprovalResult.class,
+    (callbackId, stepCtx) -> {
+        sendApprovalEmail(approverEmail, callbackId);
+    },
+    WaitForCallbackConfig.builder()
+        .callbackConfig(CallbackConfig.builder()
+            .timeout(Duration.ofHours(24))
+            .heartbeatTimeout(Duration.ofMinutes(5))
+            .build())
+        .build());
+
+// External system calls back with:
+// aws lambda send-durable-execution-callback-success \
+//   --callback-id <callbackId> \
+//   --payload '{"approved": true}'
+```
+
 ### Callback Success
 
 **CLI:**
@@ -112,6 +152,21 @@ lambda_client.send_durable_execution_callback_success(
     CallbackId=callback_id,
     Result=json.dumps({'status': 'approved'})
 )
+```
+
+**SDK (Java):**
+
+```java
+import software.amazon.awssdk.services.lambda.LambdaClient;
+import software.amazon.awssdk.services.lambda.model.SendDurableExecutionCallbackSuccessRequest;
+
+LambdaClient client = LambdaClient.create();
+client.sendDurableExecutionCallbackSuccess(
+    SendDurableExecutionCallbackSuccessRequest.builder()
+        .callbackId(callbackId)
+        .payload("{\"status\":\"approved\"}")
+        .build()
+);
 ```
 
 ### Callback Failure
@@ -212,6 +267,41 @@ result = context.wait_for_condition(
 )
 ```
 
+**Java:**
+
+```java
+import software.amazon.lambda.durable.config.WaitForConditionConfig;
+import software.amazon.lambda.durable.model.WaitForConditionResult;
+import software.amazon.lambda.durable.exception.WaitForConditionFailedException;
+
+// Define state class for job polling
+record JobState(String jobId, String status) {}
+
+var finalState = ctx.waitForCondition("wait-for-job", JobState.class,
+    (currentState, stepCtx) -> {
+        // Check current status and update state
+        var status = checkJobStatus(currentState.jobId());
+        var newState = new JobState(currentState.jobId(), status);
+        
+        // Decision logic: stop if completed, continue otherwise
+        if ("completed".equals(status)) {
+            return WaitForConditionResult.stopPolling(newState);
+        }
+        return WaitForConditionResult.continuePolling(newState);
+    },
+    WaitForConditionConfig.<JobState>builder()
+        .initialState(new JobState("job-123", "pending"))
+        .waitStrategy((state, attempt) -> {
+            // Compute delay duration (not decision logic)
+            if (attempt >= 60) {
+                throw new WaitForConditionFailedException("Max polling attempts exceeded");
+            }
+            long delaySeconds = Math.min((long) (5 * Math.pow(1.5, attempt)), 30);
+            return Duration.ofSeconds(delaySeconds);
+        })
+        .build());
+```
+
 ### Custom Wait Strategy
 
 **TypeScript:**
@@ -239,6 +329,38 @@ const result = await context.waitForCondition(
     }
   }
 );
+```
+
+**Java:**
+
+```java
+import software.amazon.lambda.durable.model.WaitForConditionResult;
+
+// Define state class
+record PollState(Data data, int attempts) {
+    boolean isReady() { return data != null && data.isReady(); }
+}
+
+var result = ctx.waitForCondition("custom-poll", PollState.class,
+    (state, stepCtx) -> {
+        // Fetch data and update state
+        var data = fetchData();
+        var newState = new PollState(data, state.attempts() + 1);
+        
+        // Decision logic: stop if ready or max attempts
+        if (newState.isReady() || newState.attempts() >= 10) {
+            return WaitForConditionResult.stopPolling(newState);
+        }
+        return WaitForConditionResult.continuePolling(newState);
+    },
+    WaitForConditionConfig.<PollState>builder()
+        .initialState(new PollState(null, 0))
+        .waitStrategy((state, attempt) -> {
+            // Compute exponential backoff delay (max 60 seconds)
+            long delaySeconds = Math.min((long) Math.pow(2, attempt), 60);
+            return Duration.ofSeconds(delaySeconds);
+        })
+        .build());
 ```
 
 ## Callback Patterns
@@ -275,6 +397,41 @@ export const handler = withDurableExecution(async (event, context: DurableContex
 });
 ```
 
+**Java:**
+
+```java
+import software.amazon.lambda.durable.config.WaitForCallbackConfig;
+import software.amazon.lambda.durable.config.CallbackConfig;
+
+public class ApprovalHandler extends DurableHandler<ApprovalRequest, ApprovalResult> {
+    @Override
+    public ApprovalResult handleRequest(ApprovalRequest event, DurableContext ctx) {
+        var request = ctx.step("create-request", Request.class,
+            s -> createApprovalRequest(event));
+        
+        var decision = ctx.waitForCallback("wait-approval", Decision.class,
+            (callbackId, s) -> {
+                sendEmail(Map.of(
+                    "to", event.getApprover(),
+                    "subject", "Approval Required",
+                    "body", "Approve: " + approvalUrl + "?callback=" + callbackId + "&action=approve\n" +
+                            "Reject: " + approvalUrl + "?callback=" + callbackId + "&action=reject"
+                ));
+            },
+            WaitForCallbackConfig.builder()
+                .callbackConfig(CallbackConfig.builder().timeout(Duration.ofHours(48)).build())
+                .build());
+        
+        if ("approve".equals(decision.getAction())) {
+            ctx.step("execute", Void.class, s -> { executeRequest(request); return null; });
+            return new ApprovalResult("approved");
+        }
+        
+        return new ApprovalResult("rejected");
+    }
+}
+```
+
 ### Webhook Integration
 
 **TypeScript:**
@@ -303,6 +460,39 @@ export const handler = withDurableExecution(async (event, context: DurableContex
   
   return { orderId: order.id, paymentStatus: payment.status };
 });
+```
+
+**Java:**
+
+```java
+import software.amazon.lambda.durable.config.WaitForCallbackConfig;
+import software.amazon.lambda.durable.config.CallbackConfig;
+
+public class OrderHandler extends DurableHandler<OrderRequest, OrderResult> {
+    @Override
+    public OrderResult handleRequest(OrderRequest event, DurableContext ctx) {
+        var order = ctx.step("create-order", Order.class,
+            s -> createOrder(event));
+        
+        var payment = ctx.waitForCallback("wait-payment", Payment.class,
+            (callbackId, s) -> {
+                paymentProvider.createPayment(Map.of(
+                    "orderId", order.getId(),
+                    "amount", order.getTotal(),
+                    "webhookUrl", webhookUrl + "?callback=" + callbackId
+                ));
+            },
+            WaitForCallbackConfig.builder()
+                .callbackConfig(CallbackConfig.builder().timeout(Duration.ofMinutes(15)).build())
+                .build());
+        
+        if ("success".equals(payment.getStatus())) {
+            ctx.step("fulfill", Void.class, s -> { fulfillOrder(order); return null; });
+        }
+        
+        return new OrderResult(order.getId(), payment.getStatus());
+    }
+}
 ```
 
 ### Async Job Polling
@@ -336,6 +526,50 @@ export const handler = withDurableExecution(async (event, context: DurableContex
 
   return result;
 });
+```
+
+**Java:**
+
+```java
+import software.amazon.lambda.durable.model.WaitForConditionResult;
+import software.amazon.lambda.durable.exception.WaitForConditionFailedException;
+
+// Define state class for job polling
+record JobState(String jobId, String status, String result) {}
+
+public class JobHandler extends DurableHandler<JobRequest, JobResult> {
+    @Override
+    public JobResult handleRequest(JobRequest event, DurableContext ctx) {
+        var jobId = ctx.step("start-job", String.class,
+            s -> startBatchJob(event.getData()));
+        
+        var result = ctx.waitForCondition("poll-job", JobState.class,
+            (state, stepCtx) -> {
+                // Fetch current job status
+                var job = getJobStatus(state.jobId());
+                var newState = new JobState(state.jobId(), job.getStatus(), job.getResult());
+                
+                // Decision logic: stop if not running, continue otherwise
+                if (!"running".equals(newState.status())) {
+                    return WaitForConditionResult.stopPolling(newState);
+                }
+                return WaitForConditionResult.continuePolling(newState);
+            },
+            WaitForConditionConfig.<JobState>builder()
+                .initialState(new JobState(jobId, "running", null))
+                .waitStrategy((state, attempt) -> {
+                    // Compute delay with exponential backoff
+                    if (attempt >= 60) {
+                        throw new WaitForConditionFailedException("Max polling attempts exceeded");
+                    }
+                    long delaySeconds = Math.min((long) (5 * Math.pow(1.5, attempt)), 30);
+                    return Duration.ofSeconds(delaySeconds);
+                })
+                .build());
+        
+        return new JobResult(result.jobId(), result.status(), result.result());
+    }
+}
 ```
 
 ## Best Practices
@@ -393,4 +627,31 @@ except CallbackError as error:
         context.logger.warn('Approval timed out')
     else:
         context.logger.error('Callback failed', error)
+```
+
+**Java:**
+
+```java
+import software.amazon.lambda.durable.config.WaitForCallbackConfig;
+import software.amazon.lambda.durable.config.CallbackConfig;
+import software.amazon.lambda.durable.exception.CallbackFailedException;
+import software.amazon.lambda.durable.exception.CallbackTimeoutException;
+import software.amazon.lambda.durable.exception.WaitForConditionFailedException;
+
+try {
+    var result = ctx.waitForCallback("wait-approval", ApprovalResult.class,
+        (callbackId, stepCtx) -> sendApproval(callbackId),
+        WaitForCallbackConfig.builder()
+            .callbackConfig(CallbackConfig.builder().timeout(Duration.ofHours(24)).build())
+            .build());
+} catch (CallbackTimeoutException e) {
+    ctx.getLogger().warn("Approval timed out: {}", e.getMessage());
+    // Handle timeout
+} catch (CallbackFailedException e) {
+    ctx.getLogger().error("Callback failed: {}", e.getMessage());
+    // Handle failure
+} catch (WaitForConditionFailedException e) {
+    ctx.getLogger().error("Condition polling failed: {}", e.getMessage());
+    // Handle polling failure
+}
 ```

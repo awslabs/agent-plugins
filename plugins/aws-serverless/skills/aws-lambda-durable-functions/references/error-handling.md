@@ -55,6 +55,32 @@ result = context.step(
 )
 ```
 
+**Java:**
+
+```java
+import java.time.Duration;
+import software.amazon.lambda.durable.config.StepConfig;
+import software.amazon.lambda.durable.retry.RetryStrategies;
+import software.amazon.lambda.durable.retry.JitterStrategy;
+
+// Exponential backoff with jitter
+var result = ctx.step("api-call", ApiResponse.class, stepCtx -> callAPI(),
+    StepConfig.builder()
+        .retryStrategy(RetryStrategies.exponentialBackoff(
+            5,                       // maxAttempts (including initial attempt)
+            Duration.ofSeconds(1),   // initialDelay
+            Duration.ofSeconds(60),  // maxDelay
+            2.0,                     // backoffRate
+            JitterStrategy.FULL))
+        .build());
+
+// Fixed delay
+var simpleResult = ctx.step("simple-retry", Result.class, stepCtx -> operation(),
+    StepConfig.builder()
+        .retryStrategy(RetryStrategies.fixedDelay(3, Duration.ofSeconds(5)))
+        .build());
+```
+
 ## Custom Retry Logic
 
 **TypeScript:**
@@ -100,6 +126,28 @@ def custom_retry(error: Exception, attempt: int) -> RetryDecision:
     return RetryDecision(should_retry=False)
 ```
 
+**Java:**
+
+```java
+import software.amazon.lambda.durable.retry.RetryDecision;
+
+var result = ctx.step("custom-retry", Result.class, stepCtx -> riskyOperation(),
+    StepConfig.builder()
+        .retryStrategy((error, attemptCount) -> {
+            // Don't retry client errors (4xx)
+            if (error instanceof HttpException he
+                    && he.getStatusCode() >= 400 && he.getStatusCode() < 500) {
+                return RetryDecision.fail();
+            }
+            // Retry server errors with exponential backoff
+            if (attemptCount < 5) {
+                return RetryDecision.retry(Duration.ofSeconds((long) Math.pow(2, attemptCount)));
+            }
+            return RetryDecision.fail();
+        })
+        .build());
+```
+
 ## Error Classification
 
 ### Retryable vs Non-Retryable
@@ -135,6 +183,27 @@ retry_config = RetryStrategyConfig(
     max_attempts=3,
     retryable_error_types=[NetworkError, TimeoutError]
 )
+```
+
+**Java:**
+
+```java
+import software.amazon.lambda.durable.retry.RetryDecision;
+
+// The Java SDK's built-in strategies have no "retryable types" option;
+// inspect the error type inside a custom strategy instead.
+var result = ctx.step("selective-retry", Result.class, stepCtx -> operation(),
+    StepConfig.builder()
+        .retryStrategy((error, attemptCount) -> {
+            boolean retryable = error instanceof NetworkException
+                || error instanceof TimeoutException;
+            if (retryable && attemptCount < 3) {
+                return RetryDecision.retry(Duration.ofSeconds((long) Math.pow(2, attemptCount)));
+            }
+            // ValidationException (and any non-listed type) won't be retried
+            return RetryDecision.fail();
+        })
+        .build());
 ```
 
 ## Saga Pattern
@@ -232,6 +301,51 @@ def handler(event: dict, context: DurableContext) -> dict:
         raise error
 ```
 
+**Java:**
+
+```java
+import software.amazon.lambda.durable.exception.DurableExecutionException;
+
+public class OrderHandler extends DurableHandler<OrderRequest, OrderResult> {
+    @Override
+    public OrderResult handleRequest(OrderRequest event, DurableContext ctx) {
+        var compensations = new ArrayList<Runnable>();
+        try {
+            // Step 1: Reserve inventory
+            var reservation = ctx.step("reserve-inventory", Reservation.class,
+                s -> inventoryService.reserve(event.getItems()));
+            compensations.add(() -> ctx.step("cancel-reservation", Void.class,
+                s -> { inventoryService.cancelReservation(reservation.getId()); return null; }));
+
+            // Step 2: Charge payment
+            var payment = ctx.step("charge-payment", Payment.class,
+                s -> paymentService.charge(event.getPaymentMethod(), event.getAmount()));
+            compensations.add(() -> ctx.step("refund-payment", Void.class,
+                s -> { paymentService.refund(payment.getId()); return null; }));
+
+            // Step 3: Create shipment
+            var shipment = ctx.step("create-shipment", Shipment.class,
+                s -> shippingService.createShipment(event.getAddress(), event.getItems()));
+
+            return new OrderResult(true, shipment.getOrderId());
+        } catch (DurableExecutionException e) {
+            ctx.getLogger().error("Order failed, executing compensations: {}", e.getMessage());
+            // Execute compensations in reverse order
+            Collections.reverse(compensations);
+            for (var comp : compensations) {
+                try {
+                    comp.run();
+                } catch (DurableExecutionException ce) {
+                    ctx.getLogger().error("Compensation failed: {}", ce.getMessage());
+                    // Continue with other compensations
+                }
+            }
+            throw e;
+        }
+    }
+}
+```
+
 ## Unrecoverable Errors
 
 Mark errors as unrecoverable to stop execution immediately:
@@ -276,6 +390,34 @@ def handler(event: dict, context: DurableContext) -> dict:
     # Continue processing...
 ```
 
+**Java:**
+
+```java
+import software.amazon.lambda.durable.exception.UnrecoverableDurableExecutionException;
+import software.amazon.awssdk.services.lambda.model.ErrorObject;
+
+public class MyHandler extends DurableHandler<MyInput, MyOutput> {
+    @Override
+    public MyOutput handleRequest(MyInput event, DurableContext ctx) {
+        var user = ctx.step("fetch-user", User.class, stepCtx -> {
+            var u = fetchUser(event.getUserId());
+            if (u == null) {
+                // Terminate execution immediately - no retry.
+                // A plain RuntimeException would be retried by the step's retry
+                // strategy; UnrecoverableDurableExecutionException is not.
+                throw new UnrecoverableDurableExecutionException(
+                    ErrorObject.builder()
+                        .errorType("UserNotFound")
+                        .errorMessage("User not found")
+                        .build());
+            }
+            return u;
+        });
+        // Continue processing...
+    }
+}
+```
+
 The SDK provides these exception types for different failure scenarios:
 
 | Exception                | Retryable       | Use case                                                    |
@@ -284,6 +426,20 @@ The SDK provides these exception types for different failure scenarios:
 | `InvocationError`        | Yes (by Lambda) | Transient infrastructure issues (Lambda retries invocation) |
 | `CallbackError`          | No              | Callback handling failures                                  |
 | `DurableExecutionsError` | —               | Base class for all SDK exceptions                           |
+
+**Java** SDK exception types:
+
+| Exception                              | Retryable | Use case                                                |
+| -------------------------------------- | --------- | ------------------------------------------------------- |
+| `StepFailedException`                  | No        | Step execution failed (business logic error)            |
+| `StepInterruptedException`             | Yes       | Step with AT_MOST_ONCE_PER_RETRY interrupted before completion |
+| `CallbackTimeoutException`             | No        | Callback didn't complete within timeout                 |
+| `CallbackFailedException`              | No        | Callback failed or was explicitly rejected              |
+| `WaitForConditionFailedException`      | No        | Condition check failed or max polling attempts exceeded |
+| `InvokeFailedException`                | No        | Lambda invocation failed                                |
+| `InvokeTimedOutException`              | No        | Lambda invocation timed out                             |
+| `UnrecoverableDurableExecutionException` | No      | Terminate execution immediately, no retry               |
+| `DurableExecutionException`            | —         | Base class for all SDK exceptions                       |
 
 ## Error Determinism
 
@@ -314,6 +470,33 @@ const result = await context.step('validate', async () => {
   }
   
   return processData(data);
+});
+```
+
+**Java:**
+
+```java
+// Define a deterministic, serializable business exception
+public class CustomBusinessException extends RuntimeException {
+    private final String code;
+    private final String field;
+
+    public CustomBusinessException(String message, String code, String field) {
+        super(message);
+        this.code = code;
+        this.field = field;
+    }
+
+    public String getCode() { return code; }
+    public String getField() { return field; }
+}
+
+var result = ctx.step("validate", ProcessResult.class, stepCtx -> {
+    if (!isValid(data)) {
+        // ✅ Deterministic error - same input produces the same failure
+        throw new CustomBusinessException("Validation failed", "INVALID_DATA", "email");
+    }
+    return processData(data);
 });
 ```
 
@@ -414,6 +597,43 @@ export const handler = withDurableExecution(async (event, context: DurableContex
     failed: results.failureCount
   };
 });
+```
+
+**Java:**
+
+```java
+import software.amazon.lambda.durable.config.MapConfig;
+import software.amazon.lambda.durable.config.CompletionConfig;
+import software.amazon.lambda.durable.model.MapResult.MapResultItem;
+
+public class BatchHandler extends DurableHandler<BatchInput, BatchOutput> {
+    @Override
+    public BatchOutput handleRequest(BatchInput event, DurableContext ctx) {
+        var results = ctx.map("process-items", event.getItems(), Result.class,
+            (item, index, childCtx) -> childCtx.step("process-" + index, Result.class,
+                s -> processItem(item)),
+            MapConfig.builder()
+                .completionConfig(CompletionConfig.toleratedFailurePercentage(0.1))  // Allow 10% failures
+                .build());
+
+        if (!results.allSucceeded()) {
+            // Log failures but continue
+            ctx.getLogger().warn("Some items failed. Failure count: {}", results.failed().size());
+
+            // Collect failed items for later retry
+            var failedItems = new ArrayList<Item>();
+            for (int i = 0; i < results.size(); i++) {
+                if (results.getItem(i).status() == MapResultItem.Status.FAILED) {
+                    failedItems.add(event.getItems().get(i));
+                }
+            }
+
+            ctx.step("store-failures", Void.class, s -> { storeFailedItems(failedItems); return null; });
+        }
+
+        return new BatchOutput(results.succeeded().size(), results.failed().size());
+    }
+}
 ```
 
 ## Best Practices

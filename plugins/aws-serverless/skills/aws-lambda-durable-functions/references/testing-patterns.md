@@ -20,6 +20,10 @@ Test durable functions locally and in the cloud with comprehensive test runners.
 - ✅ Python: Instantiate `DurableFunctionTestRunner(handler=my_handler)` directly
 - ✅ Python: Use `runner.run(input={...}, timeout=10)` — note `input=` not `payload`
 - ✅ Python: The value of result.result is serialized. Deserialize using the appropriate SerDes or default json deserializer.
+- ✅ Java: Use `LocalDurableTestRunner.create(InputType.class, new MyHandler())` (first arg is the handler INPUT type)
+- ✅ Java: Use `runner.runUntilComplete(input)` to drive the replay loop; `run(input)` for a single invocation
+- ✅ Java: `result.getStatus()` returns `ExecutionStatus`; `operation.getStatus()` returns `OperationStatus`
+- ✅ Java: Resolve callbacks with `runner.getCallbackId("<name>-callback")` then `runner.completeCallback(id, jsonResult)` / `runner.failCallback(id, error)` (waitForCallback appends `-callback` to the operation name)
 
 ### DON'T:
 
@@ -30,6 +34,7 @@ Test durable functions locally and in the cloud with comprehensive test runners.
 - ❌ TypeScript: Test callbacks without proper synchronization (leads to race conditions)
 - ❌ Python: Confuse `DurableFunctionTestRunner` (local) with `DurableFunctionCloudTestRunner` (cloud)
 - ❌ Python: Forget the `with runner:` context manager — it manages execution lifecycle
+- ❌ Java: Assert `result.getStatus()` against `OperationStatus` — it returns `ExecutionStatus` (use `OperationStatus` only for individual operations)
 
 ## Local Testing Setup
 
@@ -93,6 +98,30 @@ def test_workflow():
     assert result.status is InvocationStatus.SUCCEEDED
 ```
 
+**Java:**
+
+The Java testing SDK provides `LocalDurableTestRunner` for local testing and `CloudDurableTestRunner` for cloud testing.
+
+```java
+import software.amazon.lambda.durable.testing.LocalDurableTestRunner;
+import software.amazon.lambda.durable.model.ExecutionStatus;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+
+@Test
+void shouldExecuteWorkflow() {
+    // First arg is the handler INPUT type
+    var runner = LocalDurableTestRunner.create(MyInput.class, new MyHandler());
+
+    // runUntilComplete simulates the Lambda re-invocation loop (advances waits/retries)
+    var result = runner.runUntilComplete(new MyInput("123"));
+
+    // result.getStatus() returns ExecutionStatus
+    assertEquals(ExecutionStatus.SUCCEEDED, result.getStatus());
+    assertEquals(new MyOutput(true), result.getResult(MyOutput.class));
+}
+```
+
 ## Getting Operations
 
 **CRITICAL: Always get operations by NAME, not by index.**
@@ -138,6 +167,29 @@ def test_steps_execute():
     assert 'process-data' in step_names
 ```
 
+**Java:**
+
+```java
+import software.amazon.awssdk.services.lambda.model.OperationStatus;
+import software.amazon.awssdk.services.lambda.model.OperationType;
+
+@Test
+void shouldExecuteStepsInOrder() {
+    var runner = LocalDurableTestRunner.create(MyInput.class, new MyHandler());
+    var result = runner.runUntilComplete(new MyInput(true));
+
+    // ✅ CORRECT: Get by name (operation status uses OperationStatus)
+    var fetchStep = result.getOperation("fetch-user");
+    assertEquals(OperationType.STEP, fetchStep.getType());
+    assertEquals(OperationStatus.SUCCEEDED, fetchStep.getStatus());
+
+    var processStep = result.getOperation("process-data");
+    assertEquals(OperationStatus.SUCCEEDED, processStep.getStatus());
+
+    // ❌ WRONG: relying on positional/index lookup is brittle
+}
+```
+
 ## Testing Replay Behavior
 
 **TypeScript:**
@@ -157,6 +209,25 @@ it('should handle replay correctly', async () => {
   // Results should be identical
   expect(execution1.getResult()).toEqual(execution2.getResult());
 });
+```
+
+**Java:**
+
+```java
+@Test
+void shouldHandleReplayCorrectly() {
+    var runner = LocalDurableTestRunner.create(MyInput.class, new MyHandler());
+
+    // runUntilComplete drives the function through its replay cycles
+    var result = runner.runUntilComplete(new MyInput(42));
+    assertEquals(ExecutionStatus.SUCCEEDED, result.getStatus());
+
+    // A fresh runner replays from the start and must produce the same result
+    var replayRunner = LocalDurableTestRunner.create(MyInput.class, new MyHandler());
+    var replayResult = replayRunner.runUntilComplete(new MyInput(42));
+    assertEquals(ExecutionStatus.SUCCEEDED, replayResult.getStatus());
+    assertEquals(result.getResult(MyOutput.class), replayResult.getResult(MyOutput.class));
+}
 ```
 
 ## Testing with Fake Clock
@@ -181,6 +252,24 @@ it('should wait for specified duration', async () => {
   expect(waitOp.getType()).toBe(OperationType.WAIT);
   expect(waitOp.getWaitDetails()?.waitSeconds).toBe(60);
 });
+```
+
+**Java:**
+
+```java
+@Test
+void shouldWaitForSpecifiedDuration() {
+    var runner = LocalDurableTestRunner.create(MyInput.class, new MyHandler());
+
+    // runUntilComplete automatically advances WAIT operations (no real time elapses)
+    var result = runner.runUntilComplete(new MyInput());
+
+    assertEquals(ExecutionStatus.SUCCEEDED, result.getStatus());
+
+    var waitOp = result.getOperation("delay");
+    assertEquals(OperationType.WAIT, waitOp.getType());
+    assertEquals(OperationStatus.SUCCEEDED, waitOp.getStatus());
+}
 ```
 
 ## Test Runner API Patterns
@@ -224,6 +313,26 @@ it('incorrect api usage', async () => {
   const result = execution.getResult();
   // expect(result.greeting).toBe('...'); // Type error!
 });
+```
+
+**Java:**
+
+```java
+@Test
+void shouldUseCorrectTestRunnerApi() {
+    var runner = LocalDurableTestRunner.create(GreetingInput.class, new GreetingHandler());
+
+    // Typed input - no payload wrapper needed in Java
+    var result = runner.runUntilComplete(new GreetingInput("Alice", "123"));
+
+    // Typed result via getResult(Class)
+    var output = result.getResult(GreetingOutput.class);
+    assertEquals("Hello, Alice!", output.getGreeting());
+
+    // Get operations by name; read the typed step result
+    var greetingStep = result.getOperation("generate-greeting");
+    assertEquals("Hello, Alice!", greetingStep.getStepResult(String.class));
+}
 ```
 
 ## Testing Callbacks
@@ -310,6 +419,48 @@ def test_callback_creation():
     assert callback_ops[0].callback_id is not None
 ```
 
+**Java:**
+
+```java
+import software.amazon.awssdk.services.lambda.model.ErrorObject;
+
+@Test
+void shouldHandleCallbackSuccess() {
+    var runner = LocalDurableTestRunner.create(ApprovalInput.class, new ApprovalHandler());
+
+    // First invocation suspends at the callback (execution status PENDING)
+    var pending = runner.run(new ApprovalInput("alice@example.com"));
+    assertEquals(ExecutionStatus.PENDING, pending.getStatus());
+
+    // Resolve the callback by operation name; the result payload is JSON.
+    // waitForCallback("wait-for-approval", ...) creates a nested CALLBACK operation
+    // named "wait-for-approval-callback" - resolve by that name.
+    var callbackId = runner.getCallbackId("wait-for-approval-callback");
+    runner.completeCallback(callbackId, "{\"approved\":true,\"comments\":\"Looks good\"}");
+
+    // Resume to completion
+    var result = runner.runUntilComplete(new ApprovalInput("alice@example.com"));
+    assertEquals(ExecutionStatus.SUCCEEDED, result.getStatus());
+}
+
+@Test
+void shouldHandleCallbackFailure() {
+    var runner = LocalDurableTestRunner.create(ApprovalInput.class, new ApprovalHandler());
+
+    var pending = runner.run(new ApprovalInput("alice@example.com"));
+    assertEquals(ExecutionStatus.PENDING, pending.getStatus());
+
+    var callbackId = runner.getCallbackId("wait-for-approval-callback");
+    runner.failCallback(callbackId, ErrorObject.builder()
+        .errorType("ApprovalDenied")
+        .errorMessage("Request was rejected")
+        .build());
+
+    var result = runner.runUntilComplete(new ApprovalInput("alice@example.com"));
+    assertEquals(ExecutionStatus.FAILED, result.getStatus());
+}
+```
+
 ## Testing Callback Heartbeats
 
 **TypeScript:**
@@ -336,6 +487,26 @@ it('should handle callback heartbeats', async () => {
   const execution = await executionPromise;
   expect(execution.getStatus()).toBe('SUCCEEDED');
 });
+```
+
+**Java:**
+
+```java
+@Test
+void shouldHandleLongRunningCallback() {
+    var runner = LocalDurableTestRunner.create(MyInput.class, new MyHandler());
+
+    // Suspends at the long-running callback
+    var pending = runner.run(new MyInput());
+    assertEquals(ExecutionStatus.PENDING, pending.getStatus());
+
+    // Complete the callback once the external process finishes
+    var callbackId = runner.getCallbackId("long-running-process-callback");
+    runner.completeCallback(callbackId, "{\"status\":\"completed\"}");
+
+    var result = runner.runUntilComplete(new MyInput());
+    assertEquals(ExecutionStatus.SUCCEEDED, result.getStatus());
+}
 ```
 
 ## Testing Error Scenarios
@@ -387,6 +558,31 @@ it('should fail after max retries', async () => {
 });
 ```
 
+**Java:**
+
+```java
+@Test
+void shouldRetryOnFailure() {
+    var runner = LocalDurableTestRunner.create(MyInput.class, new RetryHandler());
+    var result = runner.runUntilComplete(new MyInput());
+
+    assertEquals(ExecutionStatus.SUCCEEDED, result.getStatus());
+
+    var step = result.getOperation("flaky-operation");
+    assertEquals(OperationStatus.SUCCEEDED, step.getStatus());
+}
+
+@Test
+void shouldFailAfterMaxRetries() {
+    var runner = LocalDurableTestRunner.create(MyInput.class, new AlwaysFailHandler());
+    var result = runner.runUntilComplete(new MyInput());
+
+    assertEquals(ExecutionStatus.FAILED, result.getStatus());
+    assertTrue(result.getError().isPresent());
+    assertTrue(result.getError().get().errorMessage().contains("Permanent failure"));
+}
+```
+
 ## Testing Concurrent Operations
 
 **TypeScript:**
@@ -408,6 +604,25 @@ it('should process items concurrently', async () => {
   const item0 = runner.getOperation('process-0');
   expect(item0.getStatus()).toBe(OperationStatus.SUCCEEDED);
 });
+```
+
+**Java:**
+
+```java
+@Test
+void shouldProcessItemsConcurrently() {
+    var runner = LocalDurableTestRunner.create(MyInput.class, new ConcurrentHandler());
+
+    var result = runner.runUntilComplete(new MyInput(List.of(1, 2, 3, 4, 5)));
+    assertEquals(ExecutionStatus.SUCCEEDED, result.getStatus());
+
+    var mapOp = result.getOperation("process-items");
+    assertEquals(OperationType.MAP, mapOp.getType());
+
+    // Check an individual item operation (map items run in named child contexts)
+    var item0 = result.getOperation("process-0");
+    assertEquals(OperationStatus.SUCCEEDED, item0.getStatus());
+}
 ```
 
 ## Cloud Testing
@@ -469,6 +684,28 @@ def test_workflow_cloud():
     assert result.status is InvocationStatus.SUCCEEDED
 ```
 
+**Java:**
+
+```java
+import software.amazon.lambda.durable.testing.CloudDurableTestRunner;
+
+@Test
+void shouldExecuteInRealLambda() {
+    // create(functionArn, inputType, outputType); region/credentials come from
+    // the default AWS provider chain (or supply a custom LambdaClient)
+    var runner = CloudDurableTestRunner.create(
+        "my-durable-function:1",  // Qualified ARN required
+        MyInput.class,
+        MyOutput.class);
+
+    var result = runner.runUntilComplete(new MyInput("123"));
+    assertEquals(ExecutionStatus.SUCCEEDED, result.getStatus());
+
+    var step = result.getOperation("fetch-user");
+    assertEquals(OperationStatus.SUCCEEDED, step.getStatus());
+}
+```
+
 ## Test Assertions
 
 **TypeScript:**
@@ -494,6 +731,28 @@ it('should validate operation details', async () => {
   const stepDetails = step.getStepDetails();
   expect(stepDetails?.result).toEqual({ processed: true });
 });
+```
+
+**Java:**
+
+```java
+@Test
+void shouldValidateOperationDetails() {
+    var runner = LocalDurableTestRunner.create(MyInput.class, new MyHandler());
+    var result = runner.runUntilComplete(new MyInput());
+
+    var step = result.getOperation("process-data");
+
+    // Operation type and status
+    assertEquals(OperationType.STEP, step.getType());
+    assertEquals(OperationStatus.SUCCEEDED, step.getStatus());
+
+    // Timing
+    assertNotNull(step.getDuration());
+
+    // Typed step result
+    assertEquals(new ProcessResult(true), step.getStepResult(ProcessResult.class));
+}
 ```
 
 ## Best Practices
@@ -557,6 +816,16 @@ await callbackOp.sendCallbackSuccess(JSON.stringify({}));
 | `Unexpected token` in callback result | Forgot to JSON.stringify              | Always stringify: `JSON.stringify(data)`          |
 | Callback result parsing error         | Result is JSON string                 | Parse result: `JSON.parse(result.value)`          |
 | Operation not found by name           | Missing operation name                | Always name operations in handler                 |
+
+### Java
+
+| Error                                            | Cause                                          | Solution                                                        |
+| ------------------------------------------------ | ---------------------------------------------- | --------------------------------------------------------------- |
+| `incompatible types: ExecutionStatus vs OperationStatus` | Comparing `result.getStatus()` to `OperationStatus` | Use `ExecutionStatus` for the execution; `OperationStatus` for operations |
+| `ResultType cannot be null`                      | Calling no-arg `getResult()` without an output type | Use `result.getResult(MyOutput.class)`                          |
+| Callback never resolves / stays PENDING          | Forgot to resolve the callback, or used the wrong name | `waitForCallback("x", ...)` creates a callback op named `x-callback`; call `runner.getCallbackId("x-callback")` then `completeCallback(...)` |
+| Wrong constructor args                           | Passing output type first to `create(...)`     | First arg is the INPUT type: `create(MyInput.class, handler)`   |
+| Operation not found by name                      | Missing operation name                         | Always name operations in the handler                           |
 
 ## Jest Configuration
 

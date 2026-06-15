@@ -51,6 +51,20 @@ now = datetime.now()                     # Different datetime each time
 context.step(lambda _: save_data({"id": id}), name='save')
 ```
 
+**Java:**
+
+```java
+// These values change on each replay!
+var id = UUID.randomUUID().toString();       // Different UUID each time
+var timestamp = System.currentTimeMillis();  // Different timestamp each time
+var random = Math.random();                  // Different random number
+var now = Instant.now();                     // Different instant each time
+
+// The step itself is fine - the problem is that id/timestamp were generated
+// OUTSIDE a step, so each replay passes different values into it.
+ctx.step("save", Void.class, s -> { saveData(id, timestamp); return null; });
+```
+
 ### ✅ CORRECT - Non-Deterministic Inside Steps
 
 **TypeScript:**
@@ -73,6 +87,17 @@ random_val = context.step(lambda _: random.random(), name='random')
 now = context.step(lambda _: datetime.now(), name='get-date')
 
 context.step(lambda _: save_data({"id": id}), name='save')
+```
+
+**Java:**
+
+```java
+var id = ctx.step("generate-id", String.class, s -> UUID.randomUUID().toString());
+var timestamp = ctx.step("get-time", Long.class, s -> System.currentTimeMillis());
+var random = ctx.step("random", Double.class, s -> Math.random());
+var now = ctx.step("get-date", Instant.class, s -> Instant.now());
+
+ctx.step("save", Void.class, s -> { saveData(id, timestamp); return null; });
 ```
 
 ### Must Be In Steps
@@ -115,6 +140,17 @@ def process(step_ctx: StepContext):
 context.step(process())
 ```
 
+**Java:**
+
+```java
+ctx.step("process", Result.class, stepCtx -> {
+    ctx.wait("delay", Duration.ofSeconds(1));      // ERROR! - cannot nest in a step
+    ctx.step("nested", String.class, s -> "");     // ERROR! - cannot nest in a step
+    ctx.invoke("other", otherArn, payload, Result.class);  // ERROR! - cannot nest in a step
+    return result;
+});
+```
+
 ### ✅ CORRECT - Use Child Context
 
 **TypeScript:**
@@ -139,6 +175,17 @@ def process_child(child_ctx: DurableContext):
     return step2
 
 context.run_in_child_context(func=process_child, name='process')
+```
+
+**Java:**
+
+```java
+ctx.runInChildContext("process", Result.class, childCtx -> {
+    childCtx.wait("processing-delay", Duration.ofSeconds(1));
+    var step1 = childCtx.step("validate", Data.class, s -> validate());
+    var step2 = childCtx.step("process", Result.class, s -> process(step1));
+    return step2;
+});
 ```
 
 ## Rule 3: Closure Mutations Are Lost
@@ -170,6 +217,17 @@ context.step(increment())
 print(counter)  # Always 0 on replay!
 ```
 
+**Java:**
+
+```java
+var counter = new java.util.concurrent.atomic.AtomicInteger(0);
+ctx.step("increment", Void.class, s -> {
+    counter.incrementAndGet();  // This mutation is lost on replay!
+    return null;
+});
+System.out.println(counter.get());  // Always 0 on replay!
+```
+
 ### ✅ CORRECT - Return Values
 
 **TypeScript:**
@@ -186,6 +244,14 @@ console.log(counter);  // Correct value
 counter = 0
 counter = context.step(lambda _: counter + 1, name='increment')
 print(counter)  # Correct value
+```
+
+**Java:**
+
+```java
+int counter = 0;
+counter = ctx.step("increment", Integer.class, s -> counter + 1);
+System.out.println(counter);  // Correct value
 ```
 
 ## Rule 4: Side Effects Outside Steps Repeat
@@ -214,6 +280,16 @@ update_database(data)                # Updates multiple times!
 context.step(lambda _: process(), name='process')
 ```
 
+**Java:**
+
+```java
+System.out.println("Starting process");  // Prints multiple times!
+sendEmail(user.getEmail());              // Sends multiple emails!
+updateDatabase(data);                    // Updates multiple times!
+
+ctx.step("process", Result.class, s -> process());
+```
+
 ### ✅ CORRECT - Side Effects In Steps
 
 **TypeScript:**
@@ -235,6 +311,15 @@ context.step(update_database(data))
 context.step(process())
 ```
 
+**Java:**
+
+```java
+ctx.getLogger().info("Starting process");  // Deduplicated automatically
+ctx.step("send-email", Void.class, s -> { sendEmail(user.getEmail()); return null; });
+ctx.step("update-db", Void.class, s -> { updateDatabase(data); return null; });
+ctx.step("process", Result.class, s -> process());
+```
+
 ### Exception: context.logger
 
 `context.logger` is replay-aware and safe to use anywhere. It automatically deduplicates logs across replays.
@@ -253,6 +338,16 @@ const apiKey = await context.step('get-key', async () => process.env.API_KEY);
 await context.step('call-api', async () => callAPI(apiKey));
 ```
 
+```java
+// ❌ WRONG if env vars can change
+var apiKey = System.getenv("API_KEY");
+ctx.step("call-api", Result.class, s -> callAPI(apiKey));
+
+// ✅ CORRECT
+var key = ctx.step("get-key", String.class, s -> System.getenv("API_KEY"));
+ctx.step("call-api", Result.class, s -> callAPI(key));
+```
+
 ### Pitfall 2: Array/Object Mutations
 
 ```typescript
@@ -265,6 +360,22 @@ await context.step('add-item', async () => {
 // ✅ CORRECT
 let items = [];
 items = await context.step('add-item', async () => [...items, newItem]);
+```
+
+```java
+// ❌ WRONG
+final var items = new ArrayList<Item>();
+ctx.step("add-item", Void.class, s -> {
+    items.add(newItem);  // Lost on replay
+    return null;
+});
+
+// ✅ CORRECT
+var items = ctx.step("add-item", new TypeToken<List<Item>>() {}, s -> {
+    var updated = new ArrayList<>(items);
+    updated.add(newItem);
+    return updated;
+});
 ```
 
 ### Pitfall 3: Conditional Logic with Non-Deterministic Values
@@ -283,6 +394,23 @@ if (shouldTakePathA) {
   await context.step('path-a', async () => ...);
 } else {
   await context.step('path-b', async () => ...);
+}
+```
+
+```java
+// ❌ WRONG
+if (Math.random() > 0.5) {  // Different on each replay!
+    ctx.step("path-a", Result.class, s -> ...);
+} else {
+    ctx.step("path-b", Result.class, s -> ...);
+}
+
+// ✅ CORRECT
+var shouldTakePathA = ctx.step("decide", Boolean.class, s -> Math.random() > 0.5);
+if (shouldTakePathA) {
+    ctx.step("path-a", Result.class, s -> ...);
+} else {
+    ctx.step("path-b", Result.class, s -> ...);
 }
 ```
 
@@ -307,4 +435,20 @@ const execution = await runner.run({ payload: { test: true } });
 // Verify operations executed correctly
 const step1 = runner.getOperation('step-name');
 expect(step1.getStatus()).toBe(OperationStatus.SUCCEEDED);
+```
+
+```java
+import software.amazon.lambda.durable.testing.LocalDurableTestRunner;
+import software.amazon.lambda.durable.model.ExecutionStatus;
+import software.amazon.awssdk.services.lambda.model.OperationStatus;
+
+var runner = LocalDurableTestRunner.create(MyInput.class, new MyHandler());
+// runUntilComplete simulates the Lambda re-invocation (replay) loop
+var result = runner.runUntilComplete(new MyInput(true));
+
+assertEquals(ExecutionStatus.SUCCEEDED, result.getStatus());
+
+// Operation-level status uses OperationStatus
+var step1 = result.getOperation("step-name");
+assertEquals(OperationStatus.SUCCEEDED, step1.getStatus());
 ```

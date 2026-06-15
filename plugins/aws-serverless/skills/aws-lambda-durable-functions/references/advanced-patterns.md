@@ -96,6 +96,48 @@ def handler(event: dict, context: DurableContext) -> str:
         context.logger.debug('Tool result added', extra={'tool': tool['name']})
 ```
 
+**Java:**
+
+```java
+public class AgentHandler extends DurableHandler<AgentRequest, String> {
+    @Override
+    public String handleRequest(AgentRequest event, DurableContext ctx) {
+        ctx.getLogger().info("Starting AI agent with prompt: {}", event.getPrompt());
+        var messages = new ArrayList<>(List.of(
+            Map.of("role", "user", "content", event.getPrompt())));
+
+        while (true) {
+            // Invoke AI model with reasoning
+            var result = ctx.step("invoke-model", ModelResult.class, stepCtx -> {
+                stepCtx.getLogger().info("Invoking AI model. Message count: {}", messages.size());
+                return invokeAIModel(messages);
+            });
+
+            // Log AI's reasoning
+            if (result.getReasoning() != null) {
+                ctx.getLogger().debug("AI reasoning: {}", result.getReasoning());
+            }
+
+            // If no tool needed, return response
+            if (result.getTool() == null) {
+                ctx.getLogger().info("AI agent completed - no tool needed");
+                return result.getResponse();
+            }
+
+            // Execute tool with dynamic step naming
+            var toolResult = ctx.step("execute-tool-" + result.getTool().getName(), String.class,
+                stepCtx -> {
+                    stepCtx.getLogger().info("Executing tool: {}", result.getTool().getName());
+                    return executeTool(result.getTool(), result.getResponse());
+                });
+
+            messages.add(Map.of("role", "assistant", "content", toolResult));
+            ctx.getLogger().debug("Tool result added. Tool: {}", result.getTool().getName());
+        }
+    }
+}
+```
+
 ## Step Semantics Deep Dive
 
 ### AtMostOncePerRetry vs AtLeastOncePerRetry
@@ -130,6 +172,30 @@ await context.step(
 );
 ```
 
+**Java:**
+
+```java
+import software.amazon.lambda.durable.config.StepConfig;
+import software.amazon.lambda.durable.config.StepSemantics;
+
+// AT_MOST_ONCE_PER_RETRY - the START checkpoint is awaited before user code runs.
+// If interrupted, the step is not silently re-run within the same attempt.
+// Use semanticsPerRetry(...) so interrupted steps still follow the retry strategy.
+ctx.step("update-database", UpdateResult.class,
+    stepCtx -> updateUserRecord(userId, data),
+    StepConfig.builder()
+        .semanticsPerRetry(StepSemantics.AT_MOST_ONCE_PER_RETRY)
+        .build());
+
+// AT_LEAST_ONCE_PER_RETRY (default) - may execute multiple times per retry attempt.
+// Use when idempotency is handled externally.
+ctx.step("send-notification", Void.class,
+    stepCtx -> { sendEmail(email, message); return null; },
+    StepConfig.builder()
+        .semanticsPerRetry(StepSemantics.AT_LEAST_ONCE_PER_RETRY)
+        .build());
+```
+
 **When to use each:**
 
 | Semantic                | Use When                      | Example Operations                                |
@@ -158,6 +224,23 @@ const results = await context.map(
     }
   }
 );
+
+// Execution stops when ANY of these conditions is met:
+// 1. 8 successful items (minSuccessful reached)
+// 2. 2 failures occur (toleratedFailureCount reached)
+// 3. 20% of items fail (toleratedFailurePercentage reached)
+```
+
+**Java:**
+
+```java
+// CompletionConfig is a record; use the canonical constructor to combine constraints.
+// Percentage is a 0.0-1.0 fraction.
+var results = ctx.map("process-items", items, Result.class,
+    (item, index, childCtx) -> childCtx.step("p-" + index, Result.class, s -> process(item)),
+    MapConfig.builder()
+        .completionConfig(new CompletionConfig(8, 2, 0.20))
+        .build());
 
 // Execution stops when ANY of these conditions is met:
 // 1. 8 successful items (minSuccessful reached)
@@ -199,6 +282,31 @@ const results = await context.map(
 // 1 item not processed, but completion policy satisfied
 ```
 
+**Java:**
+
+```java
+var items = IntStream.range(0, 10).boxed().toList();
+
+var results = ctx.map("process", items, Result.class,
+    (item, index, childCtx) -> childCtx.step("p-" + index, Result.class, s -> process(item)),
+    MapConfig.builder()
+        .maxConcurrency(3)
+        .completionConfig(new CompletionConfig(7, 3, null))
+        .build());
+
+// Scenario 1: 7 successes, 0 failures
+// ✅ Stops after 7th success (minSuccessful reached)
+// Remaining 3 items are not processed
+
+// Scenario 2: 5 successes, 3 failures
+// ❌ Stops after 3rd failure (toleratedFailureCount reached)
+// Remaining 2 items are not processed; results.allSucceeded() is false
+
+// Scenario 3: 7 successes, 2 failures
+// ✅ Stops after 7th success (minSuccessful reached)
+// 1 item not processed, but completion policy satisfied
+```
+
 ### Early Termination Pattern
 
 Use completion policies for early termination when searching:
@@ -224,6 +332,25 @@ const results = await context.map(
 if (results.successCount > 0) {
   const match = results.getSucceeded()[0];
   context.logger.info('Found match', { match });
+}
+```
+
+**Java:**
+
+```java
+// Stop after finding the first match
+var results = ctx.map("find-match", candidates, Match.class,
+    (candidate, index, childCtx) -> childCtx.step("check-" + index, Match.class,
+        s -> checkMatch(candidate)),
+    MapConfig.builder()
+        .completionConfig(CompletionConfig.minSuccessful(1))  // Stop after first success
+        .build());
+
+// Only one item processed (assuming the first succeeds)
+var matches = results.succeeded();
+if (!matches.isEmpty()) {
+    var match = matches.get(0);
+    ctx.getLogger().info("Found match: {}", match);
 }
 ```
 
@@ -267,6 +394,44 @@ const result = await context.step(
 console.log(result.createdAt instanceof Date); // true
 ```
 
+**Java:**
+
+```java
+import software.amazon.lambda.durable.serde.SerDes;
+import software.amazon.lambda.durable.TypeToken;
+import software.amazon.lambda.durable.config.StepConfig;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
+// Jackson handles java.time types (Instant, etc.) via JavaTimeModule.
+// SerDes is non-generic: serialize(Object) and deserialize(String, TypeToken<T>).
+public class DateAwareSerDes implements SerDes {
+    private final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
+
+    @Override
+    public String serialize(Object value) {
+        try {
+            return mapper.writeValueAsString(value);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public <T> T deserialize(String data, TypeToken<T> typeToken) {
+        try {
+            return mapper.readValue(data, mapper.constructType(typeToken.getType()));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+}
+
+var result = ctx.step("create-user", User.class,
+    stepCtx -> new User("Alice", "alice@example.com", Instant.now(), Instant.now()),
+    StepConfig.builder().serDes(new DateAwareSerDes()).build());
+```
+
 ### Complex Object Graphs
 
 **TypeScript:**
@@ -307,6 +472,22 @@ const result = await context.step(
   },
   { serdes: orderSerdes }
 );
+```
+
+**Java:**
+
+```java
+// Nested object graphs serialize automatically with the default Jackson-based
+// SerDes - records (or POJOs) compose without per-class registration.
+public record Customer(String id, String name) {}
+public record OrderItem(String sku, int quantity) {}
+public record Order(String id, List<OrderItem> items, Customer customer) {}
+
+var result = ctx.step("process-order", Order.class, stepCtx -> {
+    var customer = new Customer("CUST-123", "Alice");
+    var items = List.of(new OrderItem("SKU-001", 2), new OrderItem("SKU-002", 1));
+    return new Order("ORD-456", items, customer);
+});
 ```
 
 ## Nested Workflows
@@ -364,6 +545,44 @@ export const worker = withDurableExecution(
     return results.getResults();
   }
 );
+```
+
+**Java:**
+
+```java
+import software.amazon.lambda.durable.DurableFuture;
+
+// Parent orchestrator
+public class OrchestratorHandler extends DurableHandler<BatchEvent, List<BatchResult>> {
+    @Override
+    public List<BatchResult> handleRequest(BatchEvent event, DurableContext ctx) {
+        var childArn = System.getenv("CHILD_FUNCTION_ARN");
+
+        // Invoke child workflows concurrently with invokeAsync (durable operations
+        // cannot be nested inside a step).
+        var f1 = ctx.invokeAsync("batch-1", childArn, event.getBatches().get(0), BatchResult.class);
+        var f2 = ctx.invokeAsync("batch-2", childArn, event.getBatches().get(1), BatchResult.class);
+
+        // Wait for all child invocations to complete
+        DurableFuture.allOf(f1, f2);
+
+        return List.of(f1.get(), f2.get());
+    }
+}
+
+// Child worker
+public class WorkerHandler extends DurableHandler<BatchInput, List<Result>> {
+    @Override
+    public List<Result> handleRequest(BatchInput event, DurableContext ctx) {
+        var items = event.getBatch().getItems();
+
+        var results = ctx.map("process-items", items, Result.class,
+            (item, index, childCtx) -> childCtx.step("process-" + index, Result.class,
+                stepCtx -> processItem(item)));
+
+        return results.results();
+    }
+}
 ```
 
 ## Best Practices Summary

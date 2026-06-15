@@ -8,7 +8,7 @@ Advanced error handling patterns for durable functions, including timeout handli
 
 **Implementation approach:**
 
-1. Use `waitForCallback` (TypeScript) or `wait_for_callback` (Python) with a timeout configuration set in the config argument
+1. Use `waitForCallback` (TypeScript), `wait_for_callback` (Python), or `ctx.waitForCallback` (Java) with a timeout configuration set in the config argument
 2. Wrap in try-catch to handle timeout errors
 3. Check if the error is a timeout
 4. Implement fallback logic in a step (e.g., escalate to manager, use default value, retry with different parameters)
@@ -33,6 +33,30 @@ Advanced error handling patterns for durable functions, including timeout handli
 
 **Important limitation:**
 In TypeScript, native setTimeout (and patterns like Promise.race using it) will fail during execution replays. To create a reliable timeout that persists across execution (expands over multi invocations), always use the timeout parameter provided by waitForCallback or waitForCondition
+
+**Java equivalent — `DurableFuture.anyOf`:**
+Java has no `Promise.race`, but `DurableFuture.anyOf(...)` waits for the first of several async durable operations to complete, returning that operation's result. For reliable cross-invocation timeouts that persist across replays, always use the timeout configuration in `CallbackConfig` (via `WaitForCallbackConfig`) or `WaitForConditionConfig` rather than any in-process timer.
+
+```java
+import software.amazon.lambda.durable.DurableFuture;
+
+// Race multiple async operations - first to complete wins
+var primary = ctx.stepAsync("primary-api", Result.class, s -> callPrimaryAPI());
+var backup = ctx.stepAsync("backup-api", Result.class, s -> callBackupAPI());
+
+// Block until the first one completes
+DurableFuture.anyOf(primary, backup);
+
+// Read whichever finished first
+Result result;
+try {
+    result = primary.get();
+    ctx.getLogger().info("Primary API completed first");
+} catch (Exception e) {
+    result = backup.get();
+    ctx.getLogger().info("Backup API completed first");
+}
+```
 
 ## Conditional Retry Based on Error Type
 
@@ -113,3 +137,36 @@ In TypeScript, native setTimeout (and patterns like Promise.race using it) will 
 - Callback timeouts - external system didn't respond in time
 - External system delays - service is slow or unresponsive
 - Long-running operations - operation exceeded expected duration
+
+## Java Exception Types
+
+The Java SDK surfaces typed exceptions you can catch to drive fallback logic:
+
+| Exception                         | Category          | Use case                                                |
+| --------------------------------- | ----------------- | ------------------------------------------------------- |
+| `CallbackTimeoutException`        | Timeout           | Callback didn't complete within its timeout             |
+| `CallbackFailedException`         | Callback failure  | Callback failed or was explicitly rejected              |
+| `WaitForConditionFailedException` | Condition failure | Condition check failed or max polling attempts exceeded |
+| `StepFailedException`             | Permanent         | Step failed after exhausting retries (business error)   |
+| `StepInterruptedException`        | Transient         | Step interrupted before completion (can retry)          |
+| `DurableExecutionException`       | Base              | Base class for all SDK exceptions                       |
+
+```java
+import software.amazon.lambda.durable.config.WaitForCallbackConfig;
+import software.amazon.lambda.durable.config.CallbackConfig;
+import software.amazon.lambda.durable.exception.CallbackTimeoutException;
+import software.amazon.lambda.durable.exception.CallbackFailedException;
+
+try {
+    var decision = ctx.waitForCallback("wait-approval", Decision.class,
+        (callbackId, s) -> sendApproval(callbackId),
+        WaitForCallbackConfig.builder()
+            .callbackConfig(CallbackConfig.builder().timeout(Duration.ofHours(24)).build())
+            .build());
+} catch (CallbackTimeoutException e) {
+    // Fallback in a step so it is checkpointed
+    ctx.step("escalate", Void.class, s -> { escalateToManager(); return null; });
+} catch (CallbackFailedException e) {
+    ctx.getLogger().error("Callback failed: {}", e.getMessage());
+}
+```
