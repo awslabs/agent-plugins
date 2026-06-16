@@ -88,7 +88,50 @@ If the transformation target is in this list, use the pre-built image path.
 
 ### Pre-built Image Path (No Docker Required)
 
-Clone and run setup — Docker is NOT required:
+Clone the repo, collect and validate network config, then HAND the deploy to the user.
+
+**Network contract:** AWS Transform creates Batch, Lambdas, S3, KMS, IAM, and
+security groups via CloudFormation. It does NOT create VPCs, subnets, NAT gateways,
+or internet gateways — you provide those. If you don't specify a VPC, deployment
+will fail rather than auto-provision.
+
+**Constraints:**
+
+- You MUST clone/update the repo as before (unchanged commands).
+- You MUST collect `existingVpcId` / `existingSubnetIds` / `existingSecurityGroupId`
+  from the user and write them into `cdk.json` `context` BEFORE deploy. This is
+  MANDATORY for ALL sources (not just internal/self-hosted). There is no default VPC
+  fallback — `setup.sh` will fail if these are empty.
+- You MUST first discover available VPCs by running:
+
+  ```bash
+  aws ec2 describe-vpcs --query 'Vpcs[*].[VpcId,IsDefault,Tags[?Key==`Name`].Value|[0]]' --output table
+  ```
+
+  Show the results, let the user pick, then show subnets for the chosen VPC:
+
+  ```bash
+  aws ec2 describe-subnets --filters "Name=vpc-id,Values=<vpcId>" \
+    --query 'Subnets[*].[SubnetId,AvailabilityZone,MapPublicIpOnLaunch,Tags[?Key==`Name`].Value|[0]]' --output table
+  ```
+
+  Refuse to proceed without an explicit selection. You MUST NOT recommend or guide
+  the user toward any VPC (including the default). Present all VPCs neutrally. You
+  MUST NOT choose on the user's behalf even if one option appears obvious — always
+  ask and wait for explicit confirmation before writing to cdk.json.
+- You MUST NOT run `./setup.sh` yourself, because it creates IAM roles and requires
+  admin / role-creation permissions. Instead You MUST present it for the user to run:
+
+  ```
+  ! cd "$HOME/.aws/atx/custom/remote-infra" && AWS_PROFILE=<your-admin-profile> ./setup.sh
+  ```
+
+- You MUST tell the user that deploy requires an admin identity and that ReadOnly /
+  runtime credentials suffice afterward.
+- You MUST NEVER run `aws ec2 create-default-vpc` or create any VPC, subnet, NAT
+  gateway, internet gateway, or route on the user's behalf. If the account has no
+  suitable VPC or a precondition is missing, surface it to the user and refuse to
+  proceed.
 
 ```bash
 ATX_INFRA_DIR="$HOME/.aws/atx/custom/remote-infra"
@@ -105,10 +148,10 @@ If `git pull` reports a merge conflict, resolve it by keeping both the upstream
 changes and the user's customizations in the `CUSTOM LANGUAGES AND TOOLS` section
 of the Dockerfile, then commit the merge.
 
-Ensure `prebuiltImageUri` is set in `cdk.json` (it should be set to "public.ecr.aws/d9h8z6l7/aws-transform:latest" by default). Then deploy:
+Ensure `prebuiltImageUri` is set in `cdk.json` (it should be set to "public.ecr.aws/d9h8z6l7/aws-transform:latest" by default). Then present the deploy command for the user to run:
 
-```bash
-cd "$ATX_INFRA_DIR" && ./setup.sh
+```
+! cd "$HOME/.aws/atx/custom/remote-infra" && AWS_PROFILE=<your-admin-profile> ./setup.sh
 ```
 
 The setup script skips the Docker prerequisite check and container build when
@@ -354,8 +397,8 @@ aws secretsmanager create-secret --name "atx/ssh-key" --secret-string "$(cat <pa
 Setup (requires user consent):
 
 1. Explain which secrets will be created in their AWS account
-2. Get explicit confirmation and credentials from the user
-3. Create the secret(s)
+2. Get explicit confirmation from the user, then give them the `create-secret` command to run in their own terminal — do not ask them to paste the credential value into this chat
+3. Wait for the user to confirm they ran the command, then verify the secret exists with `aws secretsmanager describe-secret`
 4. Container entrypoint auto-fetches at startup — no image rebuild needed
 5. User can delete anytime: `aws secretsmanager delete-secret --secret-id "atx/github-token" --region "$REGION" --force-delete-without-recovery`
 

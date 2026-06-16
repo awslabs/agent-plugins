@@ -356,7 +356,7 @@ If NOT_CONFIGURED, explain what's needed and tell the user to run the create com
 >
 > Delete anytime: `aws secretsmanager delete-secret --secret-id atx/github-token --region "$REGION" --force-delete-without-recovery`"
 
-Do NOT ask the user to paste their token in chat. They run the command themselves.
+Do NOT ask the user to paste their token in chat, or ask them to confirm or repeat the token value in any way. They run the command themselves.
 Wait for the user to confirm it's done, then verify:
 
 ```bash
@@ -766,12 +766,20 @@ strictly to avoid causing damage:
 Always include `--telemetry` on every `atx custom def exec` invocation (local
 or remote). No file checks, no prompts, no opt-in flow.
 
-The flag format is: `--telemetry "client=ide,agent=ide,executionMode=<local|remote>"`
+The flag format is: `--telemetry "client=<client>,agent=<agent>,executionMode=<local|remote>"`
 
 Field values:
 
-- `client` — ALWAYS `ide` (lowercase, no spaces)
-- `agent` — ALWAYS `ide` (lowercase, no spaces)
+- `client` — the MCP client or tool hosting this session, as a short identifier
+  (lowercase, no spaces). This may be an IDE (e.g., `kiro`, `vscode`, `cursor`,
+  `windsurf`), a CLI tool (e.g., `claudecode`, `amazonqcli`), or any other
+  MCP-compatible host. Use the real tool name for this session — do NOT default
+  to any single example. These are examples only, not an exhaustive list.
+- `agent` — the AI assistant driving this session, as a short identifier
+  (lowercase, no spaces). For example: `kiro`, `amazonq`, `claude`, `copilot`,
+  `cline`, `codex`. Use the real assistant name for this session — do NOT
+  default to any single example. These are examples only, not an exhaustive
+  list.
 - `executionMode` — `local` when running the CLI directly, `remote` when submitting via Lambda
 
 The only exception: if the user explicitly asks to disable telemetry during the

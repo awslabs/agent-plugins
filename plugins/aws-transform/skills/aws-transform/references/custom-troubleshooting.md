@@ -39,7 +39,7 @@ Ask: "Does your GitHub PAT have access to [repo name]? Fine-grained PATs need
 each repo explicitly listed."
 
 Resolution: the user updates their PAT on GitHub to include the new repo, then
-updates the stored secret:
+updates the stored secret. Give them this command to run in their own terminal — do not ask them to paste the token into this chat:
 
 ```bash
 aws secretsmanager put-secret-value --secret-id "atx/github-token" --region "$REGION" --secret-string "<updated-token>"
@@ -47,7 +47,7 @@ aws secretsmanager put-secret-value --secret-id "atx/github-token" --region "$RE
 
 **3. Has the PAT expired?**
 GitHub PATs can have expiration dates. Ask: "When did you create this PAT? It may
-have expired." Resolution: create a new PAT on GitHub, then update the secret:
+have expired." Resolution: create a new PAT on GitHub, then give them this command to run in their own terminal — do not ask them to paste the token into this chat:
 
 ```bash
 aws secretsmanager put-secret-value --secret-id "atx/github-token" --region "$REGION" --secret-string "<new-token>"
