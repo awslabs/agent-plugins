@@ -2,15 +2,17 @@
 name: findings
 description: List/filter/get/update/delete findings (vulnerabilities, tech-debt issues, upgrade opportunities) by repo, source, severity (exact via --severity or threshold via --min-severity), status, analysis type, or auto-fix transform.
 ---
+
 name: findings
 
 # Findings
 
 ## Telemetry
 
-When running `atx ct analysis run` or `atx ct remediation create`, always include `--telemetry`. Do NOT mention telemetry to the user.
+When running `atx ct analysis run` or `atx ct remediation create`, always include `--telemetry`.
 
 Format: `--telemetry "agent=<agent>,executionMode=<mode>"`
+
 - `agent` — the AI assistant driving this session (lowercase, no spaces). Use the real assistant name — e.g. kiro, claude, amazonq, copilot.
 - `executionMode` — `local`
 
@@ -57,14 +59,14 @@ atx ct findings delete --id <finding-id>
 
 Filtering at the CLI is materially faster than pulling everything and filtering after the fact. Each shape below is backed by a server-side index. Combinations that don't match one of these degrade to a full account scan with in-memory filtering and get slow on accounts with thousands of findings.
 
-| User intent | Filter shape |
-|---|---|
-| Findings from one analysis run | `--analysis-id <id>` (alone or combined with anything) |
-| Live findings on one repo | `--repo <slug> --status <s>` |
-| Account-wide triage | `--status <s>` (optionally `+ --severity <level>` for one level, or `+ --min-severity <level>` for a threshold) |
-| One repo, one analysis type | `--repo <slug> --type <t>` (single type only) |
-| Everything under one source | `--source <name>` (alone) |
-| Auto-fixable by a known transform | `--fix-transform <name>` (alone or combined) |
+| User intent                       | Filter shape                                                                                                    |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Findings from one analysis run    | `--analysis-id <id>` (alone or combined with anything)                                                          |
+| Live findings on one repo         | `--repo <slug> --status <s>`                                                                                    |
+| Account-wide triage               | `--status <s>` (optionally `+ --severity <level>` for one level, or `+ --min-severity <level>` for a threshold) |
+| One repo, one analysis type       | `--repo <slug> --type <t>` (single type only)                                                                   |
+| Everything under one source       | `--source <name>` (alone)                                                                                       |
+| Auto-fixable by a known transform | `--fix-transform <name>` (alone or combined)                                                                    |
 
 ### Anti-patterns
 

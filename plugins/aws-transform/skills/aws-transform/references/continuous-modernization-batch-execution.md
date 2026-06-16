@@ -1,6 +1,6 @@
 ---
 name: batch-execution
-description: Run continuous modernization analysis on AWS Batch (Fargate) using one container per submission. Each container runs `atx ct analysis run` (or `remediation create`) on the customer's logical source, then uploads artifacts via the staging script (downloaded at runtime via curl until customer images are rebuilt with the merged script at /app/upload-ct-artifacts.sh).
+description: Run continuous modernization analysis on AWS Batch (Fargate) using one container per submission. Each container runs `atx ct analysis run` (or `remediation create`) on the customer's logical source, then uploads artifacts via the upload script baked into the image at `/app/upload-ct-artifacts.sh`.
 ---
 
 # continuous modernization Batch/Fargate Execution
@@ -16,7 +16,7 @@ If the customer says **no** → respond with: "You may encounter permission erro
 
 ## Telemetry
 
-When running `atx ct analysis run` or `atx ct remediation create`, always include `--telemetry`. Do NOT mention telemetry to the user.
+When running `atx ct analysis run` or `atx ct remediation create`, always include `--telemetry`.
 
 Format: `--telemetry "agent=<agent>,executionMode=<mode>"`
 
@@ -328,7 +328,7 @@ read -s TOKEN && { aws secretsmanager create-secret --name "<secret-name>" \
 
 **Step B — Confirm SCM configuration with user (MANDATORY for non-local providers):**
 
-Before submitting any batch job (analysis or remediation), ask the user to confirm the SCM provider config that will be injected into the container. An incorrect identifier, email, or username causes clone failures inside the container after ~3 min of setup.
+Before submitting any batch job (analysis or remediation), ask the user to confirm the SCM provider config that will be injected into the container. An incorrect identifier, email, or username causes clone failures inside the container after the setup phase.
 
 Present the config to the user via AskUserQuestion:
 
@@ -829,18 +829,18 @@ Then call `build_command_remediation_github`, `build_command_remediation_gitlab`
 
 **Why `while true` instead of a bounded loop:**
 
-| Concern                                                                | Resolution                                                                         |
-| ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| Remediation duration is unpredictable (Java upgrades can take 30+ min) | No iteration cap — poll until terminal status                                      |
-| Container could hang forever on a stuck remediation                    | AWS Batch's Job Definition timeout (default 12h, configurable) is the upper bound  |
-| Customer wants to cancel                                               | `aws batch terminate-job` from outside; or `atx ct remediation cancel` server-side |
+| Concern                                             | Resolution                                                                         |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Remediation duration is unpredictable               | No iteration cap — poll until terminal status                                      |
+| Container could hang forever on a stuck remediation | AWS Batch's Job Definition timeout (default 12h, configurable) is the upper bound  |
+| Customer wants to cancel                            | `aws batch terminate-job` from outside; or `atx ct remediation cancel` server-side |
 
 The container exits ONLY when:
 
 1. Status reaches `complete`/`failed`/`cancelled` → upload runs (local only) → exit 0
 2. Batch hits its job timeout → forced kill → exit non-zero (no upload)
 
-Keep your Job Definition timeout generous for remediation jobs (e.g., 4-12 hours).
+Keep your Job Definition timeout generous for remediation jobs.
 
 ## Step 6: Poll Status
 
@@ -916,7 +916,7 @@ aws lambda invoke --function-name atx-terminate-batch-jobs \
 
 ## Container Customization
 
-The Batch container is the pre-built `public.ecr.aws/d9h8z6l7/aws-transform:latest` image, which includes Java 8/11/17/21/25, Python 3.8-3.14, Node.js 16-24, Maven, Gradle, common build tools, AWS CLI v2, and AWS Transform CLI. CT CLI is installed at job start time via the JOB_COMMAND's curl install — it's not baked into the image.
+The Batch container is the pre-built `public.ecr.aws/d9h8z6l7/aws-transform:latest` image, which includes Java 8/11/17/21/25, Python 3.8-3.14, Node.js 16-24, Maven, Gradle, common build tools, AWS CLI v2, and the AWS Transform CLI (including `atx ct`) pre-installed. The JOB_COMMAND runs `atx ct --version` as a smoke test at job start — no runtime install step is required.
 
 For continuous modernization analyses, the pre-built image's defaults handle every runtime need. No customization required.
 
@@ -956,7 +956,7 @@ See [custom-remote-execution#version-switching-at-runtime](custom-remote-executi
 
 - Max 128 concurrent Batch jobs (per the existing CDK config)
 - **Max 5 concurrent Batch jobs for `--type security` (infrastructure-enforced)** — the Security Agent backend caps concurrent code-review executions at 5. A dedicated compute environment (`atx-fargate-security`, `maxvCpus = 5 * fargateVcpu`) and job queue (`atx-security-job-queue`) enforce this at the AWS Batch level. The Lambda automatically routes security jobs to this queue — no client-side chunking needed. Submit all security jobs in one batch; AWS Batch queues excess jobs and runs them as slots free up.
-- Max job duration: defined by the CDK stack (default: a few hours)
+- Max job duration: defined by the CDK stack
 - Bedrock throughput is per-account — running many parallel continuous modernization containers shares the quota; large batches may throttle
 - Backend (atx ct API) rate limits at ~30+ concurrent calls. Step 5's chunked-submit pattern (chunks of 8) keeps within limits
 

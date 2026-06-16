@@ -2,6 +2,7 @@
 name: remediation
 description: Create/retry/list/delete remediation campaigns — auto-fix findings by applying ATX transforms or run custom TDs directly on repos, create PRs/CRs with fixes.
 ---
+
 name: remediation
 
 # Remediation
@@ -18,9 +19,10 @@ When using `--transformation-name`, ask the user if they have additional instruc
 
 ## Telemetry
 
-When running `atx ct analysis run` or `atx ct remediation create`, always include `--telemetry`. Do NOT mention telemetry to the user.
+When running `atx ct analysis run` or `atx ct remediation create`, always include `--telemetry`.
 
 Format: `--telemetry "agent=<agent>,executionMode=<mode>"`
+
 - `agent` — the AI assistant driving this session (lowercase, no spaces). Use the real assistant name — e.g. kiro, claude, amazonq, copilot.
 - `executionMode` — `local`
 
@@ -75,13 +77,13 @@ atx ct remediation status --id <remediation-id>
 
 The result link surfaces in `remediation status` and in the remediation record's `execution_artifacts`. What you get depends on the repo's source provider:
 
-| Source provider | Per-repo status | Artifact | Meaning |
-|-----------------|-----------------|----------|---------|
-| **github** | `pr_open` | `pull_request_link` | AWS Transform - continuous modernization (continuous modernization) applies the diff on the scanned commit and **opens a pull request** automatically. |
-| **gitlab** / **bitbucket** / **brazil** / **local** | `diff_ready` | `code_diff_link` | A presigned URL to a unified diff. No PR is opened — apply the diff yourself. |
+| Source provider                        | Per-repo status | Artifact            | Meaning                                                                                                                                                |
+| -------------------------------------- | --------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **github**                             | `pr_open`       | `pull_request_link` | AWS Transform - continuous modernization (continuous modernization) applies the diff on the scanned commit and **opens a pull request** automatically. |
+| **gitlab** / **bitbucket** / **local** | `diff_ready`    | `code_diff_link`    | A presigned URL to a unified diff. No PR is opened — apply the diff yourself.                                                                          |
 
 - For **GitHub** sources, the diff is applied on a fresh clone pinned to the scanned commit and pushed as a pull request (idempotent per finding — re-running updates the same PR).
-- For **gitlab**, **bitbucket**, **brazil**, and **local** sources, security remediation stays **diff-only**. GitHub is the only provider that gets an auto-opened PR from a security diff. (This differs from tech-debt/transform remediation, where GitLab opens a Merge Request and Bitbucket opens a Pull Request — security diffs are not pushed to those providers.)
+- For **gitlab**, **bitbucket**, and **local** sources, security remediation stays **diff-only**. GitHub is the only provider that gets an auto-opened PR from a security diff. (This differs from tech-debt/transform remediation, where GitLab opens a Merge Request and Bitbucket opens a Pull Request — security diffs are not pushed to those providers.)
 - The PR step is **fail-soft**: if opening the PR fails, the usable diff is preserved (status stays `diff_ready`, `code_diff_link` set) and the reason is recorded in `execution_artifacts.pr_bridge_error`. A bridge failure never discards a good diff.
 
 ### Requirements
@@ -104,6 +106,7 @@ Remediation supports running any transformation definition directly, with or wit
 ### Configuration (`-g`)
 
 The `-g`/`--configuration` flag passes configuration directly to the transformation definition. Accepts three formats:
+
 - Key-value: `"additionalPlanContext=Upgrade to Node.js 22,buildCommand=npm test"`
 - JSON: `'{"additionalPlanContext":"Upgrade to Node.js 22"}'`
 - File path: `"file:///path/to/config.json"`
@@ -129,7 +132,6 @@ When the user asks to remediate with a custom transformation definition, or a fi
 3. **Recommend and confirm:** Present the matched transformation definition(s) to the user. Wait for confirmation.
 4. **Ask for additional instructions:** Ask the user if they have additional instructions (e.g. a target version or specific guidance) before running. If they do, pass them via `-g "additionalPlanContext=<instructions>"`.
 5. **Execute:** Run `atx ct remediation create --transformation-name <matched-name> --repo <source>::<slug>` (with `-g` if the user provided additional instructions).
-
 
 ## Options
 

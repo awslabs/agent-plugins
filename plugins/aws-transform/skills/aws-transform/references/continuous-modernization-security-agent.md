@@ -52,12 +52,12 @@ atx ct setup security-agent
 
 ### What Admin Setup Creates
 
-| Resource | Name Pattern | Purpose |
-|----------|-------------|---------|
-| CloudFormation stack | `kct-security-agent-<suffix>` | Manages all resources atomically |
-| IAM role | `security-agent-kct-agent-space-<suffix>` | Role the security agent service assumes |
-| IAM managed policy | `kct-security-agent-<suffix>` | Permissions attached to the role |
-| S3 bucket | `kct-security-agent-<suffix>` | Stores source code zips for scanning |
+| Resource             | Name Pattern                              | Purpose                                 |
+| -------------------- | ----------------------------------------- | --------------------------------------- |
+| CloudFormation stack | `kct-security-agent-<suffix>`             | Manages all resources atomically        |
+| IAM role             | `security-agent-kct-agent-space-<suffix>` | Role the security agent service assumes |
+| IAM managed policy   | `kct-security-agent-<suffix>`             | Permissions attached to the role        |
+| S3 bucket            | `kct-security-agent-<suffix>`             | Stores source code zips for scanning    |
 
 ### Admin Setup for EC2/Batch Job Roles
 
@@ -260,19 +260,19 @@ The executor IAM policy required for runtime is documented in `AWSTransformSecur
 
 ## Error Handling
 
-| Error | Cause | Resolution |
-|-------|-------|------------|
-| `Access denied calling Security Agent API` | Missing `AtxCtSecurityAgentAPI` policy on compute role | Admin must add the policy (see Admin Setup) |
-| `s3:PutObject` access denied | Missing `AtxCtSecurityAgentS3Access` policy | Admin must add S3 policy |
-| `iam:PassRole` denied | Missing `AtxCtSecurityAgentPassRole` policy | Admin must add PassRole policy |
-| Config file not found | Admin setup never ran | Admin must run `atx ct setup security-agent` |
-| `not_configured` status | Setup failed or never completed | Admin must re-run setup |
+| Error                                      | Cause                                                  | Resolution                                   |
+| ------------------------------------------ | ------------------------------------------------------ | -------------------------------------------- |
+| `Access denied calling Security Agent API` | Missing `AtxCtSecurityAgentAPI` policy on compute role | Admin must add the policy (see Admin Setup)  |
+| `s3:PutObject` access denied               | Missing `AtxCtSecurityAgentS3Access` policy            | Admin must add S3 policy                     |
+| `iam:PassRole` denied                      | Missing `AtxCtSecurityAgentPassRole` policy            | Admin must add PassRole policy               |
+| Config file not found                      | Admin setup never ran                                  | Admin must run `atx ct setup security-agent` |
+| `not_configured` status                    | Setup failed or never completed                        | Admin must re-run setup                      |
 
 ---
 
 ## IAM Policy Reference
 
-| Policy | File | Purpose | Who Uses It |
-|--------|------|---------|-------------|
-| Full admin + executor | `AWSTransformSecurityAnalysisAccess.json` | All permissions including CFN, CreateRole, CreateBucket | Administrator (setup) |
-| Executor only | `AWSTransformSecurityAgentExecutorAccess.json` | Runtime permissions only: SecurityAgent API, S3 read/upload, PassRole | Compute role (EC2/Batch job role) |
+| Policy                | File                                           | Purpose                                                               | Who Uses It                       |
+| --------------------- | ---------------------------------------------- | --------------------------------------------------------------------- | --------------------------------- |
+| Full admin + executor | `AWSTransformSecurityAnalysisAccess.json`      | All permissions including CFN, CreateRole, CreateBucket               | Administrator (setup)             |
+| Executor only         | `AWSTransformSecurityAgentExecutorAccess.json` | Runtime permissions only: SecurityAgent API, S3 read/upload, PassRole | Compute role (EC2/Batch job role) |

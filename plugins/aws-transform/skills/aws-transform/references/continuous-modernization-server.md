@@ -9,16 +9,16 @@ description: Start, stop, or restart the AWS Transform - continuous modernizatio
 
 AWS Transform - continuous modernization is available in these regions only:
 
-| Region | Code |
-|--------|------|
-| US East (N. Virginia) | `us-east-1` |
-| Europe (Frankfurt) | `eu-central-1` |
-| Asia Pacific (Mumbai) | `ap-south-1` |
+| Region                | Code             |
+| --------------------- | ---------------- |
+| US East (N. Virginia) | `us-east-1`      |
+| Europe (Frankfurt)    | `eu-central-1`   |
+| Asia Pacific (Mumbai) | `ap-south-1`     |
 | Asia Pacific (Sydney) | `ap-southeast-2` |
-| Asia Pacific (Tokyo) | `ap-northeast-1` |
-| Europe (London) | `eu-west-2` |
-| Asia Pacific (Seoul) | `ap-northeast-2` |
-| Canada (Central) | `ca-central-1` |
+| Asia Pacific (Tokyo)  | `ap-northeast-1` |
+| Europe (London)       | `eu-west-2`      |
+| Asia Pacific (Seoul)  | `ap-northeast-2` |
+| Canada (Central)      | `ca-central-1`   |
 
 ## Region Selection
 

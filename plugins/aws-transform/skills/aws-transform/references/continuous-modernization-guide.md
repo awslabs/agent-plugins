@@ -27,7 +27,7 @@ For the exact commands at each step, use the corresponding skill (`/source`, `/d
 
 ## Routing
 
-This guide handles continuous modernization onboarding only. For routing across Custom vs. continuous modernization (named transforms, prior findings, edge cases), see [routing](routing.md). Do not duplicate routing logic here.
+This guide handles continuous modernization onboarding only. For routing across Custom vs. continuous modernization (named transforms, prior findings, edge cases), see [continuous modernization routing](continuous-modernization.md). Do not duplicate routing logic here.
 
 ## On Start — Detect State (Prereq check /setup skill)
 

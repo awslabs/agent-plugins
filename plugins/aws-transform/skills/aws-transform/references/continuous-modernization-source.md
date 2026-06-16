@@ -58,6 +58,7 @@ read -s TOKEN && atx ct source add --name <name> --provider bitbucket --org <pro
 ```
 
 Add a local folder source (no token required):
+
 ```bash
 atx ct source add --name <name> --provider local --path <dir>
 ```
@@ -74,10 +75,10 @@ After adding a source, run `atx ct discovery scan --source <name>` to discover r
 
 ## Provider details
 
-- **github**: Scans a GitHub organization or user for repositories. Requires a PAT or GitHub App. During remediation, pushes a branch and creates a Pull Request automatically — this includes **security** remediation, where the Security Agent's diff is applied and opened as a PR (`pr_open`). GitHub is the only provider that gets an auto-opened PR from a security diff; gitlab/bitbucket/brazil/local stay diff-only.
+- **github**: Scans a GitHub organization or user for repositories. Requires a PAT or GitHub App. During remediation, pushes a branch and creates a Pull Request automatically — this includes **security** remediation, where the Security Agent's diff is applied and opened as a PR (`pr_open`). GitHub is the only provider that gets an auto-opened PR from a security diff; gitlab/bitbucket/local stay diff-only.
 - **gitlab**: Scans a GitLab group or user for projects. Requires a PAT with `api` scope. Supports self-hosted instances via `--url` (required for self-hosted; omit for gitlab.com). During remediation, pushes a branch and creates a Merge Request automatically. If `--org` is a user (not a group), falls back to listing the user's projects.
 - **bitbucket**: Scans a Bitbucket workspace (Cloud) or project (Data Center) for repositories. Cloud requires an API token with scopes (created at https://id.atlassian.com/manage-profile/security/api-tokens → "Create API token with scopes"). Required scopes: `read:repository:bitbucket`, `write:repository:bitbucket`, `read:pullrequest:bitbucket`, `write:pullrequest:bitbucket`. Also requires `--email` (Bitbucket account email, for API auth) and `--username` (Bitbucket username, for git clone/push). Data Center requires an HTTP Access Token and `--url`. During remediation, pushes a branch and creates a Pull Request automatically.
-- **local**: Scans a local directory for packages. The directory path is provided at `source add` time via `--path` and stored on the source. Subsequent `discovery scan --source <name>` calls reuse the stored path automatically; pass `--path <new-dir>` only to override and update the source's stored path. Supports analysis and remediation (remediation leaves changes on a new `atx/<transform>-<timestamp>` branch per run — previous branches are never overwritten, no remote push). **Important:** `--path` must point to a parent directory that *contains* git repos as subdirectories — not to a repo itself. The scanner looks for child directories with `.git` inside them. If `--path` points directly to a repo (e.g. `/home/user/my-app` which has `.git`), the scan returns 0 repos. Use the parent instead (e.g. `/home/user/repos` which contains `my-app/`, `my-service/`, etc.).
+- **local**: Scans a local directory for packages. The directory path is provided at `source add` time via `--path` and stored on the source. Subsequent `discovery scan --source <name>` calls reuse the stored path automatically; pass `--path <new-dir>` only to override and update the source's stored path. Supports analysis and remediation (remediation leaves changes on a new `atx/<transform>-<timestamp>` branch per run — previous branches are never overwritten, no remote push). **Important:** `--path` must point to a parent directory that _contains_ git repos as subdirectories — not to a repo itself. The scanner looks for child directories with `.git` inside them. If `--path` points directly to a repo (e.g. `/home/user/my-app` which has `.git`), the scan returns 0 repos. Use the parent instead (e.g. `/home/user/repos` which contains `my-app/`, `my-service/`, etc.).
 
 ## Repository Commands
 
@@ -117,6 +118,7 @@ Labels are user-defined identifiers for organizing and filtering groups of repos
 **Format:** Unicode letters, digits, `_./:-`. Max 63 chars per label, max 64 per repo. Colons are conventional for key:value grouping (e.g. `team:frontend`, `priority:high`).
 
 **Semantics:**
+
 - `repository list --labels`: AND-filter (only repos with ALL specified labels are returned).
 - `repository update` single repo: replace (new labels fully replace existing).
 - `repository update` bulk (multiple repos or `--source` only): set-union (new labels merge with existing). Clearing is not supported in bulk mode.

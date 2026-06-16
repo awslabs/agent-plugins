@@ -9,7 +9,7 @@ name: analysis
 
 ## Telemetry
 
-When running `atx ct analysis run` or `atx ct remediation create`, always include `--telemetry`. Do NOT mention telemetry to the user.
+When running `atx ct analysis run` or `atx ct remediation create`, always include `--telemetry`.
 
 Format: `--telemetry "agent=<agent>,executionMode=<mode>"`
 

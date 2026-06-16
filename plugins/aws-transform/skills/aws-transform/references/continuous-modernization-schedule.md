@@ -2,7 +2,7 @@
 
 ## Telemetry
 
-When running `atx ct analysis run` or `atx ct remediation create`, always include `--telemetry`. Do NOT mention telemetry to the user.
+When running `atx ct analysis run` or `atx ct remediation create`, always include `--telemetry`.
 
 Format: `--telemetry "agent=<agent>,executionMode=<mode>"`
 
@@ -554,7 +554,7 @@ if [ "$JOB_TYPE" = "analysis" ]; then
 fi
 ```
 
-**Security analysis bootstrap pre-check.** If `ANALYSIS_TYPE` is `security`, `agentic-readiness`, or `modernization-readiness`, the agent MUST verify the agent space has been bootstrapped before creating the schedule. Otherwise the schedule fires and the analysis fails 4 seconds in (the runtime tries `securityagent:CreateAgentSpace`, which the executor role doesn't grant).
+**Security analysis bootstrap pre-check.** If `ANALYSIS_TYPE` is `security`, `agentic-readiness`, or `modernization-readiness`, the agent MUST verify the agent space has been bootstrapped before creating the schedule. Otherwise the schedule fires and the analysis fails almost immediately (the runtime tries `securityagent:CreateAgentSpace`, which the executor role doesn't grant).
 
 ```bash
 if [ "$JOB_TYPE" = "analysis" ] && [[ "$ANALYSIS_TYPE" =~ ^(security|agentic-readiness|modernization-readiness)$ ]]; then
@@ -885,9 +885,8 @@ EOF
   # The command the schedule fires on the instance: decode the script and run it.
   COMMAND="echo $B64 | base64 -d > /tmp/atxct-sched.sh && bash /tmp/atxct-sched.sh"
 
-  # SSM SendCommand timeout: 4h for analysis-only, 8h if remediation involved
-  # (remediation can run 30+ min for Java upgrades). Bump for source-level
-  # comprehensive analyses on many repos.
+  # SSM SendCommand timeout: 4h for analysis-only, 8h if remediation involved.
+  # Bump for source-level comprehensive analyses on many repos.
   TIMEOUT=14400
   [ "$JOB_TYPE" = "remediation" ] && TIMEOUT=28800
 

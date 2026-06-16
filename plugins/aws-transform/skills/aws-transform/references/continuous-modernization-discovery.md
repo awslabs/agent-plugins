@@ -17,7 +17,7 @@ For local sources, the directory path is provided when the source is first added
 
 **Override:** Pass `--path <new-dir>` to `discovery scan` ONLY when you want to overwrite the stored path. This silently changes the source's `rootPath`. Confirm with the user before passing `--path` to a previously-registered local source.
 
-**Path must be a parent directory:** The path (whether at `source add` or `discovery scan`) must point to a directory that *contains* git repos as subdirectories — not to a repo itself. The scanner looks for child directories with `.git`. If the path points directly at a single repo, the scan returns 0 repos silently. If a user reports 0 repos found, verify their path points to the parent (e.g. `/home/user/repos`) not a repo directly (e.g. `/home/user/repos/my-app`).
+**Path must be a parent directory:** The path (whether at `source add` or `discovery scan`) must point to a directory that _contains_ git repos as subdirectories — not to a repo itself. The scanner looks for child directories with `.git`. If the path points directly at a single repo, the scan returns 0 repos silently. If a user reports 0 repos found, verify their path points to the parent (e.g. `/home/user/repos`) not a repo directly (e.g. `/home/user/repos/my-app`).
 
 ## Commands
 

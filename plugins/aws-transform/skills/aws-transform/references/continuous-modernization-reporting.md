@@ -31,22 +31,41 @@ atx ct remediation list --json
 The five commands do NOT return the same envelope. Read each carefully — `repository list` wraps results in `{"items": [...]}`; the other four return a flat array. All field names are snake_case.
 
 **`source list --json`** → flat array:
+
 ```jsonc
-[ { "source": "...", "provider": "github", "identifier": "...",
-    "oidcConfigured": false, "githubAppConfigured": false } ]
+[{
+  "source": "...",
+  "provider": "github",
+  "identifier": "...",
+  "oidcConfigured": false,
+  "githubAppConfigured": false
+}]
 ```
 
 **`repository list --json`** → object with `items` array:
+
 ```jsonc
-{ "items": [
-  { "id": "<source>::<slug>", "slug": "<source>::<slug>",
-    "full_name": "...", "default_branch": "main",
-    "language": null, "private": false, "archived": false,
-    "has_workflow": false, "assessed": false, "source": "...", "labels": [] }
-] }
+{
+  "items": [
+    {
+      "id": "<source>::<slug>",
+      "slug": "<source>::<slug>",
+      "full_name": "...",
+      "default_branch": "main",
+      "language": null,
+      "private": false,
+      "archived": false,
+      "has_workflow": false,
+      "assessed": false,
+      "source": "...",
+      "labels": []
+    }
+  ]
+}
 ```
 
 **`analysis list --json`** → flat array. Note: there is NO `findings` array on an analysis row — the count must be joined from `findings.json`.
+
 ```jsonc
 [ { "id": "01K...", "status": "complete|running|failed|cancelled|pending|null",
     "analysis_type": "security|tech-debt|...", "category": "Security",
@@ -55,6 +74,7 @@ The five commands do NOT return the same envelope. Read each carefully — `repo
 ```
 
 **`findings list --json`** → flat array:
+
 ```jsonc
 [ { "id": "01K...", "analysis_id": "01K..." | "manual:01K...",
     "repo": "<source>::<slug>", "analysis_type": "...", "severity": "high|medium|low",
@@ -66,6 +86,7 @@ The five commands do NOT return the same envelope. Read each carefully — `repo
 ```
 
 **`remediation list --json`** → flat array. `repos` is an OBJECT keyed by slug, NOT an array. Statuses are lowercase. PR URL is `repos[<slug>].execution_artifacts.pr_url`.
+
 ```jsonc
 [ { "id": "01K...", "name": "...", "transform_name": "...",
     "status": "succeeded|failed|in_progress|pending|cancelled|...",   // lowercase
@@ -86,6 +107,7 @@ The five commands do NOT return the same envelope. Read each carefully — `repo
 **Analyses.** `id`, `analysisType=analysis_type`, `status`, `repos`, `startedAt=started_at`, `completedAt=completed_at`, `failureReason=failure_reason`. To compute `findingsCount`, build a map first: `findingsByAnalysisId = groupBy(findings, f => f.analysis_id)`. Manual findings carry `analysis_id` of the form `"manual:<id>"` — also key by the unprefixed `<id>` so manual analyses match. Then `findingsCount = (findingsByAnalysisId[analysis.id] || []).length`. **Drop analyses with status `null`** (the literal string) — these are integ-test artifacts that don't belong in the report.
 
 **Remediations.** Convert `repos` (object) to `repoStatuses` (array):
+
 ```js
 // raw:        r.repos = { "<slug>": { status, execution_artifacts: { pr_url }, error } }
 // normalized: r.repoStatuses = [{ slug, status, executionRefs: { prUrl }, error }, ...]
@@ -96,11 +118,13 @@ const repoStatuses = Object.entries(r.repos || {}).map(([slug, rs]) => ({
   error: rs.error,
 }));
 ```
+
 Top-level fields: `id`, `name`, `transformName=transform_name`, `status` (lowercase), `repos = Object.keys(raw.repos)`, `findingIds=finding_ids`, `startedAt=started_at`, `completedAt=completed_at`.
 
 ### Scoping with `--repo <source>::<slug>`
 
 If `--repo <source>::<slug>` was passed, scope the report to that repo:
+
 - Replace `findings list --json` with `findings list --repo <source>::<slug> --json`.
 - Filter analyses client-side to those whose `repos[]` includes the slug.
 - Filter remediations client-side to those whose `repos` include the slug.
@@ -120,12 +144,14 @@ Verify server health, then run the CLI calls above to load the five entity array
 **Save the raw JSON before dispatching.** Persist the five Step 1 outputs to `~/.atxct/shared/reports/raw/<UNIX-TIMESTAMP>/` as `sources.json`, `repositories.json`, `analyses.json`, `findings.json`, `remediations.json` (`mkdir -p` first). The subagent reads them off disk, not from the prompt — JSON for a real account is too large to pass inline.
 
 **Dispatch one subagent.** Inputs:
+
 - The five JSON paths above.
 - Output path: `~/.atxct/shared/reports/continuous-modernization-report-<UNIX-TIMESTAMP>.html` (`mkdir -p` first).
 - A pointer to this skill — it reads "Raw response shapes," "Normalization," and "Sections" as its spec.
 - Approach hint: write a Python generator (more reliable HTML escaping than inline JS templates), run it, validate the HTML file is non-empty and opens, then return.
 
 The subagent's return value is ONE of:
+
 - `{"path": "<absolute path>", "summary": "<one line worth highlighting, e.g. '1 analysis failed', '3 PRs ready for review'>"}`
 - `{"error": "<one sentence reason>"}` — only after exhausting reasonable retries (3–4).
 
@@ -178,7 +204,7 @@ Chart: horizontal bar — repos per source. **Cap the chart at top 15 sources by
 Drilldown table — **top 25 sources by repo count**, not all of them. Note the total count above the table and link to `atx ct source list` for the full set.
 
 | Name | Provider | Identifier | Repos |
-|------|----------|------------|-------|
+| ---- | -------- | ---------- | ----- |
 
 Fields (normalized): `name` (raw: `source`), `provider`, `identifier`, `repos_count` (computed from repository list).
 
@@ -218,7 +244,7 @@ Hovering anywhere over a column then surfaces every non-zero segment, sorted by 
 Drilldown table — most recent 10 by `startedAt` desc:
 
 | ID (short) | Type | Status | Repos | Findings | Duration |
-|------------|------|--------|-------|----------|----------|
+| ---------- | ---- | ------ | ----- | -------- | -------- |
 
 - Short ID: first 8 chars of `id`.
 - Findings count: looked up from the precomputed `findingsByAnalysisId` map (NOT a field on the analysis row).
@@ -230,24 +256,25 @@ Fields (raw → normalized): `id`, `analysis_type` → `analysisType`, `status`,
 ### Findings
 
 Two charts side-by-side:
+
 1. Bar — severity counts. Use `status === 'open'` only. **Only include severity buckets that have at least one finding** — don't render zero-count columns. Iterate `['high','medium','low']` in that order, filter to non-zero, then plot.
 2. Doughnut — analysis-type split (`quick-scan`, `tech-debt`, `security`, `agentic-readiness`, `custom`, `manual`). Same rule: only include types with at least one finding.
 
-**Severity enum is `high | medium | low`. There is no `critical`.** 
+**Severity enum is `high | medium | low`. There is no `critical`.**
 
 Two drilldown tables:
 
 **Top risks** — group open findings by `title`, sort by repo count desc, take top 10:
 
 | Title | Severity | Repos affected | Auto-fix? |
-|-------|----------|----------------|-----------|
+| ----- | -------- | -------------- | --------- |
 
 Auto-fix? = whether `fix.transformName` is set on any finding in the group.
 
 **Top auto-fix transforms** — group findings whose `fix.transformName` is set, by transform name:
 
 | Transform | Findings | Repos | Auto Remediable |
-|-----------|----------|-------|-----------|
+| --------- | -------- | ----- | --------------- |
 
 Built-in? = whether the transform name starts with `AWS/`. Customer-namespace transforms (anything else) render as ❌.
 
