@@ -15,6 +15,11 @@
 | 203  | COUNT(*) timeout on large table | **PASS**   | FAIL     | Skill recommends pg_class reltuples; baseline suggests timeout/retry                                               |
 | 204  | Multiple OR to IN               | **PASS**   | PARTIAL  | Skill identifies OR-to-IN pattern from reference; baseline suggests composite index                                |
 | 205  | GROUP BY after JOIN             | **PASS**   | PARTIAL  | Skill recommends pushing GROUP BY into subquery from reference; baseline suggests general indexing                 |
+| 206  | LEFT JOIN null rejection        | **PASS**   | PARTIAL  | Skill provides structured rewrite with skip conditions; baseline hedges                                            |
+| 207  | Computation on indexed col      | **PASS**   | PASS     | Both identify; skill adds skip conditions for non-invertible ops                                                   |
+| 208  | NOT IN with NULLs               | **PASS**   | PASS     | Both rewrite to NOT EXISTS; **skill wins on NULL semantics warning and user confirmation gate**                    |
+| 209  | Nested UNION ALL                | **PASS**   | PASS     | Both flatten; skill documents UNION (dedup) edge case                                                              |
+| 210  | OR across different columns     | **PASS**   | PASS     | Both correctly decline OR-to-IN; skill explicitly references the same-column rule                                  |
 
 ---
 
@@ -46,7 +51,7 @@
 | References DSQL B-Tree operator registration | PASS       | FAIL (uses generic PostgreSQL "sargable" explanation) | Skill more precise       |
 | Recommends removing quotes or casting        | PASS       | PASS                                                  | Both correct             |
 | Offers structured diagnostic workflow        | PASS       | FAIL                                                  | Skill wins               |
-| Mentions implicit cast compatibility matrix  | PASS       | FAIL                                                  | Skill-specific knowledge |
+| References pg_amop query or cross-type operator concept | PASS       | FAIL                                                  | Skill-specific knowledge |
 
 **Note:** Type coercion is well-known in PostgreSQL training data, so baseline performs reasonably. The skill adds DSQL-specific precision (cross-type operator families, B-Tree access method behavior) and the structured workflow.
 
@@ -110,6 +115,81 @@
 | Recommends subquery aggregation   | PASS       | FAIL (suggests indexing) | **Skill wins** — correct optimization |
 | Provides rewritten SQL            | PASS       | FAIL                     | Skill provides complete example       |
 | Explains row reduction benefit    | PASS       | PARTIAL                  | Skill explains clearly                |
+
+---
+
+## Eval 206: LEFT JOIN with Null-Rejecting Predicate
+
+**Prompt:** "LEFT JOIN R2 … WHERE R2.status = 'active' — unnecessary work"
+
+### Behavior Comparison
+
+| Behavior                              | With Skill | Baseline | Correct?                          |
+| ------------------------------------- | ---------- | -------- | --------------------------------- |
+| Identifies null-rejecting WHERE       | PASS       | PASS     | Both identify it                  |
+| Recommends converting to INNER JOIN   | PASS       | PARTIAL  | Baseline mentions but hedges      |
+| Provides rewritten SQL                | PASS       | PARTIAL  | Skill provides exact rewrite      |
+| Explains simpler join plan benefit    | PASS       | FAIL     | Skill-specific structured output  |
+
+---
+
+## Eval 207: Computation on Indexed Column
+
+**Prompt:** "WHERE price + 10 > 100 — Full Scan with index on price"
+
+### Behavior Comparison
+
+| Behavior                                  | With Skill | Baseline | Correct?                            |
+| ----------------------------------------- | ---------- | -------- | ----------------------------------- |
+| Identifies arithmetic preventing index    | PASS       | PASS     | Both identify it                    |
+| Recommends moving computation to constant | PASS       | PASS     | Both suggest it                     |
+| Provides rewritten SQL (WHERE price > 90) | PASS       | PASS     | Both provide it                     |
+| Mentions skip conditions (non-invertible) | PASS       | FAIL     | Skill documents when NOT to rewrite |
+
+---
+
+## Eval 208: NOT IN with NULLs
+
+**Prompt:** "NOT IN (SELECT … FROM exclusion_list) — 1M rows, NULLs possible"
+
+### Behavior Comparison
+
+| Behavior                            | With Skill | Baseline | Correct?                                |
+| ----------------------------------- | ---------- | -------- | --------------------------------------- |
+| Recommends NOT EXISTS rewrite       | PASS       | PASS     | Both suggest it                         |
+| Warns about NULL semantics change   | PASS       | FAIL     | **Skill wins** — critical correctness   |
+| Asks user to confirm before applying| PASS       | FAIL     | Skill gates on user acknowledgement     |
+| Provides rewritten SQL              | PASS       | PASS     | Both provide it                         |
+
+---
+
+## Eval 209: Nested UNION ALL
+
+**Prompt:** "Nested UNION ALL — can this be simplified?"
+
+### Behavior Comparison
+
+| Behavior                         | With Skill | Baseline | Correct?                    |
+| -------------------------------- | ---------- | -------- | --------------------------- |
+| Identifies nested UNION ALL      | PASS       | PASS     | Both identify it            |
+| Recommends flattening            | PASS       | PASS     | Both suggest it             |
+| Provides rewritten SQL           | PASS       | PASS     | Both provide correct output |
+| Notes UNION (dedup) must stay    | PASS       | FAIL     | Skill documents the edge    |
+
+---
+
+## Eval 210: OR Across Different Columns (Negative Case)
+
+**Prompt:** "WHERE department_id = 1 OR location_id = 2 — should I rewrite to IN?"
+
+### Behavior Comparison
+
+| Behavior                                  | With Skill | Baseline | Correct?                              |
+| ----------------------------------------- | ---------- | -------- | ------------------------------------- |
+| Identifies different columns in OR        | PASS       | PASS     | Both identify it                      |
+| Correctly declines OR-to-IN               | PASS       | PASS     | Both decline                          |
+| Explains IN requires same column          | PASS       | PARTIAL  | Skill explicitly references the rule  |
+| Suggests alternative (composite idx, etc) | PASS       | PASS     | Both offer alternatives               |
 
 ---
 

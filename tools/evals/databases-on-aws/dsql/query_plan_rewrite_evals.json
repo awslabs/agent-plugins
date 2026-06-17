@@ -105,7 +105,7 @@
     },
     {
       "id": 208,
-      "prompt": "My DSQL query uses:\n\nSELECT * FROM customers WHERE customer_id NOT IN (SELECT customer_id FROM blacklist);\n\nThe blacklist table has 1M rows and may contain NULLs in customer_id. This is slow. How to optimize?",
+      "prompt": "My DSQL query uses:\n\nSELECT * FROM customers WHERE customer_id NOT IN (SELECT customer_id FROM exclusion_list);\n\nThe exclusion_list table has 1M rows and may contain NULLs in customer_id. This is slow. How to optimize?",
       "expected_output": "Recommends NOT EXISTS rewrite but warns about NULL semantics difference",
       "files": [],
       "expectations": [

@@ -14,7 +14,7 @@ SELECT *
 FROM customers
 WHERE customer_id NOT IN (
   SELECT customer_id
-  FROM blacklisted_customers
+  FROM excluded_customers
 );
 
 -- Rewritten
@@ -22,7 +22,7 @@ SELECT *
 FROM customers c
 WHERE NOT EXISTS (
   SELECT 1
-  FROM blacklisted_customers b
+  FROM excluded_customers b
   WHERE b.customer_id = c.customer_id
 );
 ```
