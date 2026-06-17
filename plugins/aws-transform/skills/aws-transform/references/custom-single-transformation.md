@@ -69,10 +69,10 @@ If not a git repo: `cd <repo-path> && git init && git add . && git commit -m "In
 ### Telemetry
 
 When running `atx custom def exec`, always include the `--telemetry` flag (see the Telemetry section in [custom](custom.md)). Format:
-`--telemetry "client=ide,agent=ide,executionMode=<local|remote>"`
+`--telemetry "client=<client>,agent=<agent>,executionMode=<local|remote>"`
 
-- `client` is always `ide`
-- `agent` is always `ide`
+- `client` is the MCP host for this session (lowercase, no spaces) — e.g., `kiro`, `vscode`, `cursor`, `windsurf`, `claudecode`, `amazonqcli`. Use the real host name; do not default to any example.
+- `agent` is the AI assistant for this session (lowercase, no spaces) — e.g., `kiro`, `amazonq`, `claude`, `copilot`, `cline`, `codex`. Use the real assistant name; do not default to any example.
 - `executionMode` is `local` for direct CLI invocation, `remote` when submitting via Lambda
 
 ### Execute and Monitor
@@ -90,7 +90,7 @@ cat > ~/.aws/atx/custom/atx-agent-session/run.sh << 'RUNNER'
 #!/bin/bash
 atx custom def exec -n <td-name> -p <repo-path> -x -t \
   --configuration 'additionalPlanContext=<user-config>' \
-  --telemetry "client=ide,agent=ide,executionMode=local"
+  --telemetry "client=<client>,agent=<agent>,executionMode=local"
 echo $? > ~/.aws/atx/custom/atx-agent-session/transform.exit
 RUNNER
 chmod +x ~/.aws/atx/custom/atx-agent-session/run.sh
@@ -248,7 +248,7 @@ the container's IAM role cannot read from them.
 
 ```bash
 aws lambda invoke --function-name atx-trigger-job \
-  --payload '{"source":"<url-or-s3>","command":"atx custom def exec -n <td> -p /source/<project> -x -t --telemetry \"client=ide,agent=ide,executionMode=remote\"","jobName":"<name>","environment":{"JAVA_VERSION":"<target>"}}' \
+  --payload '{"source":"<url-or-s3>","command":"atx custom def exec -n <td> -p /source/<project> -x -t --telemetry \"client=<client>,agent=<agent>,executionMode=remote\"","jobName":"<name>","environment":{"JAVA_VERSION":"<target>"}}' \
   --cli-binary-format raw-in-base64-out /dev/stdout
 ```
 

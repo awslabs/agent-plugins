@@ -1,9 +1,85 @@
 ---
 name: aws-transform
-description: Migrate, modernize, and upgrade codebases to AWS. Transforms .NET Framework to .NET 8/10, mainframe COBOL to Java, VMware VMs to EC2, SQL Server to Aurora, and upgrades Java/Python/Node.js versions and AWS SDKs. Use when the user says "migrate .NET to AWS", "upgrade Java to 17/21", "modernize COBOL", "modernize mainframe", "move VMware to EC2", "convert SQL Server to Aurora", "upgrade Python version", "migrate AWS SDK", or "transform this codebase". Don't use for infrastructure provisioning, CI/CD pipelines, or general coding tasks.
+description: Migrate, modernize, and upgrade codebases to AWS. Run analysis on repos for tech debt, security vulnerabilities, and modernization opportunities. Transforms .NET Framework to .NET 8/10, mainframe COBOL to Java, VMware VMs to EC2, SQL Server to Aurora, and upgrades Java/Python/Node.js versions and AWS SDKs. Use when the user says "migrate .NET to AWS", "upgrade Java to 17/21", "modernize COBOL", "modernize mainframe", "move VMware to EC2", "convert SQL Server to Aurora", "upgrade Python version", "migrate AWS SDK", "transform this codebase", "analyze for issues", "find tech debt", "what tech debt", "security vulnerabilities", "CVEs", "what's wrong with my code", "assess my repos", "where do I start", "find what's outdated", "analyze my repos", "AWS Transform - continuous modernization", "continuous modernization" or "continuous-modernization". Don't use for infrastructure provisioning, CI/CD pipelines, or general coding tasks.
 ---
 
 # AWS Transform
+
+## CRITICAL: Route Before Anything Else
+
+**STOP. Before reading files, analyzing code, or starting any workflow, identify the workload first, then route.**
+
+### Step A: Identify the workload
+
+Look for an explicit workload signal in the user's request — a named technology (`.NET`, `VMware`, `SQL Server`/`Aurora`/`Oracle`/`MySQL`, `mainframe`/`COBOL`), workload-specific terminology (Hyper-V, EC2 rehost, stored procs, CICS, JCL), or file/project signals already in the conversation. If no signal is present, treat the request as **workload-unspecified**.
+
+### Step B: Apply workload-specific routing
+
+Workload-specific rules ALWAYS win over the keyword list in Step C. Do not let "analysis" or "tech debt" phrasing override these.
+
+| Workload                 | Route                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **.NET**                 | Ask the user via `AskUserQuestion`: "For your .NET work, are you looking to **modernize to .NET 8/10** (port the code, change targets), **run an assessment for modernization** (scope the work, identify blockers, plan the port), or **analyze your repos for tech debt, security vulnerabilities, or CVEs**?" → "Modernize" or "Assessment for modernization" → proceed to the Overview section (the .NET workload handles both). → "Analyze for tech debt / security / CVEs" → route to continuous modernization (see Step D). |
+| **VMware**               | Proceed to the Overview section. **NEVER route VMware requests to continuous modernization** — even if the user uses words like "analyze", "assess", "find issues". VMware assessment is handled by the VMware workload agent, see [vmware](references/vmware.md).                                                                                                                                                                                                                                                                 |
+| **SQL / Database**       | Proceed to the Overview section. **NEVER route SQL/database requests to continuous modernization** — SQL Server, Oracle, MySQL, and Aurora migrations are handled by the SQL workload agent, see [sql](references/sql.md).                                                                                                                                                                                                                                                                                                         |
+| **Mainframe / COBOL**    | Proceed to the Overview section. **NEVER route mainframe requests to continuous modernization** — COBOL/CICS/JCL transformations are handled by the mainframe workload agent, see [mainframe](references/mainframe.md).                                                                                                                                                                                                                                                                                                            |
+| **Workload-unspecified** | Continue to Step C.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+
+### Step C: Keyword-based routing (workload-unspecified only)
+
+This list applies **only** when the user has not named a workload. If any of the workload rules in Step B matched, you have already routed — do not re-evaluate against this list.
+
+If the user's workload-unspecified request matches any of these intents, route to **continuous modernization** — do NOT scan files yourself:
+
+- "analysis", "analyze", "find issues", "what's wrong", "tech debt", "security vulnerabilities", "CVEs"
+- "what should I fix", "where do I start"
+- "report", "dashboard", "compare", "trend"
+- "remediate findings", "remediation", "fix what you found"
+- "custom transform"
+- "continuous modernization", "AWS Transform - continuous modernization"
+
+### Step D: For continuous modernization requests
+
+1. **First-response telemetry notice (once per session).** The first time a request routes here in this session, ALWAYS prepend this line exactly to your reply to the user before doing anything else:
+
+   > Note: this skill collects telemetry. To opt out, see [here](https://docs.aws.amazon.com/transform/latest/userguide/transform-usage-telemetry.html).
+
+   Show it exactly once per session. Do NOT repeat it on subsequent continuous modernization requests in the same session. If the user explicitly asks to disable telemetry, omit `--telemetry` for the rest of the session (see each sub-skill's Telemetry section for the flag format).
+2. When invoking AWS Transform - continuous modernization (continuous modernization) commands, use `atx ct` (with a space). `atxct` (no space) is being deprecated; it remains functionally equivalent and hits the same backend, so an `atxct` invocation in the user's environment is not itself a problem. Do not warn the user about `atxct` and do not treat its presence as a failure cause.
+3. Check if `atx ct` is installed AND up to date — run this as a single command:
+
+   ```
+   INSTALLED=$(atx ct --version 2>/dev/null | head -1); LATEST=$(curl -fsSL "https://transform-cli.awsstatic.com/index.json" 2>/dev/null | grep -o '"latest"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"latest"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/'); echo "Installed: ${INSTALLED:-not found}, Latest: ${LATEST:-unknown}"
+   ```
+
+4. If `INSTALLED` is empty or `LATEST` is newer: `curl -fsSL https://transform-cli.awsstatic.com/install.sh | bash && source ~/.bashrc`
+5. If `atx ct` fails after install, the binary itself is rarely the cause — `atx ct` and `atxct` share the same backend and fail identically for env/auth/server reasons. Check those first:
+   - `ATXCT_FES_ENDPOINT` is set on the server process (not just the CLI shell)
+   - `AWS_PROFILE` points at a valid account with refreshed credentials
+   - The server is running (`atx ct status --health`)
+
+   Only after those check out, verify `atx --help` shows the `ct` subcommand and that `atxct-plugin.mjs` is co-located with the `atx` binary.
+6. Start the server using the [continuous-modernization-server.md](references/continuous-modernization-server.md) skill — it will ask the user for their region, validate it against the supported list, and start with the correct `AWS_REGION`. Wait 5s, then verify with `atx ct status --health`.
+7. Then use the appropriate continuous modernization skill — see [continuous-modernization](references/continuous-modernization.md)
+
+**When in doubt for a workload-unspecified request → continuous modernization.** This default applies ONLY after Step B has cleared — VMware, SQL, and mainframe never fall through to continuous modernization regardless of how the question is phrased; .NET only routes to continuous modernization after the user picks "analyze for tech debt / security / CVEs" in Step B's intent question (both "modernize" and "assessment for modernization" stay in the .NET workload). Once routed, do NOT manually read source files to find issues — that's what `atx ct analysis run` does.
+
+## CRITICAL: Never Show Pricing or Timing Estimates
+
+**Do NOT quote specific dollar amounts, hourly rates, or time estimates** for AWS resources or analyses. This includes:
+
+- ❌ "~$0.20/hr", "~$5/day", "$X per analysis"
+- ❌ "takes ~30 min", "completes in 2-5 hours", "~30s startup"
+- ❌ "ETA: 30 min – 2 hours"
+
+**Instead:**
+
+- For pricing: redirect to https://aws.amazon.com/ec2/pricing/, https://aws.amazon.com/transform/pricing/, etc.
+- If asked directly: "I can't give specific cost or time estimates — pricing depends on your usage and AWS quotas. Check the AWS pricing pages for current rates."
+
+This applies to all responses, all skills, and all situations.
+
+---
 
 ## Overview
 
@@ -76,10 +152,22 @@ Check for `.atx/context.json` (workspace-relative). NEVER read `~/.aws/atx/kiro-
 
 ## Determining user intent
 
+**If Step A/B routed the request to continuous modernization, skip this entire section.** continuous modernization has its own self-contained onboarding flow — hand off directly to [continuous-modernization-guide](references/continuous-modernization-guide.md). Its own first prompt (Mode selection: Local vs. AWS Infrastructure) is the user's first visible question. Do NOT show the generic intent menu first, and do NOT mix in non-continuous modernization options like "Browse My Jobs" or "Start a Specific Transform" — those are AWS Transform top-level capabilities, not continuous modernization features.
+
+For every other route — VMware, SQL, Mainframe, and .NET (modernize or assessment-for-modernization) — use the generic intent menu below. The menu's options (Discover Workspace, Browse Jobs, Start Specific Transform, Analyze for findings) are how those workloads enter the standard MANDATORY workflow's Discovery → Scope → Assessment phases.
+
+### Generic intent menu
+
 Ask the user: "What would you like to focus on?" The first user-visible action in this phase is the question — no auth-probing tool calls precede it, no auth lecture precedes it.
 
-With projects: [Discover This Workspace] [Browse My Jobs] [Start a Specific Transform]
-No projects: [Browse My Jobs] [Open a Project Folder] [Start from Scratch]
+With projects: [Discover This Workspace] [Browse My Jobs] [Start a Specific Transform] [Analyze for findings]
+No projects: [Browse My Jobs] [Open a Project Folder] [Start from Scratch] [Analyze for findings]
+
+**Custom vs continuous modernization routing.** When the user's intent is clear, route to the correct skill set
+using the decision table in [continuous-modernization reference](references/continuous-modernization.md). Key rule: named transformation
+
+- no prior continuous modernization findings → Custom. Analysis/reporting/remediation of existing
+  findings → continuous modernization. When in doubt → continuous modernization.
 
 **Just-in-time auth.** Once the user picks an intent, the next tool that action needs may require auth. If so, prompt for auth then, framed around the action the user just chose ("to browse your jobs, sign in to AWS Transform"). Which auth each MCP tool needs is reported by the MCP server — read it from the tool's description, `get_status`, or the error the tool returns. CLI transforms use AWS credentials only — do NOT prompt for sign-in for CLI-only intents, even when sign-in is unconfigured. If the user picks something that needs no service call (e.g., "Open a Project Folder"), do not probe auth.
 
@@ -250,6 +338,7 @@ Resume: read `phase`, pick up from that phase.
 - MUST NOT create requirements from discovery — wait for assessment
 - MUST NOT skip from discovery to execution
 - MUST NOT modify code, upgrade dependencies, or run analysis manually — always use AWS Transform tooling
+- MUST NOT probe `--help` to figure out a CLI invocation that the reference files already document. The capability-specific reference files in `references/` (e.g. `continuous-modernization-source.md`, `continuous-modernization-analysis.md`, `continuous-modernization-remediation.md`, `custom-cli-reference.md`) contain the canonical `atx ct …` and `atx custom …` commands with every required flag and example invocations — read the matching file and lift the command verbatim. The orchestrating files (`continuous-modernization-guide.md`, `continuous-modernization-setup.md`) explicitly point at them ("Use the `/source` skill for the exact commands"). `--help` is a fallback used ONLY when (a) no reference file covers the capability, or (b) a documented command demonstrably fails because the installed CLI version diverges from the reference. Treat `--help` probes the user can see as a signal that the agent didn't read its own skill — that is the failure mode this rule prevents.
 - MUST NOT make decisions on behalf of the user
 - MUST NOT editorialize or use subjective language — no "interesting", "fascinating", "notably", "impressive", "remarkable". State findings as facts.
 - MUST NOT prompt for authentication before the user has declared an intent. Auth prompts come from the tool a chosen action needs, framed around that action.
@@ -272,12 +361,12 @@ Resume: read `phase`, pick up from that phase.
 
 ### Workload Types
 
-| Workload     | Files                      |
-| ------------ | -------------------------- |
-| .NET         | `references/dotnet*.md`    |
-| SQL/Database | `references/sql*.md`       |
-| Mainframe    | `references/mainframe*.md` |
-| VMware       | `references/vmware*.md`    |
-| Custom       | `references/custom*.md`    |
+| Workload                 | Files                                     |
+| ------------------------ | ----------------------------------------- |
+| .NET                     | `references/dotnet*.md`                   |
+| SQL/Database             | `references/sql*.md`                      |
+| Mainframe                | `references/mainframe*.md`                |
+| VMware                   | `references/vmware*.md`                   |
+| continuous modernization | `references/continuous-modernization*.md` |
 
-Each workload type has a root reference file with its capabilities, workflow, and agent details. Additional files with the same prefix provide deeper guidance (e.g., `custom-cli-reference.md`, `custom-repo-analysis.md`).
+Each workload type has a root reference file with its capabilities, workflow, and agent details. Additional files with the same prefix provide deeper guidance (e.g., `continuous-modernization-setup.md`, `continuous-modernization-discovery.md`).

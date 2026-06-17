@@ -86,7 +86,7 @@
     },
     {
       "category": "migration",
-      "description": "Migrate, modernize, and upgrade codebases to AWS. Transforms .NET Framework to .NET 8/10, mainframe COBOL to Java, VMware VMs to EC2, SQL Server to Aurora, and upgrades Java/Python/Node.js versions and AWS SDKs.",
+      "description": "Migrate, modernize, and upgrade codebases to AWS. Transforms .NET Framework to .NET 8/10, mainframe COBOL to Java, VMware VMs to EC2, SQL Server to Aurora, and upgrades Java/Python/Node.js versions and AWS SDKs. AWS Transform - continuous modernization analyzes codebases for tech debt, security issues, and upgrade opportunities, then remediates them.",
       "keywords": [
         "aws",
         "aws-transform",
@@ -101,12 +101,20 @@
         "aurora",
         "java",
         "python",
-        "sdk"
+        "sdk",
+        "continuous modernization",
+        "AWS Transform - continuous modernization",
+        "tech debt",
+        "security vulnerabilities",
+        "analyze repos",
+        "security analysis",
+        "modernization analysis",
+        "agentic readiness"
       ],
       "name": "aws-transform",
       "source": "./plugins/aws-transform",
-      "tags": ["aws", "migration", "modernization", "transform"],
-      "version": "1.0.0"
+      "tags": ["aws", "migration", "modernization", "transform", "continuous modernization"],
+      "version": "1.1.1"
     },
     {
       "category": "development",

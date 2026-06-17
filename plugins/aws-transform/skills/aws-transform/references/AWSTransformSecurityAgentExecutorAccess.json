@@ -1,0 +1,70 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "STSIdentity",
+      "Effect": "Allow",
+      "Action": "sts:GetCallerIdentity",
+      "Resource": "*"
+    },
+    {
+      "Sid": "SecurityAgentApi",
+      "Effect": "Allow",
+      "Action": [
+        "securityagent:ListAgentSpaces",
+        "securityagent:CreateCodeReview",
+        "securityagent:StartCodeReviewJob",
+        "securityagent:ListCodeReviewJobsForCodeReview",
+        "securityagent:ListFindings",
+        "securityagent:BatchGetFindings",
+        "securityagent:StartCodeRemediation"
+      ],
+      "Resource": "arn:aws:securityagent:*:*:agent-space*",
+      "Condition": {
+        "StringEquals": {
+          "aws:ResourceAccount": "${aws:PrincipalAccount}"
+        }
+      }
+    },
+    {
+      "Sid": "S3SecurityAgentBucketRead",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::kct-security-agent-*",
+        "arn:aws:s3:::kct-security-agent-*/*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "s3:ResourceAccount": "${aws:PrincipalAccount}"
+        }
+      }
+    },
+    {
+      "Sid": "S3SecurityAgentUpload",
+      "Effect": "Allow",
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::kct-security-agent-*/security-scans/*",
+      "Condition": {
+        "StringEquals": {
+          "s3:ResourceAccount": "${aws:PrincipalAccount}"
+        }
+      }
+    },
+    {
+      "Sid": "IAMPassSecurityAgentRole",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::*:role/security-agent-*",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "securityagent.amazonaws.com",
+          "aws:ResourceAccount": "${aws:PrincipalAccount}"
+        }
+      }
+    }
+  ]
+}
