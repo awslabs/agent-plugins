@@ -45,12 +45,12 @@
 
 ### Behavior Comparison
 
-| Behavior                                     | With Skill | Baseline                                              | Correct?                 |
-| -------------------------------------------- | ---------- | ----------------------------------------------------- | ------------------------ |
-| Identifies type mismatch                     | PASS       | PASS                                                  | Both correct             |
-| References DSQL B-Tree operator registration | PASS       | FAIL (uses generic PostgreSQL "sargable" explanation) | Skill more precise       |
-| Recommends removing quotes or casting        | PASS       | PASS                                                  | Both correct             |
-| Offers structured diagnostic workflow        | PASS       | FAIL                                                  | Skill wins               |
+| Behavior                                                | With Skill | Baseline                                              | Correct?                 |
+| ------------------------------------------------------- | ---------- | ----------------------------------------------------- | ------------------------ |
+| Identifies type mismatch                                | PASS       | PASS                                                  | Both correct             |
+| References DSQL B-Tree operator registration            | PASS       | FAIL (uses generic PostgreSQL "sargable" explanation) | Skill more precise       |
+| Recommends removing quotes or casting                   | PASS       | PASS                                                  | Both correct             |
+| Offers structured diagnostic workflow                   | PASS       | FAIL                                                  | Skill wins               |
 | References pg_amop query or cross-type operator concept | PASS       | FAIL                                                  | Skill-specific knowledge |
 
 **Note:** Type coercion is well-known in PostgreSQL training data, so baseline performs reasonably. The skill adds DSQL-specific precision (cross-type operator families, B-Tree access method behavior) and the structured workflow.
@@ -124,12 +124,12 @@
 
 ### Behavior Comparison
 
-| Behavior                              | With Skill | Baseline | Correct?                          |
-| ------------------------------------- | ---------- | -------- | --------------------------------- |
-| Identifies null-rejecting WHERE       | PASS       | PASS     | Both identify it                  |
-| Recommends converting to INNER JOIN   | PASS       | PARTIAL  | Baseline mentions but hedges      |
-| Provides rewritten SQL                | PASS       | PARTIAL  | Skill provides exact rewrite      |
-| Explains simpler join plan benefit    | PASS       | FAIL     | Skill-specific structured output  |
+| Behavior                            | With Skill | Baseline | Correct?                         |
+| ----------------------------------- | ---------- | -------- | -------------------------------- |
+| Identifies null-rejecting WHERE     | PASS       | PASS     | Both identify it                 |
+| Recommends converting to INNER JOIN | PASS       | PARTIAL  | Baseline mentions but hedges     |
+| Provides rewritten SQL              | PASS       | PARTIAL  | Skill provides exact rewrite     |
+| Explains simpler join plan benefit  | PASS       | FAIL     | Skill-specific structured output |
 
 ---
 
@@ -154,12 +154,12 @@
 
 ### Behavior Comparison
 
-| Behavior                            | With Skill | Baseline | Correct?                                |
-| ----------------------------------- | ---------- | -------- | --------------------------------------- |
-| Recommends NOT EXISTS rewrite       | PASS       | PASS     | Both suggest it                         |
-| Warns about NULL semantics change   | PASS       | FAIL     | **Skill wins** — critical correctness   |
-| Asks user to confirm before applying| PASS       | FAIL     | Skill gates on user acknowledgement     |
-| Provides rewritten SQL              | PASS       | PASS     | Both provide it                         |
+| Behavior                             | With Skill | Baseline | Correct?                              |
+| ------------------------------------ | ---------- | -------- | ------------------------------------- |
+| Recommends NOT EXISTS rewrite        | PASS       | PASS     | Both suggest it                       |
+| Warns about NULL semantics change    | PASS       | FAIL     | **Skill wins** — critical correctness |
+| Asks user to confirm before applying | PASS       | FAIL     | Skill gates on user acknowledgement   |
+| Provides rewritten SQL               | PASS       | PASS     | Both provide it                       |
 
 ---
 
@@ -169,12 +169,12 @@
 
 ### Behavior Comparison
 
-| Behavior                         | With Skill | Baseline | Correct?                    |
-| -------------------------------- | ---------- | -------- | --------------------------- |
-| Identifies nested UNION ALL      | PASS       | PASS     | Both identify it            |
-| Recommends flattening            | PASS       | PASS     | Both suggest it             |
-| Provides rewritten SQL           | PASS       | PASS     | Both provide correct output |
-| Notes UNION (dedup) must stay    | PASS       | FAIL     | Skill documents the edge    |
+| Behavior                      | With Skill | Baseline | Correct?                    |
+| ----------------------------- | ---------- | -------- | --------------------------- |
+| Identifies nested UNION ALL   | PASS       | PASS     | Both identify it            |
+| Recommends flattening         | PASS       | PASS     | Both suggest it             |
+| Provides rewritten SQL        | PASS       | PASS     | Both provide correct output |
+| Notes UNION (dedup) must stay | PASS       | FAIL     | Skill documents the edge    |
 
 ---
 
@@ -184,12 +184,12 @@
 
 ### Behavior Comparison
 
-| Behavior                                  | With Skill | Baseline | Correct?                              |
-| ----------------------------------------- | ---------- | -------- | ------------------------------------- |
-| Identifies different columns in OR        | PASS       | PASS     | Both identify it                      |
-| Correctly declines OR-to-IN               | PASS       | PASS     | Both decline                          |
-| Explains IN requires same column          | PASS       | PARTIAL  | Skill explicitly references the rule  |
-| Suggests alternative (composite idx, etc) | PASS       | PASS     | Both offer alternatives               |
+| Behavior                                  | With Skill | Baseline | Correct?                             |
+| ----------------------------------------- | ---------- | -------- | ------------------------------------ |
+| Identifies different columns in OR        | PASS       | PASS     | Both identify it                     |
+| Correctly declines OR-to-IN               | PASS       | PASS     | Both decline                         |
+| Explains IN requires same column          | PASS       | PARTIAL  | Skill explicitly references the rule |
+| Suggests alternative (composite idx, etc) | PASS       | PASS     | Both offer alternatives              |
 
 ---
 
