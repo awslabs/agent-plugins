@@ -157,7 +157,6 @@ PYTHONPATH="<skill-creator-path>:$PYTHONPATH" python -m scripts.run_loop \
 
 ---
 
-<<<<<<< HEAD
 ### Query Plan Rewrite Evals (manual)
 
 Tests whether the agent recommends correct SQL rewrites for common performance anti-patterns,
