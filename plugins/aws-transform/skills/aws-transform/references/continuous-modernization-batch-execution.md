@@ -139,15 +139,27 @@ will fail rather than auto-provision.
   guide the user toward any VPC (including the default VPC). Present all VPCs
   neutrally without commentary on which is "simplest", "easiest", or "looks
   pre-configured". The user must make their own informed choice.
-- After the user picks a VPC, show its subnets and security groups:
+- After the user picks a VPC, show its **private** subnets and security groups:
 
   ```bash
-  aws ec2 describe-subnets --filters "Name=vpc-id,Values=<vpcId>" \
-    --query 'Subnets[*].[SubnetId,AvailabilityZone,MapPublicIpOnLaunch,Tags[?Key==`Name`].Value|[0]]' --output table
+  aws ec2 describe-subnets --filters "Name=vpc-id,Values=<vpcId>" "Name=map-public-ip-on-launch,Values=false" \
+    --query 'Subnets[*].[SubnetId,AvailabilityZone,Tags[?Key==`Name`].Value|[0]]' --output table
   aws ec2 describe-security-groups --filters "Name=vpc-id,Values=<vpcId>" \
     --query 'SecurityGroups[*].[GroupId,GroupName,Description]' --output table
   ```
 
+- You MUST only present **private subnets** (`MapPublicIpOnLaunch=false`) to the user.
+  The query above filters them via `map-public-ip-on-launch=false`. This is a hard
+  requirement: the CDK stack sets `assignPublicIp: DISABLED` on Fargate tasks, so tasks
+  in public subnets get a private IP that cannot route through an internet gateway.
+  If the result set is empty (all subnets in the VPC are public), tell the user:
+  "No private subnets found in this VPC. This stack does not support public subnets —
+  Fargate tasks require private subnets with NAT gateway for outbound connectivity."
+  Then direct them to `create-vpc.sh`.
+  If the VPC contained public subnets that were filtered out, include this note when
+  presenting results: "Some subnets in this VPC were not shown because they are public
+  (auto-assign public IP enabled). This stack does not support public subnets — Fargate
+  tasks require private subnets with NAT gateway for outbound connectivity."
 - Then ask the user to select:
   1. `existing_subnet_ids`: which subnets (MANDATORY).
   2. `existing_security_group_id`: which security group (MANDATORY).
@@ -167,6 +179,28 @@ will fail rather than auto-provision.
 
 - You MUST verify, and report results to the user, the following BEFORE rewriting
   config, because each is a silent deploy-time or runtime failure if wrong:
+  - The selected subnets do NOT route to an internet gateway. Run:
+
+    ```bash
+    aws ec2 describe-route-tables \
+      --filters "Name=association.subnet-id,Values=<subnet-id-1>,<subnet-id-2>" \
+      --query 'RouteTables[*].Routes[?DestinationCidrBlock==`0.0.0.0/0`].[GatewayId]' --output text
+    ```
+
+    If no explicit association exists for a subnet, also check the VPC's main route
+    table:
+
+    ```bash
+    aws ec2 describe-route-tables \
+      --filters "Name=vpc-id,Values=<vpcId>" "Name=association.main,Values=true" \
+      --query 'RouteTables[*].Routes[?DestinationCidrBlock==`0.0.0.0/0`].[GatewayId]' --output text
+    ```
+
+    If any result starts with `igw-`, REJECT and tell the user: "Subnet `<id>` has a
+    default route to an internet gateway (igw-...). This stack does not support public
+    subnets — Fargate tasks deployed here would have no outbound network path. Please
+    select subnets that route through a NAT gateway or VPC endpoints."
+    You MUST NOT proceed to cdk.json rewrite if any selected subnet has an IGW route.
   - The supplied subnets are in availability zones `${REGION}a` and `${REGION}b`,
     because the stack hardcodes those AZs (`lib/infrastructure-stack.ts`).
   - The subnets have egress (NAT gateway or VPC endpoints), because the stack does

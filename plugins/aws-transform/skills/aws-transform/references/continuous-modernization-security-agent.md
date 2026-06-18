@@ -180,12 +180,14 @@ S3_BUCKET=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --regi
   --query "Stacks[0].Parameters[?ParameterKey=='S3Resource'].ParameterValue" --output text --no-cli-pager)
 ROLE_ARN=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region us-east-1 \
   --query "Stacks[0].Outputs[?OutputKey=='RoleArn'].OutputValue" --output text --no-cli-pager)
+AGENT_SPACE_ID=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region us-east-1 \
+  --query "Stacks[0].Outputs[?OutputKey=='AgentSpaceId'].OutputValue" --output text --no-cli-pager)
 
 # Write the config file
 mkdir -p ~/.atxct/shared
 cat > ~/.atxct/shared/security_agent_config.json << EOF
 {
-  "agentSpaceId": "",
+  "agentSpaceId": "${AGENT_SPACE_ID}",
   "agentSpaceName": "${AGENT_SPACE_NAME}",
   "s3Bucket": "${S3_BUCKET}",
   "roleArn": "${ROLE_ARN}",

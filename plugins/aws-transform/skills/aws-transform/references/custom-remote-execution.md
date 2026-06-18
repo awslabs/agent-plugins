@@ -108,12 +108,28 @@ will fail rather than auto-provision.
   aws ec2 describe-vpcs --query 'Vpcs[*].[VpcId,IsDefault,Tags[?Key==`Name`].Value|[0]]' --output table
   ```
 
-  Show the results, let the user pick, then show subnets for the chosen VPC:
+  Show the results, let the user pick, then show **private** subnets for the chosen VPC:
 
   ```bash
-  aws ec2 describe-subnets --filters "Name=vpc-id,Values=<vpcId>" \
-    --query 'Subnets[*].[SubnetId,AvailabilityZone,MapPublicIpOnLaunch,Tags[?Key==`Name`].Value|[0]]' --output table
+  aws ec2 describe-subnets --filters "Name=vpc-id,Values=<vpcId>" "Name=map-public-ip-on-launch,Values=false" \
+    --query 'Subnets[*].[SubnetId,AvailabilityZone,Tags[?Key==`Name`].Value|[0]]' --output table
   ```
+
+  Only private subnets are shown. The CDK stack sets `assignPublicIp: DISABLED` on
+  Fargate tasks, so public subnets cannot provide outbound connectivity. If none remain
+  after filtering, tell the user: "No private subnets found in this VPC. This stack
+  does not support public subnets — Fargate tasks require private subnets with NAT
+  gateway for outbound connectivity." Then direct them to `create-vpc.sh`. If public
+  subnets were filtered out, note: "Some subnets in this VPC were not shown because
+  they are public (auto-assign public IP enabled). This stack does not support public
+  subnets — Fargate tasks require private subnets with NAT gateway for outbound
+  connectivity."
+
+  After the user selects subnets, verify their route tables do not have a default route
+  to an internet gateway (`0.0.0.0/0 → igw-*`). Check both explicit subnet associations
+  and the VPC's main route table. If an IGW route is found, reject: "Subnet `<id>` has a
+  default route to an internet gateway (igw-...). This stack does not support public
+  subnets — Fargate tasks deployed here would have no outbound network path."
 
   Refuse to proceed without an explicit selection. You MUST NOT recommend or guide
   the user toward any VPC (including the default). Present all VPCs neutrally. You

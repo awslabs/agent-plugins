@@ -1253,7 +1253,7 @@ The agent MUST print the following to the customer:
 - ❌ `AWS_PROFILE=admin aws cloudformation create-stack ...` (the agent assumed a name)
 - ✅ `AWS_PROFILE=<your-admin-profile> aws cloudformation create-stack ...` (placeholder for the customer to fill in)
 
-This rule applies to **every admin handoff in this skill**: create-stack, delete-stack, security-agent bootstrap, instance-tag handoff, instance-role-policy handoff, anywhere else admin is invoked.
+This rule applies to **every admin handoff in this skill**: create-stack, delete-stack, instance-tag handoff, instance-role-policy handoff, anywhere else admin is invoked.
 
 The full handoff command set (admin runs in their shell, in `${REGION}`):
 
@@ -1397,37 +1397,7 @@ If `ANALYSIS_TYPE=security` (or `agentic-readiness` / `modernization-readiness` 
 
 The S3 + `iam:PassRole` grants the instance role needs for security analysis are **always-on** in the CFN template (the `securityagent:*` actions, `s3:*` on `kct-security-agent-*`, and `iam:PassRole` on `security-agent-*` are part of the base role policy). No stack redeploy is required if the customer decides to run security analysis after the stack is up -- the role already has what's needed.
 
-**One-time agent-space bootstrap.** The first time anyone in this account runs a security analysis, the runtime calls `securityagent:CreateAgentSpace` to provision the agent-space resource. That permission is intentionally NOT granted to the EC2 instance role (the role only has the operate-mode `securityagent:*` actions). So the first security analysis MUST run locally with admin credentials, which create the agent space and populate `agentSpaceId` in `~/.atxct/shared/security_agent_config.json`. Every subsequent run -- on EC2 or local, by any caller -- finds the existing agent space via `list-agent-spaces` and never needs `CreateAgentSpace` again.
-
-**The agent MUST run this check before submitting a security/agentic-readiness/modernization-readiness analysis on EC2:**
-
-```bash
-atx ct setup security-agent --status 2>/dev/null > /tmp/sa-status.json
-AGENT_SPACE_ID=$(jq -r '.agentSpaceId // ""' /tmp/sa-status.json)
-
-if [ -z "$AGENT_SPACE_ID" ]; then
-  # First-time bootstrap required.
-  echo "agent space not yet provisioned"
-fi
-```
-
-**If `agentSpaceId` is empty**, the agent MUST stop the EC2 flow and emit an admin handoff. Phrasing:
-
-> "Before I can run security analysis on EC2, the agent space resource needs to be provisioned in your account. This is a one-time bootstrap that requires admin credentials (only the first security analysis ever in this account needs this). Run this on your laptop with your admin profile:
->
-> ```bash
-> AWS_PROFILE=<your-admin-profile> AWS_REGION=$REGION atx ct analysis run \
->   --type security \
->   --source $LOGICAL_SOURCE_NAME \
->   --repo "$LOGICAL_SOURCE_NAME::<one-repo>" \
->   --telemetry "agent=$AGENT,executionMode=local"
-> ```
->
-> Pick any single repo from your source -- the bootstrap doesn't depend on which one. After this completes, your local `~/.atxct/shared/security_agent_config.json` will have `agentSpaceId` populated. Come back to this conversation and I'll sync it to the EC2 container and run the actual analysis there."
-
-The agent then STOPS this turn. On the next user turn, re-check `--status`; if `agentSpaceId` is now populated, proceed to the config-sync step below.
-
-**If `agentSpaceId` is populated** (either from a prior bootstrap, or because the customer just ran the one-time admin-creds analysis), sync the config file into the EC2 container so the runtime can find the existing agent space:
+The agent space is provisioned during `atx ct setup security-agent`, which writes the populated `agentSpaceId` into `~/.atxct/shared/security_agent_config.json`. The EC2 runtime is read-only -- it finds the existing agent space via `list-agent-spaces` and never creates one. Sync the local config file into the EC2 container so the runtime can find the existing agent space:
 
 ```bash
 # Sync security agent config from laptop into all atx-ct containers.

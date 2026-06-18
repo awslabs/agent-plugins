@@ -369,7 +369,7 @@ This step provisions the `AtxSchedulerInvocationRole` (the role EventBridge Sche
 
 **The agent does NOT run these commands itself**, even if an admin profile is reachable locally. It prepares the inputs, prints the bundle as a single admin handoff, and waits for the user to come back. This is the same pattern Step 5d uses in `continuous-modernization-ec2-execution.md`.
 
-**Profile-name guidance for the agent.** When emitting this admin handoff (or any admin handoff in this skill -- including the security-agent bootstrap below in Mode 1), the agent MUST use the placeholder `<your-admin-profile>` rather than guessing a profile name from the customer's local AWS config, environment variables, or shell history. Customers commonly have multiple AWS profiles configured locally and the agent has no reliable way to identify which one carries admin permissions. Substituting a wrong name leads to confusing AccessDenied errors during execution.
+**Profile-name guidance for the agent.** When emitting this admin handoff (or any admin handoff in this skill), the agent MUST use the placeholder `<your-admin-profile>` rather than guessing a profile name from the customer's local AWS config, environment variables, or shell history. Customers commonly have multiple AWS profiles configured locally and the agent has no reliable way to identify which one carries admin permissions. Substituting a wrong name leads to confusing AccessDenied errors during execution.
 
 This step is also idempotent -- re-running it on an already-set-up account is safe (`grep -v EntityAlreadyExists` and `grep -v ConflictException` swallow the no-op cases). So the admin runs it once per account; subsequent schedules reuse the same role and group.
 
@@ -553,37 +553,6 @@ if [ "$JOB_TYPE" = "analysis" ]; then
   fi
 fi
 ```
-
-**Security analysis bootstrap pre-check.** If `ANALYSIS_TYPE` is `security`, `agentic-readiness`, or `modernization-readiness`, the agent MUST verify the agent space has been bootstrapped before creating the schedule. Otherwise the schedule fires and the analysis fails almost immediately (the runtime tries `securityagent:CreateAgentSpace`, which the executor role doesn't grant).
-
-```bash
-if [ "$JOB_TYPE" = "analysis" ] && [[ "$ANALYSIS_TYPE" =~ ^(security|agentic-readiness|modernization-readiness)$ ]]; then
-  AGENT_SPACE_ID=$(atx ct setup security-agent --status 2>/dev/null | jq -r '.agentSpaceId // ""')
-
-  if [ -z "$AGENT_SPACE_ID" ]; then
-    cat <<'EOF'
-ERROR: Security agent space not bootstrapped.
-
-Before scheduling a security/agentic-readiness/modernization-readiness analysis,
-run ONE security analysis locally with admin credentials. This populates the
-agent-space ID in your config so subsequent runs (including this schedule)
-can use it without admin permissions.
-
-  AWS_PROFILE=<your-admin-profile> AWS_REGION=$REGION atx ct analysis run \
-    --type security \
-    --source $LOGICAL_SOURCE_NAME \
-    --repo "$LOGICAL_SOURCE_NAME::<one-repo>" \
-    --telemetry "agent=$AGENT,executionMode=local"
-
-After it completes, re-run the schedule setup. The check will see agentSpaceId
-populated and proceed.
-EOF
-    return 1
-  fi
-fi
-```
-
-The agent MUST stop and emit the bootstrap admin handoff to the customer if `agentSpaceId` is empty. **Do NOT create the schedule until bootstrap is done** -- creating it anyway just produces a schedule that fails on every fire.
 
 #### Mode 2: Remediation (`JOB_TYPE=remediation`)
 

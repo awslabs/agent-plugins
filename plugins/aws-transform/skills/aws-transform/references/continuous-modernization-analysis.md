@@ -68,43 +68,6 @@ atx ct analysis cancel --id <id>
 atx ct analysis delete --id <id> [--cascade-findings]
 ```
 
-## Security analysis prerequisite
-
-If the analysis type is `security`, `agentic-readiness`, or `modernization-readiness` (these all use the security-agent under the hood), the agent space resource must be provisioned in the customer's account before the analysis can run. The first run in any new account triggers `securityagent:CreateAgentSpace`, which requires admin credentials. After that one-time bootstrap, every subsequent run finds the existing agent space via `list-agent-spaces` and never needs `CreateAgentSpace` again.
-
-**The agent MUST run this check before submitting a security/agentic-readiness/modernization-readiness analysis:**
-
-```bash
-AGENT_SPACE_ID=$(atx ct setup security-agent --status 2>/dev/null | jq -r '.agentSpaceId // ""')
-
-if [ -z "$AGENT_SPACE_ID" ]; then
-  # First-time bootstrap required: agent space not yet provisioned in this account.
-  echo "agent space not yet provisioned"
-fi
-```
-
-**If `agentSpaceId` is empty**, the agent MUST stop and emit an admin handoff. The customer needs to run the analysis once with admin credentials (creates the agent space, populates `agentSpaceId` in the local config), then re-run with whatever credentials they normally use.
-
-**Profile-name guidance for the agent.** When emitting the bootstrap handoff command, the agent MUST use the placeholder `<your-admin-profile>` rather than guessing a profile name from the customer's local AWS config, environment variables, or shell history. Substituting a wrong name leads to confusing AccessDenied errors.
-
-Suggested phrasing:
-
-> "Before I can run a `<analysis-type>` analysis, the agent space resource needs to be provisioned in your account. This is a one-time bootstrap that requires admin credentials -- only the first security/agentic-readiness/modernization-readiness analysis ever in this account needs this. Run this with your admin profile:
->
-> ```bash
-> AWS_PROFILE=<your-admin-profile> atx ct analysis run \
->   --type <analysis-type> \
->   --source <source-name> \
->   --repo "<source-name>::<one-repo>" \
->   --telemetry "agent=<AGENT>,executionMode=local"
-> ```
->
-> Pick any one repo from your source -- the bootstrap doesn't depend on which one. After it completes, your local `~/.atxct/shared/security_agent_config.json` will have `agentSpaceId` populated. Re-run your original request and the analysis will proceed without admin creds."
-
-The agent then STOPS this turn. On the next user turn, re-check `--status`; if `agentSpaceId` is now populated, proceed with the original analysis request.
-
-**If `agentSpaceId` is populated** (already bootstrapped), proceed with the analysis normally using whatever credentials the customer's local profile has.
-
 ## Custom Analysis
 
 The `custom` type runs any transformation definition (TD) against a repository. Unlike other analysis types, custom analysis does not generate findings -- it executes the TD directly.
