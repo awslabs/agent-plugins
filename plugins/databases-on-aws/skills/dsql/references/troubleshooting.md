@@ -93,10 +93,12 @@ See [full list of unsupported features](https://docs.aws.amazon.com/aurora-dsql/
 ### Error: "Datatype array not supported"
 
 **Cause:** Using `TEXT[]` or other array column types
-**Solution:**
+**Solution:** Serialize the array into a single column — DSQL has no array column type. PREFER `JSONB`; MAY use `TEXT` for opaque columns. ASK the user which format fits the access pattern.
 
-1. Change the column to `JSONB` (`tags JSONB`) and serialize the array as a JSONB array
-2. At query time, expand it with `jsonb_array_elements_text(tags)`
+- **PREFER `JSONB`** — the application queries inside the value (`@>`/`?`/`?|`/`?&`, `jsonb_array_elements_text`, or indexed JSONB paths); values are normalized on write. Insert: `INSERT INTO t (tags) VALUES ($1::jsonb)` with `JSON.stringify(arr)`. Query: `jsonb_array_elements_text(tags)`.
+- **MAY use `TEXT`** — the column is opaque to the database (the app reads the whole value, parses it, and never queries inside). Insert raw: `INSERT INTO t (tags_csv) VALUES ($1)` with `arr.join(',')`.
+- **`JSON` is valid** when writes dominate (no parse/sort overhead on write), byte-exact input matters (audit, replay, duplicate keys), or only `->`/`->>` is needed.
+- **When migrating:** keep existing `JSON` columns as `JSON`; upgrade to `JSONB` only when JSONB-only operators or indexed paths are needed.
 
 ### Error: "Please use CREATE INDEX ASYNC"
 
