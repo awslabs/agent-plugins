@@ -35,12 +35,12 @@ Enter this workflow if **ANY** of these signals are present:
 
 Before entering the workflow, confirm the query targets DSQL:
 
-| Condition                                                                     | Action                                                                             |
-| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| Only `aurora-dsql` MCP is connected (no other database MCPs)                  | Proceed — DSQL is the only target                                                  |
-| User explicitly mentions DSQL, Aurora DSQL, or a known DSQL cluster           | Proceed                                                                            |
-| Conversation already has prior DSQL interaction (earlier queries, schema ops) | Proceed                                                                            |
-| Multiple database MCPs are connected and no DSQL signal in the message        | Ask the user which database they mean before proceeding                            |
+| Condition                                                                     | Action                                                                                |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Only `aurora-dsql` MCP is connected (no other database MCPs)                  | Proceed — DSQL is the only target                                                     |
+| User explicitly mentions DSQL, Aurora DSQL, or a known DSQL cluster           | Proceed                                                                               |
+| Conversation already has prior DSQL interaction (earlier queries, schema ops) | Proceed                                                                               |
+| Multiple database MCPs are connected and no DSQL signal in the message        | Ask the user which database they mean before proceeding                               |
 | No database MCP is connected                                                  | Inform the user that the `aurora-dsql` MCP is required — no MCP means no plan capture |
 
 ---
