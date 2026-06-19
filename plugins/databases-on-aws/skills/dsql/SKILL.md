@@ -77,12 +77,15 @@ Load these files as needed for detailed guidance:
 
 ### Query Plan Explainability:
 
-| Reference                                                                         | When to Load                    | Contains                                                                  |
-| --------------------------------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------- |
-| [query-plan/plan-interpretation.md](references/query-plan/plan-interpretation.md) | MUST load at Workflow 9 Phase 0 | DSQL node types, Node Duration math, estimation-error bands               |
-| [query-plan/catalog-queries.md](references/query-plan/catalog-queries.md)         | MUST load at Workflow 9 Phase 0 | `pg_class`/`pg_stats`/`pg_indexes` SQL, correlated-predicate verification |
-| [query-plan/guc-experiments.md](references/query-plan/guc-experiments.md)         | MUST load at Workflow 9 Phase 0 | GUC experiment procedures, 30-second skip protocol                        |
-| [query-plan/report-format.md](references/query-plan/report-format.md)             | MUST load at Workflow 9 Phase 0 | Required report structure, element checklist, support request template    |
+| Reference                                                                                           | When to Load                                          | Contains                                                                  |
+| --------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------- |
+| [query-plan/workflow.md](references/query-plan/workflow.md)                                         | MUST load at Workflow 9 entry — gates all other files | Trigger criteria, context disambiguation, routing, phased workflow        |
+| [query-plan/plan-interpretation.md](references/query-plan/plan-interpretation.md)                   | MUST load at Workflow 9 Phase 0                       | DSQL node types, Node Duration math, estimation-error bands               |
+| [query-plan/catalog-queries.md](references/query-plan/catalog-queries.md)                           | MUST load at Workflow 9 Phase 0                       | `pg_class`/`pg_stats`/`pg_indexes` SQL, correlated-predicate verification |
+| [query-plan/guc-experiments.md](references/query-plan/guc-experiments.md)                           | MUST load at Workflow 9 Phase 0                       | GUC experiment procedures, 30-second skip protocol                        |
+| [query-plan/report-format.md](references/query-plan/report-format.md)                               | MUST load at Workflow 9 Phase 0                       | Required report structure, element checklist, support request template    |
+| [query-plan/query-rewrites-generic.md](references/query-plan/query-rewrites-generic.md)             | SHOULD load at Phase 0; sub-files on-demand           | Index of 11 generic rewrite patterns                                      |
+| [query-plan/query-rewrites-dsql-specific.md](references/query-plan/query-rewrites-dsql-specific.md) | SHOULD load at Phase 0; sub-files on-demand           | Index of DSQL-specific rewrite patterns                                   |
 
 ---
 
@@ -220,7 +223,7 @@ MUST load [dsql-lint.md](references/dsql-lint.md) before running `dsql_lint`. Ru
 
 Explains why the DSQL optimizer chose a particular plan. Triggered by slow queries, high DPU, unexpected Full Scans, or plans the user doesn't understand. **REQUIRES a structured Markdown diagnostic report as the deliverable.**
 
-MUST load all four reference files at Phase 0: [query-plan/plan-interpretation.md](references/query-plan/plan-interpretation.md), [query-plan/catalog-queries.md](references/query-plan/catalog-queries.md), [query-plan/guc-experiments.md](references/query-plan/guc-experiments.md), [query-plan/report-format.md](references/query-plan/report-format.md). The phase procedures (capture plan, gather evidence, experiment, produce report) are defined in those files.
+MUST load [query-plan/workflow.md](references/query-plan/workflow.md) at entry — it defines trigger criteria, context disambiguation, routing, and the full phased workflow (Phase 0–4). Workflow.md specifies which reference files to load at each phase.
 
 **Safety.** Plan capture uses `readonly_query` exclusively. Rewrite DML to SELECT for plan capture. **MUST NOT** use `transact --allow-writes` for plan capture.
 
