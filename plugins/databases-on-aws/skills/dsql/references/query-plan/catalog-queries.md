@@ -2,6 +2,11 @@
 
 Exact SQL for interrogating optimizer statistics and actual cardinalities against the DSQL cluster.
 
+**Placeholder substitution:** All queries in this file use `'{...}'` placeholders. MUST substitute via `safe_query.build()` — see input-validation.md. Use the correct helper per position:
+
+- **Identifier positions** (FROM clause, GROUP BY, column aliases): `ident()` → emits `"value"`
+- **String-literal positions** (WHERE `= '{schema}'`, `IN ('{table}')`, equality comparisons against catalog columns): `allow()` or `regex()` → emits `'value'`
+
 ## Table of Contents
 
 1. [Table-Level Statistics (pg_class)](#table-level-statistics)
@@ -107,8 +112,6 @@ Compare against `pg_stats.n_distinct`:
 - If `n_distinct` is negative: multiply absolute value by actual row count to get estimated distinct count
 
 ## Column Types for Predicate Columns
-
-MUST substitute `'{schema}'`, `'{table}'`, and `'{col}'` placeholders in the queries below via `safe_query.build()` with `ident()` — see input-validation.md.
 
 Retrieve the declared types for columns used in WHERE predicates and JOIN conditions, to detect type coercion index bypass (see plan-interpretation.md):
 
