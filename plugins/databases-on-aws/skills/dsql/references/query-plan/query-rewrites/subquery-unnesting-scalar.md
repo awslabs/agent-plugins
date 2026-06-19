@@ -2,7 +2,7 @@
 
 When a query contains a scalar subquery in the SELECT clause computing an aggregate correlated by equality, rewrite it as a LEFT JOIN with GROUP BY. This reduces repeated subquery executions and enables better join planning.
 
-**SHOULD apply when:** The scalar subquery is correlated via equality and contains an aggregate function (MAX, MIN, COUNT, SUM). For COUNT and SUM, MUST wrap with `COALESCE(..., 0)` because the LEFT JOIN returns NULL (not 0) for unmatched rows — the scalar subquery returns 0.
+**SHOULD apply when:** The scalar subquery is correlated via equality and contains an aggregate function (MAX, MIN, COUNT, SUM). For COUNT, MUST wrap with `COALESCE(..., 0)` because the LEFT JOIN returns NULL for unmatched rows while the scalar `COUNT` returns 0. For SUM/MAX/MIN, do NOT add COALESCE — both the scalar subquery and the LEFT JOIN return NULL on empty sets.
 
 **SHOULD skip when:** The scalar subquery is uncorrelated.
 

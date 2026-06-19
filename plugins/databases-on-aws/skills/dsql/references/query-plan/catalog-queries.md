@@ -139,7 +139,7 @@ FROM pg_amop ao
 JOIN pg_type lt ON lt.oid = ao.amoplefttype
 JOIN pg_type rt ON rt.oid = ao.amoprighttype
 -- 10003 is DSQL's B-Tree OID (PG mainline is 403).
--- Verify with: SELECT oid FROM pg_am WHERE amname = 'btree'
+-- Verify with: SELECT oid FROM pg_am WHERE amname = 'btree_index'
 WHERE ao.amopmethod = 10003
   AND ao.amoplefttype != ao.amoprighttype
 ORDER BY lt.typname, rt.typname;
@@ -155,7 +155,7 @@ SELECT EXISTS (
   FROM pg_amop ao
   JOIN pg_type lt ON lt.oid = ao.amoplefttype
   JOIN pg_type rt ON rt.oid = ao.amoprighttype
-  -- 10003 = DSQL B-Tree OID; verify with: SELECT oid FROM pg_am WHERE amname = 'btree'
+  -- 10003 = DSQL B-Tree OID; verify with: SELECT oid FROM pg_am WHERE amname = 'btree_index'
   WHERE ao.amopmethod = 10003
     AND lt.typname = '{predicate_type}'
     AND rt.typname = '{column_type}'

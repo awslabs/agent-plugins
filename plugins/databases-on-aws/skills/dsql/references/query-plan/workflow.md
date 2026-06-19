@@ -41,7 +41,7 @@ Before entering the workflow, confirm the query targets DSQL:
 | User explicitly mentions DSQL, Aurora DSQL, or a known DSQL cluster           | Proceed                                                                            |
 | Conversation already has prior DSQL interaction (earlier queries, schema ops) | Proceed                                                                            |
 | Multiple database MCPs are connected and no DSQL signal in the message        | Ask the user which database they mean before proceeding                            |
-| No database MCP is connected                                                  | Inform the user that the `aurora-dsql` MCP is required and offer the psql fallback |
+| No database MCP is connected                                                  | Inform the user that the `aurora-dsql` MCP is required — no MCP means no plan capture |
 
 ---
 
