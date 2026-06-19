@@ -2,9 +2,9 @@
 
 When a query contains an uncorrelated `IN (SELECT ...)` subquery, rewrite it as an EXISTS (preferred, preserves semi-join semantics) or explicit JOIN. This enables better join order optimizations and index usage.
 
-**SHOULD apply when:** The subquery does not reference columns from the outer query.
+**SHOULD apply when:** The subquery does not reference columns from the outer query and returns a large or variable number of rows.
 
-**SHOULD skip when:** The subquery is correlated (references outer query columns).
+**SHOULD skip when:** The IN list is a small static set of constants (e.g., `IN ('admin', 'editor')`) or the subquery is correlated (references outer query columns).
 
 ```sql
 -- Original

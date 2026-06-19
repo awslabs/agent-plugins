@@ -4,7 +4,7 @@
     {
       "id": 200,
       "prompt": "My DSQL query is slow. It does:\n\nSELECT * FROM customers WHERE customer_id IN (SELECT customer_id FROM orders WHERE order_date > '2024-01-01');\n\nThe EXPLAIN shows a Full Scan on customers. Can you diagnose and suggest a fix?",
-      "expected_output": "Runs EXPLAIN ANALYZE, identifies subquery-driven Full Scan, recommends EXISTS rewrite from query-rewrites/subquery-unnesting-uncorrelated.md or in-subquery-to-exists.md",
+      "expected_output": "Runs EXPLAIN ANALYZE, identifies subquery-driven Full Scan, recommends EXISTS rewrite from query-rewrites/subquery-unnesting-uncorrelated.md",
       "files": [],
       "expectations": [
         "Loads query-plan/workflow.md or reads the reference files listed in Phase 0",

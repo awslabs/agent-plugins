@@ -13,7 +13,6 @@ Generic SQL rewrites that SHOULD be recommended when a plan reveals inefficiency
 | Correlated EXISTS subquery                 | [subquery-unnesting-correlated.md](query-rewrites/subquery-unnesting-correlated.md)     |
 | Scalar correlated subquery in SELECT       | [subquery-unnesting-scalar.md](query-rewrites/subquery-unnesting-scalar.md)             |
 | Computation on indexed column in predicate | [push-computation-to-constant.md](query-rewrites/push-computation-to-constant.md)       |
-| Large IN-subquery result set               | [in-subquery-to-exists.md](query-rewrites/in-subquery-to-exists.md)                     |
 | GROUP BY after JOIN with dimension columns | [push-group-by-into-subquery.md](query-rewrites/push-group-by-into-subquery.md)         |
 | NOT IN with large or nullable subquery     | [not-in-to-not-exists.md](query-rewrites/not-in-to-not-exists.md)                       |
 | Nested UNION ALL                           | [flatten-union-all.md](query-rewrites/flatten-union-all.md)                             |
