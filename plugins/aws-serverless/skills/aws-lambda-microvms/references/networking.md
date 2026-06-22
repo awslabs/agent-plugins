@@ -54,9 +54,9 @@ The proxy expects a valid auth token in `X-aws-proxy-auth`. Tokens come from `Cr
 
 ### Two token APIs
 
-| API | Purpose |
-| --- | --- |
-| `create-microvm-auth-token` | Application traffic. Requires `allowedPorts`. |
+| API                               | Purpose                                                                                                                                |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `create-microvm-auth-token`       | Application traffic. Requires `allowedPorts`.                                                                                          |
 | `create-microvm-shell-auth-token` | Shell access (only when the `SHELL_INGRESS` network connector is attached). Works from the AWS console or a terminal WebSocket client. |
 
 Both return a `TokenParts` map (multiple key/value entries) — typically you want the `X-aws-proxy-auth` value.
@@ -96,13 +96,13 @@ The `lambda-microvms.*` subprotocols are **stripped before forwarding** to your 
 
 ## Protocol support
 
-| Protocol | Notes |
-| --- | --- |
-| HTTP/1.1 | Default. |
-| HTTP/2 | Negotiated via ALPN on TLS (if supported), with HTTP/1.1 fallback. For plaintext connections, send `X-aws-proxy-force-h2: true` to force HTTP/2 over plaintext (H2C) to the upstream. |
-| gRPC | Just HTTP/2 — works as soon as your server is on HTTP/2. |
-| WebSockets | Standard upgrade flow. Use subprotocols for auth/port (above). |
-| TLS to upstream | Optional. The proxy auto-detects whether your server speaks TLS and adjusts (re-encrypt for end-to-end TLS, or terminate at proxy). |
+| Protocol        | Notes                                                                                                                                                                                 |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| HTTP/1.1        | Default.                                                                                                                                                                              |
+| HTTP/2          | Negotiated via ALPN on TLS (if supported), with HTTP/1.1 fallback. For plaintext connections, send `X-aws-proxy-force-h2: true` to force HTTP/2 over plaintext (H2C) to the upstream. |
+| gRPC            | Just HTTP/2 — works as soon as your server is on HTTP/2.                                                                                                                              |
+| WebSockets      | Standard upgrade flow. Use subprotocols for auth/port (above).                                                                                                                        |
+| TLS to upstream | Optional. The proxy auto-detects whether your server speaks TLS and adjusts (re-encrypt for end-to-end TLS, or terminate at proxy).                                                   |
 
 > Protocol negotiation in this table applies to proxy agent → guest application traffic inside the MicroVM. Client → proxy service traffic is always TLS-encrypted and negotiates HTTP/2 independently.
 
@@ -149,7 +149,7 @@ Constraints:
 - Connector must be in the same Region as the MicroVM image.
 - `NetworkProtocol` supports both `IPv4` and `DualStack`.
 - The connector is **bound at run time** — you can't swap connectors on suspend/resume.
-- For internet *and* VPC access, configure a **NAT gateway** in your VPC.
+- For internet _and_ VPC access, configure a **NAT gateway** in your VPC.
 
 ## Reserved / stripped headers
 

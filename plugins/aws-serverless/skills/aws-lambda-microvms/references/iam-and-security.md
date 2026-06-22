@@ -4,10 +4,10 @@ Lambda MicroVMs uses two IAM roles with a clean separation between **build time*
 
 ## Two roles, two phases
 
-| Role | Required? | Used by | Used during |
-| --- | --- | --- | --- |
-| **Build role** (`buildRoleArn`) | Yes | `CreateMicrovmImage` / `UpdateMicrovmImage` | Image build (download artifact, run Dockerfile, ship build logs) |
-| **Execution role** (`executionRoleArn`) | Optional | `RunMicrovm` | Application runtime (assumed inside the guest, exposed via IMDSv2) |
+| Role                                    | Required? | Used by                                     | Used during                                                        |
+| --------------------------------------- | --------- | ------------------------------------------- | ------------------------------------------------------------------ |
+| **Build role** (`buildRoleArn`)         | Yes       | `CreateMicrovmImage` / `UpdateMicrovmImage` | Image build (download artifact, run Dockerfile, ship build logs)   |
+| **Execution role** (`executionRoleArn`) | Optional  | `RunMicrovm`                                | Application runtime (assumed inside the guest, exposed via IMDSv2) |
 
 The two **must be separate** ARNs in production. The build role usually needs S3/ECR permissions you don't want exposed to running application code; the execution role usually needs application-specific perms (DynamoDB, Secrets Manager, etc.) the build doesn't.
 
@@ -66,7 +66,7 @@ Add as needed:
 
 ## Execution role — minimum permissions
 
-The execution role is **optional**, but without it, application stdout is *not* forwarded to CloudWatch.
+The execution role is **optional**, but without it, application stdout is _not_ forwarded to CloudWatch.
 
 ```json
 {
@@ -99,17 +99,17 @@ The MicroVM ID is automatically provided in the `/run` hook request body as `mic
 
 Lambda issues short-lived, opaque auth tokens for ingress traffic.
 
-| Field | Detail |
-| --- | --- |
-| TTL | `expirationInMinutes` ≤ 60 |
+| Field  | Detail                                                                                          |
+| ------ | ----------------------------------------------------------------------------------------------- |
+| TTL    | `expirationInMinutes` ≤ 60                                                                      |
 | Header | `X-aws-proxy-auth: <token>` (or WebSocket subprotocol `lambda-microvms.authentication.<token>`) |
-| Scope | Restricted to a list of ports/ranges via `allowedPorts` on `CreateMicrovmAuthToken` (required) |
+| Scope  | Restricted to a list of ports/ranges via `allowedPorts` on `CreateMicrovmAuthToken` (required)  |
 
 ### Two token operations
 
-| Operation | When to use |
-| --- | --- |
-| `create-microvm-auth-token` | Application traffic. Requires `allowedPorts`. |
+| Operation                         | When to use                                                                                                                              |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `create-microvm-auth-token`       | Application traffic. Requires `allowedPorts`.                                                                                            |
 | `create-microvm-shell-auth-token` | Interactive shell access (browser or terminal). Only works when the MicroVM was run with the `SHELL_INGRESS` network connector attached. |
 
 ## Shell access (debugging)

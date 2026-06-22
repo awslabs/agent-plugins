@@ -55,21 +55,21 @@ Your application can implement HTTP endpoints that Lambda invokes at lifecycle t
 
 ### Image build hooks
 
-| Hook | Path | When invoked | Timeout field | Use it for |
-| --- | --- | --- | --- | --- |
-| **`/ready`** | `POST /aws/lambda-microvms/runtime/v1/ready` | During image build, before snapshot capture | `readyTimeoutInSeconds` (1–3600) | Confirm app initialized; fail the build if app is broken |
-| **`/validate`** | `POST /aws/lambda-microvms/runtime/v1/validate` | After build, on a test MicroVM run from the snapshot | `validateTimeoutInSeconds` (1–3600) | End-to-end smoke test of the snapshot |
+| Hook            | Path                                            | When invoked                                         | Timeout field                       | Use it for                                               |
+| --------------- | ----------------------------------------------- | ---------------------------------------------------- | ----------------------------------- | -------------------------------------------------------- |
+| **`/ready`**    | `POST /aws/lambda-microvms/runtime/v1/ready`    | During image build, before snapshot capture          | `readyTimeoutInSeconds` (1–3600)    | Confirm app initialized; fail the build if app is broken |
+| **`/validate`** | `POST /aws/lambda-microvms/runtime/v1/validate` | After build, on a test MicroVM run from the snapshot | `validateTimeoutInSeconds` (1–3600) | End-to-end smoke test of the snapshot                    |
 
 Implementing image build hooks is recommended for performance — they ensure your application is fully initialized before the snapshot is captured, resulting in faster runs.
 
 ### MicroVM hooks
 
-| Hook | Path | When invoked | Timeout field | Use it for |
-| --- | --- | --- | --- | --- |
-| **`/run`** | `POST /aws/lambda-microvms/runtime/v1/run` | Once, immediately after a MicroVM is run (resumed from snapshot) | `runTimeoutInSeconds` (1–60) | Create per-VM unique state, fetch secrets, register with discovery. **Should be quick** — not for long-running work |
-| **`/resume`** | `POST /aws/lambda-microvms/runtime/v1/resume` | After `SUSPENDED` → `RUNNING` | `resumeTimeoutInSeconds` (1–60) | Re-establish connections, generate new randomness if your application relies on non-CSPRNGs |
-| **`/suspend`** | `POST /aws/lambda-microvms/runtime/v1/suspend` | Just before `RUNNING` → `SUSPENDED` | `suspendTimeoutInSeconds` (1–60) | Return 200 only when the app is ready to be suspended. Customer decides the strategy: wait for in-flight work to drain within the timeout, or return immediately |
-| **`/terminate`** | `POST /aws/lambda-microvms/runtime/v1/terminate` | Just before termination | `terminateTimeoutInSeconds` (1–60) | Flush logs, persist state, deregister |
+| Hook             | Path                                             | When invoked                                                     | Timeout field                      | Use it for                                                                                                                                                       |
+| ---------------- | ------------------------------------------------ | ---------------------------------------------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`/run`**       | `POST /aws/lambda-microvms/runtime/v1/run`       | Once, immediately after a MicroVM is run (resumed from snapshot) | `runTimeoutInSeconds` (1–60)       | Create per-VM unique state, fetch secrets, register with discovery. **Should be quick** — not for long-running work                                              |
+| **`/resume`**    | `POST /aws/lambda-microvms/runtime/v1/resume`    | After `SUSPENDED` → `RUNNING`                                    | `resumeTimeoutInSeconds` (1–60)    | Re-establish connections, generate new randomness if your application relies on non-CSPRNGs                                                                      |
+| **`/suspend`**   | `POST /aws/lambda-microvms/runtime/v1/suspend`   | Just before `RUNNING` → `SUSPENDED`                              | `suspendTimeoutInSeconds` (1–60)   | Return 200 only when the app is ready to be suspended. Customer decides the strategy: wait for in-flight work to drain within the timeout, or return immediately |
+| **`/terminate`** | `POST /aws/lambda-microvms/runtime/v1/terminate` | Just before termination                                          | `terminateTimeoutInSeconds` (1–60) | Flush logs, persist state, deregister                                                                                                                            |
 
 > If you use microVM hooks, you must implement the `/ready` microVM image hook. This ensures your application has booted and can receive hook events.
 >
@@ -137,11 +137,11 @@ TerminateMicrovm ─────▶│   POST /terminate           │
 
 ## Idle policy fields
 
-| Field | Range | Notes |
-| --- | --- | --- |
-| `maxIdleDurationSeconds` | ≥60 | Required. Idle threshold from last proxy traffic. |
-| `suspendedDurationSeconds` | ≥0 | Required. Time-to-terminate while suspended. `0` means "terminate immediately on suspend." |
-| `autoResumeEnabled` | bool | Required. If true, proxy resumes the VM transparently when traffic arrives at its endpoint. |
+| Field                      | Range | Notes                                                                                       |
+| -------------------------- | ----- | ------------------------------------------------------------------------------------------- |
+| `maxIdleDurationSeconds`   | ≥60   | Required. Idle threshold from last proxy traffic.                                           |
+| `suspendedDurationSeconds` | ≥0    | Required. Time-to-terminate while suspended. `0` means "terminate immediately on suspend."  |
+| `autoResumeEnabled`        | bool  | Required. If true, proxy resumes the VM transparently when traffic arrives at its endpoint. |
 
 In `RunMicrovm` you can also set `maximumDurationInSeconds` (cap 28,800) — a hard wall-clock lifetime regardless of activity.
 

@@ -13,18 +13,18 @@ aws lambda-microvms list-microvm-image-builds \
   --query 'items[].[architecture,buildState,stateReason]' --output table
 ```
 
-| `stateReason` | Cause | Fix |
-| --- | --- | --- |
-| `S3_ACCESS_DENIED` | Build role can't read the artifact. | Add `s3:GetObject` for the artifact key to the build role. |
-| `S3_NO_SUCH_KEY` | Wrong path. | Verify `--code-artifact uri=s3://bucket/key` matches what's in S3. |
-| `S3_NO_SUCH_BUCKET` | Bucket doesn't exist. | Create the bucket; check spelling. |
-| `S3_INVALID_OBJECT` | Glacier or other non-instant storage class. | Move to Standard. |
-| `S3_CROSS_REGION_ACCESS_DENIED` | Artifact in different region than the image. | Re-upload to a bucket in the image's region. |
-| `ARCHIVE_DOCKERFILE_NOT_FOUND` | No `Dockerfile` at zip root. | Ensure `Dockerfile` is at the **top level** of the zip — `unzip -l my-app.zip` should show `Dockerfile` first, not `my-app/Dockerfile`. |
-| `ARCHIVE_INVALID` | Corrupt or non-zip archive. | Re-create with `zip -r`; verify with `unzip -t`. |
-| `CONTAINER_BUILD_FAILED` | Dockerfile error. | Reproduce locally with `docker build` against the same base image. Check the build logs in `/aws/lambda-microvms/<image-name>` in CloudWatch. |
-| `DISK_STORAGE_FULL` | Build exceeded disk. | Trim layers (multi-stage builds, `--no-install-recommends`, clean caches). |
-| `INTERNAL_PLATFORM_ERROR` | Service-side. | Retry. If persistent, contact support. |
+| `stateReason`                   | Cause                                        | Fix                                                                                                                                           |
+| ------------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `S3_ACCESS_DENIED`              | Build role can't read the artifact.          | Add `s3:GetObject` for the artifact key to the build role.                                                                                    |
+| `S3_NO_SUCH_KEY`                | Wrong path.                                  | Verify `--code-artifact uri=s3://bucket/key` matches what's in S3.                                                                            |
+| `S3_NO_SUCH_BUCKET`             | Bucket doesn't exist.                        | Create the bucket; check spelling.                                                                                                            |
+| `S3_INVALID_OBJECT`             | Glacier or other non-instant storage class.  | Move to Standard.                                                                                                                             |
+| `S3_CROSS_REGION_ACCESS_DENIED` | Artifact in different region than the image. | Re-upload to a bucket in the image's region.                                                                                                  |
+| `ARCHIVE_DOCKERFILE_NOT_FOUND`  | No `Dockerfile` at zip root.                 | Ensure `Dockerfile` is at the **top level** of the zip — `unzip -l my-app.zip` should show `Dockerfile` first, not `my-app/Dockerfile`.       |
+| `ARCHIVE_INVALID`               | Corrupt or non-zip archive.                  | Re-create with `zip -r`; verify with `unzip -t`.                                                                                              |
+| `CONTAINER_BUILD_FAILED`        | Dockerfile error.                            | Reproduce locally with `docker build` against the same base image. Check the build logs in `/aws/lambda-microvms/<image-name>` in CloudWatch. |
+| `DISK_STORAGE_FULL`             | Build exceeded disk.                         | Trim layers (multi-stage builds, `--no-install-recommends`, clean caches).                                                                    |
+| `INTERNAL_PLATFORM_ERROR`       | Service-side.                                | Retry. If persistent, contact support.                                                                                                        |
 
 ### `/ready` hook caused build failure
 
@@ -36,13 +36,13 @@ The validation phase launches a test MicroVM from the snapshot and calls `/valid
 
 ## Run failures (`RunMicrovm`)
 
-| Error | Likely cause | Fix |
-| --- | --- | --- |
-| `ResourceNotFoundException` | Image, version, or execution role doesn't exist. | Verify ARNs. For custom images use `imageVersion`; for managed images you can omit it. |
-| `ServiceQuotaExceededException` | Hit account-wide MicroVM concurrency or memory cap. | Wait for terminations, request a quota increase. |
-| `ValidationException` | Bad input (idle policy missing required fields, malformed connector ARN, etc.). | Check the `message` field — it's specific. |
-| `AccessDenied` | Caller can't `lambda:RunMicrovm`, or `iam:PassRole` for the execution role, or `lambda:PassNetworkConnector` (required on every `RunMicrovm`, even with the default connectors). | Add the missing IAM permission to the caller. |
-| `ConflictException` | `clientToken` reused with different parameters. | Use a fresh `clientToken` or replay the exact same request. |
+| Error                           | Likely cause                                                                                                                                                                     | Fix                                                                                    |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `ResourceNotFoundException`     | Image, version, or execution role doesn't exist.                                                                                                                                 | Verify ARNs. For custom images use `imageVersion`; for managed images you can omit it. |
+| `ServiceQuotaExceededException` | Hit account-wide MicroVM concurrency or memory cap.                                                                                                                              | Wait for terminations, request a quota increase.                                       |
+| `ValidationException`           | Bad input (idle policy missing required fields, malformed connector ARN, etc.).                                                                                                  | Check the `message` field — it's specific.                                             |
+| `AccessDenied`                  | Caller can't `lambda:RunMicrovm`, or `iam:PassRole` for the execution role, or `lambda:PassNetworkConnector` (required on every `RunMicrovm`, even with the default connectors). | Add the missing IAM permission to the caller.                                          |
+| `ConflictException`             | `clientToken` reused with different parameters.                                                                                                                                  | Use a fresh `clientToken` or replay the exact same request.                            |
 
 ## Connect / auth failures
 
@@ -76,23 +76,23 @@ If the proxy receives traffic before `RunMicrovm` finishes, it may 5xx. Retry co
 
 ## Hook timeouts at runtime
 
-| Hook | Symptom | Fix |
-| --- | --- | --- |
-| `/run` | `RunMicrovm` returns success but VM goes to `TERMINATED` shortly after with `stateReason` mentioning hook failure. | Raise `runTimeoutInSeconds`; move long-running init out of `/run` (it should be quick). |
-| `/resume` | First request after resume hangs / 502s. | Raise `resumeTimeoutInSeconds`. Check resume hook for slow operations (DB reconnects, etc.). |
-| `/suspend` | VM doesn't actually suspend on idle. | Hook is hanging or returning non-200. Hook should return 200 when the app is ready to suspend. |
-| `/terminate` | Logs/state lost on shutdown. | Add a flush in `/terminate` and raise the timeout. |
+| Hook         | Symptom                                                                                                            | Fix                                                                                            |
+| ------------ | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `/run`       | `RunMicrovm` returns success but VM goes to `TERMINATED` shortly after with `stateReason` mentioning hook failure. | Raise `runTimeoutInSeconds`; move long-running init out of `/run` (it should be quick).        |
+| `/resume`    | First request after resume hangs / 502s.                                                                           | Raise `resumeTimeoutInSeconds`. Check resume hook for slow operations (DB reconnects, etc.).   |
+| `/suspend`   | VM doesn't actually suspend on idle.                                                                               | Hook is hanging or returning non-200. Hook should return 200 when the app is ready to suspend. |
+| `/terminate` | Logs/state lost on shutdown.                                                                                       | Add a flush in `/terminate` and raise the timeout.                                             |
 
 Hook server **must bind to `0.0.0.0`** on the configured `port` (commonly 9000). `127.0.0.1`-only listeners are unreachable from Lambda's hook caller.
 
 ## Network connector troubleshooting
 
-| Issue | Cause | Fix |
-| --- | --- | --- |
-| Connector stuck in `PENDING` >10 min | ENI provisioning failure (subnet full, missing IAM perms). | Check `StateReason` on `get-network-connector`. Verify the operator role has `ec2:CreateNetworkInterface` and `ec2:CreateTags`. |
-| `InvalidGroup.NotFound` | Subnet and SG in different VPCs / regions. | Both must share VPC and Region with the connector. |
-| `Unable to assume role` | Operator role trust policy doesn't allow `lambda.amazonaws.com`. | Fix trust policy, retry. |
-| `Invalid security token` | Caller's AWS creds are stale. | Refresh credentials. |
+| Issue                                | Cause                                                            | Fix                                                                                                                             |
+| ------------------------------------ | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Connector stuck in `PENDING` >10 min | ENI provisioning failure (subnet full, missing IAM perms).       | Check `StateReason` on `get-network-connector`. Verify the operator role has `ec2:CreateNetworkInterface` and `ec2:CreateTags`. |
+| `InvalidGroup.NotFound`              | Subnet and SG in different VPCs / regions.                       | Both must share VPC and Region with the connector.                                                                              |
+| `Unable to assume role`              | Operator role trust policy doesn't allow `lambda.amazonaws.com`. | Fix trust policy, retry.                                                                                                        |
+| `Invalid security token`             | Caller's AWS creds are stale.                                    | Refresh credentials.                                                                                                            |
 
 ## Snapshot / uniqueness symptoms
 
@@ -117,12 +117,12 @@ Or mark old versions `INACTIVE` first if you want to keep them around for rollba
 
 ## Where logs live
 
-| Log | Location |
-| --- | --- |
-| Image build logs | `/aws/lambda-microvms/<image-name>` (build role must have `logs:*` on this group) |
-| Application stdout / stderr | Same group at runtime, when `executionRoleArn` has `logs:*` |
-| Custom CloudWatch logging | Pass `--logging '{"cloudWatch":{"logGroup":"...","logStream":"..."}}'` to `RunMicrovm` |
-| CloudTrail | Standard `lambda:*` events in your trail |
+| Log                         | Location                                                                               |
+| --------------------------- | -------------------------------------------------------------------------------------- |
+| Image build logs            | `/aws/lambda-microvms/<image-name>` (build role must have `logs:*` on this group)      |
+| Application stdout / stderr | Same group at runtime, when `executionRoleArn` has `logs:*`                            |
+| Custom CloudWatch logging   | Pass `--logging '{"cloudWatch":{"logGroup":"...","logStream":"..."}}'` to `RunMicrovm` |
+| CloudTrail                  | Standard `lambda:*` events in your trail                                               |
 
 > Avoid logging secrets, tokens, or PII to stdout/stderr — application output is forwarded to CloudWatch.
 

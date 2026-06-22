@@ -28,7 +28,7 @@ End-to-end: prerequisites → package → create image → run MicroVM → authe
    - `s3:GetObject` on the artifact key, `s3:PutObject` for build outputs (if you write any).
    - `logs:CreateLogGroup`, `logs:CreateLogStream`, `logs:PutLogEvents`.
    - `ecr:GetAuthorizationToken` if your `Dockerfile` `FROM` references private ECR.
-3. **(Optional) Execution role** for runtime — Lambda uses this to ship logs and to expose AWS credentials inside the MicroVM via IMDSv2. Same trust policy as the build role. Without an execution role, application stdout is *not* shipped to CloudWatch.
+3. **(Optional) Execution role** for runtime — Lambda uses this to ship logs and to expose AWS credentials inside the MicroVM via IMDSv2. Same trust policy as the build role. Without an execution role, application stdout is _not_ shipped to CloudWatch.
 
 See [`iam-and-security.md`](iam-and-security.md) for the full breakdown.
 
@@ -93,7 +93,7 @@ aws s3 cp my-app.zip s3://${BUCKET}/microvm-images/my-first-image/code-artifact.
 
 ## Step 2 — List managed base images
 
-A custom image must be built *on top of* a Lambda-managed base image (Amazon Linux 2023 + service components).
+A custom image must be built _on top of_ a Lambda-managed base image (Amazon Linux 2023 + service components).
 
 ```bash
 aws lambda-microvms list-managed-microvm-images

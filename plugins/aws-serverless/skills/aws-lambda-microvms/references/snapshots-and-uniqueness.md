@@ -32,15 +32,15 @@ If your build-phase code does any of these, it ends up in the snapshot and is id
 
 ## CSPRNGs that are safe across snapshot resume
 
-| Language | Use | Don't use |
-| --- | --- | --- |
-| Java | `java.security.SecureRandom` | `java.util.Random`, `Math.random()` seeded once |
-| Python | `secrets`, `random.SystemRandom` | `random.random()` with default seed |
-| .NET | `System.Security.Cryptography.RandomNumberGenerator` | `System.Random` instance reused across snapshot |
-| Node.js | `crypto.randomBytes`, `crypto.randomUUID` | `Math.random()` |
-| Go | `crypto/rand` | `math/rand` |
-| Rust | `rand::rngs::OsRng` | `rand::thread_rng()` if seeded once before snapshot |
-| C/C++ | `getrandom(2)`, `/dev/urandom` per-call | `rand()`, `srand(time(NULL))` once |
+| Language | Use                                                  | Don't use                                           |
+| -------- | ---------------------------------------------------- | --------------------------------------------------- |
+| Java     | `java.security.SecureRandom`                         | `java.util.Random`, `Math.random()` seeded once     |
+| Python   | `secrets`, `random.SystemRandom`                     | `random.random()` with default seed                 |
+| .NET     | `System.Security.Cryptography.RandomNumberGenerator` | `System.Random` instance reused across snapshot     |
+| Node.js  | `crypto.randomBytes`, `crypto.randomUUID`            | `Math.random()`                                     |
+| Go       | `crypto/rand`                                        | `math/rand`                                         |
+| Rust     | `rand::rngs::OsRng`                                  | `rand::thread_rng()` if seeded once before snapshot |
+| C/C++    | `getrandom(2)`, `/dev/urandom` per-call              | `rand()`, `srand(time(NULL))` once                  |
 
 The Lambda base ECR image (`public.ecr.aws/lambda/microvms:al2023-minimal`) ships an OpenSSL build that automatically re-seeds entropy on snapshot resume. If you bring your own base image, your OpenSSL version will **not** do this by default — use the Lambda base image or ensure your application reads fresh entropy per-call. Reading `/dev/urandom` per-call is safe — the kernel RNG reseeds on resume.
 
@@ -52,11 +52,11 @@ TCP connections opened in the entrypoint (e.g. an SDK client warming up) are cap
 
 You have three places to inject configuration:
 
-| Where | Set at | Same for all VMs? | Visible to | Use for |
-| --- | --- | --- | --- | --- |
-| **Build env vars** (`--environment-variables`) | Image creation | Yes — burnt into the snapshot | Container env at build time and after resume | Static, non-sensitive: log level, app port, feature toggles |
-| **`runHookPayload`** | `RunMicrovm` | No — per-VM | Body of the `/run` POST | Per-VM: tenant ID, session ID, signed URLs, references to secrets |
-| **Execution role + AWS SDK** | At run | No — assumed credentials | IMDSv2 in the guest | Real secrets — fetch from Secrets Manager / SSM Parameter Store at runtime |
+| Where                                          | Set at         | Same for all VMs?             | Visible to                                   | Use for                                                                    |
+| ---------------------------------------------- | -------------- | ----------------------------- | -------------------------------------------- | -------------------------------------------------------------------------- |
+| **Build env vars** (`--environment-variables`) | Image creation | Yes — burnt into the snapshot | Container env at build time and after resume | Static, non-sensitive: log level, app port, feature toggles                |
+| **`runHookPayload`**                           | `RunMicrovm`   | No — per-VM                   | Body of the `/run` POST                      | Per-VM: tenant ID, session ID, signed URLs, references to secrets          |
+| **Execution role + AWS SDK**                   | At run         | No — assumed credentials      | IMDSv2 in the guest                          | Real secrets — fetch from Secrets Manager / SSM Parameter Store at runtime |
 
 ## Inspecting snapshot sizes
 
