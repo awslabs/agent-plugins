@@ -214,6 +214,7 @@ jobs:
             set +e
             semgrep scan --oss-only --verbose --metrics=off --config=r/all \
               --max-log-list-entries=0 \
+              --exclude-rule="bbp-pattern-inject" \
               --exclude-rule="ai.generic.detect-generic-ai-anthprop.detect-generic-ai-anthprop" \
               --exclude-rule="generic.secrets.security.detected-sonarqube-docs-api-key.detected-sonarqube-docs-api-key" \
               --exclude-rule="apex.lang.best-practice.ncino.accessmodifiers.globalaccessmodifiers.global-access-modifiers" \

@@ -13,7 +13,7 @@ effortless scaling, multi-region viability, among other advantages.
 - **REQUIRED: Follow DDL Guidelines** - Refer to [DDL Rules](#schema-ddl-rules)
 - **SHALL repeatedly generate fresh tokens** - Refer to [Connection Limits](auth/authentication-guide.md#connection-rules)
 - **ALWAYS use ASYNC indexes** - `CREATE INDEX ASYNC` is mandatory
-- **MUST serialize arrays as JSONB** - see [Schema Design Rules](#schema-design-rules)
+- **MUST serialize arrays** into a single-column representation; **PREFER `JSONB`** (operators work directly); **MAY use `TEXT`** when the column is opaque to the database; **ASK** the user - see [Schema Design Rules](#schema-design-rules)
 - **ALWAYS Batch within row limit** - maintain transaction limits (verify via `awsknowledge`: `aurora dsql transaction limits`)
 - **REQUIRED: Build and sanitize all SQL with `safe_query.build()`** - See [Input Validation](../mcp/tools/input-validation.md#required-pattern)
 - **MUST follow correct Application Layer Patterns** - when multi-tenant isolation or application referential integrity are required; refer to [Application Layer Patterns](#application-layer-patterns)
@@ -54,7 +54,14 @@ effortless scaling, multi-region viability, among other advantages.
 ### Schema Design Rules
 
 - MUST verify column types via `awsknowledge`: `aurora dsql supported data types` or the [DSQL supported data types list](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-supported-data-types.html)
-- MUST serialize arrays as JSONB; expand at query time via `jsonb_array_elements_text(data)`
+- MUST serialize arrays into a single-column representation — DSQL has no array column type:
+  - **PREFER `JSONB`** — `@>`, `?`, `?|`, `?&`, and `jsonb_array_elements_text(data)` work directly; values validated and normalized at write
+  - **MAY use `TEXT`** when the column is opaque to the database (application reads the whole value, parses it, never queries inside)
+- For document columns:
+  - **`JSONB`** when querying with `@>`, `?`, or indexed JSONB paths
+  - **`JSON`** when writes dominate (no parse/sort overhead), when byte-exact input matters (audit, replay, payloads with duplicate keys), or when only `->`/`->>` is needed
+  - **SHOULD keep** existing `JSON` columns as `JSON` when migrating; **MAY upgrade to `JSONB`** if the application needs JSONB-only operators or indexed paths
+  - ASK the user about query patterns and read/write ratio before defaulting
 - **MUST NOT** add per-column `COLLATE` clauses — DSQL uses C collation database-wide and rejects `COLLATE "C"` in DDL. `dsql_lint(fix=true)` auto-strips `COLLATE` clauses from migrated schemas (rule `collation`, fix status `fixed`).
 - ALWAYS include tenant_id in tables for multi-tenant isolation
 - SHOULD create async indexes for tenant_id and common query patterns
@@ -127,7 +134,7 @@ UPDATE table SET c = 'default' WHERE c IS NULL;        ← AFTER ADD COLUMN
 
 **MUST verify** column types against the [DSQL supported data types docs](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-supported-data-types.html) or via `awsknowledge`: `aurora dsql supported data types` — the supported set evolves, so do not treat any static list as exhaustive.
 
-Arrays and `INET` are **[runtime-only](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-supported-data-types.html#working-with-postgresql-compatibility-query-runtime)** — cast at query time. For structured data, prefer `JSONB` over `JSON` for queryable fields.
+Arrays and `INET` are **[runtime-only](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-supported-data-types.html#working-with-postgresql-compatibility-query-runtime)** — cast at query time. For structured data, **PREFER `JSONB`** when querying inside the value (`@>`, `?`, indexed JSONB paths); `JSON` is valid when writes dominate, byte-exact input matters, or only `->`/`->>` is needed. ASK the user about query patterns before defaulting.
 
 ### Supported Key
 

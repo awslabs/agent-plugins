@@ -7,6 +7,11 @@
 
 # Excluded rules:
 #
+# bbp-pattern-inject
+#   Reason: Broken rule in the community registry (r/all) - fails to parse
+#   ("Invalid pattern for Python: Stdlib.Parsing.Parse_error"), which makes
+#   semgrep exit 2 and fail every PR regardless of findings. Not our rule.
+#
 # ai.generic.detect-generic-ai-anthprop.detect-generic-ai-anthprop
 #   Reason: This contains a Claude Code plugin repository - Anthropic references are expected
 #

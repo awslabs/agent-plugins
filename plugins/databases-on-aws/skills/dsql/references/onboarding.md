@@ -35,7 +35,7 @@ These guidelines apply when users say "Get started with DSQL" or similar phrases
   - Example:
     - "What column names would you like in this table?"
     - "What is the column name of the primary key?"
-    - "Should this column be `JSONB` or `JSON`? (`JSONB` is recommended for queryable structured data.)"
+    - "Should this column be JSON, JSONB, or TEXT? (PREFER JSONB for `@>`/`?` queries; JSON for write-heavy or byte-exact paths; TEXT for columns the database never inspects.)"
 
 **Examples:**
 
@@ -252,8 +252,8 @@ cargo add aws-sdk-dsql tokio --features full
 - If yes, MUST verify DSQL compatibility:
   - No SERIAL types (use `GENERATED AS IDENTITY` with sequences, or UUID)
   - No foreign keys (implement in application)
-  - Serialize arrays as `JSONB`; expand at query time with `jsonb_array_elements_text(data)`
-  - For structured data, prefer `JSONB` over `JSON` for queryable fields
+  - Arrays must be serialized into a single column — PREFER `JSONB` when querying inside the value (`@>`, `?`, `jsonb_array_elements_text(data)`, indexed JSONB paths); MAY use `TEXT` for columns the database never inspects; `JSON` is also valid for write-heavy or byte-exact paths. ASK the user.
+  - SHOULD keep existing `JSON` columns as `JSON`; MAY upgrade to `JSONB` if JSONB-only operators or indexed paths are needed
   - Verify column types against the [supported data types list](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-supported-data-types.html)
   - Reference [`./development-guide.md`](./development-guide.md) for full constraints
 
@@ -351,7 +351,7 @@ Let them know you're ready to help with more:
 **ALWAYS follow these rules:**
 
 1. **Indexes:** Use `CREATE INDEX ASYNC` - synchronous index creation not supported
-2. **Arrays:** Serialize as `JSONB`; expand at query time with `jsonb_array_elements_text(data)`
+2. **Serialization:** Arrays must be serialized into a single column — PREFER `JSONB` (operators work directly); MAY use `TEXT` for columns the database never inspects. For document columns, `JSON` is also a valid choice (write-heavy or byte-exact paths). ASK the user.
 3. **Referential Integrity:** Implement foreign key validation in application code
 4. **DDL Operations:** Execute one DDL per transaction, no mixing with DML
 5. **Transaction Limits:** Maximum 3,000 row modifications, 10 MiB data size per transaction

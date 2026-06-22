@@ -21,10 +21,12 @@ CREATE TABLE IF NOT EXISTS orders (
   tenant_id VARCHAR(255) NOT NULL,
   status VARCHAR(50) NOT NULL,
   tags JSONB,
-  metadata JSONB,
+  metadata JSON,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
+
+Both `JSONB` and `JSON` are valid; pick by access pattern (see Schema Design Rules in `development-guide.md`).
 
 ---
 
