@@ -65,7 +65,9 @@
         "sam",
         "api gateway",
         "eventbridge",
-        "step functions"
+        "step functions",
+        "microvms",
+        "firecracker"
       ],
       "name": "aws-serverless",
       "source": "./plugins/aws-serverless",
@@ -80,9 +82,11 @@
         "sam",
         "api gateway",
         "eventbridge",
-        "step functions"
+        "step functions",
+        "microvms",
+        "firecracker"
       ],
-      "version": "1.1.1"
+      "version": "1.2.0"
     },
     {
       "category": "migration",

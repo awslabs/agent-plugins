@@ -1,6 +1,6 @@
 {
   "name": "aws-serverless",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Design, build, deploy, test, and debug serverless applications with AWS Serverless services.",
   "author": {
     "name": "Amazon Web Services",
@@ -22,7 +22,9 @@
     "sam",
     "api-gateway",
     "eventbridge",
-    "step-functions"
+    "step-functions",
+    "microvms",
+    "firecracker"
   ],
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",
