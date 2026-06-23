@@ -118,7 +118,7 @@ Attach the `SHELL_INGRESS` network connector at run time:
 
 ```bash
 aws lambda-microvms run-microvm \
-  --image-identifier arn:aws:lambda:<region>:<account>:microvm-image/my-image \
+  --image-identifier arn:aws:lambda:<region>:<account>:microvm-image:my-image \
   --execution-role-arn ... \
   --ingress-network-connectors '["arn:aws:lambda:<region>:aws:network-connector:aws-network-connector:SHELL_INGRESS"]'
 ```
