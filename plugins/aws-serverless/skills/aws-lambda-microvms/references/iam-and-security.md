@@ -25,7 +25,7 @@ The two **must be separate** ARNs in production. The build role usually needs S3
         "aws:SourceAccount": "<account-id>"
       },
       "ArnLike": {
-        "aws:SourceArn": "arn:aws:lambda:<region>:<account-id>:microvm-image/*"
+        "aws:SourceArn": "arn:aws:lambda:<region>:<account-id>:microvm-image:*"
       }
     }
   }]
