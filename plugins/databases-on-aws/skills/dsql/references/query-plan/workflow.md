@@ -75,7 +75,9 @@ SHOULD also load these index files to identify applicable rewrites at Phase 2:
 
 ## Phase 1: Capture the Plan
 
-**ALWAYS** run `readonly_query("EXPLAIN ANALYZE VERBOSE …")` on the user's query verbatim (SELECT form) — **ALWAYS** capture a fresh plan from the cluster, even when the user describes the plan or reports an anomaly. **MAY** leverage `get_schema` or `information_schema` for schema sanity checks.
+For queries the user reports as expensive or slow (execution time >30s, high DPU, or timeout), start with plain `EXPLAIN` (without ANALYZE) to see the optimizer's plan without executing the query. Then run `EXPLAIN ANALYZE VERBOSE` to get actual row counts and DPU.
+
+For all other queries, run `readonly_query("EXPLAIN ANALYZE VERBOSE …")` directly on the user's query verbatim (SELECT form) — **ALWAYS** capture a fresh plan from the cluster, even when the user describes the plan or reports an anomaly. **MAY** leverage `get_schema` or `information_schema` for schema sanity checks.
 
 When EXPLAIN errors (`relation does not exist`, `column does not exist`), **MUST** report the error verbatim — **MUST NOT** invent DSQL-specific semantics (e.g., case sensitivity, identifier quoting) as the root cause.
 
