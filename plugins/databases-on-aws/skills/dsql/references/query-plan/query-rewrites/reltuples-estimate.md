@@ -4,7 +4,7 @@ When a query performs `COUNT(*)` on a large table, rewrite to use the `reltuples
 
 **SHOULD apply when:** An approximate count is acceptable and the table is large enough that `COUNT(*)` is prohibitively expensive.
 
-**Staleness warning:** `reltuples` reflects the last `ANALYZE` or autovacuum run. MUST warn the user that the value MAY be stale on write-heavy or recently created tables. SHOULD recommend cross-checking `pg_stat_user_tables.last_analyze` when the count drives a decision.
+**Staleness warning:** `reltuples` reflects the last `ANALYZE` run. MUST warn the user that the value MAY be stale on write-heavy or recently created tables (DSQL does not populate `pg_stat_user_tables.last_analyze`). A value of `-1` means statistics have never been gathered — treat as "unknown" and recommend running `ANALYZE` first.
 
 **SHOULD skip when:** The application requires an exact count.
 
@@ -13,8 +13,8 @@ When a query performs `COUNT(*)` on a large table, rewrite to use the `reltuples
 SELECT COUNT(*) AS exact_count
 FROM big_table;
 
--- Rewritten (DSQL)
-SELECT reltuples::bigint AS estimated_count
+-- Rewritten (DSQL) — GREATEST guards against -1 (never-analyzed)
+SELECT GREATEST(reltuples, 0)::bigint AS estimated_count
 FROM pg_class
 WHERE oid = 'public.big_table'::regclass;
 ```

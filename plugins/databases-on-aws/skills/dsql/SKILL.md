@@ -84,7 +84,7 @@ Load these files as needed for detailed guidance:
 | [query-plan/catalog-queries.md](references/query-plan/catalog-queries.md)                           | MUST load at Workflow 9 Phase 0                       | `pg_class`/`pg_stats`/`pg_indexes` SQL, correlated-predicate verification |
 | [query-plan/guc-experiments.md](references/query-plan/guc-experiments.md)                           | MUST load at Workflow 9 Phase 0                       | GUC experiment procedures, 30-second skip protocol                        |
 | [query-plan/report-format.md](references/query-plan/report-format.md)                               | MUST load at Workflow 9 Phase 0                       | Required report structure, element checklist, support request template    |
-| [query-plan/query-rewrites-generic.md](references/query-plan/query-rewrites-generic.md)             | SHOULD load at Phase 0; sub-files on-demand           | Index of 11 generic rewrite patterns                                      |
+| [query-plan/query-rewrites-generic.md](references/query-plan/query-rewrites-generic.md)             | SHOULD load at Phase 0; sub-files on-demand           | Index of 10 generic rewrite patterns                                      |
 | [query-plan/query-rewrites-dsql-specific.md](references/query-plan/query-rewrites-dsql-specific.md) | SHOULD load at Phase 0; sub-files on-demand           | Index of DSQL-specific rewrite patterns                                   |
 
 ---

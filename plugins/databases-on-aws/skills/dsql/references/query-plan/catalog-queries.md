@@ -2,10 +2,22 @@
 
 Exact SQL for interrogating optimizer statistics and actual cardinalities against the DSQL cluster.
 
-**Placeholder substitution:** All queries in this file use `'{...}'` placeholders. MUST substitute via `safe_query.build()` — see input-validation.md. Use the correct helper per position:
+**Placeholder substitution:** All queries in this file use `{...}` placeholders. MUST substitute via `safe_query.build()` — see input-validation.md. Use the correct helper per position:
 
 - **Identifier positions** (FROM clause, GROUP BY, column aliases): `ident()` → emits `"value"`
-- **String-literal positions** (WHERE `= '{schema}'`, `IN ('{table}')`, equality comparisons against catalog columns): `allow()` or `regex()` → emits `'value'`
+- **String-literal positions** (WHERE `= {schema}`, `IN ({table})`, equality comparisons against catalog columns): `allow()` or `regex()` → emits `'value'`
+
+Worked example:
+
+```python
+safe_query.build(
+    "SELECT reltuples FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+    "WHERE n.nspname = {schema} AND c.relname IN ({t1}, {t2})",
+    schema=regex(r"^[a-z_]+$", user_schema),
+    t1=regex(r"^[a-z_]+$", table1),
+    t2=regex(r"^[a-z_]+$", table2),
+)
+```
 
 ## Table of Contents
 
@@ -33,8 +45,8 @@ SELECT
   relpages
 FROM pg_class c
 JOIN pg_namespace n ON n.oid = c.relnamespace
-WHERE n.nspname = '{schema}'
-  AND c.relname IN ('{table1}', '{table2}', '{table3}');
+WHERE n.nspname = {schema}
+  AND c.relname IN ({table1}, {table2}, {table3});
 ```
 
 Compare `reltuples` against actual `COUNT(*)`. A divergence >20% on the table-stats snapshot indicates stale `reltuples` requiring `ANALYZE`. This is distinct from the row-estimate-vs-actual error thresholds used for plan findings (see plan-interpretation.md: 2x–5x minor, 5x–50x significant, 50x+ severe).
@@ -54,9 +66,9 @@ SELECT
   histogram_bounds,
   correlation
 FROM pg_stats
-WHERE schemaname = '{schema}'
-  AND tablename = '{table}'
-  AND attname IN ('{col1}', '{col2}');
+WHERE schemaname = {schema}
+  AND tablename = {table}
+  AND attname IN ({col1}, {col2});
 ```
 
 **Key fields:**
@@ -79,8 +91,8 @@ SELECT
   indexname,
   indexdef
 FROM pg_indexes
-WHERE schemaname = '{schema}'
-  AND tablename IN ('{table1}', '{table2}', '{table3}')
+WHERE schemaname = {schema}
+  AND tablename IN ({table1}, {table2}, {table3})
 ORDER BY tablename, indexname;
 ```
 
@@ -123,9 +135,9 @@ SELECT
   c.udt_name,
   c.is_nullable
 FROM information_schema.columns c
-WHERE c.table_schema = '{schema}'
-  AND c.table_name IN ('{table1}', '{table2}')
-  AND c.column_name IN ('{col1}', '{col2}');
+WHERE c.table_schema = {schema}
+  AND c.table_name IN ({table1}, {table2})
+  AND c.column_name IN ({col1}, {col2});
 ```
 
 Cross-reference the column type against predicate literals visible in the EXPLAIN output. When the types differ, use the B-Tree Cross-Type Operator Support query below to determine whether the mismatch prevents index usage.
@@ -160,8 +172,8 @@ SELECT EXISTS (
   JOIN pg_type rt ON rt.oid = ao.amoprighttype
   -- 10003 = DSQL B-Tree OID; verify with: SELECT oid FROM pg_am WHERE amname = 'btree_index'
   WHERE ao.amopmethod = 10003
-    AND lt.typname = '{predicate_type}'
-    AND rt.typname = '{column_type}'
+    AND lt.typname = {predicate_type}
+    AND rt.typname = {column_type}
 ) AS index_usable;
 ```
 
@@ -183,8 +195,8 @@ JOIN pg_attribute a ON a.attrelid = ix.indrelid
   AND a.attnum = ANY(ix.indkey)
 JOIN pg_type t ON t.oid = a.atttypid
 JOIN pg_namespace n ON n.oid = ic.relnamespace
-WHERE n.nspname = '{schema}'
-  AND i.tablename IN ('{table1}', '{table2}')
+WHERE n.nspname = {schema}
+  AND i.tablename IN ({table1}, {table2})
 ORDER BY i.tablename, i.indexname, a.attnum;
 ```
 

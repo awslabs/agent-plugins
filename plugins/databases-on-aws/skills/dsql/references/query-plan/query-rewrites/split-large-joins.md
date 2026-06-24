@@ -1,6 +1,6 @@
 # Rewrite: Split Large Joins for DP Join Ordering (DSQL-Specific)
 
-When a query joins more tables than the optimizer's DP threshold (e.g., 10 joins for Aurora DSQL), rewrite it into multiple subqueries each joining no more tables than the threshold, then join the subquery results.
+When a query joins more tables than the optimizer's DP threshold, rewrite it into multiple subqueries each joining no more tables than the threshold, then join the subquery results. The agent MUST run `SHOW join_collapse_limit;` on the target cluster to determine the actual threshold rather than assuming a fixed value (default is **8** on Aurora DSQL).
 
 This allows the PostgreSQL-based DSQL engine to apply dynamic-programming (DP) join ordering within each smaller block, producing a better overall join plan than a greedy algorithm on many tables.
 
@@ -9,7 +9,7 @@ This allows the PostgreSQL-based DSQL engine to apply dynamic-programming (DP) j
 **SHOULD skip when:** The total table count is at or below the threshold, or splitting would prevent necessary cross-block optimizations.
 
 ```sql
--- Original (11 tables — exceeds DP threshold of 10)
+-- Original (11 tables — exceeds default DP threshold of 8)
 SELECT *
 FROM R1
   JOIN R2 ON R1.id = R2.r1_id
@@ -24,7 +24,7 @@ FROM R1
   JOIN R11 ON R10.id = R11.r10_id
 WHERE Filters;
 
--- Rewritten (DSQL) — split into two CTEs, each ≤ 10 tables
+-- Rewritten (DSQL) — split into two CTEs, each ≤ 8 tables
 WITH
   sub1 AS (
     SELECT R1.id, R6.id AS r6_id, R6.col
