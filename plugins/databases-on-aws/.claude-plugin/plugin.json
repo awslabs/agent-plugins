@@ -22,5 +22,5 @@
   "license": "Apache-2.0",
   "name": "databases-on-aws",
   "repository": "https://github.com/awslabs/agent-plugins",
-  "version": "1.3.3"
+  "version": "1.4.0"
 }
