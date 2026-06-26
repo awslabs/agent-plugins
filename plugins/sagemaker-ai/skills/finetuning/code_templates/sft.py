@@ -75,7 +75,8 @@ trainer = SFTTrainer(
     s3_output_path=S3_OUTPUT_PATH,
     sagemaker_session=sagemaker_session,
     #accept_eula=ACCEPT_EULA, # Uncomment for Meta models
-    role=ROLE_ARN
+    role=ROLE_ARN,
+    tags=[{"Key": "aws-sagemaker:model-customization-client-origin", "Value": "sherpa-plugin"}]
 )
 
 print("Here are the recommended hyperparameters for the current training job:")

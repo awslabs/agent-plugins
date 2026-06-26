@@ -89,7 +89,8 @@ trainer = RLVRTrainer(
     sagemaker_session=sagemaker_session,
     #accept_eula=ACCEPT_EULA, # Uncomment for Meta models
     role=ROLE_ARN,
-    custom_reward_function=CUSTOM_REWARD_FUNCTION
+    custom_reward_function=CUSTOM_REWARD_FUNCTION,
+    tags=[{"Key": "aws-sagemaker:model-customization-client-origin", "Value": "sherpa-plugin"}]
 )
 print("Here are the recommended hyperparameters for the current training job:")
 print(f"Batch size: {trainer.hyperparameters.global_batch_size}")
