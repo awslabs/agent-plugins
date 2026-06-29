@@ -74,7 +74,7 @@ The primary metric is `db.active_sessions.avg` — the average number of session
 4. Query AAS by `wait_event` for the **same hour last week** (baseline 2)
 5. Compute the distribution (% each wait event contributes to total AAS) for each period
 6. Flag any wait event where the proportion changed by >30% vs either baseline
-7. Load [wait-events.md](references/wait-events.md) and interpret flagged changes
+7. Load [wait-events.md](wait-events.md) and interpret flagged changes
 
 **Critical rules:**
 
