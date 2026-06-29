@@ -13,7 +13,13 @@ Diagnose Aurora DSQL cluster performance by querying Active Average Sessions (AA
 
 - There is no upper bound to AAS in DSQL — absolute values are not inherently problematic
 - What matters is **change over time**: shifts in wait event distribution, new queries appearing, or existing queries consuming disproportionately more time
-- This skill observes via CloudWatch only — it does **not** recommend schema changes, indexing strategies, or query rewrites. Those require live database access via the `dsql` skill.
+- This skill observes via CloudWatch only — it does **not** recommend schema changes, indexing strategies, or query rewrites. Those require live database access via Workflow 9.
+
+**PromQL syntax rules:**
+
+- Label names containing `.` or `@` **MUST** be quoted in selectors: `"@resource.aws.auroradsql.cluster_id"="value"`
+- The `get_promql_label_values` tool **MUST** include a `match` parameter to return results — calls without match return empty
+- Use `{__name__="db.active_sessions.avg", ...}` selector form for all queries
 
 ---
 
@@ -69,19 +75,22 @@ The primary metric is `db.active_sessions.avg` — the average number of session
 **Steps:**
 
 1. Confirm you have a specific `cluster_id` — do not proceed without one
-2. Query AAS by `db.wait.event` for the **current hour** in 10-minute chunks (step=60s) — compare the chunks against each other to detect recent shifts
-3. Query AAS by `db.wait.event` for the **same hour yesterday** (baseline 1)
-4. Query AAS by `db.wait.event` for the **same hour last week** (baseline 2)
-5. Compute the distribution (% each wait event contributes to total AAS) for each period
-6. Flag any wait event where the proportion changed by >30% vs either baseline
-7. Load [wait-events.md](wait-events.md) and interpret flagged changes
+2. Verify the cluster exists by calling `get_promql_label_values` with a match filter (see discovery patterns in [promql-patterns.md](promql-patterns.md))
+3. Query AAS by `db.wait.event` for the **current hour** in 10-minute chunks (step=60s) — compare the chunks against each other to detect recent shifts
+4. Query AAS by `db.wait.event` for the **same hour yesterday** (baseline 1)
+5. Query AAS by `db.wait.event` for the **same hour last week** (baseline 2)
+6. Compute the distribution (% each wait event contributes to total AAS) for each period
+7. Flag any wait event where the proportion changed by >30% vs either baseline
+8. Load [wait-events.md](wait-events.md) and interpret flagged changes
 
 **Critical rules:**
 
 - **MUST** have a specific `cluster_id` before proceeding
-- **MUST** filter by cluster using `"@resource.aws.auroradsql.cluster_id"`
+- **MUST** filter by cluster using `"@resource.aws.auroradsql.cluster_id"` in all queries
+- **MUST** quote label names that contain `.` or `@` in PromQL selectors (e.g., `"@resource.aws.auroradsql.cluster_id"`, `"db.wait.event"`)
 - **MUST** compare against temporal baselines — do NOT report absolute AAS values as inherently problematic
 - **MUST** split the current hour into 10-minute chunks and compare them to detect intra-hour shifts
+- **MUST** use the `match` parameter with `get_promql_label_values` — calls without a match filter return empty
 - A >30% change in a wait event's share of total AAS warrants flagging to the user
 - If total AAS increased but distribution is unchanged, this may be legitimate load growth — report but do not alarm
 

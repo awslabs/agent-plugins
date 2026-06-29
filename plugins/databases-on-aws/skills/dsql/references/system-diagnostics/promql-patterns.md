@@ -2,6 +2,8 @@
 
 Reusable PromQL templates for diagnosing Aurora DSQL via `db.active_sessions.avg`. Replace `CLUSTER_ID` with the actual `@resource.aws.auroradsql.cluster_id` value.
 
+**Important:** The `get_promql_label_values` tool requires a `match` parameter (series selector) to find DSQL metrics. Without it, queries may return empty results. Always include a match filter when discovering labels.
+
 ---
 
 ## Discovery Queries
@@ -9,25 +11,37 @@ Reusable PromQL templates for diagnosing Aurora DSQL via `db.active_sessions.avg
 ### List available clusters
 
 ```promql
-get_promql_label_values(metric="db.active_sessions.avg", label="@resource.aws.auroradsql.cluster_id")
+get_promql_label_values(
+  label_name="@resource.aws.auroradsql.cluster_id",
+  match=["{__name__=\"db.active_sessions.avg\"}"]
+)
 ```
 
 ### List wait events on a cluster
 
 ```promql
-get_promql_label_values(metric="db.active_sessions.avg", label="db.wait.event", matchers='@resource.aws.auroradsql.cluster_id="CLUSTER_ID"')
+get_promql_label_values(
+  label_name="db.wait.event",
+  match=["{__name__=\"db.active_sessions.avg\", \"@resource.aws.auroradsql.cluster_id\"=\"CLUSTER_ID\"}"]
+)
 ```
 
 ### List applications connecting
 
 ```promql
-get_promql_label_values(metric="db.active_sessions.avg", label="application.name", matchers='@resource.aws.auroradsql.cluster_id="CLUSTER_ID"')
+get_promql_label_values(
+  label_name="application.name",
+  match=["{__name__=\"db.active_sessions.avg\", \"@resource.aws.auroradsql.cluster_id\"=\"CLUSTER_ID\"}"]
+)
 ```
 
 ### List IAM roles connecting
 
 ```promql
-get_promql_label_values(metric="db.active_sessions.avg", label="aws.auroradsql.session.role.arn", matchers='@resource.aws.auroradsql.cluster_id="CLUSTER_ID"')
+get_promql_label_values(
+  label_name="aws.auroradsql.session.role.arn",
+  match=["{__name__=\"db.active_sessions.avg\", \"@resource.aws.auroradsql.cluster_id\"=\"CLUSTER_ID\"}"]
+)
 ```
 
 ---
