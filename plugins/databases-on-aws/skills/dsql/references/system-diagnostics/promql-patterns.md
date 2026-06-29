@@ -178,6 +178,7 @@ execute_promql_query(query='sum by (iam_role_arn, wait_event)({__name__="db.acti
 ### Commit analysis — volume vs conflicts
 
 Use standard CloudWatch metrics alongside PromQL:
+
 ```
 # PromQL: Commit wait AAS trend
 execute_promql_range_query(

@@ -3,12 +3,14 @@
 Diagnose Aurora DSQL cluster performance by querying Active Average Sessions (AAS) via PromQL, detecting temporal anomalies in wait event distribution, and using the `dsql` skill's database tools for root cause analysis.
 
 **Key capabilities:**
+
 - Temporal trend analysis of AAS via `db.active_sessions.avg` metric
 - Wait event distribution shift detection
 - Top-SQL regression identification (new or growing queries)
 - Automatic handoff to `dsql` skill for live database investigation
 
 **Important principles:**
+
 - There is no upper bound to AAS in DSQL — absolute values are not inherently problematic
 - What matters is **change over time**: shifts in wait event distribution, new queries appearing, or existing queries consuming disproportionately more time
 - This skill observes via CloudWatch only — it does **not** recommend schema changes, indexing strategies, or query rewrites. Those require live database access via the `dsql` skill.
@@ -18,6 +20,7 @@ Diagnose Aurora DSQL cluster performance by querying Active Average Sessions (AA
 ## Prerequisites
 
 **MUST** have before starting:
+
 1. A specific `cluster_id` to investigate — never proceed without one. Ask the user if not provided.
 2. The CloudWatch MCP server (`awslabs.cloudwatch-mcp-server`) configured with PromQL access in the **same region** as the DSQL cluster
 3. The `aurora-dsql` MCP server configured for the target cluster (for per-query investigation via EXPLAIN)
@@ -29,10 +32,12 @@ Diagnose Aurora DSQL cluster performance by querying Active Average Sessions (AA
 Load these sibling files as needed:
 
 ### [wait-events.md](wait-events.md)
+
 **When:** ALWAYS load when interpreting AAS results
 **Contains:** DSQL wait events with canonical descriptions and investigation guidance
 
 ### [promql-patterns.md](promql-patterns.md)
+
 **When:** Load when constructing PromQL queries
 **Contains:** Reusable PromQL query templates for all workflows
 
@@ -44,16 +49,16 @@ The primary metric is `db.active_sessions.avg` — the average number of session
 
 **Normalized SQL and AAS interpretation:** All SQL in the metric is normalized (parameterized). The `normalized_sql` label groups all executions of the same query shape. A query with high AAS indicates it is executing frequently and/or concurrently across many sessions. A single slow query can only contribute at most 1 AAS — high AAS always means high concurrency or high call frequency, not a single slow execution. Neither this skill nor the `dsql` skill can currently distinguish frequency from per-execution cost; this will be possible in a future release that publishes per-SQL execution statistics via PromQL.
 
-| Label | Purpose |
-|-------|---------|
-| `wait_event` | Which wait the session is in (OnCpu, ClientRead, Commit, etc.) |
-| `normalized_sql` | SQL fingerprint — groups identical query shapes |
-| `query_id` | Correlates with DSQL `EXPLAIN` Query Identifier |
-| `application_name` | Client application identifier |
-| `iam_role_arn` | IAM role used for the connection |
-| `session_state` | Session state (active, idle in transaction) |
-| `@resource.aws.auroradsql.cluster_id` | Cluster identifier for filtering |
-| `@resource.cloud.resource_id` | Full cluster ARN |
+| Label                                 | Purpose                                                        |
+| ------------------------------------- | -------------------------------------------------------------- |
+| `wait_event`                          | Which wait the session is in (OnCpu, ClientRead, Commit, etc.) |
+| `normalized_sql`                      | SQL fingerprint — groups identical query shapes                |
+| `query_id`                            | Correlates with DSQL `EXPLAIN` Query Identifier                |
+| `application_name`                    | Client application identifier                                  |
+| `iam_role_arn`                        | IAM role used for the connection                               |
+| `session_state`                       | Session state (active, idle in transaction)                    |
+| `@resource.aws.auroradsql.cluster_id` | Cluster identifier for filtering                               |
+| `@resource.cloud.resource_id`         | Full cluster ARN                                               |
 
 ---
 
@@ -62,6 +67,7 @@ The primary metric is `db.active_sessions.avg` — the average number of session
 **Goal:** Detect whether the cluster's wait event distribution has changed compared to historical baselines.
 
 **Steps:**
+
 1. Confirm you have a specific `cluster_id` — do not proceed without one
 2. Query AAS by `wait_event` for the **current hour** in 10-minute chunks (step=60s) — compare the chunks against each other to detect recent shifts
 3. Query AAS by `wait_event` for the **same hour yesterday** (baseline 1)
@@ -71,6 +77,7 @@ The primary metric is `db.active_sessions.avg` — the average number of session
 7. Load [wait-events.md](references/wait-events.md) and interpret flagged changes
 
 **Critical rules:**
+
 - **MUST** have a specific `cluster_id` before proceeding
 - **MUST** filter by cluster using `"@resource.aws.auroradsql.cluster_id"`
 - **MUST** compare against temporal baselines — do NOT report absolute AAS values as inherently problematic
@@ -79,6 +86,7 @@ The primary metric is `db.active_sessions.avg` — the average number of session
 - If total AAS increased but distribution is unchanged, this may be legitimate load growth — report but do not alarm
 
 **Example:**
+
 ```promql
 # Current hour (split into chunks for intra-hour comparison)
 execute_promql_range_query(
@@ -106,17 +114,20 @@ execute_promql_range_query(
 **Goal:** Identify SQL statements that have become more prominent compared to baseline periods.
 
 **Steps:**
+
 1. Query top-N SQL by AAS for the current period
 2. Query top-N SQL for the same period yesterday and last week
 3. Identify queries that are **new** in the top-N or have **grown** significantly vs baseline
 4. Note which `wait_event` dominates for the regressed queries
 
 **Critical rules:**
+
 - **MUST** include `query_id` in grouping — stable identifier for handoff to `dsql` skill
 - **MUST** compare top-N across periods — a query being #1 is only notable if it wasn't before
 - **MUST NOT** recommend indexing or schema changes — defer to `dsql` skill
 
 **Example:**
+
 ```promql
 # Top 5 SQL for current period
 execute_promql_query(query='topk(5, sum by (normalized_sql, query_id)({__name__="db.active_sessions.avg", "@resource.aws.auroradsql.cluster_id"="CLUSTER_ID"}))')
@@ -132,23 +143,24 @@ execute_promql_query(query='topk(10, sum by (normalized_sql, query_id, wait_even
 **Goal:** Guide investigation based on which wait event has shifted.
 
 **Steps:**
+
 1. Run Workflow 1 to identify which wait event(s) have changed
 2. Branch on the wait event showing the largest shift:
 
-| Changed Wait Event | Investigation |
-|---|---|
-| **OnCpu** | Identify which queries grew via Workflow 2. Hand off to `dsql` skill. |
-| **ClientRead** | Top IAM role + application. Indicates idle-in-transaction growth — client-side issue. |
-| **ClientWrite** | Top application. Client is slow consuming results — check client health. |
-| **SequentialScanRead** | Identify query via Workflow 2. Hand off to `dsql` skill — may be plan regression or missing index. |
-| **ScatteredBatchRead** | Identify query. Hand off to `dsql` skill. |
-| **SingleRead** | Identify query. Hand off to `dsql` skill. |
-| **FkExistenceCheck** | Identify query. Check TotalTransactions CW metric for insert volume change. |
-| **UniqueConstraintCheck** | Identify query. Check whether insert/upsert patterns changed. |
-| **Commit** | Run Workflow 6 (Commit Analysis) to distinguish volume increase from OCC conflicts. |
-| **PgSleep** | Identify application. Verify intentional — may indicate new polling behavior. |
+| Changed Wait Event        | Investigation                                                                                      |
+| ------------------------- | -------------------------------------------------------------------------------------------------- |
+| **OnCpu**                 | Identify which queries grew via Workflow 2. Hand off to `dsql` skill.                              |
+| **ClientRead**            | Top IAM role + application. Indicates idle-in-transaction growth — client-side issue.              |
+| **ClientWrite**           | Top application. Client is slow consuming results — check client health.                           |
+| **SequentialScanRead**    | Identify query via Workflow 2. Hand off to `dsql` skill — may be plan regression or missing index. |
+| **ScatteredBatchRead**    | Identify query. Hand off to `dsql` skill.                                                          |
+| **SingleRead**            | Identify query. Hand off to `dsql` skill.                                                          |
+| **FkExistenceCheck**      | Identify query. Check TotalTransactions CW metric for insert volume change.                        |
+| **UniqueConstraintCheck** | Identify query. Check whether insert/upsert patterns changed.                                      |
+| **Commit**                | Run Workflow 6 (Commit Analysis) to distinguish volume increase from OCC conflicts.                |
+| **PgSleep**               | Identify application. Verify intentional — may indicate new polling behavior.                      |
 
-3. Load [wait-events.md](references/wait-events.md) for detailed investigation guidance
+Load [wait-events.md](wait-events.md) for detailed investigation guidance on each wait event.
 
 ---
 
@@ -157,10 +169,12 @@ execute_promql_query(query='topk(10, sum by (normalized_sql, query_id, wait_even
 **Goal:** Identify which roles or applications are driving anomalous changes.
 
 **Critical rules:**
+
 - **MUST** compare against baseline — an application being dominant is only noteworthy if it has changed
 - Report the delta: "application X increased from 30% to 55% of total AAS"
 
 **Example:**
+
 ```promql
 # Top IAM roles
 execute_promql_query(query='topk(5, sum by (iam_role_arn)({__name__="db.active_sessions.avg", "@resource.aws.auroradsql.cluster_id"="CLUSTER_ID"}))')
@@ -176,12 +190,14 @@ execute_promql_query(query='topk(5, sum by (application_name)({__name__="db.acti
 **Goal:** Identify when a change occurred and pinpoint the inflection point.
 
 **Critical rules:**
+
 - **SHOULD** use step: 60s (< 1h), 300s (1–6h), 900s (> 6h), 3600s (> 24h)
 - **MUST** specify `start` and `end` in RFC 3339 format
 - Maximum range per query is 7 days — split longer investigations into multiple queries
 - Look for: inflection points, step-changes in specific wait events, distribution shifts
 
 **Example:**
+
 ```promql
 execute_promql_range_query(
   query='sum by (wait_event)({__name__="db.active_sessions.avg", "@resource.aws.auroradsql.cluster_id"="CLUSTER_ID"})',
@@ -198,6 +214,7 @@ execute_promql_range_query(
 **Goal:** Distinguish between increased commit volume (legitimate) and OCC conflict growth (problematic).
 
 **Steps:**
+
 1. Confirm Commit wait has shifted (from Workflow 1 comparison)
 2. Query standard CloudWatch metrics for the same period:
    - `AuroraDSQL` namespace, dimension `ClusterId`
@@ -209,6 +226,7 @@ execute_promql_range_query(
    - If Commit AAS increased but TotalTransactions did not → transactions are taking longer to commit
 
 **Example (standard CW metrics):**
+
 ```
 get_metric_data(
   namespace="AuroraDSQL",
@@ -254,11 +272,11 @@ Then proceed to Workflow 9 (Query Plan Explainability) for the identified query.
 
 ## Error Handling
 
-| Situation | Action |
-|-----------|--------|
-| No cluster_id provided | Ask the user — never proceed without a specific cluster |
-| No series found | Verify cluster ID with `get_promql_label_values`. Check region. |
-| Empty result (no data) | Cluster is idle for that period. Widen time window. |
-| `query_id` missing | Not all queries emit it. Filter by `normalized_sql` instead. |
-| PromQL timeout | Reduce cardinality — fewer labels or shorter time range. |
-| Range > 7 days | Split into multiple 7-day range queries. |
+| Situation              | Action                                                          |
+| ---------------------- | --------------------------------------------------------------- |
+| No cluster_id provided | Ask the user — never proceed without a specific cluster         |
+| No series found        | Verify cluster ID with `get_promql_label_values`. Check region. |
+| Empty result (no data) | Cluster is idle for that period. Widen time window.             |
+| `query_id` missing     | Not all queries emit it. Filter by `normalized_sql` instead.    |
+| PromQL timeout         | Reduce cardinality — fewer labels or shorter time range.        |
+| Range > 7 days         | Split into multiple 7-day range queries.                        |
