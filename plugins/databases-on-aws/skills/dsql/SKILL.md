@@ -160,6 +160,21 @@ See [scripts/README.md](../../scripts/README.md) for usage and hook configuratio
 
 ---
 
+## Performance Routing
+
+When the user reports a performance problem, use this table to select the correct workflow:
+
+| User signal                                                                                                             | Route to                                                                           |
+| ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| General performance complaint, "cluster is slow", "something changed", latency regression, no specific query identified | **Workflow 12** (System Diagnostics) — observe via CloudWatch first                |
+| Specific query or query_id to investigate, "explain this plan", "why is this query slow"                                | **Workflow 9** (Query Plan Explainability) — direct EXPLAIN analysis               |
+| OCC conflicts, commit errors, retry storms                                                                              | **Workflow 12** (System Diagnostics) — confirm via CW metrics before investigating |
+| Cost optimization, "where is compute time spent"                                                                        | **Workflow 12** (System Diagnostics) — identify top contributors first             |
+
+**Rule:** When in doubt, start with Workflow 12. It identifies specific queries to investigate and routes to Workflow 9 with context.
+
+---
+
 ## Common Workflows
 
 ### Workflow 1: Create Multi-Tenant Schema
