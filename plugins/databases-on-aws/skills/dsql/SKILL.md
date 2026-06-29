@@ -77,11 +77,11 @@ Load these files as needed for detailed guidance:
 
 ### System Diagnostics:
 
-| Reference                                                                                           | When to Load                                                     | Contains                                                              |
-| --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------- |
-| [system-diagnostics/workflow.md](references/system-diagnostics/workflow.md)                         | MUST load at Workflow 12 entry — cluster performance diagnostics | Prerequisites, 6 diagnostic workflows, temporal comparison, handoff   |
-| [system-diagnostics/wait-events.md](references/system-diagnostics/wait-events.md)                   | ALWAYS load when interpreting AAS results                        | Canonical DSQL wait event descriptions and investigation guidance     |
-| [system-diagnostics/promql-patterns.md](references/system-diagnostics/promql-patterns.md)           | Load when constructing PromQL queries                            | Reusable query templates for AAS breakdown, top-SQL, temporal compare |
+| Reference                                                                                 | When to Load                                                     | Contains                                                              |
+| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------- |
+| [system-diagnostics/workflow.md](references/system-diagnostics/workflow.md)               | MUST load at Workflow 12 entry — cluster performance diagnostics | Prerequisites, 6 diagnostic workflows, temporal comparison, handoff   |
+| [system-diagnostics/wait-events.md](references/system-diagnostics/wait-events.md)         | ALWAYS load when interpreting AAS results                        | Canonical DSQL wait event descriptions and investigation guidance     |
+| [system-diagnostics/promql-patterns.md](references/system-diagnostics/promql-patterns.md) | Load when constructing PromQL queries                            | Reusable query templates for AAS breakdown, top-SQL, temporal compare |
 
 ### Query Plan Explainability:
 
