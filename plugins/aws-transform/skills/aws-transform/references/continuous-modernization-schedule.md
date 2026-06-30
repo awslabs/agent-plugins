@@ -678,7 +678,7 @@ if [ "$JOB_TYPE" = "remediation" ] && [ "$REMEDIATION_MODE" = "transformation" ]
 fi
 ```
 
-If the customer hasn't run `atx ct source add` yet, hand off to [continuous-modernization-source](continuous-modernization-source.md) BEFORE creating the schedule. Saves confusion when the schedule fires and fails silently.
+If the customer hasn't registered the source yet or needs to update the token on an existing source, hand off to [continuous-modernization-source](continuous-modernization-source.md) BEFORE creating the schedule. Saves confusion when the schedule fires and fails silently.
 
 ## Step 5: Construct and Create the Schedule
 

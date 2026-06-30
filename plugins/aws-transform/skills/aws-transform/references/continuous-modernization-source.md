@@ -23,6 +23,8 @@ After the user says "done", run `atx ct source list --json` to verify the source
 
 Supported provider types: `github`, `gitlab`, `bitbucket`, `local`
 
+Before adding a source, run `atx ct source list --json` to check whether it already exists. If it does, use `source update` to update the token instead of `source add`.
+
 When adding a source, the agent should inform the customer what PAT scopes are needed and why:
 
 "Your personal access token requires read access to list and scan your repositories for modernization findings, write access to push remediation branches, and pull request (or merge request) creation permissions to deliver the automated fixes for your review."
@@ -61,6 +63,12 @@ Add a local folder source (no token required):
 
 ```bash
 atx ct source add --name <name> --provider local --path <dir>
+```
+
+Update token on an existing source (use instead of source add when the source already exists):
+
+```bash
+read -s TOKEN && atx ct source update --name <name> --token "$TOKEN"; unset TOKEN
 ```
 
 ```bash

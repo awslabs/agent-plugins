@@ -13,9 +13,9 @@ When the user wants to remediate specific findings, fetch each one with `atx ct 
 
 When using `--transformation-name`, ask the user if they have additional instructions (e.g. a target version or specific guidance) before running. If they do, pass them via `-g "additionalPlanContext=<instructions>"`.
 
-- **`fix` is set** — the finding is auto-remediable via `--ids` alone.
-- **`fix` is null and `recommendation` names a transformation definition** — offer `--ids --transformation-name <name-from-recommendation>`.
-- **`fix` is null and no `recommendation`** — use [Transformation Definition Discovery for Remediation](#transformation-definition-discovery-for-remediation) to find a matching transformation definition.
+- **`fix` is set** — the finding is auto-remediable via `--ids` alone. The server runs the finding's own `fix.transform_name`, which always matches the finding.
+- **`fix` is null and `recommendation` names a transformation definition** — offer `--ids --transformation-name <name-from-recommendation>` ONLY when the finding is exactly the upgrade or migration that transformation definition performs (e.g. a Node.js version finding with a Node.js version-upgrade definition). A `recommendation` can name a transformation definition that does not actually fix the finding — a version-upgrade definition must never be used for ad-hoc work such as deleting files, resolving CDK Nag suppressions, Docker cleanup, or config edits. If the named definition does not directly perform the finding's fix, treat it as if there were no recommendation and use discovery below.
+- **`fix` is null and no `recommendation`** (or a `recommendation` whose named definition does not fit) — use [Transformation Definition Discovery for Remediation](#transformation-definition-discovery-for-remediation) to find a matching transformation definition. If none performs the finding's fix, tell the user it must be fixed manually rather than forcing an unrelated definition.
 
 ## Telemetry
 
@@ -123,7 +123,7 @@ Only valid with `--transformation-name`.
 
 ## Transformation Definition Discovery for Remediation
 
-When the user asks to remediate with a custom transformation definition, or a finding has no `fix` field and no `recommendation` that mentions a transformation definition, use transformation definition discovery to find the right transformation definition. If a finding already has a `recommendation` naming a transformation definition, skip discovery and use that name directly.
+When the user asks to remediate with a custom transformation definition, or a finding has no `fix` field and no `recommendation` that names a transformation definition which actually performs the finding's fix, use transformation definition discovery to find the right transformation definition. If a finding's `recommendation` names a transformation definition AND that definition is exactly the upgrade/migration that performs the finding's fix, skip discovery and use that name directly; otherwise treat the recommendation as if it were absent and discover.
 
 ### Workflow
 

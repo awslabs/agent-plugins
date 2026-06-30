@@ -1,6 +1,6 @@
 {
   "name": "aws-transform",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "Migrate, modernize, and upgrade codebases to AWS. Transforms .NET Framework to .NET 8/10, mainframe COBOL to Java, VMware VMs to EC2, SQL Server to Aurora, and upgrades Java/Python/Node.js versions and AWS SDKs. AWS Transform - continuous modernization analyzes codebases for tech debt, security issues, and upgrade opportunities, then remediates them.",
   "author": {
     "name": "Amazon Web Services",

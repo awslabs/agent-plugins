@@ -118,7 +118,7 @@
       "name": "aws-transform",
       "source": "./plugins/aws-transform",
       "tags": ["aws", "migration", "modernization", "transform", "continuous modernization"],
-      "version": "1.1.2"
+      "version": "1.2.0"
     },
     {
       "category": "development",
