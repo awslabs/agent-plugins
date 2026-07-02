@@ -1,0 +1,132 @@
+# exclusions.toml — human-maintained source of truth for Semgrep rule decisions.
+#
+# Each [rules."<rule-id>"] entry records a decision about one rule from the
+# Semgrep r/all ruleset:
+#   status = "excluded"  -> the rule is physically removed from r-all.active.yaml
+#   status = "active"    -> the rule is kept (explicitly decided, documented here)
+#   pr                   -> the PR number where the decision was made ("TBD" if unknown)
+#   reason               -> why the decision was made
+#
+# Rules with no entry here are implicitly active. Edit this file, then run
+# `mise run semgrep:update` to regenerate r-all.active.yaml and EXCLUSIONS.md.
+#
+# Seeded from the 22 --exclude-rule flags previously duplicated across
+# mise.toml, the CI workflow, and documented in the old .semgrep.yaml stub.
+
+# --- AI / generic provider references (expected in this repository) -----------
+
+[rules."ai.generic.detect-generic-ai-anthprop.detect-generic-ai-anthprop"]
+status = "excluded"
+pr = "TBD"
+reason = "This is a Claude Code plugin repository — Anthropic references are expected."
+
+[rules."ai.generic.detect-generic-ai-oai.detect-generic-ai-oai"]
+status = "excluded"
+pr = "89"
+reason = "OpenAI references appear in documentation/examples, not as secrets."
+
+# --- Secrets false positives --------------------------------------------------
+
+[rules."generic.secrets.security.detected-sonarqube-docs-api-key.detected-sonarqube-docs-api-key"]
+status = "excluded"
+pr = "TBD"
+reason = "False positive — dynamically generated tokens in CI, not hardcoded secrets."
+
+# --- Apex rules (Semgrep Pro language; unavailable with --oss-only) ------------
+
+[rules."apex.lang.best-practice.ncino.accessmodifiers.globalaccessmodifiers.global-access-modifiers"]
+status = "excluded"
+pr = "TBD"
+reason = "Apex is a Semgrep Pro language, not available with --oss-only; no Apex code in repo."
+
+[rules."apex.lang.best-practice.ncino.urls.absoluteurls.absolute-urls"]
+status = "excluded"
+pr = "TBD"
+reason = "Apex is a Semgrep Pro language, not available with --oss-only; no Apex code in repo."
+
+[rules."apex.lang.security.ncino.dml.apexcsrfconstructor.apex-csrf-constructor"]
+status = "excluded"
+pr = "TBD"
+reason = "Apex is a Semgrep Pro language, not available with --oss-only; no Apex code in repo."
+
+[rules."apex.lang.security.ncino.dml.dmlnativestatements.dml-native-statements"]
+status = "excluded"
+pr = "TBD"
+reason = "Apex is a Semgrep Pro language, not available with --oss-only; no Apex code in repo."
+
+[rules."apex.lang.security.ncino.encryption.badcrypto.bad-crypto"]
+status = "excluded"
+pr = "TBD"
+reason = "Apex is a Semgrep Pro language, not available with --oss-only; no Apex code in repo."
+
+[rules."apex.lang.security.ncino.endpoints.insecurehttprequest.insecure-http-request"]
+status = "excluded"
+pr = "TBD"
+reason = "Apex is a Semgrep Pro language, not available with --oss-only; no Apex code in repo."
+
+[rules."apex.lang.security.ncino.endpoints.namedcredentialsconstantmatch.named-credentials-constant-match"]
+status = "excluded"
+pr = "TBD"
+reason = "Apex is a Semgrep Pro language, not available with --oss-only; no Apex code in repo."
+
+[rules."apex.lang.security.ncino.endpoints.namedcredentialsstringmatch.named-credentials-string-match"]
+status = "excluded"
+pr = "TBD"
+reason = "Apex is a Semgrep Pro language, not available with --oss-only; no Apex code in repo."
+
+[rules."apex.lang.security.ncino.injection.apexsoqlinjectionfromunescapedurlparam.soql-injection-unescaped-url-param"]
+status = "excluded"
+pr = "TBD"
+reason = "Apex is a Semgrep Pro language, not available with --oss-only; no Apex code in repo."
+
+[rules."apex.lang.security.ncino.injection.apexsoqlinjectionunescapedparam.soql-injection-unescaped-param"]
+status = "excluded"
+pr = "TBD"
+reason = "Apex is a Semgrep Pro language, not available with --oss-only; no Apex code in repo."
+
+[rules."apex.lang.security.ncino.sharing.specifysharinglevel.specify-sharing-level"]
+status = "excluded"
+pr = "TBD"
+reason = "Apex is a Semgrep Pro language, not available with --oss-only; no Apex code in repo."
+
+[rules."apex.lang.security.ncino.system.systemdebug.system-debug"]
+status = "excluded"
+pr = "TBD"
+reason = "Apex is a Semgrep Pro language, not available with --oss-only; no Apex code in repo."
+
+# --- Elixir rules (Semgrep Pro language; unavailable with --oss-only) ----------
+
+[rules."elixir.lang.best-practice.deprecated-bnot-operator.deprecated_bnot_operator"]
+status = "excluded"
+pr = "TBD"
+reason = "Elixir is a Semgrep Pro language, not available with --oss-only; no Elixir code in repo."
+
+[rules."elixir.lang.best-practice.deprecated-bxor-operator.deprecated_bxor_operator"]
+status = "excluded"
+pr = "TBD"
+reason = "Elixir is a Semgrep Pro language, not available with --oss-only; no Elixir code in repo."
+
+[rules."elixir.lang.best-practice.deprecated-calendar-iso-day-of-week-3.deprecated_calendar_iso_day_of_week_3"]
+status = "excluded"
+pr = "TBD"
+reason = "Elixir is a Semgrep Pro language, not available with --oss-only; no Elixir code in repo."
+
+[rules."elixir.lang.best-practice.deprecated-use-bitwise.deprecated_use_bitwise"]
+status = "excluded"
+pr = "TBD"
+reason = "Elixir is a Semgrep Pro language, not available with --oss-only; no Elixir code in repo."
+
+[rules."elixir.lang.best-practice.enum-map-into.enum_map_into"]
+status = "excluded"
+pr = "TBD"
+reason = "Elixir is a Semgrep Pro language, not available with --oss-only; no Elixir code in repo."
+
+[rules."elixir.lang.best-practice.enum-map-join.enum_map_join"]
+status = "excluded"
+pr = "TBD"
+reason = "Elixir is a Semgrep Pro language, not available with --oss-only; no Elixir code in repo."
+
+[rules."elixir.lang.correctness.atom-exhaustion.atom_exhaustion"]
+status = "excluded"
+pr = "TBD"
+reason = "Elixir is a Semgrep Pro language, not available with --oss-only; no Elixir code in repo."
