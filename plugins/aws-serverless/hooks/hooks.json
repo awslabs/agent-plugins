@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/validate-template.sh",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/validate-template.sh\"",
             "timeout": 120
           }
         ]
