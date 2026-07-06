@@ -11,25 +11,25 @@ This table lists rules with a recorded human decision (`active`/`excluded`) plus
 
 | rule-id | rule-description | rule-status | rule-updated |
 | ------- | ---------------- | ----------- | ------------ |
-| `ai.generic.detect-generic-ai-anthprop.detect-generic-ai-anthprop` | Possibly found usage of AI: Anthropic | `excluded` — PR#TBD | 2026-07-02 |
+| `ai.generic.detect-generic-ai-anthprop.detect-generic-ai-anthprop` | Possibly found usage of AI: Anthropic | `excluded` — PR#220 | 2026-07-02 |
 | `ai.generic.detect-generic-ai-oai.detect-generic-ai-oai` | Possibly found usage of AI: OpenAI | `excluded` — PR#89 | 2026-07-02 |
-| `apex.lang.best-practice.ncino.accessmodifiers.globalaccessmodifiers.global-access-modifiers` | Global classes, methods, and variables should be avoided (especially in | `excluded` — PR#TBD | 2026-07-02 |
-| `apex.lang.best-practice.ncino.urls.absoluteurls.absolute-urls` | Using absolute URLs to Salesforce Pages is bug prone. Different sandboxes | `excluded` — PR#TBD | 2026-07-02 |
-| `apex.lang.security.ncino.dml.apexcsrfconstructor.apex-csrf-constructor` | Having DML operations in Apex class constructor or initializers can have | `excluded` — PR#TBD | 2026-07-02 |
-| `apex.lang.security.ncino.dml.dmlnativestatements.dml-native-statements` | Native Salesforce DML operations execute in system context, ignoring the | `excluded` — PR#TBD | 2026-07-02 |
-| `apex.lang.security.ncino.encryption.badcrypto.bad-crypto` | The rule makes sure you are using randomly generated IVs and keys for Crypto | `excluded` — PR#TBD | 2026-07-02 |
-| `apex.lang.security.ncino.endpoints.insecurehttprequest.insecure-http-request` | The software transmits sensitive or security-critical data in cleartext | `excluded` — PR#TBD | 2026-07-02 |
-| `apex.lang.security.ncino.endpoints.namedcredentialsconstantmatch.named-credentials-constant-match` | Named Credentials (and callout endpoints) should be used instead of hard-coding | `excluded` — PR#TBD | 2026-07-02 |
-| `apex.lang.security.ncino.endpoints.namedcredentialsstringmatch.named-credentials-string-match` | Named Credentials (and callout endpoints) should be used instead of hard-coding | `excluded` — PR#TBD | 2026-07-02 |
-| `apex.lang.security.ncino.injection.apexsoqlinjectionfromunescapedurlparam.soql-injection-unescaped-url-param` | If a dynamic query must be used,leverage nFORCE Query Builder. In other | `excluded` — PR#TBD | 2026-07-02 |
-| `apex.lang.security.ncino.injection.apexsoqlinjectionunescapedparam.soql-injection-unescaped-param` | If a dynamic query must be used,leverage nFORCE Query Builder. In other | `excluded` — PR#TBD | 2026-07-02 |
-| `apex.lang.security.ncino.sharing.specifysharinglevel.specify-sharing-level` | Every Apex class should have an explicit sharing mode declared. Use the | `excluded` — PR#TBD | 2026-07-02 |
-| `apex.lang.security.ncino.system.systemdebug.system-debug` | In addition to debug statements potentially logging data excessively, debug | `excluded` — PR#TBD | 2026-07-02 |
-| `elixir.lang.best-practice.deprecated-bnot-operator.deprecated_bnot_operator` | The bitwise operator (`^^^`) is already deprecated. Please use `Bitwise.bnot($VAL)` | `excluded` — PR#TBD | 2026-07-02 |
-| `elixir.lang.best-practice.deprecated-bxor-operator.deprecated_bxor_operator` | The bitwise operator (`^^^`) is already deprecated. Please use `Bitwise.bxor($LEFT, | `excluded` — PR#TBD | 2026-07-02 |
-| `elixir.lang.best-practice.deprecated-calendar-iso-day-of-week-3.deprecated_calendar_iso_day_of_week_3` | `Calendar.ISO.day_of_week/3` is already deprecated. Please use `Calendar.ISO.day_of_week/4` | `excluded` — PR#TBD | 2026-07-02 |
-| `elixir.lang.best-practice.deprecated-use-bitwise.deprecated_use_bitwise` | The syntax `use Bitwise` is already deprecated. Please use `import Bitwise` | `excluded` — PR#TBD | 2026-07-02 |
-| `elixir.lang.best-practice.enum-map-into.enum_map_into` | Using `Enum.into/3` is more efficient than using `Enum.map/2 \|> Enum.into/2`. | `excluded` — PR#TBD | 2026-07-02 |
-| `elixir.lang.best-practice.enum-map-join.enum_map_join` | Using `Enum.map_join/3` is more efficient than using `Enum.map/2 \|> Enum.join/2`. | `excluded` — PR#TBD | 2026-07-02 |
-| `elixir.lang.correctness.atom-exhaustion.atom_exhaustion` | Atom values are appended to a global table but never removed. If input | `excluded` — PR#TBD | 2026-07-02 |
-| `generic.secrets.security.detected-sonarqube-docs-api-key.detected-sonarqube-docs-api-key` | SonarQube Docs API Key detected | `excluded` — PR#TBD | 2026-07-02 |
+| `apex.lang.best-practice.ncino.accessmodifiers.globalaccessmodifiers.global-access-modifiers` | Global classes, methods, and variables should be avoided (especially in | `excluded` — PR#220 | 2026-07-02 |
+| `apex.lang.best-practice.ncino.urls.absoluteurls.absolute-urls` | Using absolute URLs to Salesforce Pages is bug prone. Different sandboxes | `excluded` — PR#220 | 2026-07-02 |
+| `apex.lang.security.ncino.dml.apexcsrfconstructor.apex-csrf-constructor` | Having DML operations in Apex class constructor or initializers can have | `excluded` — PR#220 | 2026-07-02 |
+| `apex.lang.security.ncino.dml.dmlnativestatements.dml-native-statements` | Native Salesforce DML operations execute in system context, ignoring the | `excluded` — PR#220 | 2026-07-02 |
+| `apex.lang.security.ncino.encryption.badcrypto.bad-crypto` | The rule makes sure you are using randomly generated IVs and keys for Crypto | `excluded` — PR#220 | 2026-07-02 |
+| `apex.lang.security.ncino.endpoints.insecurehttprequest.insecure-http-request` | The software transmits sensitive or security-critical data in cleartext | `excluded` — PR#220 | 2026-07-02 |
+| `apex.lang.security.ncino.endpoints.namedcredentialsconstantmatch.named-credentials-constant-match` | Named Credentials (and callout endpoints) should be used instead of hard-coding | `excluded` — PR#220 | 2026-07-02 |
+| `apex.lang.security.ncino.endpoints.namedcredentialsstringmatch.named-credentials-string-match` | Named Credentials (and callout endpoints) should be used instead of hard-coding | `excluded` — PR#220 | 2026-07-02 |
+| `apex.lang.security.ncino.injection.apexsoqlinjectionfromunescapedurlparam.soql-injection-unescaped-url-param` | If a dynamic query must be used,leverage nFORCE Query Builder. In other | `excluded` — PR#220 | 2026-07-02 |
+| `apex.lang.security.ncino.injection.apexsoqlinjectionunescapedparam.soql-injection-unescaped-param` | If a dynamic query must be used,leverage nFORCE Query Builder. In other | `excluded` — PR#220 | 2026-07-02 |
+| `apex.lang.security.ncino.sharing.specifysharinglevel.specify-sharing-level` | Every Apex class should have an explicit sharing mode declared. Use the | `excluded` — PR#220 | 2026-07-02 |
+| `apex.lang.security.ncino.system.systemdebug.system-debug` | In addition to debug statements potentially logging data excessively, debug | `excluded` — PR#220 | 2026-07-02 |
+| `elixir.lang.best-practice.deprecated-bnot-operator.deprecated_bnot_operator` | The bitwise operator (`^^^`) is already deprecated. Please use `Bitwise.bnot($VAL)` | `excluded` — PR#220 | 2026-07-02 |
+| `elixir.lang.best-practice.deprecated-bxor-operator.deprecated_bxor_operator` | The bitwise operator (`^^^`) is already deprecated. Please use `Bitwise.bxor($LEFT, | `excluded` — PR#220 | 2026-07-02 |
+| `elixir.lang.best-practice.deprecated-calendar-iso-day-of-week-3.deprecated_calendar_iso_day_of_week_3` | `Calendar.ISO.day_of_week/3` is already deprecated. Please use `Calendar.ISO.day_of_week/4` | `excluded` — PR#220 | 2026-07-02 |
+| `elixir.lang.best-practice.deprecated-use-bitwise.deprecated_use_bitwise` | The syntax `use Bitwise` is already deprecated. Please use `import Bitwise` | `excluded` — PR#220 | 2026-07-02 |
+| `elixir.lang.best-practice.enum-map-into.enum_map_into` | Using `Enum.into/3` is more efficient than using `Enum.map/2 \|> Enum.into/2`. | `excluded` — PR#220 | 2026-07-02 |
+| `elixir.lang.best-practice.enum-map-join.enum_map_join` | Using `Enum.map_join/3` is more efficient than using `Enum.map/2 \|> Enum.join/2`. | `excluded` — PR#220 | 2026-07-02 |
+| `elixir.lang.correctness.atom-exhaustion.atom_exhaustion` | Atom values are appended to a global table but never removed. If input | `excluded` — PR#220 | 2026-07-02 |
+| `generic.secrets.security.detected-sonarqube-docs-api-key.detected-sonarqube-docs-api-key` | SonarQube Docs API Key detected | `excluded` — PR#220 | 2026-07-02 |
