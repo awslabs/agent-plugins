@@ -334,7 +334,7 @@ def main() -> int:
         is_bootstrap = not prior_state
 
         new_state: dict[str, dict] = {}
-        active_blocks: list[str] = []
+        active_blocks: list[tuple[str, str]] = []
         doc_rows: list[tuple[str, str, str, str]] = []
         counts = {"active": 0, "excluded": 0, "auto_excluded": 0, "new": 0, "changed": 0}
         seen_ids: set[str] = set()
@@ -368,7 +368,7 @@ def main() -> int:
                 counts["auto_excluded"] += 1
                 auto_excluded_ids.append(rule_id)
             else:
-                active_blocks.append(block)
+                active_blocks.append((rule_id, block))
                 counts["active"] += 1
 
             # The doc lists decided rules (explicit exclusions.toml entry),
@@ -388,8 +388,13 @@ def main() -> int:
         # Warn about exclusions.toml entries that no longer match any rule.
         stale = sorted(set(exclusions) - seen_ids)
 
-        # Write outputs only after all parsing succeeded.
-        active_text = GENERATED_HEADER + header + "".join(active_blocks)
+        # Write outputs only after all parsing succeeded. Sort active rule blocks
+        # by id so the output is deterministic: the registry serves r/all in a
+        # nondeterministic order, so without this every regeneration would emit a
+        # spurious full-file diff even when no rule actually changed. Sorting
+        # makes real drift the only thing that shows up in git.
+        active_blocks.sort(key=lambda rb: rb[0])
+        active_text = GENERATED_HEADER + header + "".join(b for _, b in active_blocks)
         ACTIVE_FILE.write_text(active_text, encoding="utf-8")
         STATE_FILE.write_text(
             json.dumps(new_state, indent=2, sort_keys=True) + "\n", encoding="utf-8"
