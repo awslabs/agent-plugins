@@ -3,15 +3,40 @@
 # Each [rules."<rule-id>"] entry records a decision about one rule from the
 # Semgrep r/all ruleset:
 #   status = "excluded"  -> the rule is physically removed from r-all.active.yaml
-#   status = "active"    -> the rule is kept (explicitly decided, documented here)
+#   status = "active"    -> the rule is kept (explicitly decided, documented here);
+#                           also force-keeps a rule the [auto_exclude] policy would drop
 #   pr                   -> the PR number where the decision was made ("TBD" if unknown)
 #   reason               -> why the decision was made
 #
-# Rules with no entry here are implicitly active. Edit this file, then run
+# Rules with no entry here are implicitly active, UNLESS they match the
+# [auto_exclude] source policy below. Edit this file, then run
 # `mise run semgrep:update` to regenerate r-all.active.yaml and EXCLUSIONS.md.
 #
-# Seeded from the 22 --exclude-rule flags previously duplicated across
-# mise.toml, the CI workflow, and documented in the old .semgrep.yaml stub.
+# The per-rule [rules] entries were seeded from the 22 --exclude-rule flags
+# previously duplicated across mise.toml, the CI workflow, and the old
+# .semgrep.yaml stub, plus bbp-pattern-inject (see PR #200).
+
+# --- Source-based auto-exclusion policy ---------------------------------------
+#
+# Any rule whose `source` metadata matches a key below is excluded automatically
+# — no per-rule entry needed — which also drops FUTURE rules published with that
+# source. This is how we determine validity of new rules in the r/all feed:
+# there is no positive "is-valid" signal, but a rule with no canonical registry
+# source (source = https://semgrep.dev/r/None) is not a curated community rule.
+#
+# Provenance (investigated on PR #220): 104 rules share source=/r/None in one
+# contiguous registry id burst (r_id 311562-311715) and never appear in
+# semgrep/semgrep-rules. They are offensive-security probes (SSRF via rule
+# metadata targeting 169.254.169.254, stored-XSS payloads in message/fix fields,
+# command-injection and secret-exfil tests, plus "PWNED-PRODUCTION-RULE" and a
+# rule impersonating a real id) — a suspected Bug Bounty Program (bbp) researcher
+# testing the registry. None are valid. To force-keep a specific /None rule if
+# Semgrep ever ships a legitimate one, add [rules."<id>"] with status="active".
+
+[auto_exclude]
+pr = "220"
+[auto_exclude.sources]
+"https://semgrep.dev/r/None" = "Suspected Bug Bounty Program (bbp) researcher probe — no canonical registry source (source=/r/None); not a curated community rule. See PR #220 provenance analysis."
 
 # --- Broken upstream rules (fail to parse; make semgrep exit 2) ----------------
 

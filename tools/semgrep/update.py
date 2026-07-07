@@ -23,6 +23,13 @@ Design constraints (see RFC #211):
   tracked file is overwritten, so a bad upstream response can never produce a
   broken active ruleset.
 
+Rules are dropped two ways: explicit per-rule ``[rules."id"]`` entries, and the
+``[auto_exclude]`` source policy — any rule whose ``source`` metadata matches a
+listed value (e.g. ``https://semgrep.dev/r/None``, which marks rules with no
+canonical registry source) is excluded automatically, including future ones. An
+explicit ``[rules."id"]`` with ``status = "active"`` force-keeps a rule the
+policy would otherwise drop.
+
 Run manually via ``mise run semgrep:update`` (``uv run tools/semgrep/update.py``).
 The generated files are script-owned; hand edits are lost on the next run. Only
 ``exclusions.toml`` is human-edited.
@@ -66,6 +73,10 @@ RULE_START_RE = re.compile(r"^- ", re.MULTILINE)
 ID_RE = re.compile(r"^(?:- |  )id: (.+)$", re.MULTILINE)
 VERSION_ID_RE = re.compile(r"^ +version_id: (\S+)$", re.MULTILINE)
 MESSAGE_RE = re.compile(r"^  message: (.+)$", re.MULTILINE)
+# The rule's canonical registry source. Anchored on ": " so it never matches the
+# adjacent "source-rule-url:" key. A rule with source "https://semgrep.dev/r/None"
+# has no published registry entry (see the [auto_exclude] policy).
+SOURCE_RE = re.compile(r"^\s+source: (\S+)\s*$", re.MULTILINE)
 
 GENERATED_HEADER = (
     "# GENERATED FILE — DO NOT EDIT BY HAND.\n"
@@ -136,8 +147,25 @@ def split_rules(raw: str) -> tuple[str, list[str]]:
     return header, blocks
 
 
-def parse_block(block: str) -> tuple[str, str, str]:
-    """Extract (rule_id, version_id, description) from a single rule block."""
+def sanitize_description(text: str) -> str:
+    """Render untrusted rule text as inert markdown-table content.
+
+    Escapes HTML angle brackets (so payloads like ``<img src=x onerror=...>``
+    become visible text, not markup — MD045/no-alt-text and any rendered XSS),
+    backticks (so inline code can't break out), and the pipe that would
+    otherwise split a table cell. Newlines are already stripped by the caller.
+    """
+    return (
+        text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("`", "\\`")
+        .replace("|", "\\|")
+    )
+
+
+def parse_block(block: str) -> tuple[str, str, str, str]:
+    """Extract (rule_id, version_id, description, source) from a rule block."""
     id_match = ID_RE.search(block)
     if not id_match:
         raise UpdateError(f"rule block has no id:\n{block[:200]}")
@@ -150,9 +178,17 @@ def parse_block(block: str) -> tuple[str, str, str]:
     message = message_match.group(1).strip() if message_match else ""
     # Strip a single layer of surrounding YAML quotes and keep the first line.
     message = message.strip("'\"").splitlines()[0] if message else ""
-    description = message[:117] + "..." if len(message) > 120 else message
+    message = message[:117] + "..." if len(message) > 120 else message
+    # Neutralize rule-supplied text before it lands in EXCLUSIONS.md. Rule
+    # messages are untrusted (the r/all feed carries probe rules whose messages
+    # are XSS/markup payloads, e.g. "<img src=x onerror=...>"); render them as
+    # inert text so they can't inject active markup or break the markdown table.
+    description = sanitize_description(message)
 
-    return rule_id, version_id, description
+    source_match = SOURCE_RE.search(block)
+    source = source_match.group(1).strip() if source_match else ""
+
+    return rule_id, version_id, description, source
 
 
 def load_json(path: Path) -> dict:
@@ -164,16 +200,35 @@ def load_json(path: Path) -> dict:
         raise UpdateError(f"could not read {path.name}: {exc}") from exc
 
 
-def load_exclusions() -> dict[str, dict]:
-    """Load the human-maintained exclusions.toml (id -> {status, pr, reason})."""
+def load_toml() -> dict:
+    """Load and parse exclusions.toml, or return {} if absent."""
     if not EXCLUSIONS_TOML.exists():
         print(f"  note: {EXCLUSIONS_TOML.name} not found — treating all rules as new")
         return {}
     try:
-        data = tomllib.loads(EXCLUSIONS_TOML.read_text(encoding="utf-8"))
+        return tomllib.loads(EXCLUSIONS_TOML.read_text(encoding="utf-8"))
     except (OSError, tomllib.TOMLDecodeError) as exc:
         raise UpdateError(f"could not read {EXCLUSIONS_TOML.name}: {exc}") from exc
+
+
+def load_exclusions(data: dict) -> dict[str, dict]:
+    """Per-rule decisions ([rules."id"] -> {status, pr, reason})."""
     return data.get("rules", {})
+
+
+def load_auto_exclude(data: dict) -> dict:
+    """Load the source-based auto-exclusion policy ([auto_exclude]).
+
+    Returns {"sources": {value: reason}, "pr": str}. Any rule whose ``source``
+    metadata matches a listed value is excluded automatically — no per-ID entry
+    needed — which also catches *future* rules published with that source. A
+    rule can still be force-kept via an explicit [rules."id"] status="active".
+    """
+    policy = data.get("auto_exclude", {})
+    return {
+        "sources": policy.get("sources", {}),
+        "pr": policy.get("pr", "TBD"),
+    }
 
 
 def render_status(entry: dict | None) -> str:
@@ -219,7 +274,8 @@ def render_doc(
         "| ------- | ---------------- | ----------- | ------------ |",
     ]
     for rule_id, description, status, updated in rows:
-        desc = description.replace("|", "\\|") or "—"
+        # description is already sanitized (pipes/backticks/angle-brackets escaped).
+        desc = description or "—"
         lines.append(f"| `{rule_id}` | {desc} | {status} | {updated} |")
     lines.append("")
     return "\n".join(lines)
@@ -231,7 +287,9 @@ def main() -> int:
         header, blocks = split_rules(raw)
 
         prior_state = load_json(STATE_FILE)
-        exclusions = load_exclusions()
+        toml_data = load_toml()
+        exclusions = load_exclusions(toml_data)
+        auto = load_auto_exclude(toml_data)
         today = date.today().isoformat()
 
         # On the first run there is no prior state, so the snapshot *is* the
@@ -243,11 +301,12 @@ def main() -> int:
         new_state: dict[str, dict] = {}
         active_blocks: list[str] = []
         doc_rows: list[tuple[str, str, str, str]] = []
-        counts = {"active": 0, "excluded": 0, "new": 0, "changed": 0}
+        counts = {"active": 0, "excluded": 0, "auto_excluded": 0, "new": 0, "changed": 0}
         seen_ids: set[str] = set()
+        auto_excluded_ids: list[str] = []
 
         for block in blocks:
-            rule_id, version_id, description = parse_block(block)
+            rule_id, version_id, description, source = parse_block(block)
             seen_ids.add(rule_id)
 
             # Derive the "last changed" date from version_id drift.
@@ -262,18 +321,29 @@ def main() -> int:
             new_state[rule_id] = {"version_id": version_id, "updated": updated}
 
             entry = exclusions.get(rule_id)
-            is_excluded = entry is not None and entry.get("status") == "excluded"
+            explicit_active = entry is not None and entry.get("status") == "active"
+            explicit_excluded = entry is not None and entry.get("status") == "excluded"
+            # Source-based policy: exclude any rule whose source matches, unless a
+            # human explicitly force-kept it via [rules."id"] status="active".
+            auto_excluded = source in auto["sources"] and not explicit_active
 
-            if is_excluded:
+            if explicit_excluded:
                 counts["excluded"] += 1
+            elif auto_excluded:
+                counts["auto_excluded"] += 1
+                auto_excluded_ids.append(rule_id)
             else:
                 active_blocks.append(block)
                 counts["active"] += 1
 
-            # The doc lists decided rules (any exclusions.toml entry) plus new
-            # rules (appeared since the last snapshot and awaiting a decision).
+            # The doc lists decided rules (explicit exclusions.toml entry),
+            # auto-excluded rules (with the policy reason), and new rules
+            # (appeared since the last snapshot and awaiting a decision).
             if entry is not None:
                 doc_rows.append((rule_id, description, render_status(entry), updated))
+            elif auto_excluded:
+                status = f"`auto-excluded` — PR#{auto['pr']}"
+                doc_rows.append((rule_id, description, status, updated))
             elif prior is None and not is_bootstrap:
                 counts["new"] += 1
                 doc_rows.append((rule_id, description, render_status(None), updated))
@@ -296,7 +366,7 @@ def main() -> int:
                 version=semgrep_version(),
                 total=len(blocks),
                 active=counts["active"],
-                excluded=counts["excluded"],
+                excluded=counts["excluded"] + counts["auto_excluded"],
                 new=counts["new"],
                 rows=doc_rows,
             ),
@@ -308,16 +378,23 @@ def main() -> int:
 
     print(
         f"Wrote {ACTIVE_FILE.relative_to(ROOT)}"
-        f" ({counts['active']} active, {counts['excluded']} excluded of {len(blocks)})"
+        f" ({counts['active']} active,"
+        f" {counts['excluded']} excluded,"
+        f" {counts['auto_excluded']} auto-excluded of {len(blocks)})"
     )
     print(
         f"Summary: {counts['new']} new (need triage),"
         f" {counts['excluded']} excluded,"
+        f" {counts['auto_excluded']} auto-excluded (source policy),"
         f" {counts['changed']} changed,"
         f" {len(removed)} removed"
     )
     if counts["new"]:
         print(f"  triage the {counts['new']} new rule(s) in {EXCLUSIONS_DOC.name}")
+    if auto_excluded_ids:
+        preview = ", ".join(sorted(auto_excluded_ids)[:5])
+        more = f" (+{len(auto_excluded_ids) - 5} more)" if len(auto_excluded_ids) > 5 else ""
+        print(f"  auto-excluded {len(auto_excluded_ids)} rule(s) by source policy: {preview}{more}")
     if removed:
         print(f"  removed upstream: {', '.join(removed)}")
     if stale:
