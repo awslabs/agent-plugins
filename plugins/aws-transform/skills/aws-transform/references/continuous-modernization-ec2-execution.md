@@ -70,22 +70,22 @@ For github / gitlab / bitbucket, the customer must register the source on their 
 
 ## Multi-Worker Support
 
-**Default behavior (`WorkerCount=5`): five parallel containers** named `atx-ct-1` through `atx-ct-5`. Each runs its own atx ct server. This default provides headroom for parallel work without requiring later resize (which is destructive; see "Changing WorkerCount Requires Redeploy"). The agent targets a specific worker by setting `WORKER_NUM` (1..WorkerCount) before calling SSM helpers or `build_command_*()`.
+**Default behavior (`WorkerCount=1`): a single container** named `atx-ct` (legacy behavior), sized for the default `m5.2xlarge` (32 GB) with a 50 GB volume. Each worker runs its own atx ct server. The default is 1 because every worker is memory-capped at `(instance RAM - 4 GB) / WorkerCount`, so a higher WorkerCount must be paired with a larger InstanceType; defaulting to 1 keeps a no-preference customer on a right-sized box rather than over-provisioning. For multi-analysis parallelism the customer chooses N>1 and the laptop-side provisioning script auto-sizes the InstanceType to match (m5.4xlarge for 2-4, m5.8xlarge for 5). The agent targets a specific worker by setting `WORKER_NUM` (1..WorkerCount) before calling SSM helpers or `build_command_*()`.
 
-For customers with simpler workloads or tighter cost constraints, override `WORKER_COUNT=1` (single container named `atx-ct`, legacy behavior) or any value in 1-5. The auto-sized instance type and disk shrink to match.
+To run multiple analyses in parallel, set `WORKER_COUNT` to any value in 1-5; the auto-sized instance type and disk grow to match. Note WorkerCount is fixed at stack-create time -- raising it later requires a destructive redeploy (see "Changing WorkerCount Requires Redeploy"), so a customer who knows they will need parallelism can opt into a higher count up front.
 
 ### Choosing WorkerCount
 
-| Customer intent                                                           | WorkerCount                                                                          |
-| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| "Scan my source" / "tech-debt-quick on source X" / "find vulnerabilities" | 1 is sufficient                                                                      |
-| Default (no specific parallelism request)                                 | 5 (provides headroom; saves a future redeploy if customer later wants parallel work) |
-| "Run tech-debt AND security in parallel" on the same source               | 2+ (one per analysis type)                                                           |
-| "Analyze sources A, B, C concurrently"                                    | 3+ (one per source)                                                                  |
-| "Run a separate analysis on each repo in this source in parallel"         | N where N is the repo count, capped at 5                                             |
-| 6+ truly parallel jobs                                                    | Use the Batch path instead (Fargate scales to 64 concurrent)                         |
+| Customer intent                                                           | WorkerCount                                                                             |
+| ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| "Scan my source" / "tech-debt-quick on source X" / "find vulnerabilities" | 1 is sufficient                                                                         |
+| Default (no specific parallelism request)                                 | 1 (right-sized m5.2xlarge; each worker is memory-capped, so 1 avoids over-provisioning) |
+| "Run tech-debt AND security in parallel" on the same source               | 2+ (one per analysis type)                                                              |
+| "Analyze sources A, B, C concurrently"                                    | 3+ (one per source)                                                                     |
+| "Run a separate analysis on each repo in this source in parallel"         | N where N is the repo count, capped at 5                                                |
+| 6+ truly parallel jobs                                                    | Use the Batch path instead (Fargate scales to 64 concurrent)                            |
 
-If the customer's intent is unclear, ASK: "Do you want one analysis covering everything (single AID, simpler reporting), or N separate analyses running in parallel (one AID per item)?" Default to 5 if they have no preference; they pay for headroom but avoid a destructive resize later.
+If the customer's intent is unclear, ASK: "Do you want one analysis covering everything (single AID, simpler reporting), or N separate analyses running in parallel (one AID per item)?" Default to 1 if they have no preference; the laptop-side auto-sizing matches WorkerCount=1 to m5.2xlarge with a 50 GB volume, so they pay only for what they need. If they expect parallelism later, mention they can opt into a higher count now to avoid a destructive redeploy.
 
 When proposing a WorkerCount for a new CFN stack in the consent prompt, ALWAYS include this warning: "Note: WorkerCount is fixed at stack-create time. Changing it later requires the admin to redeploy the stack (which causes downtime)." This warning does NOT apply to the existing-instance path; there's no stack to redeploy, and WorkerCount can be changed by stopping/starting containers.
 
@@ -612,7 +612,7 @@ Show the list to the customer and ask:
 2. **Source type:** GitHub, GitLab, Bitbucket, or local
 3. **Analysis type:** `tech-debt-comprehensive`, `tech-debt-quick`, `security`, `agentic-readiness`, `modernization-readiness`, or `custom`
 
-If the list is empty or the customer wants to register a new source, run `atx ct source add` via the [continuous-modernization-source](continuous-modernization-source.md) skill, then return here.
+If the list is empty, the customer wants to register a new source, or needs to update the token on an existing source, use the [continuous-modernization-source](continuous-modernization-source.md) skill (`source add` for new, `source update` for existing), then return here.
 
 ```bash
 LOGICAL_SOURCE_NAME="<picked-source-name>"
@@ -961,10 +961,10 @@ Parameters:
     MinValue: 50
   WorkerCount:
     Type: Number
-    Default: 5
+    Default: 1
     MinValue: 1
     MaxValue: 5
-    Description: Number of parallel atx-ct containers (1-5). Default 5 provides headroom for parallel work without requiring later resize. WorkerCount=1 creates a single container named "atx-ct" (legacy behavior). WorkerCount>1 creates "atx-ct-1", "atx-ct-2", etc. For more than 5 parallel jobs, use the Batch path.
+    Description: Number of parallel atx-ct containers (1-5). Each container is memory-capped at (instance RAM minus 4 GB) divided by WorkerCount, so WorkerCount must be sized to the InstanceType. The template default of 1 is matched to the default InstanceType (m5.2xlarge, 32 GB). IMPORTANT - if you raise WorkerCount, also raise InstanceType so each worker still gets enough RAM (use m5.4xlarge for 2-4 workers, m5.8xlarge for 5); the laptop-side provision script auto-sizes InstanceType from WorkerCount for you. WorkerCount of 1 creates a single container named atx-ct (legacy behavior); WorkerCount above 1 creates atx-ct-1, atx-ct-2, etc. For more than 5 parallel jobs, use the Batch path.
 
 Conditions:
   CreateNewSG: !Equals [!Ref ExistingSecurityGroupId, '']
@@ -1078,6 +1078,23 @@ Resources:
           #!/bin/bash
           set -e
           trap 'cfn-signal -e $? --stack ${AWS::StackName} --resource Instance --region ${AWS::Region}' ERR EXIT
+
+          # Precheck FIRST (before dnf/docker pull, which take minutes): reject a
+          # WorkerCount that does not fit this instance's RAM. Each worker needs
+          # >=2048 MB (the per-worker floor applied at launch) plus ~4 GB reserved
+          # for the OS/Docker/SSM agent; if the host cannot satisfy that, the 2048
+          # MB floor would over-commit RAM and the OOM-killer could take the SSM
+          # agent -- exactly the failure this template prevents. Failing here (set
+          # -e + ERR/EXIT cfn-signal trap rolls the stack back) surfaces a bad
+          # WorkerCount/InstanceType pairing in seconds instead of after the image
+          # pull. RAM is static, so nothing below changes this verdict.
+          MEM_TOTAL_MB=$(( $(awk '/MemTotal/{print $2}' /proc/meminfo) / 1024 ))
+          REQUIRED_MB=$(( ${WorkerCount} * 2048 + 4096 ))
+          if [ "$MEM_TOTAL_MB" -lt "$REQUIRED_MB" ]; then
+            echo "FATAL: host has ${!MEM_TOTAL_MB} MB but WorkerCount=${WorkerCount} requires ${!REQUIRED_MB} MB (2048 MB/worker + 4096 MB reserved). Raise InstanceType or lower WorkerCount." >&2
+            exit 1
+          fi
+
           dnf install -y docker
           systemctl start docker
           systemctl enable docker
@@ -1094,8 +1111,28 @@ Resources:
             CONTAINERS=$(seq -f "atx-ct-%g" 1 ${WorkerCount})
           fi
 
+          # Cap each container's memory so a runaway analysis (heavy parallel
+          # cloning of many/large repos) can only OOM its own container, never
+          # the host. An unbounded container can exhaust host RAM, get the SSM
+          # agent OOM-killed (severing all access), and -- with the old
+          # --restart unless-stopped -- loop forever. Reserve ~4 GB for the OS,
+          # Docker daemon, and SSM agent; split the remainder across workers.
+          # --restart on-failure:3 bounds that OOM loop (an OOM is exit 137 =
+          # failure, retried at most 3x then left down). It intentionally does
+          # NOT restart a clean exit 0: `atx ct server` is a forever-daemon, so
+          # a clean exit is unexpected and SHOULD surface as a provision failure
+          # via the health check below rather than be silently resurrected. A
+          # boot-time OOM is not expected (an idle server needs far less than
+          # the >=2048 MB floor), so the cap will realistically only bite under
+          # a real runaway analysis, not at provision.
+          # MEM_TOTAL_MB was computed and range-checked in the precheck at the top
+          # of UserData; reuse it to split the budget across workers.
+          MEM_PER_WORKER_MB=$(( (MEM_TOTAL_MB - 4096) / ${WorkerCount} ))
+          if [ "$MEM_PER_WORKER_MB" -lt 2048 ]; then MEM_PER_WORKER_MB=2048; fi
+
           for name in $CONTAINERS; do
-            docker run -d --name "$name" --restart unless-stopped \
+            docker run -d --name "$name" --restart on-failure:3 \
+              --memory="${!MEM_PER_WORKER_MB}m" --memory-swap="${!MEM_PER_WORKER_MB}m" \
               --entrypoint /bin/bash \
               -e CT_OUTPUT_BUCKET=atx-ct-output-${AWS::AccountId} \
               -e AWS_REGION=${AWS::Region} \
@@ -1107,22 +1144,39 @@ Resources:
           # Wait for all containers to report healthy in PARALLEL (background each
           # health-check, then wait on all PIDs). Sequential checking would not fit
           # within the CFN CreationPolicy timeout for higher WorkerCount values.
-          # Note: ${!name} is the CFN !Sub escape: !Sub leaves it as literal ${name}
-          # for bash to resolve. Plain ${name} would error with "Unresolved resource
-          # dependencies [name]" because !Sub treats ${...} as CFN refs.
+          # Note: ${!name} is the CFN !Sub escape -- !Sub leaves it as a literal
+          # dollar-brace for bash to resolve. An unescaped bash variable in this
+          # !Sub block would error with "Unresolved resource dependencies"
+          # because !Sub treats dollar-brace refs as CFN resource references.
+          # Each worker fast-fails only when its container is TERMINALLY down, so a
+          # dead worker surfaces within seconds instead of waiting out the full 300s
+          # poll -- WITHOUT tripping on the transient "exited" snapshot a container
+          # shows BETWEEN --restart on-failure:3 retries. Terminal = Status=dead, OR
+          # Status=exited with either a clean ExitCode 0 (on-failure never restarts a
+          # clean exit) or RestartCount>=3 (retries exhausted). A non-zero exit with
+          # RestartCount<3 is mid-retry -- keep polling, it may still come up.
           PIDS=()
           for name in $CONTAINERS; do
             (
               for i in $(seq 1 60); do
+                STATUS=$(docker inspect "$name" --format '{{.State.Status}}' 2>/dev/null || echo missing)
+                EC=$(docker inspect "$name" --format '{{.State.ExitCode}}' 2>/dev/null || echo -1)
+                RC=$(docker inspect "$name" --format '{{.RestartCount}}' 2>/dev/null || echo 0)
+                if [ "$STATUS" = dead ] || { [ "$STATUS" = exited ] && { [ "$EC" = 0 ] || [ "$RC" -ge 3 ]; }; }; then
+                  OOM=$(docker inspect "$name" --format '{{.State.OOMKilled}}' 2>/dev/null)
+                  echo "Worker ${!name} terminal: Status=$STATUS OOMKilled=$OOM ExitCode=$EC RestartCount=$RC" >&2
+                  exit 1
+                fi
                 if docker exec "$name" bash -c 'atx ct status --health' > /dev/null 2>&1; then exit 0; fi
                 sleep 5
               done
+              echo "Worker ${!name} never became healthy within 300s" >&2
               exit 1
             ) &
             PIDS+=($!)
           done
           for pid in "${!PIDS[@]}"; do
-            wait "$pid" || { echo "Health check failed for one or more workers"; exit 1; }
+            wait "$pid" || { echo "Health check failed for one or more workers" >&2; exit 1; }
           done
           for name in $CONTAINERS; do
             docker ps --filter "name=^${!name}$" --filter status=running --format '{{.Names}}' | grep -q "^${!name}$"
@@ -1143,11 +1197,13 @@ Outputs:
   Region: { Value: !Ref AWS::Region }
 CFN_EOF
 
-# Worker count (default 5; max 5). Default of 5 provides headroom for parallel work
-# without later resize (which is destructive; see "Changing WorkerCount" section).
-# Customer can override to a smaller value (e.g., WORKER_COUNT=1 for legacy single-container
-# behavior, or WORKER_COUNT=3 for moderate parallelism with lower cost).
-WORKER_COUNT="${WORKER_COUNT:-5}"
+# Worker count (default 1; max 5). Default of 1 matches the CFN template default and
+# keeps each worker on a right-sized box (InstanceType is auto-sized from WORKER_COUNT
+# below, and each container is memory-capped at (instance RAM - 4 GB) / WORKER_COUNT at
+# launch). Raise it for more parallelism (e.g. WORKER_COUNT=3 or 5); the auto-sizing
+# bumps InstanceType so each worker still gets enough RAM. Changing it after provisioning
+# is destructive (see "Changing WorkerCount" section).
+WORKER_COUNT="${WORKER_COUNT:-1}"
 if [ "$WORKER_COUNT" -lt 1 ] || [ "$WORKER_COUNT" -gt 5 ]; then
   echo "ERROR: WORKER_COUNT must be 1-5. Got: $WORKER_COUNT. For more parallelism, use the Batch path." >&2
   exit 1
@@ -1413,6 +1469,35 @@ aws s3 rm s3://atx-source-code-${ACCOUNT_ID}/temp/security_agent_config.json
 ```
 
 ### Step 7: Confirm and Submit
+
+**Validate credentials (non-local providers):** Before confirming, verify that the required secret exists in Secrets Manager. Skip for local provider sources.
+
+| Provider      | Required Secret       |
+| ------------- | --------------------- |
+| **github**    | `atx/github-token`    |
+| **gitlab**    | `atx/gitlab-token`    |
+| **bitbucket** | `atx/bitbucket-token` |
+| **local**     | (none — skip)         |
+
+```bash
+aws secretsmanager describe-secret --secret-id <secret-name> --region $REGION 2>&1
+```
+
+- If `ResourceNotFoundException` → inform the user that the secret is missing. Give them the command to run in their own terminal:
+
+```bash
+read -s TOKEN && { aws secretsmanager create-secret --name "<secret-name>" \
+  --secret-string "$TOKEN" --region $REGION 2>/dev/null \
+  || aws secretsmanager put-secret-value --secret-id "<secret-name>" \
+       --secret-string "$TOKEN" --region $REGION; }; unset TOKEN
+```
+
+- If the secret exists → ask the customer: "Your `<secret-name>` token was last updated on `<LastChangedDate>`. Would you like to rotate it, or is the current token still valid?" If they want to rotate:
+
+```bash
+read -s TOKEN && aws secretsmanager put-secret-value --secret-id "<secret-name>" \
+  --secret-string "$TOKEN" --region $REGION; unset TOKEN
+```
 
 Tell the customer what will happen and wait for explicit confirmation.
 
@@ -2040,8 +2125,24 @@ else
 fi
 
 for name in $CONTAINERS; do
-  ssm_run "sudo docker rm -f $name 2>/dev/null; \
-    sudo docker run -d --name $name --restart unless-stopped \
+  # Cap each container's memory so a runaway analysis can only OOM its own
+  # container, never the host (which would OOM-kill the SSM agent and sever
+  # access). The memory math runs on the REMOTE host (\$-escaped) because an
+  # existing instance's RAM is not known laptop-side; ~4 GB is reserved for the
+  # OS/Docker/SSM agent and the remainder split across the workers.
+  # WORKER_COUNT is the authoritative worker count (Step 2 reads it from the
+  # stack/instance). Resolve it on the LAPTOP with a :-1 fallback so a re-paste in
+  # a fresh shell where it is unset degrades to 1 instead of rendering "/ ))" --
+  # a bash arithmetic syntax error that would leave the container unlaunched with
+  # the error buried in SSM StandardErrorContent. (A bare "$WORKER_COUNT" had no
+  # such guard.) The fallback resolves laptop-side, so the remote host divides by
+  # the real count, never a blind 1 that would over-commit a multi-worker host.
+  ssm_run "WC=${WORKER_COUNT:-1}; sudo docker rm -f $name 2>/dev/null; \
+    MEM_TOTAL_MB=\$(( \$(awk '/MemTotal/{print \$2}' /proc/meminfo) / 1024 )); \
+    MEM_PER_WORKER_MB=\$(( (\$MEM_TOTAL_MB - 4096) / \$WC )); \
+    [ \$MEM_PER_WORKER_MB -lt 2048 ] && MEM_PER_WORKER_MB=2048; \
+    sudo docker run -d --name $name --restart on-failure:3 \
+      --memory=\${MEM_PER_WORKER_MB}m --memory-swap=\${MEM_PER_WORKER_MB}m \
       --entrypoint /bin/bash \
       -e CT_OUTPUT_BUCKET=atx-ct-output-${ACCOUNT_ID} \
       -e AWS_REGION=${REGION} \
@@ -2165,11 +2266,19 @@ For continuous modernization analyses, the pre-built image's defaults handle eve
 For remediation runs that target a specific language version (e.g., Java 21, Python 3.13), pass the version as an environment variable on the `docker run` (Step 6):
 
 ```bash
-ssm_run "sudo docker run -d --name atx-ct ... \
-  -e JAVA_VERSION=21 \
-  -e PYTHON_VERSION=3.13 \
-  -e NODE_VERSION=22 \
-  $IMAGE -c '...'"
+# Each ssm_run is a separate remote shell, so compute MEM_PER_WORKER_MB in the
+# SAME command that launches the container (Step C.5 does the identical compute).
+# WORKER_COUNT resolves laptop-side with a :-1 fallback (see Step C.5) so an unset
+# value degrades to 1 instead of rendering an empty divisor "/ ))".
+ssm_run "WC=${WORKER_COUNT:-1}; MEM_TOTAL_MB=\$(( \$(awk '/MemTotal/{print \$2}' /proc/meminfo) / 1024 )); \
+  MEM_PER_WORKER_MB=\$(( (\$MEM_TOTAL_MB - 4096) / \$WC )); \
+  [ \$MEM_PER_WORKER_MB -lt 2048 ] && MEM_PER_WORKER_MB=2048; \
+  sudo docker run -d --name atx-ct --restart on-failure:3 \
+    --memory=\${MEM_PER_WORKER_MB}m --memory-swap=\${MEM_PER_WORKER_MB}m ... \
+    -e JAVA_VERSION=21 \
+    -e PYTHON_VERSION=3.13 \
+    -e NODE_VERSION=22 \
+    $IMAGE -c '...'"
 ```
 
 Available versions:
@@ -2187,18 +2296,19 @@ For analyses, runtime switching is generally not needed.
 
 ## Error Handling
 
-| Error                                                                                                  | Cause                                                                                                                                                                                                                                                                                                       | Fix                                                                                                                                                                                                                                                                                                                                                                                                     |
-| ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| SSM agent not Online                                                                                   | Instance role missing `AmazonSSMManagedInstanceCore` or no outbound internet                                                                                                                                                                                                                                | Re-attach the managed policy; verify VPC has NAT or public IP                                                                                                                                                                                                                                                                                                                                           |
-| Container exits / restarts on launch                                                                   | `atx ct server` crashed on startup, or the image failed to pull                                                                                                                                                                                                                                             | Check container logs: `ssm_run "sudo docker logs ${CONTAINER_NAME} 2>&1 \| tail -50"`. If the image failed to pull, verify outbound internet (NAT/public IP) so the host can reach `public.ecr.aws`. If the server crashed, check for port conflicts on 8081. If UserData itself failed, the stack is in `ROLLBACK_COMPLETE`; check `aws cloudformation describe-stack-events --stack-name $STACK_NAME` |
-| `atx ct analysis run` clone fails                                                                      | PAT expired or repo private to a different account                                                                                                                                                                                                                                                          | Verify customer's PAT has access; re-stage source config (Step 6)                                                                                                                                                                                                                                                                                                                                       |
-| Findings missing after analysis                                                                        | Server crashed before persisting                                                                                                                                                                                                                                                                            | Check `tail /tmp/atxct-<job-id>.log`; recover via `analysis get --id $AID`                                                                                                                                                                                                                                                                                                                              |
-| Artifacts missing from S3                                                                              | Wrapper killed before upload step                                                                                                                                                                                                                                                                           | Re-run upload manually (see Cancellation section)                                                                                                                                                                                                                                                                                                                                                       |
-| Polling never completes                                                                                | atx ct server hung or container down                                                                                                                                                                                                                                                                        | `ssm_run "sudo docker ps"` and `ssm_run "sudo docker logs ${CONTAINER_NAME} \| tail"` to diagnose                                                                                                                                                                                                                                                                                                       |
-| Container starts but all AWS API calls return "credentials not available" or fail to reach IMDS        | Bridge networking + IMDSv2 hop limit = 1 (default). Token TTL expires before reaching the container's network namespace.                                                                                                                                                                                    | On an existing instance, the customer can run `aws ec2 modify-instance-metadata-options --instance-id <id> --http-put-response-hop-limit 2 --region <region>`. We do NOT modify metadata options on customer instances automatically; it's a side-effect on resources they own. The CFN-managed flow does not hit this in practice with current Docker bridge defaults.                                 |
-| Status-check ssm_run calls hang during fan-out                                                         | Older fan-out submissions kept SSM agent worker slots occupied until each wrapper exited (CommandWorkersLimit default 5). Mitigated by submitting all workers via a single SSM command and using `( ( bash X & ) & )` double-fork to orphan each wrapper to init. SSM marks the launch Success immediately. | If you still observe queueing, list in-flight commands with ``aws ssm list-commands --instance-id <id> --query 'Commands[?Status==`InProgress`].CommandId'`` and cancel orphaned ones via `aws ssm cancel-command --command-id <id>`. Read wrapper progress through a single batched `ssm_run` reading `/tmp/atxct-fan-w*-*.{log,aids,rids}` rather than many small calls.                              |
-| `atx ct analysis run` hangs cloning from internal/self-hosted git host                                 | Subnet has 0.0.0.0/0 egress (Step 5b validation passed) but no route to the customer's internal git host. VPN / Direct Connect / VPC peering missing or filtered.                                                                                                                                           | The skill cannot auto-verify routes to corporate-network git hosts. Confirm with the network team that the subnet's route table includes a path to the git host CIDR. Test from any instance in the same subnet: `nslookup <git-host>` then `curl -v https://<git-host>/`.                                                                                                                              |
-| Stack create fails with "no NAT/route" or container UserData times out after Step 5b validation passed | Subnet's 0.0.0.0/0 default route was removed (or the subnet was switched to a different route table) between Step 5b validation and stack deploy.                                                                                                                                                           | Re-run Step 5b validation on the current state of the route table. The check uses `ec2:DescribeRouteTables`; if the network team is making concurrent changes, run validation immediately before the admin handoff.                                                                                                                                                                                     |
+| Error                                                                                                  | Cause                                                                                                                                                                                                                                                                                                       | Fix                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| SSM agent not Online                                                                                   | Instance role missing `AmazonSSMManagedInstanceCore` or no outbound internet                                                                                                                                                                                                                                | Re-attach the managed policy; verify VPC has NAT or public IP                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Container exits / restarts on launch (or stays `exited`)                                               | `atx ct server` crashed, OR exited cleanly (exit 0) and was intentionally not recovered by `--restart on-failure:3`, OR the image failed to pull                                                                                                                                                            | First triage with `ssm_run "sudo docker inspect <name> --format '{{.State.Status}} ExitCode={{.State.ExitCode}} RestartCount={{.RestartCount}} OOMKilled={{.State.OOMKilled}}'"`. If `OOMKilled=true`, see the OOM row below. If `ExitCode=0`, the server exited cleanly and was correctly NOT auto-restarted -- investigate why it shut down (`docker logs`). If `ExitCode!=0` (often `RestartCount=3`), check `docker logs <name>` for a crash: image-pull failure (verify NAT/public IP to `public.ecr.aws`), port conflict on 8081, or missing env/role perms. If UserData itself failed, the stack is in `ROLLBACK_COMPLETE`; check `aws cloudformation describe-stack-events --stack-name $STACK_NAME` |
+| Container OOM-killed (gone after a few restarts; jobs fail with "container not running")               | The workload exceeded the container's per-worker `--memory` cap (e.g. a heavy parallel-clone analysis); `--restart on-failure:3` retried 3x then left it down                                                                                                                                               | `ssm_run "sudo docker inspect <name> --format '{{.State.OOMKilled}} {{.State.ExitCode}} {{.RestartCount}} {{.State.Status}}'"`. If `OOMKilled=true`, the cap was exceeded -- give each worker more RAM: raise `InstanceType` and/or lower `WorkerCount` (each gets `(instance RAM - 4 GB) / WorkerCount`), then re-provision. **If `OOMKilled=false` but `RestartCount=3 Status=exited`, this is NOT an OOM** -- the server crashed for another reason; fall through to "Container exits / restarts on launch" above. Restart a downed container with `ssm_run "sudo docker start <name>"`                                                                                                                   |
+| `atx ct analysis run` clone fails                                                                      | PAT expired or repo private to a different account                                                                                                                                                                                                                                                          | Verify customer's PAT has access; re-stage source config (Step 6)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Findings missing after analysis                                                                        | Server crashed before persisting                                                                                                                                                                                                                                                                            | Check `tail /tmp/atxct-<job-id>.log`; recover via `analysis get --id $AID`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Artifacts missing from S3                                                                              | Wrapper killed before upload step                                                                                                                                                                                                                                                                           | Re-run upload manually (see Cancellation section)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Polling never completes                                                                                | atx ct server hung or container down                                                                                                                                                                                                                                                                        | `ssm_run "sudo docker ps"` and `ssm_run "sudo docker logs ${CONTAINER_NAME} \| tail"` to diagnose                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Container starts but all AWS API calls return "credentials not available" or fail to reach IMDS        | Bridge networking + IMDSv2 hop limit = 1 (default). Token TTL expires before reaching the container's network namespace.                                                                                                                                                                                    | On an existing instance, the customer can run `aws ec2 modify-instance-metadata-options --instance-id <id> --http-put-response-hop-limit 2 --region <region>`. We do NOT modify metadata options on customer instances automatically; it's a side-effect on resources they own. The CFN-managed flow does not hit this in practice with current Docker bridge defaults.                                                                                                                                                                                                                                                                                                                                      |
+| Status-check ssm_run calls hang during fan-out                                                         | Older fan-out submissions kept SSM agent worker slots occupied until each wrapper exited (CommandWorkersLimit default 5). Mitigated by submitting all workers via a single SSM command and using `( ( bash X & ) & )` double-fork to orphan each wrapper to init. SSM marks the launch Success immediately. | If you still observe queueing, list in-flight commands with ``aws ssm list-commands --instance-id <id> --query 'Commands[?Status==`InProgress`].CommandId'`` and cancel orphaned ones via `aws ssm cancel-command --command-id <id>`. Read wrapper progress through a single batched `ssm_run` reading `/tmp/atxct-fan-w*-*.{log,aids,rids}` rather than many small calls.                                                                                                                                                                                                                                                                                                                                   |
+| `atx ct analysis run` hangs cloning from internal/self-hosted git host                                 | Subnet has 0.0.0.0/0 egress (Step 5b validation passed) but no route to the customer's internal git host. VPN / Direct Connect / VPC peering missing or filtered.                                                                                                                                           | The skill cannot auto-verify routes to corporate-network git hosts. Confirm with the network team that the subnet's route table includes a path to the git host CIDR. Test from any instance in the same subnet: `nslookup <git-host>` then `curl -v https://<git-host>/`.                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Stack create fails with "no NAT/route" or container UserData times out after Step 5b validation passed | Subnet's 0.0.0.0/0 default route was removed (or the subnet was switched to a different route table) between Step 5b validation and stack deploy.                                                                                                                                                           | Re-run Step 5b validation on the current state of the route table. The check uses `ec2:DescribeRouteTables`; if the network team is making concurrent changes, run validation immediately before the admin handoff.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 ## Pricing
 

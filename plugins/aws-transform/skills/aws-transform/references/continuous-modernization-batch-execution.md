@@ -270,7 +270,7 @@ Show the list to the customer and ask:
 3. **Repos to analyze:** all repos in source, or a specific subset
 4. **Analysis type:** `tech-debt-comprehensive`, `tech-debt-quick`, `security`, `agentic-readiness`, `modernization-readiness`
 
-If the list is empty or the customer wants to register a new source first, run `atx ct source add` via the [continuous-modernization-source](continuous-modernization-source.md) skill, then return here.
+If the list is empty, the customer wants to register a new source, or needs to update the token on an existing source, use the [continuous-modernization-source](continuous-modernization-source.md) skill (`source add` for new, `source update` for existing), then return here.
 
 Once the source is selected, run discovery and enumerate:
 
@@ -358,6 +358,13 @@ read -s TOKEN && { aws secretsmanager create-secret --name "<secret-name>" \
   --secret-string "$TOKEN" --region <region> 2>/dev/null \
   || aws secretsmanager put-secret-value --secret-id "<secret-name>" \
        --secret-string "$TOKEN" --region <region>; }; unset TOKEN
+```
+
+- If the secret exists → ask the customer: "Your `<secret-name>` token was last updated on `<LastChangedDate>`. Would you like to rotate it, or is the current token still valid?" If they want to rotate:
+
+```bash
+read -s TOKEN && aws secretsmanager put-secret-value --secret-id "<secret-name>" \
+  --secret-string "$TOKEN" --region <region>; unset TOKEN
 ```
 
 **Step B — Confirm SCM configuration with user (MANDATORY for non-local providers):**

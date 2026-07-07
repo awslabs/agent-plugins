@@ -1,5 +1,41 @@
 # LMI Troubleshooting
 
+## Testing Phase: Monitor and Adjust
+
+After deploying your LMI function with a test workload, check these metrics and adjust:
+
+**Duration increased vs. existing function:**
+
+- This indicates the concurrency estimations used during setup may be off. Investigate by:
+  - Checking ExecutionEnvironmentCPUUtilization and ExecutionEnvironmentMemoryUtilization for saturation
+  - Reducing PerExecutionEnvironmentMaxConcurrency to see if duration improves
+  - Reviewing instance types — switching to larger or more powerful instances may help if resources are constrained
+- If reducing concurrency doesn't help, check throttle metrics below
+
+**Low ExecutionEnvironmentCPUUtilization (below 10%):**
+
+- Increase PerExecutionEnvironmentMaxConcurrency to improve utilization
+- Or lower MemorySize to reduce vCPUs per execution environment
+- If memory utilization is also high, increase ExecutionEnvironmentMemoryGiBPerVCpu ratio instead
+
+**Ongoing CPUThrottles:**
+
+- Switch capacity provider to Manual scaling mode with a lower CPU utilization target (e.g., 25%)
+
+**Ongoing MemoryThrottles:**
+
+- Increase MemorySize
+- To maintain the same vCPU count, adjust ratio proportionally (e.g., 4GB/2:1 → 8GB/4:1 keeps 2 vCPUs)
+
+**Ongoing DiskThrottles:**
+
+- Reduce per-invocation /tmp usage or reduce PerExecutionEnvironmentMaxConcurrency
+
+**Ongoing ConcurrencyThrottles:**
+
+- Increase PerExecutionEnvironmentMaxConcurrency (if CPU and memory have headroom)
+- Check if MaxExecutionEnvironments or MaxVCpuCount is capping scale-out
+
 ## Common Issues
 
 | Issue                          | Cause                                            | Resolution                                                                          |

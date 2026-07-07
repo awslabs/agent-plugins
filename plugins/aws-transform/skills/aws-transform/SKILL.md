@@ -164,10 +164,7 @@ With projects: [Discover This Workspace] [Browse My Jobs] [Start a Specific Tran
 No projects: [Browse My Jobs] [Open a Project Folder] [Start from Scratch] [Analyze for findings]
 
 **Custom vs continuous modernization routing.** When the user's intent is clear, route to the correct skill set
-using the decision table in [continuous-modernization reference](references/continuous-modernization.md). Key rule: named transformation
-
-- no prior continuous modernization findings → Custom. Analysis/reporting/remediation of existing
-  findings → continuous modernization. When in doubt → continuous modernization.
+using the decision table in [continuous-modernization reference](references/continuous-modernization.md). Key rule: named transformation AND no prior continuous modernization findings → Custom. Analysis/reporting/remediation of existing findings → continuous modernization. When in doubt → continuous modernization.
 
 **Just-in-time auth.** Once the user picks an intent, the next tool that action needs may require auth. If so, prompt for auth then, framed around the action the user just chose ("to browse your jobs, sign in to AWS Transform"). Which auth each MCP tool needs is reported by the MCP server — read it from the tool's description, `get_status`, or the error the tool returns. CLI transforms use AWS credentials only — do NOT prompt for sign-in for CLI-only intents, even when sign-in is unconfigured. If the user picks something that needs no service call (e.g., "Open a Project Folder"), do not probe auth.
 
