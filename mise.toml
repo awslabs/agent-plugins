@@ -139,8 +139,11 @@ run = [
 
 [tasks."security:gitleaks"]
 description = "Run GitLeaks"
+# Scan only history reachable from HEAD (the current branch), not every ref in
+# the clone. Without --log-opts, gitleaks walks all refs and fails on secrets
+# that exist only on other, unmerged branches. Matches the CI scan scope.
 run = [
-  "gitleaks git --config=.gitleaks.toml --baseline-path=.gitleaks-baseline.json"
+  "gitleaks git --config=.gitleaks.toml --baseline-path=.gitleaks-baseline.json --log-opts=HEAD",
 ]
 
 [tasks."security:grype"]

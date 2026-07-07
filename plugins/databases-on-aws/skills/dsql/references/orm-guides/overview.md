@@ -5,12 +5,13 @@ names and configuration not available in general documentation.
 
 ## Adapters
 
-| Framework  | Adapter                            | Install                                                      |
-| ---------- | ---------------------------------- | ------------------------------------------------------------ |
-| Django     | `aurora_dsql_django`               | `pip install aurora-dsql-django boto3`                       |
-| Hibernate  | `aurora-dsql-hibernate-dialect`    | `software.amazon.dsql:aurora-dsql-hibernate-dialect` (Maven) |
-| Rails      | Standard `pg` gem + `aws-sdk-dsql` | `gem 'pg'` + `gem 'aws-sdk-dsql'`                            |
-| SQLAlchemy | `aurora_dsql_sqlalchemy`           | `pip install aurora-dsql-sqlalchemy boto3`                   |
+| Framework  | Adapter                                 | Install                                                      |
+| ---------- | --------------------------------------- | ------------------------------------------------------------ |
+| Django     | `aurora_dsql_django`                    | `pip install aurora-dsql-django boto3`                       |
+| EF Core    | `Amazon.AuroraDsql.EntityFrameworkCore` | `dotnet add package Amazon.AuroraDsql.EntityFrameworkCore`   |
+| Hibernate  | `aurora-dsql-hibernate-dialect`         | `software.amazon.dsql:aurora-dsql-hibernate-dialect` (Maven) |
+| Rails      | Standard `pg` gem + `aws-sdk-dsql`      | `gem 'pg'` + `gem 'aws-sdk-dsql'`                            |
+| SQLAlchemy | `aurora_dsql_sqlalchemy`                | `pip install aurora-dsql-sqlalchemy boto3`                   |
 
 ## Key Gotchas Per Framework
 
@@ -24,6 +25,20 @@ names and configuration not available in general documentation.
 | SELECT FOR UPDATE | Remove — DSQL uses OCC; wrap writes in retry decorator            |
 | AutoField         | Replace with `UUIDField(primary_key=True, default=uuid.uuid4)`    |
 | ForeignKey        | Add `db_constraint=False`                                         |
+
+### EF Core (.NET)
+
+Requires .NET 8.0+, EF Core 9.0.7+, and `Amazon.AuroraDsql.Npgsql` 1.1.0+.
+
+| Issue          | Fix                                                                                                                                                                                                                                                |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Setup          | `AddDsqlDataSource(host)` then `UseDsql(sp)` in `AddDbContext` (IAM auth via `Amazon.AuroraDsql.Npgsql`)                                                                                                                                           |
+| PKs            | `Guid` keys with a store-generated `gen_random_uuid()` default — leave `Id` unset on insert                                                                                                                                                        |
+| Auto-increment | `long` keys via `dsql.EnableIdentityColumns()` — `cacheSize: 1` for near-strict ordering, larger (default ≥ 65536) for throughput                                                                                                                  |
+| OCC retry      | `DsqlExecutionStrategy` auto-retries `SaveChangesAsync` in implicit transactions. Inside an explicit transaction it does NOT retry — use `ExecuteInTransactionAsync` and call `ChangeTracker.Clear()` first so retries don't replay stale entities |
+| FK constraints | Not enforced — navigations/`Include`/joins work, but enforce referential integrity in the application layer                                                                                                                                        |
+| Isolation      | Requested isolation levels are ignored; `SET TRANSACTION ISOLATION LEVEL`, `SAVEPOINT`, and `LOCK TABLE` are filtered at the ADO.NET layer                                                                                                         |
+| Migrations     | dsql-lint rewrites EF Core DDL for DSQL (e.g. `CREATE INDEX` → `CREATE INDEX ASYNC`) and makes it idempotent so failed migrations re-run safely                                                                                                    |
 
 ### Hibernate
 
