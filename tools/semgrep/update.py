@@ -56,6 +56,8 @@ import json
 import re
 import sys
 import tomllib
+import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import date
 from pathlib import Path
@@ -114,6 +116,30 @@ def semgrep_version() -> str:
         return "unknown"
 
 
+def _https_only_opener() -> urllib.request.OpenerDirector:
+    """Build a urllib opener that can ONLY speak HTTPS.
+
+    The default opener (``urllib.request.urlopen``) installs handlers for
+    ``file://`` and ``ftp://``, so a URL that resolved to another scheme could
+    read local files (CWE-939, Improper Authorization in Handler for Custom URL
+    Scheme). We construct an opener with the HTTPS/redirect/error handlers only —
+    no ``FileHandler``/``FTPHandler`` — so non-HTTPS schemes have no handler and
+    are physically unreachable, closing the risk by construction rather than by
+    trusting the URL to stay constant.
+    """
+    opener = urllib.request.OpenerDirector()
+    for handler in (
+        urllib.request.ProxyHandler(),
+        urllib.request.HTTPSHandler(),
+        urllib.request.HTTPRedirectHandler(),
+        urllib.request.HTTPDefaultErrorHandler(),
+        urllib.request.HTTPErrorProcessor(),
+        urllib.request.UnknownHandler(),
+    ):
+        opener.add_handler(handler)
+    return opener
+
+
 def download_ruleset() -> str:
     """Download r/all to the transient snapshot path and return its text.
 
@@ -121,11 +147,13 @@ def download_ruleset() -> str:
     look like a Semgrep ruleset — never lets a bad download reach the active file.
     """
     print(f"Downloading {RULESET_URL} ...")
+    scheme = urllib.parse.urlsplit(RULESET_URL).scheme
+    if scheme != "https":
+        raise UpdateError(f"ruleset URL must use https, got {scheme!r}")
+    opener = _https_only_opener()
     req = urllib.request.Request(RULESET_URL, headers={"Accept": "text/yaml"})
     try:
-        # RULESET_URL is a fixed https:// constant, not user input, so there is
-        # no file:/custom-scheme risk that B310/S310 warn about.
-        with urllib.request.urlopen(req, timeout=DOWNLOAD_TIMEOUT) as resp:  # nosec B310  # noqa: S310
+        with opener.open(req, timeout=DOWNLOAD_TIMEOUT) as resp:
             raw = resp.read().decode("utf-8")
     except (urllib.error.URLError, TimeoutError) as exc:
         raise UpdateError(f"download failed: {exc}") from exc
@@ -277,13 +305,13 @@ def render_doc(
         f"- **Semgrep version:** {version}",
         f"- **Total rules in snapshot:** {total}",
         f"- **Active:** {active} &nbsp;|&nbsp; **Excluded:** {excluded}"
-        f" &nbsp;|&nbsp; **New (awaiting triage):** {new}",
+        + f" &nbsp;|&nbsp; **New (awaiting triage):** {new}",
         "",
         "This table lists rules with a recorded human decision (`active`/`excluded`)"
-        " plus rules that are new since the last snapshot and await triage. The"
-        f" other {total - len(rows)} rules are implicitly active. Edit"
-        " `exclusions.toml` to change a decision, then run"
-        " `mise run semgrep:update`.",
+        + " plus rules that are new since the last snapshot and await triage. The"
+        + f" other {total - len(rows)} rules are implicitly active. Edit"
+        + " `exclusions.toml` to change a decision, then run"
+        + " `mise run semgrep:update`.",
         "",
     ]
     lines.extend(render_table(rows))
