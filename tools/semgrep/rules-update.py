@@ -158,6 +158,12 @@ def split_rules(raw: str) -> tuple[str, list[str]]:
     ``header`` is the leading ``rules:`` line (kept verbatim). Each block is the
     text of one rule including its leading ``- `` marker and trailing newline,
     preserved byte-for-byte so retained rules are identical to the download.
+
+    Assumes a rule's own content never begins a column-0 ``- `` line (e.g. inside
+    a ``message``/``fix`` block scalar), since that marker is what delimits rules.
+    r/all indents all such nested content, so this holds; if it ever didn't, the
+    mis-split block would fail the ``rule_id_of`` id lookup and abort loudly
+    rather than silently corrupt the ruleset.
     """
     starts = [m.start() for m in RULE_START_RE.finditer(raw)]
     if not starts:
@@ -249,8 +255,10 @@ def main() -> int:
         # Write output only after all parsing succeeded. Sort blocks by id so the
         # output is deterministic: the registry serves r/all in a nondeterministic
         # order, so without this every regeneration would emit a spurious
-        # full-file diff even when no rule actually changed.
-        active_blocks.sort(key=lambda rb: rb[0])
+        # full-file diff even when no rule actually changed. Tie-break on the
+        # block text so duplicate ids (r/all reuses some) also order stably,
+        # rather than falling back to the download's nondeterministic order.
+        active_blocks.sort(key=lambda rb: (rb[0], rb[1]))
         vendored_text = GENERATED_HEADER + header + "".join(b for _, b in active_blocks)
         VENDORED_FILE.write_text(vendored_text, encoding="utf-8")
     except UpdateError as exc:

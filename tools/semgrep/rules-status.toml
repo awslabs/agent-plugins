@@ -1,18 +1,17 @@
-# exclusions.toml — human-maintained source of truth for Semgrep rule decisions.
+# rules-status.toml — human-maintained source of truth for Semgrep rule decisions.
 #
 # Each [rules."<rule-id>"] entry records a decision about one rule from the
 # Semgrep r/all ruleset:
-#   status = "excluded"  -> the rule is physically removed from r-all.active.yaml
+#   status = "excluded"  -> the rule is physically removed from rules-vendored.yaml
 #   status = "active"    -> the rule is kept, but the decision is recorded here
 #   pr                   -> the PR number where the decision was made
 #   reason               -> why the decision was made
 #
 # Every exclusion is listed EXPLICITLY. Nothing is dropped implicitly, so a rule
-# that appears in a future r/all can never be silently excluded — it surfaces as
-# `new` in EXCLUSIONS.md for triage. When an excluded rule is later removed
-# upstream, update.py flags its orphaned entry here (console + a "Removed
-# upstream" section in EXCLUSIONS.md) as safe to prune. Edit this file, then run
-# `mise run semgrep:update`.
+# that appears in a future r/all can never be silently excluded — rules-update.py
+# reports it as `new` for triage. When an excluded rule is later removed
+# upstream, rules-update.py reports its orphaned entry (console) as safe to
+# prune. Edit this file, then run `mise run semgrep:update`.
 #
 # PR provenance (from git history):
 #   PR #11  (2026-02-07) — original 21: anthropic, sonarqube, 12 apex, 7 elixir
