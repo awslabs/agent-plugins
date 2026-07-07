@@ -121,7 +121,7 @@ description = "Run SemGrepOSS"
 # file, so no --exclude-rule flags. --config is explicit here for parity with
 # CI/pre-commit; SEMGREP_RULES ([env]) covers bare `semgrep` calls too.
 run = [
- "semgrep scan --quiet --oss-only --metrics=off --config=tools/semgrep/r-all.active.yaml --max-log-list-entries=0"
+ "semgrep scan --oss-only --verbose --metrics=off --config=tools/semgrep/r-all.active.yaml --max-log-list-entries=0"
 ]
 
 [tasks."semgrep:update"]
