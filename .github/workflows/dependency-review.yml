@@ -14,3 +14,12 @@ jobs:
           config-file: amazon-ospo/dependency-review-config/default/dependency-review-config.yml@8e4c9fdde54d2b7c6a3a28b97eddd26c4cd90a66 # main
           # # distlib
           # allow-dependencies-licenses: "pkg:pypi/distlib@0.4.0"
+          #
+          # SonarSource/sonarqube-scan-action is LGPL-3.0, which is not on the
+          # org's permissive-only allow-licenses list. It is a CI-only action we
+          # invoke in the pipeline — not code we distribute or link into the
+          # published plugins — so its copyleft terms do not reach our Apache-2.0
+          # output. Pinned to the exact SHA (= the dependency-review PURL version
+          # for a SHA-pinned action), so any future version bump re-triggers the
+          # license review rather than silently inheriting this exception.
+          allow-dependencies-licenses: "pkg:githubactions/SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e"
