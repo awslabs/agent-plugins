@@ -23,12 +23,13 @@ Design constraints (see RFC #211):
   tracked file is overwritten, so a bad upstream response can never produce a
   broken active ruleset.
 
-Rules are dropped two ways: explicit per-rule ``[rules."id"]`` entries, and the
-``[auto_exclude]`` source policy — any rule whose ``source`` metadata matches a
-listed value (e.g. ``https://semgrep.dev/r/None``, which marks rules with no
-canonical registry source) is excluded automatically, including future ones. An
-explicit ``[rules."id"]`` with ``status = "active"`` force-keeps a rule the
-policy would otherwise drop.
+A rule is dropped only when a human lists it explicitly in ``exclusions.toml``
+with ``status = "excluded"``. Nothing is excluded implicitly — so a rule that
+appears in a future ``r/all`` can never be silently removed; it surfaces as
+``new`` for triage. When an excluded rule later disappears upstream, its now-
+orphaned ``exclusions.toml`` entry is reported (console + a "Removed upstream"
+section in ``EXCLUSIONS.md``) as safe to prune, rather than deleted
+automatically.
 
 Run manually via ``mise run semgrep:update`` (``uv run tools/semgrep/update.py``).
 The generated files are script-owned; hand edits are lost on the next run. Only
@@ -259,21 +260,6 @@ def load_exclusions(data: dict) -> dict[str, dict]:
     return data.get("rules", {})
 
 
-def load_auto_exclude(data: dict) -> dict:
-    """Load the source-based auto-exclusion policy ([auto_exclude]).
-
-    Returns {"sources": {value: reason}, "pr": str}. Any rule whose ``source``
-    metadata matches a listed value is excluded automatically — no per-ID entry
-    needed — which also catches *future* rules published with that source. A
-    rule can still be force-kept via an explicit [rules."id"] status="active".
-    """
-    policy = data.get("auto_exclude", {})
-    return {
-        "sources": policy.get("sources", {}),
-        "pr": policy.get("pr", "TBD"),
-    }
-
-
 def render_status(entry: dict | None) -> str:
     """Render the rule-status column from an exclusions.toml entry."""
     if entry is None:
@@ -294,6 +280,7 @@ def render_doc(
     excluded: int,
     new: int,
     rows: list[tuple[str, str, str, str]],
+    removed_rows: list[tuple[str, str, str]],
 ) -> str:
     """Render EXCLUSIONS.md (goal B) — decided rules plus pending new rules."""
     lines = [
@@ -307,15 +294,46 @@ def render_doc(
         f"- **Active:** {active} &nbsp;|&nbsp; **Excluded:** {excluded}"
         + f" &nbsp;|&nbsp; **New (awaiting triage):** {new}",
         "",
-        "This table lists rules with a recorded human decision (`active`/`excluded`)"
-        + " plus rules that are new since the last snapshot and await triage. The"
-        + f" other {total - len(rows)} rules are implicitly active. Edit"
-        + " `exclusions.toml` to change a decision, then run"
-        + " `mise run semgrep:update`.",
+        "This table lists rules with a recorded decision plus rules new since the"
+        + f" last snapshot that await triage. The other {total - len(rows)} rules"
+        + " are implicitly active. Edit `exclusions.toml` to change a decision,"
+        + " then run `mise run semgrep:update`.",
+        "",
+        "**rule-status values:**",
+        "",
+        "- `excluded` — removed from the active ruleset by an explicit"
+        + " `[rules.\"id\"]` entry in `exclusions.toml`; the PR# is where that"
+        + " decision was made. Every exclusion is listed individually — nothing"
+        + " is dropped implicitly, so a new upstream rule can never be silently"
+        + " excluded (it appears as `new` for triage instead).",
+        "- `active` — present in the ruleset but explicitly recorded in"
+        + " `exclusions.toml` (a deliberate keep decision).",
+        "- `new` — present in the snapshot with no recorded decision yet; triage"
+        + " it into `exclusions.toml`.",
         "",
     ]
     lines.extend(render_table(rows))
     lines.append("")
+
+    if removed_rows:
+        lines.extend(
+            [
+                "## Removed upstream (safe to prune)",
+                "",
+                "These `exclusions.toml` entries no longer match any rule in the"
+                + " current `r/all` snapshot — the rule was removed upstream. The"
+                + " entry is harmless but stale; delete it from `exclusions.toml`"
+                + " when convenient.",
+                "",
+                "| rule-id | last-known-status | reason |",
+                "| ------- | ----------------- | ------ |",
+            ]
+        )
+        for rule_id, reason, status in sorted(removed_rows):
+            safe_reason = sanitize_description(reason) or "—"
+            lines.append(f"| `{rule_id}` | {status} | {safe_reason} |")
+        lines.append("")
+
     return "\n".join(lines)
 
 
@@ -352,7 +370,6 @@ def main() -> int:
         prior_state = load_json(STATE_FILE)
         toml_data = load_toml()
         exclusions = load_exclusions(toml_data)
-        auto = load_auto_exclude(toml_data)
         today = date.today().isoformat()
 
         # On the first run there is no prior state, so the snapshot *is* the
@@ -364,12 +381,11 @@ def main() -> int:
         new_state: dict[str, dict] = {}
         active_blocks: list[tuple[str, str]] = []
         doc_rows: list[tuple[str, str, str, str]] = []
-        counts = {"active": 0, "excluded": 0, "auto_excluded": 0, "new": 0, "changed": 0}
+        counts = {"active": 0, "excluded": 0, "new": 0, "changed": 0}
         seen_ids: set[str] = set()
-        auto_excluded_ids: list[str] = []
 
         for block in blocks:
-            rule_id, version_id, description, source = parse_block(block)
+            rule_id, version_id, description, _source = parse_block(block)
             seen_ids.add(rule_id)
 
             # Derive the "last changed" date from version_id drift.
@@ -383,37 +399,30 @@ def main() -> int:
                 updated = prior.get("updated", today)
             new_state[rule_id] = {"version_id": version_id, "updated": updated}
 
+            # A rule is excluded only when a human listed it explicitly in
+            # exclusions.toml with status="excluded". Nothing is dropped
+            # implicitly, so a new upstream rule can never silently disappear —
+            # it surfaces as `new` for triage.
             entry = exclusions.get(rule_id)
-            explicit_active = entry is not None and entry.get("status") == "active"
-            explicit_excluded = entry is not None and entry.get("status") == "excluded"
-            # Source-based policy: exclude any rule whose source matches, unless a
-            # human explicitly force-kept it via [rules."id"] status="active".
-            auto_excluded = source in auto["sources"] and not explicit_active
-
-            if explicit_excluded:
+            if entry is not None and entry.get("status") == "excluded":
                 counts["excluded"] += 1
-            elif auto_excluded:
-                counts["auto_excluded"] += 1
-                auto_excluded_ids.append(rule_id)
             else:
                 active_blocks.append((rule_id, block))
                 counts["active"] += 1
 
-            # The doc lists decided rules (explicit exclusions.toml entry),
-            # auto-excluded rules (with the policy reason), and new rules
+            # The doc lists rules with an explicit decision plus new rules
             # (appeared since the last snapshot and awaiting a decision).
             if entry is not None:
                 doc_rows.append((rule_id, description, render_status(entry), updated))
-            elif auto_excluded:
-                status = f"`auto-excluded` — PR#{auto['pr']}"
-                doc_rows.append((rule_id, description, status, updated))
             elif prior is None and not is_bootstrap:
                 counts["new"] += 1
                 doc_rows.append((rule_id, description, render_status(None), updated))
 
         removed = sorted(set(prior_state) - seen_ids)
 
-        # Warn about exclusions.toml entries that no longer match any rule.
+        # exclusions.toml entries that no longer match any rule in the snapshot:
+        # the rule was removed upstream, so the entry is safe to prune. Surfaced
+        # both in the console and in a doc section (not auto-deleted).
         stale = sorted(set(exclusions) - seen_ids)
 
         # Write outputs only after all parsing succeeded. Sort active rule blocks
@@ -427,16 +436,28 @@ def main() -> int:
         STATE_FILE.write_text(
             json.dumps(new_state, indent=2, sort_keys=True) + "\n", encoding="utf-8"
         )
-        doc_rows.sort(key=lambda r: r[0])
+        # Collapse rows that share a rule-id to one entry. The r/all feed reuses
+        # some ids across duplicate blocks (e.g. the bbp probe rules), which is
+        # meaningless in a human tracking table; the active file and rule-state
+        # already handle the blocks/keys directly.
+        deduped_rows = list({row[0]: row for row in doc_rows}.values())
+        deduped_rows.sort(key=lambda r: r[0])
+        # Orphaned exclusions: listed in exclusions.toml but gone from the
+        # snapshot (removed upstream). Surface them in the doc as safe-to-prune.
+        removed_rows = [
+            (rule_id, exclusions[rule_id].get("reason", ""), render_status(exclusions[rule_id]))
+            for rule_id in stale
+        ]
         EXCLUSIONS_DOC.write_text(
             render_doc(
                 today=today,
                 version=semgrep_version(),
                 total=len(blocks),
                 active=counts["active"],
-                excluded=counts["excluded"] + counts["auto_excluded"],
+                excluded=counts["excluded"],
                 new=counts["new"],
-                rows=doc_rows,
+                rows=deduped_rows,
+                removed_rows=removed_rows,
             ),
             encoding="utf-8",
         )
@@ -446,28 +467,22 @@ def main() -> int:
 
     print(
         f"Wrote {ACTIVE_FILE.relative_to(ROOT)}"
-        f" ({counts['active']} active,"
-        f" {counts['excluded']} excluded,"
-        f" {counts['auto_excluded']} auto-excluded of {len(blocks)})"
+        f" ({counts['active']} active, {counts['excluded']} excluded of {len(blocks)})"
     )
     print(
         f"Summary: {counts['new']} new (need triage),"
         f" {counts['excluded']} excluded,"
-        f" {counts['auto_excluded']} auto-excluded (source policy),"
         f" {counts['changed']} changed,"
         f" {len(removed)} removed"
     )
     if counts["new"]:
         print(f"  triage the {counts['new']} new rule(s) in {EXCLUSIONS_DOC.name}")
-    if auto_excluded_ids:
-        preview = ", ".join(sorted(auto_excluded_ids)[:5])
-        more = f" (+{len(auto_excluded_ids) - 5} more)" if len(auto_excluded_ids) > 5 else ""
-        print(f"  auto-excluded {len(auto_excluded_ids)} rule(s) by source policy: {preview}{more}")
     if removed:
         print(f"  removed upstream: {', '.join(removed)}")
     if stale:
         print(
-            f"  warning: exclusions.toml lists {len(stale)} unknown rule(s): {', '.join(stale)}"
+            f"  {len(stale)} exclusions.toml entr(y/ies) no longer match any rule"
+            f" (removed upstream, safe to prune): {', '.join(stale)}"
         )
     print(
         "Next: run `mise run security:semgrep` to verify the active file scans clean."
