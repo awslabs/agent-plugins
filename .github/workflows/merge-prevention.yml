@@ -45,18 +45,19 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       PR_LABELS_JSON: ${{ toJson(github.event.pull_request.labels.*.name) }}
+      PR_NUMBER_EVENT: ${{ github.event.pull_request.number }}
     steps:
       - name: Get PR info
         id: get-pr
         run: |
-          if [ "${{ github.event_name }}" == "merge_group" ]; then
-            PR_NUMBER=$(echo "${{ github.ref }}" | grep -oP '(?<=/pr-)\d+' || echo "")
-            PR_LABELS=$(gh api repos/${{ github.repository }}/pulls/$PR_NUMBER | jq -c '[.labels[].name] // []')
+          if [ "$GITHUB_EVENT_NAME" == "merge_group" ]; then
+            PR_NUMBER=$(echo "$GITHUB_REF" | grep -oP '(?<=/pr-)\d+' || echo "")
+            PR_LABELS=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" | jq -c '[.labels[].name] // []')
             echo "::group::Getting Information"
-            gh api repos/${{ github.repository }}/pulls/$PR_NUMBER
+            gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER"
             echo "::endgroup::"
-          elif [ "${{ github.event_name }}" == "pull_request" ]; then
-            PR_NUMBER="${{ github.event.pull_request.number }}"
+          elif [ "$GITHUB_EVENT_NAME" == "pull_request" ]; then
+            PR_NUMBER="$PR_NUMBER_EVENT"
             PR_LABELS=$(echo "$PR_LABELS_JSON" | jq -c '.')
           fi
           echo "::group::Debug Output Values"
@@ -70,8 +71,9 @@ jobs:
     needs: get-pr-info
     if: always()
     steps:
-      - run: |
-          PR_NUMBER="${{ needs.get-pr-info.outputs.pr_number }}"
+      - env:
+          PR_NUMBER: ${{ needs.get-pr-info.outputs.pr_number }}
+        run: |
           # Default to 0 (allow all) if not set
           if [ -z "$HALT_MERGES" ]; then
             HALT_MERGES=0
@@ -98,19 +100,21 @@ jobs:
     needs: get-pr-info
     if: always()
     steps:
-      - run: |
+      - env:
+          PR_LABELS: ${{ needs.get-pr-info.outputs.pr_labels }}
+        run: |
           echo "::group::Debug Output Values"
-          echo "PR_LABELS: ${{ needs.get-pr-info.outputs.pr_labels }}"
+          echo "PR_LABELS: $PR_LABELS"
           echo "::endgroup::"
-      - name: When PR has the "${{ env.DO_NOT_MERGE_LABEL }}" label
+      - name: When PR has the do-not-merge label
         id: pr-has-label
         if: contains(needs.get-pr-info.outputs.pr_labels, env.DO_NOT_MERGE_LABEL)
         run: |
-          echo "::error::❌ The label \"${{ env.DO_NOT_MERGE_LABEL }}\" is used to prevent merging."
+          echo "::error::❌ The label \"$DO_NOT_MERGE_LABEL\" is used to prevent merging."
           exit 1
-      - name: When PR does not have the "${{ env.DO_NOT_MERGE_LABEL }}" label
+      - name: When PR does not have the do-not-merge label
         id: pr-missing-label
-        if: ! contains(needs.get-pr-info.outputs.pr_labels, env.DO_NOT_MERGE_LABEL)
+        if: ${{ !contains(needs.get-pr-info.outputs.pr_labels, env.DO_NOT_MERGE_LABEL) }}
         run: |
-          echo "::debug::✅ The label \"${{ env.DO_NOT_MERGE_LABEL }}\" is absent"
+          echo "::debug::✅ The label \"$DO_NOT_MERGE_LABEL\" is absent"
           exit 0
