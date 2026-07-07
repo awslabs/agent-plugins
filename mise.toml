@@ -106,6 +106,14 @@ description = "Scaffold a new skill directory"
 run = "uv run tools/init-skill.py"
 
 # =========
+# TESTING
+# =========
+
+[tasks.test]
+description = "Run Python unit tests (discovers test_*.py under tools/ and plugins/)"
+run = "uv run tools/run-tests.py"
+
+# =========
 # SECURITY
 # =========
 
@@ -167,10 +175,11 @@ run = [
 # ===============
 
 [tasks.build]
-description = "Complete build: lint, format, validate, security scans"
+description = "Complete build: lint, format, validate, test, security scans"
 run = [
     { task = "lint" },
     { task = "fmt:check" },
     { task = "validate" },
+    { task = "test" },
     { task = "security"}
 ]
