@@ -145,6 +145,31 @@
         "Recommends adding --header to the loader invocation"
       ],
       "llm_judge": true
+    },
+    {
+      "id": 13,
+      "prompt": "I'm building a new .NET web API with Entity Framework Core and want to use Aurora DSQL as the database. Help me get the data layer set up correctly.",
+      "expected_output": "Recommends the Amazon.AuroraDsql.EntityFrameworkCore adapter with AddDsqlDataSource/UseDsql, and guides toward DSQL-friendly patterns: Guid keys with gen_random_uuid(), application-layer referential integrity, and DsqlExecutionStrategy for OCC retry.",
+      "files": [],
+      "expectations": [
+        "Recommends the Amazon.AuroraDsql.EntityFrameworkCore adapter and AddDsqlDataSource/UseDsql setup",
+        "Recommends Guid primary keys with a gen_random_uuid() default (or EnableIdentityColumns for long keys)",
+        "Recommends enforcing referential integrity in the application layer",
+        "Recommends DsqlExecutionStrategy for OCC retry to handle concurrency conflicts"
+      ],
+      "llm_judge": true
+    },
+    {
+      "id": 14,
+      "prompt": "Can I use Aurora DSQL with a C# / .NET application? What's the recommended setup?",
+      "expected_output": "Confirms .NET support, recommends the Amazon.AuroraDsql.Npgsql connector for IAM auth and the Amazon.AuroraDsql.EntityFrameworkCore adapter for EF Core, and notes the .NET 8.0+/EF Core 9.0.7+ requirements.",
+      "files": [],
+      "expectations": [
+        "Confirms Aurora DSQL works with .NET / C#",
+        "Recommends the Amazon.AuroraDsql.Npgsql connector for automatic IAM authentication",
+        "Recommends the Amazon.AuroraDsql.EntityFrameworkCore adapter for EF Core users"
+      ],
+      "llm_judge": true
     }
   ]
 }

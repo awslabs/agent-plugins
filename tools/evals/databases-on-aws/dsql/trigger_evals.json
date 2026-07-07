@@ -64,6 +64,18 @@
     "should_trigger": true
   },
   {
+    "query": "I'm migrating a .NET app with Entity Framework Core over to Aurora DSQL",
+    "should_trigger": true
+  },
+  {
+    "query": "I'm building a .NET app with Entity Framework Core and want to use Aurora DSQL as the database",
+    "should_trigger": true
+  },
+  {
+    "query": "Can I use Aurora DSQL from a C# / .NET application? Looking for the recommended setup",
+    "should_trigger": true
+  },
+  {
     "query": "I need to set up an Aurora Serverless v2 PostgreSQL cluster with read replicas for my analytics workload",
     "should_trigger": false
   },

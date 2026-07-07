@@ -42,11 +42,24 @@ jobs:
           curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar -xz;
           sudo mv gitleaks /usr/local/bin/;
           gitleaks --version;
-      - name: Run gitleaks (full history)
+      - name: Run gitleaks
         id: gitleaks
+        env:
+          # On pull_request, restrict the scan to commits the PR introduces so
+          # it cannot fail on secrets that live only on other, unmerged branches.
+          # On push/schedule/dispatch, scan the full history reachable from HEAD.
+          PR_BASE_REF: ${{ github.base_ref }}
         run: |
           set +e
-          gitleaks git --config=.gitleaks.toml --baseline-path=.gitleaks-baseline.json --report-path=gitleaks-report_sarif.json --report-format=sarif .
+          # checkout uses fetch-depth: 0, so the base branch is already present
+          # as origin/<base_ref>; no extra fetch is needed.
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            LOG_OPTS="origin/$PR_BASE_REF..HEAD"
+          else
+            LOG_OPTS="HEAD"
+          fi
+          echo "::notice::gitleaks scanning range: $LOG_OPTS"
+          gitleaks git --config=.gitleaks.toml --baseline-path=.gitleaks-baseline.json --log-opts="$LOG_OPTS" --report-path=gitleaks-report_sarif.json --report-format=sarif .
           GITLEAKS_EXIT=$?
           set -e
           echo "exit_code=$GITLEAKS_EXIT" >> "$GITHUB_OUTPUT"
