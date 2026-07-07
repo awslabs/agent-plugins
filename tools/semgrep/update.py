@@ -91,10 +91,6 @@ RULE_START_RE = re.compile(r"^- ", re.MULTILINE)
 ID_RE = re.compile(r"^(?:- |  )id: (.+)$", re.MULTILINE)
 VERSION_ID_RE = re.compile(r"^ +version_id: (\S+)$", re.MULTILINE)
 MESSAGE_RE = re.compile(r"^  message: (.+)$", re.MULTILINE)
-# The rule's canonical registry source. Anchored on ": " so it never matches the
-# adjacent "source-rule-url:" key. A rule with source "https://semgrep.dev/r/None"
-# has no published registry entry (see the [auto_exclude] policy).
-SOURCE_RE = re.compile(r"^\s+source: (\S+)\s*$", re.MULTILINE)
 
 GENERATED_HEADER = (
     "# GENERATED FILE — DO NOT EDIT BY HAND.\n"
@@ -208,8 +204,8 @@ def sanitize_description(text: str) -> str:
     )
 
 
-def parse_block(block: str) -> tuple[str, str, str, str]:
-    """Extract (rule_id, version_id, description, source) from a rule block."""
+def parse_block(block: str) -> tuple[str, str, str]:
+    """Extract (rule_id, version_id, description) from a rule block."""
     id_match = ID_RE.search(block)
     if not id_match:
         raise UpdateError(f"rule block has no id:\n{block[:200]}")
@@ -229,10 +225,7 @@ def parse_block(block: str) -> tuple[str, str, str, str]:
     # inert text so they can't inject active markup or break the markdown table.
     description = sanitize_description(message)
 
-    source_match = SOURCE_RE.search(block)
-    source = source_match.group(1).strip() if source_match else ""
-
-    return rule_id, version_id, description, source
+    return rule_id, version_id, description
 
 
 def load_json(path: Path) -> dict:
@@ -385,7 +378,7 @@ def main() -> int:
         seen_ids: set[str] = set()
 
         for block in blocks:
-            rule_id, version_id, description, _source = parse_block(block)
+            rule_id, version_id, description = parse_block(block)
             seen_ids.add(rule_id)
 
             # Derive the "last changed" date from version_id drift.
