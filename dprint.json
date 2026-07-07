@@ -3,8 +3,7 @@
   "excludes": [
     "**/node_modules/**",
     "**/.git/**",
-    "**/dist/**",
-    "tools/semgrep/EXCLUSIONS.md"
+    "**/dist/**"
   ],
   "indentWidth": 2,
   "json": {

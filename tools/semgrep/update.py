@@ -34,22 +34,20 @@ Run manually via ``mise run semgrep:update`` (``uv run tools/semgrep/update.py``
 The generated files are script-owned; hand edits are lost on the next run. Only
 ``exclusions.toml`` is human-edited.
 
-Generated-file formatting is owned by this script, not by repo formatters, so a
-regeneration never fights a formatter. Which tool needs to skip which file
-depends on whether that tool would actually rewrite the generated output — kept
-minimal on purpose (``dprint.json`` is strict JSON with no comments, so the
+This script emits both generated files in exactly the format the repo's dprint
+config produces, so ``dprint fmt`` leaves them untouched and neither needs a
+dprint exclude (``dprint.json`` is strict JSON with no comments, so the
 rationale lives here):
 
-* ``r-all.active.yaml`` — excluded in ``.semgrepignore`` (self-match) and the
-  gitleaks allowlist (contains secret-detection regexes).
-* ``EXCLUSIONS.md`` — excluded from dprint (it reflows/pads markdown tables,
-  which churns on every regeneration) and from the whitespace/large-file
-  pre-commit hooks.
-* ``rule-state.json`` — NOT excluded from dprint: this script emits
-  ``json.dumps(indent=2, sort_keys=True)``, which already matches dprint's JSON
-  style, so dprint leaves it untouched. It stays in the pre-commit ``exclude``
-  only because hooks like check-added-large-files/detect-private-key would
-  otherwise act on it.
+* ``EXCLUSIONS.md`` — ``render_table`` column-pads the markdown table the same
+  way the dprint markdown plugin does.
+* ``rule-state.json`` — ``json.dumps(indent=2, sort_keys=True)`` matches
+  dprint's JSON style.
+
+Both still sit in the pre-commit ``exclude`` because content hooks
+(check-added-large-files, detect-private-key, whitespace fixers) would otherwise
+act on them; ``r-all.active.yaml`` is excluded in ``.semgrepignore`` (self-match)
+and the gitleaks allowlist (it contains secret-detection regexes).
 """
 
 from __future__ import annotations
@@ -287,15 +285,35 @@ def render_doc(
         " `exclusions.toml` to change a decision, then run"
         " `mise run semgrep:update`.",
         "",
-        "| rule-id | rule-description | rule-status | rule-updated |",
-        "| ------- | ---------------- | ----------- | ------------ |",
     ]
-    for rule_id, description, status, updated in rows:
-        # description is already sanitized (pipes/backticks/angle-brackets escaped).
-        desc = description or "—"
-        lines.append(f"| `{rule_id}` | {desc} | {status} | {updated} |")
+    lines.extend(render_table(rows))
     lines.append("")
     return "\n".join(lines)
+
+
+def render_table(rows: list[tuple[str, str, str, str]]) -> list[str]:
+    """Render the tracking table with dprint-aligned columns.
+
+    Emits the same column-padded GitHub table that the dprint markdown plugin
+    produces (each cell space-padded to the widest cell in its column, delimiter
+    dashes matching that width, minimum 3), so ``dprint fmt`` leaves the
+    generated file untouched and it needs no formatter exclude. Widths are by
+    code-point count, matching dprint for the ASCII-dominant, already-sanitized
+    cell values; a rule description with wide glyphs is the only case that could
+    drift, and ``sanitize_description`` plus the build's ``fmt:check`` guard it.
+    """
+    header = ("rule-id", "rule-description", "rule-status", "rule-updated")
+    cells = [header] + [
+        (f"`{rule_id}`", description or "—", status, updated)
+        for rule_id, description, status, updated in rows
+    ]
+    widths = [max(len(row[c]) for row in cells) for c in range(len(header))]
+
+    def fmt(row: tuple[str, ...]) -> str:
+        return "| " + " | ".join(v.ljust(widths[c]) for c, v in enumerate(row)) + " |"
+
+    delimiter = "| " + " | ".join("-" * w for w in widths) + " |"
+    return [fmt(header), delimiter, *(fmt(row) for row in cells[1:])]
 
 
 def main() -> int:
