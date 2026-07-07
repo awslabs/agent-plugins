@@ -4,8 +4,7 @@
     "**/node_modules/**",
     "**/.git/**",
     "**/dist/**",
-    "tools/semgrep/EXCLUSIONS.md",
-    "tools/semgrep/rule-state.json"
+    "tools/semgrep/EXCLUSIONS.md"
   ],
   "indentWidth": 2,
   "json": {

@@ -33,6 +33,23 @@ policy would otherwise drop.
 Run manually via ``mise run semgrep:update`` (``uv run tools/semgrep/update.py``).
 The generated files are script-owned; hand edits are lost on the next run. Only
 ``exclusions.toml`` is human-edited.
+
+Generated-file formatting is owned by this script, not by repo formatters, so a
+regeneration never fights a formatter. Which tool needs to skip which file
+depends on whether that tool would actually rewrite the generated output — kept
+minimal on purpose (``dprint.json`` is strict JSON with no comments, so the
+rationale lives here):
+
+* ``r-all.active.yaml`` — excluded in ``.semgrepignore`` (self-match) and the
+  gitleaks allowlist (contains secret-detection regexes).
+* ``EXCLUSIONS.md`` — excluded from dprint (it reflows/pads markdown tables,
+  which churns on every regeneration) and from the whitespace/large-file
+  pre-commit hooks.
+* ``rule-state.json`` — NOT excluded from dprint: this script emits
+  ``json.dumps(indent=2, sort_keys=True)``, which already matches dprint's JSON
+  style, so dprint leaves it untouched. It stays in the pre-commit ``exclude``
+  only because hooks like check-added-large-files/detect-private-key would
+  otherwise act on it.
 """
 
 from __future__ import annotations
