@@ -210,13 +210,13 @@ jobs:
             fi
 
             # Run semgrep against the vendored ruleset (RFC #211).
-            # Exclusions are baked into tools/semgrep/r-all.active.yaml
-            # (source of truth: tools/semgrep/exclusions.toml), so no
+            # Exclusions are baked into tools/semgrep/rules-vendored.yaml
+            # (source of truth: tools/semgrep/rules-status.toml), so no
             # --exclude-rule flags are needed. --config is explicit because
             # CI does not inherit mise's SEMGREP_RULES env.
             set +e
             semgrep scan --oss-only --verbose --metrics=off \
-              --config=tools/semgrep/r-all.active.yaml \
+              --config=tools/semgrep/rules-vendored.yaml \
               --max-log-list-entries=0 \
               --sarif-output semgrep-report_sarif.json $BASELINE_ARGS
             SEMGREP_EXIT=$?

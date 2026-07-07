@@ -7,7 +7,7 @@ min_version = "2026.2.4"
 # Vendored Semgrep ruleset (RFC #211). Used by any bare `semgrep` call in a mise
 # context because Semgrep reads SEMGREP_RULES whenever --config is absent. See
 # tools/semgrep/ and `mise run semgrep:update`.
-SEMGREP_RULES = "tools/semgrep/r-all.active.yaml"
+SEMGREP_RULES = "tools/semgrep/rules-vendored.yaml"
 
 [tools]
 uv = "0.10"
@@ -117,18 +117,19 @@ run = [
 
 [tasks."security:semgrep"]
 description = "Run SemGrepOSS"
-# Uses the vendored ruleset (RFC #211): exclusions are baked into the active
+# Uses the vendored ruleset (RFC #211): exclusions are baked into the vendored
 # file, so no --exclude-rule flags. --config is explicit here for parity with
 # CI/pre-commit; SEMGREP_RULES ([env]) covers bare `semgrep` calls too.
 run = [
- "semgrep scan --oss-only --verbose --metrics=off --config=tools/semgrep/r-all.active.yaml --max-log-list-entries=0"
+ "semgrep scan --oss-only --verbose --metrics=off --config=tools/semgrep/rules-vendored.yaml --max-log-list-entries=0"
 ]
 
 [tasks."semgrep:update"]
 description = "Refresh the vendored Semgrep ruleset (RFC #211)"
-# Re-downloads r/all, diffs version_ids, rebuilds r-all.active.yaml,
-# rule-state.json, and EXCLUSIONS.md. Run manually; then re-run security:semgrep.
-run = "uv run tools/semgrep/update.py"
+# Re-downloads r/all and rebuilds rules-vendored.yaml (dropping rules marked
+# excluded in rules-status.toml); reports new/orphaned rules. Run manually;
+# then re-run security:semgrep.
+run = "uv run tools/semgrep/rules-update.py"
 
 [tasks."security:checkov"]
 description = "Run Checkov"

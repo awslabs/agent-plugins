@@ -1,6 +1,6 @@
 # GENERATED FILE — DO NOT EDIT BY HAND.
-# Produced by tools/semgrep/update.py from the Semgrep r/all ruleset.
-# Excluded rules (see tools/semgrep/exclusions.toml) are physically
+# Produced by tools/semgrep/rules-update.py from the Semgrep r/all ruleset.
+# Excluded rules (see tools/semgrep/rules-status.toml) are physically
 # removed. Hand edits are lost on the next `mise run semgrep:update`.
 rules:
 - id: ai.ai-best-practices.agent-unbounded-loop.agent-unbounded-loop.agent-unbounded-loop-python
