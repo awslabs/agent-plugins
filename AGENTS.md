@@ -150,7 +150,7 @@ mise run lint:md:fix   # Lint Markdown with auto-fix
 mise run lint:manifests   # Validate JSON manifests (marketplace, plugin, MCP)
 mise run lint:cross-refs  # Validate cross-references between manifests
 mise run lint          # All linters
-mise run security      # All security scans (Bandit, SemGrep, Gitleaks, Checkov, Grype)
+mise run security      # All security scans (Bandit, SemGrep, Gitleaks, Checkov, Grype, zizmor)
 mise run build         # Full build: lint + fmt:check + security
 ```
 
