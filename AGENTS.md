@@ -174,7 +174,7 @@ claude --plugin-dir ./plugins/deploy-on-aws
 
 ## Git Worktree Workflow
 
-ALWAYS use git worktrees for new work. The main worktree stays on its current branch and is never switched. Each piece of work gets its own worktree under `.tmp/`, branching off the current branch. This enables multiple agents to work in parallel without conflicts.
+ALWAYS use git worktrees for new work. The main worktree stays on its current branch and is never switched. Each piece of work gets its own worktree under `.tmp/`, branching off the latest `origin/main`. This enables multiple agents to work in parallel without conflicts.
 
 ```bash
 # Fast-forward main first, then branch new work off the latest remote
