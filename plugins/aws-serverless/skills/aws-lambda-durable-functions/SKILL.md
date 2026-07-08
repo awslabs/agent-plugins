@@ -161,7 +161,7 @@ import software.amazon.lambda.durable.DurableContext;
 public class MyHandler extends DurableHandler<MyInput, MyOutput> {
     @Override
     public MyOutput handleRequest(MyInput event, DurableContext ctx) {
-        var result = ctx.step("process", ProcessResult.class, stepCtx -> processData(event));
+        var result = ctx.step("process", MyOutput.class, stepCtx -> processData(event));
         return result;
     }
 }

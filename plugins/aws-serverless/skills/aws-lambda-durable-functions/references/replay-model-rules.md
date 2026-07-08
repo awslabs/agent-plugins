@@ -220,7 +220,7 @@ print(counter)  # Always 0 on replay!
 **Java:**
 
 ```java
-var counter = new java.util.concurrent.atomic.AtomicInteger(0);
+var counter = new AtomicInteger(0);
 ctx.step("increment", Void.class, s -> {
     counter.incrementAndGet();  // This mutation is lost on replay!
     return null;
@@ -249,8 +249,8 @@ print(counter)  # Correct value
 **Java:**
 
 ```java
-int counter = 0;
-counter = ctx.step("increment", Integer.class, s -> counter + 1);
+int initial = 0;
+int counter = ctx.step("increment", Integer.class, s -> initial + 1);
 System.out.println(counter);  // Correct value
 ```
 
