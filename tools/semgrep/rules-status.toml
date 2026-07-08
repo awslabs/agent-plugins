@@ -1,0 +1,531 @@
+# rules-status.toml — human-maintained source of truth for Semgrep rule decisions.
+#
+# Each [rules."<rule-id>"] entry records a decision about one rule from the
+# Semgrep r/all ruleset:
+#   status = "excluded"  -> the rule is physically removed from rules-vendored.yaml
+#   status = "active"    -> the rule is kept, but the decision is recorded here
+#   pr                   -> the PR number where the decision was made
+#   reason               -> why the decision was made
+#
+# Every exclusion is listed EXPLICITLY. Nothing is dropped implicitly, so a rule
+# that appears in a future r/all can never be silently excluded — rules-update.py
+# reports it as `new` for triage. When an excluded rule is later removed
+# upstream, rules-update.py reports its orphaned entry (console) as safe to
+# prune. Edit this file, then run `mise run semgrep:update`.
+#
+# PR provenance (from git history):
+#   PR #11  (2026-02-07) — original 21: anthropic, sonarqube, 12 apex, 7 elixir
+#   PR #89  (2026-03-11) — generic OpenAI reference
+#   PR #200 (2026-06-22) — bbp-pattern-inject (broken rule, semgrep exit 2)
+#   PR #220 (this PR)    — the 78 remaining bug-bounty-probe rules (source=/r/None)
+
+# --- Pre-existing exclusions (PR #11, #89) ------------------------------------
+
+[rules."ai.generic.detect-generic-ai-anthprop.detect-generic-ai-anthprop"]
+status = "excluded"
+pr = "11"
+reason = "This is a Claude Code plugin repository — Anthropic references are expected."
+
+[rules."ai.generic.detect-generic-ai-oai.detect-generic-ai-oai"]
+status = "excluded"
+pr = "89"
+reason = "OpenAI references appear in documentation/examples, not as secrets."
+
+[rules."apex.lang.best-practice.ncino.accessmodifiers.globalaccessmodifiers.global-access-modifiers"]
+status = "excluded"
+pr = "11"
+reason = "Apex is a Semgrep Pro language, not available with --oss-only; no Apex code in repo."
+
+[rules."apex.lang.best-practice.ncino.urls.absoluteurls.absolute-urls"]
+status = "excluded"
+pr = "11"
+reason = "Apex is a Semgrep Pro language, not available with --oss-only; no Apex code in repo."
+
+[rules."apex.lang.security.ncino.dml.apexcsrfconstructor.apex-csrf-constructor"]
+status = "excluded"
+pr = "11"
+reason = "Apex is a Semgrep Pro language, not available with --oss-only; no Apex code in repo."
+
+[rules."apex.lang.security.ncino.dml.dmlnativestatements.dml-native-statements"]
+status = "excluded"
+pr = "11"
+reason = "Apex is a Semgrep Pro language, not available with --oss-only; no Apex code in repo."
+
+[rules."apex.lang.security.ncino.encryption.badcrypto.bad-crypto"]
+status = "excluded"
+pr = "11"
+reason = "Apex is a Semgrep Pro language, not available with --oss-only; no Apex code in repo."
+
+[rules."apex.lang.security.ncino.endpoints.insecurehttprequest.insecure-http-request"]
+status = "excluded"
+pr = "11"
+reason = "Apex is a Semgrep Pro language, not available with --oss-only; no Apex code in repo."
+
+[rules."apex.lang.security.ncino.endpoints.namedcredentialsconstantmatch.named-credentials-constant-match"]
+status = "excluded"
+pr = "11"
+reason = "Apex is a Semgrep Pro language, not available with --oss-only; no Apex code in repo."
+
+[rules."apex.lang.security.ncino.endpoints.namedcredentialsstringmatch.named-credentials-string-match"]
+status = "excluded"
+pr = "11"
+reason = "Apex is a Semgrep Pro language, not available with --oss-only; no Apex code in repo."
+
+[rules."apex.lang.security.ncino.injection.apexsoqlinjectionfromunescapedurlparam.soql-injection-unescaped-url-param"]
+status = "excluded"
+pr = "11"
+reason = "Apex is a Semgrep Pro language, not available with --oss-only; no Apex code in repo."
+
+[rules."apex.lang.security.ncino.injection.apexsoqlinjectionunescapedparam.soql-injection-unescaped-param"]
+status = "excluded"
+pr = "11"
+reason = "Apex is a Semgrep Pro language, not available with --oss-only; no Apex code in repo."
+
+[rules."apex.lang.security.ncino.sharing.specifysharinglevel.specify-sharing-level"]
+status = "excluded"
+pr = "11"
+reason = "Apex is a Semgrep Pro language, not available with --oss-only; no Apex code in repo."
+
+[rules."apex.lang.security.ncino.system.systemdebug.system-debug"]
+status = "excluded"
+pr = "11"
+reason = "Apex is a Semgrep Pro language, not available with --oss-only; no Apex code in repo."
+
+[rules."elixir.lang.best-practice.deprecated-bnot-operator.deprecated_bnot_operator"]
+status = "excluded"
+pr = "11"
+reason = "Elixir is a Semgrep Pro language, not available with --oss-only; no Elixir code in repo."
+
+[rules."elixir.lang.best-practice.deprecated-bxor-operator.deprecated_bxor_operator"]
+status = "excluded"
+pr = "11"
+reason = "Elixir is a Semgrep Pro language, not available with --oss-only; no Elixir code in repo."
+
+[rules."elixir.lang.best-practice.deprecated-calendar-iso-day-of-week-3.deprecated_calendar_iso_day_of_week_3"]
+status = "excluded"
+pr = "11"
+reason = "Elixir is a Semgrep Pro language, not available with --oss-only; no Elixir code in repo."
+
+[rules."elixir.lang.best-practice.deprecated-use-bitwise.deprecated_use_bitwise"]
+status = "excluded"
+pr = "11"
+reason = "Elixir is a Semgrep Pro language, not available with --oss-only; no Elixir code in repo."
+
+[rules."elixir.lang.best-practice.enum-map-into.enum_map_into"]
+status = "excluded"
+pr = "11"
+reason = "Elixir is a Semgrep Pro language, not available with --oss-only; no Elixir code in repo."
+
+[rules."elixir.lang.best-practice.enum-map-join.enum_map_join"]
+status = "excluded"
+pr = "11"
+reason = "Elixir is a Semgrep Pro language, not available with --oss-only; no Elixir code in repo."
+
+[rules."elixir.lang.correctness.atom-exhaustion.atom_exhaustion"]
+status = "excluded"
+pr = "11"
+reason = "Elixir is a Semgrep Pro language, not available with --oss-only; no Elixir code in repo."
+
+[rules."generic.secrets.security.detected-sonarqube-docs-api-key.detected-sonarqube-docs-api-key"]
+status = "excluded"
+pr = "11"
+reason = "False positive — dynamically generated tokens in CI, not hardcoded secrets."
+
+# --- Bug-bounty-probe rules (source=https://semgrep.dev/r/None) ---------------
+# Listed explicitly (not auto-excluded by source) so nothing is dropped without
+# a human decision; a real rule that ever carries /r/None would surface as `new`.
+
+[rules."bbp-pattern-inject"]
+status = "excluded"
+pr = "200"
+reason = "Broken rule in the community registry (r/all) — fails to parse ('Invalid pattern for Python: Stdlib.Parsing.Parse_error'), making semgrep exit 2 and fail every PR regardless of findings. Not our rule. See PR #200."
+
+[rules."PWNED-PRODUCTION-RULE"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-app-inject"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-art-tok"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-auto_approve"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-bypass_review"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-c4-dns-exfil"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-c5-dns-exfil"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-check-patch"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-crit4-exfil"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-crit4-exfil-v2"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-crit5-argo"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-dig-whoami"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-direct-var"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-echo-test"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-env-count"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-env-hash"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-env-secret"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-env-tok-first"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-envgrep"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-etc-host"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-exfil-test-4"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-gh-token"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-gha-tok"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-ghtok-cut"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-ghtok-space"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-ghtok1"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-ghtok2"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-git-inject"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-host-whoami"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-hostname"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-hostname-space"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-id-cut"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-inject-test"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-is_pro_rule"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-is_semgrep_rule"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-is_trusted"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-managed_by"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-ns-static"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-org_id"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-ping"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-ping-static"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-ping-whoami"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-pwd-test"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-rate-check"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-script-path"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-source_of_truth"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-ssrf"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-ssrf-check"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-ssrf-fix"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-ssrf-meta-link"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-ssrf-meta-references"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-ssrf-meta-shortlink"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-ssrf-meta-source"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-ssrf-meta-source-rule-url"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-ssrf-meta-url"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-ssti-test"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-tok-exists"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-token1"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-whoami-dns"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-x"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-xss-fix-field"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-y"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."bbp-yaml-rce-test"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."python.lang.bbp-test"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."python.lang.security.audit.subprocess-shell-true"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."rl-test-1"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."rl-test-2"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."rl-test-3"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."rl-test-4"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."rl-test-5"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."t"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."test-bbp-app-probe1"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."test-bbp-autofix"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."test-bbp-probe"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."test-bbp-xss-msg"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."test.bbp.probe"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."x"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."
+
+[rules."yaml.semgrep.duplicate-id"]
+status = "excluded"
+pr = "220"
+reason = "Bug Bounty Program (bbp) researcher probe published directly to the r/all registry (source=https://semgrep.dev/r/None, no canonical source; r_id burst 311562-311715, absent from semgrep/semgrep-rules). Junk/offensive test rule (SSRF/XSS/exfil/command-injection probes). See PR #220 provenance analysis."

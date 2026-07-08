@@ -1,3 +1,14 @@
+# The generated, byte-for-byte vendored Semgrep ruleset (RFC #211) is produced
+# by tools/semgrep/rules-update.py and must stay identical to the upstream
+# download. It necessarily contains detection patterns (private-key markers,
+# example secrets, non-permalink URLs) and exceeds size limits, so ALL content
+# hooks must skip it; any autofix hook would corrupt the ruleset. The
+# hand-authored rules-update.py and rules-status.toml stay in scope on purpose.
+exclude: |
+    (?x)^(
+        tools/semgrep/rules-vendored\.yaml
+    )$
+
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
@@ -56,7 +67,7 @@ repos:
     rev: v1.151.0
     hooks:
     -   id: semgrep
-        args: [ '--oss-only', '--verbose', '--metrics=off', '--baseline-commit', 'main', '--config=r/all', '--sarif-output', '.tmp/semgrep.sarif.json', '--error' ]
+        args: [ '--oss-only', '--verbose', '--metrics=off', '--baseline-commit', 'main', '--config=tools/semgrep/rules-vendored.yaml', '--max-log-list-entries=0', '--sarif-output', '.tmp/semgrep.sarif.json', '--error' ]
         stages: [pre-push]
 -   repo: https://github.com/bridgecrewio/checkov
     rev: 3.2.500
