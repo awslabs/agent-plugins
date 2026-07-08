@@ -30,8 +30,10 @@ Diagnose Aurora DSQL cluster performance by querying Active Average Sessions (AA
 **MUST** have before starting:
 
 1. A specific `cluster_id` to investigate — never proceed without one. Ask the user if not provided.
-2. The CloudWatch MCP server (`awslabs.cloudwatch-mcp-server`) configured with PromQL access in the **same region** as the DSQL cluster
+2. The CloudWatch MCP server (`awslabs.cloudwatch-mcp-server`) enabled and configured with PromQL access in the **same region** as the DSQL cluster. See [mcp-setup.md](../../mcp/mcp-setup.md#cloudwatch-mcp-server-system-diagnostics--workflow-12) for how to enable it, the region requirement, PromQL-enabled regions, and the required session restart. If its PromQL tools are unavailable, resolve that before starting rather than working around it — see Error Handling below.
 3. The `aurora-dsql` MCP server configured for the target cluster (for per-query investigation via EXPLAIN)
+
+**If the PromQL tools are unavailable** (e.g. `execute_promql_range_query` / `get_promql_label_values` are missing, or a call returns "No such tool available"): the diagnostic cannot run, and there is no substitute — AAS is only readable through these tools, so do not fall back to the AWS CLI, standard CloudWatch metrics, or fabricated numbers. The usual cause is that the CloudWatch server is disabled, misconfigured, or was enabled after this session started (its tools only register at session start). **Tell the user to enable/fix it per [mcp-setup.md](../../mcp/mcp-setup.md#cloudwatch-mcp-server-system-diagnostics--workflow-12) and then restart the session**, since a mid-session enable will show as "Connected" yet still expose no callable tools until restart. Report this as the blocker and the fix, rather than reporting only that data is missing.
 
 ---
 
@@ -81,7 +83,7 @@ The primary metric is `db.active_sessions.avg` — the average number of session
 **Steps:**
 
 1. Confirm you have a specific `cluster_id` — do not proceed without one
-2. Verify the cluster exists by calling `get_promql_label_values` with a match filter (see [promql-patterns.md](promql-patterns.md))
+2. Verify the cluster exists by calling `get_promql_label_values` with a match filter **and an explicit `start`/`end` window covering the period you intend to analyze** (see [promql-patterns.md](promql-patterns.md)). Label-value and series lookups default to a window ending "now"; if the cluster's most recent data is older than that default (for example, a lightly-used or paused cluster), the call returns an empty list even though the cluster exists. An empty result here means "no data in that window," not "no such cluster" — widen or shift the window before concluding the cluster is missing.
 3. Query AAS by `db.wait.event` for the **current hour** in 10-minute chunks (step=60s)
 4. Query AAS by `db.wait.event` for the **same hour yesterday** (baseline 1)
 5. Query AAS by `db.wait.event` for the **same hour last week** (baseline 2)
@@ -93,7 +95,7 @@ The primary metric is `db.active_sessions.avg` — the average number of session
 
 - **MUST** filter by cluster using `"@resource.aws.auroradsql.cluster_id"` in all queries
 - **MUST** quote label names that contain `.` or `@` in PromQL selectors
-- **MUST** use the `match` parameter with `get_promql_label_values` — calls without match return empty
+- **MUST** use the `match` parameter with `get_promql_label_values` — calls without match return empty. When the data you care about is not recent, **also** pass an explicit `start`/`end`, since these lookups default to a window ending "now" and will otherwise miss older data
 - **MUST** compare against temporal baselines — do NOT report absolute AAS values as inherently problematic
 - A >30% change in a wait event's share of total AAS warrants flagging
 
@@ -282,11 +284,12 @@ execute_promql_range_query(
 
 ## Error Handling
 
-| Situation              | Action                                                                 |
-| ---------------------- | ---------------------------------------------------------------------- |
-| No cluster_id provided | Ask the user — never proceed without a specific cluster                |
-| No series found        | Verify cluster ID with `get_promql_label_values`. Check region.        |
-| Empty result (no data) | Cluster is idle for that period. Widen time window.                    |
-| `db.query.id` missing  | Not all queries emit it. Filter by `db.query.normalized_text` instead. |
-| PromQL timeout         | Reduce cardinality — fewer labels or shorter time range.               |
-| Range > 7 days         | Split into multiple 7-day range queries.                               |
+| Situation                                                 | Action                                                                                                                                                                                                                                                                                                                                |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| No cluster_id provided                                    | Ask the user — never proceed without a specific cluster                                                                                                                                                                                                                                                                               |
+| PromQL tools not callable (e.g. "No such tool available") | The CloudWatch server is not enabled, is misconfigured, or was enabled after the session started. Enable/fix it per [mcp-setup.md](../../mcp/mcp-setup.md#cloudwatch-mcp-server-system-diagnostics--workflow-12), then **restart the session** — tools are registered at startup. Do not fall back to guessing or to unrelated tools. |
+| No series / empty label values                            | Confirm the `match` selector, then widen or shift the `start`/`end` window — these lookups default to "now" and miss older data. Only after that, suspect a wrong cluster ID or region.                                                                                                                                               |
+| Empty result (no data)                                    | Cluster is idle for that period. Widen time window.                                                                                                                                                                                                                                                                                   |
+| `db.query.id` missing                                     | Not all queries emit it. Filter by `db.query.normalized_text` instead.                                                                                                                                                                                                                                                                |
+| PromQL timeout                                            | Reduce cardinality — fewer labels or shorter time range.                                                                                                                                                                                                                                                                              |
+| Range > 7 days                                            | Split into multiple 7-day range queries.                                                                                                                                                                                                                                                                                              |

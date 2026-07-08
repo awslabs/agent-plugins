@@ -21,7 +21,9 @@
       ],
       "disabled": true,
       "env": {
-        "FASTMCP_LOG_LEVEL": "ERROR"
+        "FASTMCP_LOG_LEVEL": "ERROR",
+        "AWS_REGION": "[your dsql cluster region, e.g. us-east-1 — must be a PromQL-enabled region]",
+        "AWS_PROFILE": "[your aws profile name, e.g. default]"
       }
     }
   }
