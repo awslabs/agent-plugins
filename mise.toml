@@ -109,7 +109,7 @@ run = "uv run tools/init-skill.py"
 # TESTING
 # =========
 
-[tasks."test:py"]
+[tasks."test:python"]
 description = "Run Python unit tests with pytest (ephemeral, no repo dependency)"
 # `uv run --with pytest` installs pytest into a cached, throwaway env for this
 # run only — nothing is added to the repo's declared deps. pytest handles
@@ -117,15 +117,15 @@ description = "Run Python unit tests with pytest (ephemeral, no repo dependency)
 # which we treat as success so the build never breaks when tests are absent.
 run = "uv run --with pytest pytest tools plugins || [ $? -eq 5 ]"
 
-[tasks."test:js"]
-description = "Run JS/TS unit tests when a package.json defines them"
+[tasks."test:node"]
+description = "Run Node (JS/TS) unit tests when a package.json defines them"
 run = "if [ -f package.json ] && grep -q '\"test\"' package.json; then npm test; else echo 'no package.json test script; skipping'; fi"
 
 [tasks.test]
 description = "Run unit tests across languages"
 run = [
-  { task = "test:py" },
-  { task = "test:js" },
+  { task = "test:python" },
+  { task = "test:node" },
 ]
 
 # =========
