@@ -2,6 +2,8 @@
 
 Aurora DSQL exposes wait events via the `db.wait.event` label on `db.active_sessions.avg`. Each indicates where sessions spend time.
 
+> **Observe-only guardrail.** A wait event tells you _where_ time was spent, not _why_. The "Possible causes" lists below are **candidates to confirm in Workflow 9 (`EXPLAIN ANALYZE`)** — they are **not** findings you may report from CloudWatch data alone. In particular, a read/IO wait event (`SequentialScanRead`, `ScatteredBatchRead`, `SingleRead`) does **not** establish a full/sequential scan, a missing index, or a plan regression: the same label appears for a fast, fully-indexed query executed by many concurrent sessions. Never restate a wait-event label as a scan type or an index state — that is Workflow 9's output. See the "Important principles" in [workflow.md](workflow.md).
+
 ---
 
 ## Summary
@@ -81,24 +83,20 @@ QP is sending data to the application.
 
 ## SequentialScanRead
 
-QP has issued a scan of a contiguous range of tuples.
+QP has issued a scan of a contiguous range of tuples. This is a storage-layer range read — it is **not** synonymous with a `Seq Scan` / Full Scan plan node, and high AAS here most often reflects high concurrency or call frequency rather than a slow query. An `Index Only Scan` on a well-chosen key still issues contiguous range reads and surfaces under this event.
 
-**Root causes:**
+**Possible causes (confirm in Workflow 9 — do NOT report from AAS alone):**
 
+- Many concurrent/high-frequency executions of an efficient indexed query (most common; not a defect)
 - Missing index for the WHERE clause
-- Plan regression — index exists but planner chose scan after statistics changed
+- Plan regression — index exists but planner chose a scan after statistics changed
 - Intentional full-table aggregation
 
-**Diagnosis — distinguish missing index from plan flip:**
+**Observe-only steps:**
 
-- Compare AAS trend over time (Workflow 5). A sudden jump (not proportional to traffic growth) suggests plan regression.
-
-**Remediation:**
-
-1. Identify query: `topk(3, sum by ("db.query.normalized_text", "db.query.id")(db.active_sessions.avg{"db.wait.event"="SequentialScanRead", ...}))`
-2. Compare against baseline — a sudden jump suggests plan regression
-3. Defer to `dsql` skill for EXPLAIN analysis
-4. If intentional (analytics workload), accept or schedule off-peak
+1. Identify the query: `topk(3, sum by ("db.query.normalized_text", "db.query.id")(db.active_sessions.avg{"db.wait.event"="SequentialScanRead", ...}))`
+2. Compare against the temporal baseline — has a specific query's share grown, and is the growth proportional to traffic?
+3. Hand the identified query off to Workflow 9. **Do not** assert "full scan", "missing index", or "plan regression" — Workflow 9's `EXPLAIN ANALYZE` establishes which (if any) of the causes above is real.
 
 ---
 
@@ -106,17 +104,18 @@ QP has issued a scan of a contiguous range of tuples.
 
 QP has issued one or more non-contiguous tuple reads.
 
-**Root causes:**
+**Possible causes (confirm in Workflow 9 — do NOT report from AAS alone):**
 
 - Query performing lookups across non-contiguous storage locations
 - Secondary index lookup followed by wide data fetch
 - Batch operations with keys spread across storage
+- High concurrency/frequency of an otherwise efficient query
 
-**Remediation:**
+**Observe-only steps:**
 
 1. Identify query: `topk(3, sum by ("db.query.normalized_text", "db.query.id")(db.active_sessions.avg{"db.wait.event"="ScatteredBatchRead", ...}))`
-2. Compare against baseline — has a specific query's ScatteredBatchRead grown?
-3. Defer to `dsql` skill for EXPLAIN analysis
+2. Compare against baseline — has a specific query's ScatteredBatchRead grown, and is it proportional to traffic?
+3. Hand the identified query off to Workflow 9 for `EXPLAIN` analysis — do not assert a scan type or index state here
 
 ---
 
@@ -124,18 +123,18 @@ QP has issued one or more non-contiguous tuple reads.
 
 QP is reading a tuple returned by a streamed storage operation.
 
-**Root causes:**
+**Possible causes (confirm in Workflow 9 — do NOT report from AAS alone):**
 
 - A query called at very high frequency (each call is fast but volume accumulates AAS)
 - ORM lazy-loading relationships triggering many individual lookups
 
 **Note:** A single slow query only contributes 1 AAS at most. High AAS on SingleRead indicates many concurrent executions or high call frequency, not a single slow query. Because `db.query.normalized_text` groups all executions of the same query shape, a single-key lookup called thousands of times per second will appear as a high-AAS query.
 
-**Remediation:**
+**Observe-only steps:**
 
 1. Identify query: `topk(5, sum by (db.query.normalized_text)(db.active_sessions.avg{"db.wait.event"="SingleRead", ...}))`
 2. Check if SingleRead AAS has grown vs baseline — indicates increased call frequency
-3. Defer to `dsql` skill for query-level diagnostics
+3. Hand the identified query off to Workflow 9 for query-level diagnostics
 
 ---
 

@@ -16,6 +16,7 @@ Diagnose Aurora DSQL cluster performance by querying Active Average Sessions (AA
 - There is no upper bound to AAS in DSQL — absolute values are not inherently problematic
 - What matters is **change over time**: shifts in wait event distribution, new queries appearing, or existing queries consuming disproportionately more time
 - This skill observes via CloudWatch only — it does **not** recommend schema changes, indexing strategies, or query rewrites. Those require live database access via Workflow 9.
+- **A `db.wait.event` label is not an EXPLAIN node type.** It reports _where a session spent time_, not the query plan. You **MUST NOT** infer a scan type ("full scan", "Seq Scan"), an index state (missing / still building / unused), or any per-query root cause from a wait event. In particular, `SequentialScanRead` is a storage-layer range read that accumulates AAS under high concurrency or call frequency — it is **not** evidence of a full table scan or a missing index. Only Workflow 9 (`EXPLAIN ANALYZE`) can establish scan type, index usage, or root cause. A fast, well-indexed query run by thousands of concurrent sessions produces high AAS on read wait events; this is expected, not a defect.
 
 **PromQL syntax rules:**
 
@@ -262,6 +263,8 @@ After completing all phases, present a unified report covering:
 When queries are identified as newly prominent or significantly grown, describe the observed anomaly and proceed to Workflow 9:
 
 > "Query `{NORMALIZED_SQL}` (db.query.id: `{QUERY_ID}`) is using significantly more system time than it did {TIMEFRAME} ago. Its share of cluster AAS on `{WAIT_EVENT}` has grown from {OLD}% to {NEW}%."
+
+The handoff **MUST** describe only what the metric shows — a query's share of a wait event changed vs baseline. It **MUST NOT** append a hypothesized cause (e.g. "because it is full-scanning", "the index is missing", "the plan regressed to a Seq Scan"). Scan type, index usage, and root cause are Workflow 9's _output_, not this handoff's input — stating them here pre-judges the investigation and is exactly the kind of guess this skill must not make.
 
 Then proceed to Workflow 9 (Query Plan Explainability) for each identified query.
 
