@@ -18,36 +18,48 @@ AWS Transform for mainframe accelerates the modernization of legacy zOS mainfram
 
 ## Capabilities Overview
 
-| #  | Capability                            | Description                                                                                                          | Eligible Files  | Requires                                                     |
-| -- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | --------------- | ------------------------------------------------------------ |
-| 1  | Analyze code                          | Classifies files, counts LOC, maps dependencies, identifies missing files and duplicates                             | All             | —                                                            |
-| 2  | Data analysis                         | Data lineage (program/JCL → dataset mapping) and data dictionary (field-level metadata for copybooks and Db2)        | All             | Code analysis                                                |
-| 3  | Activity metrics analysis             | Analyzes SMF records (type 30 batch, type 110 CICS) for job frequency, resource usage, unused code identification    | SMF records     | Recommend code analysis first                                |
-| 4  | Generate technical documentation      | PDF/JSON docs per file — summary or detailed functional specification with logic, flows, dependencies                | COBOL, JCL      | Code analysis + dependency analysis                          |
-| 5  | Extract business logic                | Extracts business rules, process flows, and logic — application-level (grouped by transactions/jobs) or file-level   | COBOL, JCL      | Code analysis + dependency + entry point analysis            |
-| 6  | Decompose code                        | Breaks codebase into functional domains using seed programs, produces dependency graphs                              | All             | Code analysis. Recommend BRE first                           |
-| 7  | Migration wave planning               | Sequenced migration plan based on decomposed domains with recommended modernization order                            | Domains         | Decomposition                                                |
-| 8  | Refactor code                         | Transforms COBOL → cloud-optimized Java. Configurable target DB, encoding, engine version                            | COBOL           | Code analysis. Recommend decomposition + wave planning first |
-| 9  | Reforge code                          | LLM-powered post-refactor improvement — replaces COBOL-style Java with idiomatic Java patterns                       | Refactored Java | Refactor. Quota: 3M LOC/job, 50M LOC/user/month              |
-| 10 | Plan test cases                       | Creates test plans from code analysis and scheduler paths, prioritizes by complexity, maps business rules            | JCL, schedulers | Code analysis. Benefits from BRE                             |
-| 11 | Generate test data collection scripts | Produces JCL scripts to collect before/after test data from mainframe (Db2 unloads, VSAM REPRO, sequential datasets) | Test plan       | Test planning                                                |
-| 12 | Test automation script generation     | Generates scripts to execute test cases on the modernized Java application with data setup and result comparison     | Test plan       | Test planning + test data collection                         |
+| # | Capability                            | Description                                                                                                                                   | Eligible Files  | Requires                                          |
+| - | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | ------------------------------------------------- |
+| 1 | Analyze code                          | Parse and analyze your files, collect statistics, analyze structure and dependencies, generate dependency graphs, and identify missing assets | All             | —                                                 |
+| 2 | Analyze data                          | Analyze data flow and lineage relationships in your codebase                                                                                  | All             | Code analysis                                     |
+| 3 | Analyze activity metrics              | Analyze mainframe SMF records for job runs and metrics                                                                                        | SMF records     | Recommend code analysis first                     |
+| 4 | Generate technical documentation      | Create comprehensive technical documentation for your mainframe code                                                                          | COBOL, JCL      | Code analysis + dependency analysis               |
+| 5 | Extract business logic                | Extract and document business rules from your mainframe applications                                                                          | COBOL, JCL      | Code analysis + dependency + entry point analysis |
+| 6 | Decompose code                        | Break down your codebase into functional or logical domains based on seed programs                                                            | All             | Code analysis. Recommend BRE first                |
+| 7 | Plan test cases                       | Create test plans from mainframe code and schedulers                                                                                          | JCL, schedulers | Code analysis. Benefits from BRE                  |
+| 8 | Generate test data collection scripts | Create JCL scripts for data collection                                                                                                        | Test plan       | Test planning                                     |
+| 9 | Generate test automation scripts      | Generate execution scripts for modern environments                                                                                            | Test plan       | Test planning + test data collection              |
 
 ## Starting Workflow
 
-1. **Inventory** — Scan for COBOL (.cbl, .cob), JCL (.jcl), copybooks (.cpy), and VSAM definitions
-2. **Scope decision** — Ask user: full rewrite, partial modernization, or re-platform?
-3. **Complete analysis on AWS Transform** — Based on what the customer wants to do, run relevant agents in AWS Transform. Note: the agent always starts with a "Kick off modernization" step that requires connector setup and source code location before any analysis begins.
-4. **Build modernized applications with IDE** — Based on scope, draft modernization requirements based on outputs from agents
+When the user mentions mainframe modernization, COBOL, JCL, or any mainframe-related topic, present the options directly:
 
-**Key question to ask user:** "Can you tell me what you are looking to accomplish today on your mainframe modernization project? Is this a full re-architecture to microservices, or a lift-and-shift to run COBOL on AWS?"
+**Question:** "Here are your mainframe modernization options. You can write out an objective or select from options below:"
+
+**Options:**
+
+- **"Assess and reimagine"** — "Identify modernization boundaries to identify business functions, and generate requirements to reimagine the business functions. This will analyze code and data to discover discrete data paths and produce a catalog of business functions, then generate modernization requirements to reimagine your selected business functions."
+- **"Reimagine"** — "If you already have a scoped application, generate requirements and reimagine this application. This will analyze your programs and data sources, extract business rules, and generate modernization requirements to reimagine your application."
+- **"See list of all capabilities"** — "Create a custom job plan by selecting from all available capabilities."
+- **"Connect to an existing job"** — "Resume or check progress on a mainframe modernization job you've already started."
+
+**Based on selection:**
+
+- **Assess and reimagine:** Create a job with the full end-to-end workflow. The generated plan will include: Kick off modernization → Discover business functions (Analyze code, Analyze data, Discover data paths, Discover business functions). After the "Discover business functions" phase completes, the user will select one or more business functions to reimagine. Then proceed to: Reimagine (Extract business logic, Generate requirements) for the selected business functions. Confirm the plan with the user before executing.
+
+- **Reimagine:** Create a job scoped to reimagining an already-analyzed application. The generated plan will include: Kick off modernization → Analyze code → Analyze data → Extract business logic → Generate requirements. Confirm the plan with the user before executing.
+
+- **See list of all capabilities:** Present the capabilities from the Capabilities Overview table above and let the user select which to include (they can select by name or number, and choose multiple). Then generate a custom job plan from their selections. Confirm the plan with the user before executing.
+
+- **Connect to an existing job:** List the user's workspaces and jobs to find mainframe jobs. Present the job(s) with their current status (phase, progress, pending tasks). Once connected, show the job status and ask what they'd like to do next (e.g., check status, trigger reimagine, handle pending requests, download artifacts). If the user then asks to "reimagine" or "forward engineer" from a connected job, follow [mainframe-reimagine](mainframe-reimagine.md).
+
+All new job options require a "Kick off modernization" step first (connector setup and source code location) before any analysis begins. Additional steps may be added due to dependencies between capabilities.
 
 ## Agents & Transforms
 
-| Agent                               | How to Discover                            | Purpose                                  |
-| ----------------------------------- | ------------------------------------------ | ---------------------------------------- |
-| Mainframe agent                     | `list_resources` with `resource: "agents"` | End-to-end COBOL → Java/C# modernization |
-| AWS/comprehensive-codebase-analysis | CLI: `atx custom def exec`                 | Static analysis of COBOL programs        |
+| Agent           | How to Discover                            | Purpose                                                    |
+| --------------- | ------------------------------------------ | ---------------------------------------------------------- |
+| Mainframe agent | `list_resources` with `resource: "agents"` | End-to-end COBOL → Modern microservices application on AWS |
 
 **Discover the agent dynamically** — do not hardcode the agent name:
 
@@ -121,6 +133,10 @@ These are things that work differently through the MCP API vs the AWS Transform 
 
 The agent requires source code as a **single .zip file** in S3. When the "Specify resource location" task appears, `assetLocation` must point to a `.zip` file.
 
+### Reimagine (Forward Engineering)
+
+See [mainframe-reimagine](mainframe-reimagine.md) for the complete workflow to download specs and source code, organize a workspace, and begin reimagining.
+
 ### Business Logic Extraction (BRE) Configuration
 
 When the "Configure settings" task appears for BRE (`MainframeBreInputComponent`), you MUST always populate the `userSelectedFiles` array — regardless of `reportScope`.
@@ -133,8 +149,7 @@ Both scopes require the file list. The webapp auto-selects all files for `applic
 ## Known Limitations
 
 - Assembler programs (ASM) are not handled by AWS Transform agents — the IDE can analyze but not convert
-- PL/I is supported for BRE and documentation only — not for refactoring
+- PL/I is supported for Business Logic Extraction, Technical Documentation and Data Analysis only — not for refactoring
 - CICS BMS screen conversion may need manual UI design decisions
 - Complex SORT/MERGE JCL steps may need manual review
 - Performance tuning of converted Java code is not automated
-- Reforge quota: 3M lines of code per job, 50M lines of code per user per month
