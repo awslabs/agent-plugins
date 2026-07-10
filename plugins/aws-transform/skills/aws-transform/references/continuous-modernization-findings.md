@@ -51,6 +51,20 @@ atx ct findings batch-update --ids <id1,id2,...> --status <open|dismissed> --rea
 atx ct findings delete --id <finding-id>
 ```
 
+## Pagination (nextToken)
+
+Depending on the CLI version, `atx ct findings list` may return only a bounded page rather than every finding — so don't assume a fixed response shape. After each call, check whether the response carries a `nextToken`. If it's present and non-empty, the results are truncated: call the same command again with the same filters plus `--next-token <token>`, and repeat until the response has no `nextToken`. Concatenate the pages before answering. If there's no `nextToken`, you already have the full set.
+
+```bash
+# First page
+atx ct findings list --status open --json
+# ...response includes "nextToken": "<token>" → fetch the next page
+atx ct findings list --status open --json --next-token <token>
+# ...repeat until the response has no nextToken
+```
+
+Never present the first page as the complete set when a `nextToken` is present — that silently drops findings and undercounts severity totals.
+
 ## Status set
 
 `open`, `dismissed`, `obsolete`. Transitions a user can drive: `open ↔ dismissed`. `obsolete` is a terminal state set by the system when a re-analysis no longer produces the finding — users do not transition into or out of it.
@@ -77,6 +91,7 @@ Filtering at the CLI is materially faster than pulling everything and filtering 
 - "Auto-fixable" without a transform name → narrow with `--type tech-debt-quick` first. `tech-debt-quick` findings carry an ATX-transform fix; `security` findings carry a security-agent fix (see the [remediation](continuous-modernization-remediation.md) skill). Findings without a `fix` field may still be remediable — see the [remediation](continuous-modernization-remediation.md) skill's decision tree.
 - `--type` alone or `--type --severity`/`--type --min-severity` (no status, no repo) → add `--status open` to anchor on the live-triage shape.
 - Passing both `--severity` and `--min-severity` in the same call → the CLI rejects this. Pick one.
+- Treating the first page of `atx ct findings list` as the complete set when the response carries a non-empty `nextToken`. Page through with `--next-token <token>` until no `nextToken` remains — otherwise you silently drop findings.
 
 ### Multi-repo, multi-type questions
 
