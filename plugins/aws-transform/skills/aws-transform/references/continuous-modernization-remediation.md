@@ -68,7 +68,7 @@ If the remediation would span more than 250 repositories, split it into multiple
 
 `atx ct remediation create` returns immediately by default with a remediation ID. With `--wait` it blocks until the remediation completes — and applying transforms across repos can take a long time. Prefer `--wait` so you can act on the result in the same step.
 
-**`--wait` is version-gated** — it exists only in newer CLI versions. Confirm support via `atx ct remediation create --help` (or `atx ct --version`) before relying on it; if it isn't listed, run without `--wait` and do not invent the flag. If a run fails with an unknown-option error for `--wait`, re-run without it.
+**`--wait` is version-gated** — it exists only in newer CLI versions. Confirm support via `atx ct remediation create --help` (or `atx ct --version`) before relying on it; if it isn't listed, run without `--wait` and do not invent the flag. Only re-run without `--wait` if the command fails with an error that explicitly names `--wait` as an unrecognized option AND returned no remediation ID — do not treat auth, `INVALID_INPUT`, or repo-cap failures as a missing-flag error, and never blindly re-run a `create` that may have already submitted.
 
 **Run long jobs in the background and monitor a log.** Start long-running remediations with `&`, redirect output to a log file, and monitor it:
 
