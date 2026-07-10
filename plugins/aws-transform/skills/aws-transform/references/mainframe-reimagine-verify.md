@@ -85,7 +85,7 @@ The verification script is located at `verify-traceability.py`. Run it with the 
 
 ```bash
 python3 verify-traceability.py \
-    --inputs-dir inputs/spec \
+    --inputs-dir spec \
     --specs-dir outputs/microservices \
     --output traceability-dashboard.html
 ```
@@ -94,7 +94,7 @@ python3 verify-traceability.py \
 
 | Parameter      | Default                       | Description                                            |
 | -------------- | ----------------------------- | ------------------------------------------------------ |
-| `--inputs-dir` | `inputs/spec`                 | Path to the business function input directory          |
+| `--inputs-dir` | `spec`                        | Path to the business function input directory          |
 | `--specs-dir`  | `outputs/microservices`       | Path to the generated microservice specification files |
 | `--output`     | `traceability-dashboard.html` | Path for the output HTML dashboard                     |
 
@@ -171,7 +171,7 @@ After updating specifications, re-run the script to confirm coverage has improve
 
 ```bash
 python3 verify-traceability.py \
-    --inputs-dir inputs/spec \
+    --inputs-dir spec \
     --specs-dir outputs/microservices \
     --output traceability-dashboard.html
 ```

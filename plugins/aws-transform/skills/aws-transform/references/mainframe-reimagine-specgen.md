@@ -279,7 +279,6 @@ Design REST API endpoints for each use case in this bounded context:
 | 404    | NOT_FOUND        | `<when>`    |
 | 409    | CONFLICT         | `<when>`    |
 
-````
 ### Step 6: Define Event Publishing
 
 Map domain events from the DDD analysis that originate from this bounded context:
@@ -298,7 +297,7 @@ Map domain events from the DDD analysis that originate from this bounded context
 2. An event for any cross-context operation it receives
 3. An event for any async/batch operation completion
 
-```markdown
+````markdown
 ## Event Publishing
 
 ### <EventName>
@@ -316,11 +315,11 @@ Map domain events from the DDD analysis that originate from this bounded context
       "<relevant state change fields with types>"
     }
   }
+  ```
 ````
 
 - **Subscribers**: `<list ALL consuming services with their BC identifier>`
 
-````
 ### Step 7: Define Service Communication
 
 Document how this service interacts with other bounded contexts:
@@ -331,7 +330,7 @@ Document how this service interacts with other bounded contexts:
 - **Asynchronous (Events)**: For eventual consistency and decoupling
 - **Resilience patterns**: Circuit breaker, retry, timeout, fallback — **with specific numeric parameters**
 
-**MANDATORY: Resilience Pattern Specificity**
+#### MANDATORY: Resilience Pattern Specificity
 
 Do NOT use generic descriptions like "Circuit Breaker / Retry / Timeout". Each synchronous dependency MUST specify concrete resilience parameters:
 
@@ -345,22 +344,22 @@ Do NOT use generic descriptions like "Circuit Breaker / Retry / Timeout". Each s
 
 ### Synchronous Dependencies (Outbound REST Calls)
 
-| Target Service | Endpoint | Purpose | Resilience Pattern |
-|---------------|----------|---------|-------------------|
-| <service> | <path> | <why> | Circuit Breaker (<N> failures / <M>s window), Retry (<X> attempts, exponential backoff), Timeout (<Y>s) |
+| Target Service | Endpoint | Purpose | Resilience Pattern                                                                                      |
+| -------------- | -------- | ------- | ------------------------------------------------------------------------------------------------------- |
+| <service>      | <path>   | <why>   | Circuit Breaker (<N> failures / <M>s window), Retry (<X> attempts, exponential backoff), Timeout (<Y>s) |
 
 ### Events Consumed (Inbound)
 
-| Event | Source Context | Handler | Action |
-|-------|---------------|---------|--------|
-| <event name> | <context> | <handler class name> | <what happens> |
+| Event        | Source Context | Handler              | Action         |
+| ------------ | -------------- | -------------------- | -------------- |
+| <event name> | <context>      | <handler class name> | <what happens> |
 
 ### Anti-Corruption Layer
 
-| External Concept | Internal Concept | Translation Logic |
-|-----------------|-----------------|-------------------|
+| External Concept      | Internal Concept       | Translation Logic      |
+| --------------------- | ---------------------- | ---------------------- |
 | <external model term> | <internal domain term> | <specific translation> |
-````
+```
 
 ### Step 8: Define Domain Services
 
