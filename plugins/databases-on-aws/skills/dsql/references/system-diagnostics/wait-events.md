@@ -35,7 +35,7 @@ Actively processing in the Query Processor (QP), not waiting for any other resou
 
 **Remediation:**
 
-1. Identify top SQL: `topk(5, sum by ("db.query.normalized_text", "db.query.id")(db.active_sessions.avg{"db.wait.event"="OnCpu", ...}))`
+1. Identify top SQL: `topk(5, sum by ("db.query.normalized_text", "db.query.id")({__name__="db.active_sessions.avg", "db.wait.event"="OnCpu", ...}))`
 2. Compare against baseline — identify which queries have grown
 3. Defer to `dsql` skill for EXPLAIN analysis
 
@@ -55,7 +55,7 @@ QP is waiting for the next request. This is only reported when the QP has an act
 
 **Remediation:**
 
-1. Identify role/app: `sum by ("aws.auroradsql.session.role.arn", "application.name")(db.active_sessions.avg{"db.wait.event"="ClientRead", ...})`
+1. Identify role/app: `sum by ("aws.auroradsql.session.role.arn", "application.name")({__name__="db.active_sessions.avg", "db.wait.event"="ClientRead", ...})`
 2. Set `idle_in_transaction_session_timeout` to limit idle transaction duration
 3. Fix application error-handling to always close transactions
 4. Audit connection pool configuration — ensure pools issue RESET or DISCARD on return
@@ -75,7 +75,7 @@ QP is sending data to the application.
 
 **Observe-only steps:**
 
-1. Identify app: `sum by ("application.name")(db.active_sessions.avg{"db.wait.event"="ClientWrite", ...})`
+1. Identify app: `sum by ("application.name")({__name__="db.active_sessions.avg", "db.wait.event"="ClientWrite", ...})`
 2. Check client-side factors this skill can observe: network throughput and TCP buffers, client GC/IO pauses
 3. If a large result set is suspected, hand the query off to Workflow 9 — reducing result size (`LIMIT` / pagination) is a query rewrite, and query rewrites are Workflow 9's responsibility, not this skill's
 
@@ -94,7 +94,7 @@ QP has issued a scan of a contiguous range of tuples. This is a storage-layer ra
 
 **Observe-only steps:**
 
-1. Identify the query: `topk(3, sum by ("db.query.normalized_text", "db.query.id")(db.active_sessions.avg{"db.wait.event"="SequentialScanRead", ...}))`
+1. Identify the query: `topk(3, sum by ("db.query.normalized_text", "db.query.id")({__name__="db.active_sessions.avg", "db.wait.event"="SequentialScanRead", ...}))`
 2. Compare against the temporal baseline — has a specific query's share grown, and is the growth proportional to traffic?
 3. Hand the identified query off to Workflow 9. **Do not** assert "full scan", "missing index", or "plan regression" — Workflow 9's `EXPLAIN ANALYZE` establishes which (if any) of the causes above is real.
 
@@ -113,7 +113,7 @@ QP has issued one or more non-contiguous tuple reads.
 
 **Observe-only steps:**
 
-1. Identify query: `topk(3, sum by ("db.query.normalized_text", "db.query.id")(db.active_sessions.avg{"db.wait.event"="ScatteredBatchRead", ...}))`
+1. Identify query: `topk(3, sum by ("db.query.normalized_text", "db.query.id")({__name__="db.active_sessions.avg", "db.wait.event"="ScatteredBatchRead", ...}))`
 2. Compare against baseline — has a specific query's ScatteredBatchRead grown, and is it proportional to traffic?
 3. Hand the identified query off to Workflow 9 for `EXPLAIN` analysis — do not assert a scan type or index state here
 
@@ -132,7 +132,7 @@ QP is reading a tuple returned by a streamed storage operation.
 
 **Observe-only steps:**
 
-1. Identify query: `topk(5, sum by (db.query.normalized_text)(db.active_sessions.avg{"db.wait.event"="SingleRead", ...}))`
+1. Identify query: `topk(5, sum by ("db.query.normalized_text")({__name__="db.active_sessions.avg", "db.wait.event"="SingleRead", ...}))`
 2. Check if SingleRead AAS has grown vs baseline — indicates increased call frequency
 3. Hand the identified query off to Workflow 9 for query-level diagnostics
 
@@ -149,7 +149,7 @@ Storage reads to validate foreign key existence.
 
 **Remediation:**
 
-1. Identify query: `sum by (db.query.normalized_text)(db.active_sessions.avg{"db.wait.event"="FkExistenceCheck", ...})`
+1. Identify query: `sum by ("db.query.normalized_text")({__name__="db.active_sessions.avg", "db.wait.event"="FkExistenceCheck", ...})`
 2. Check if insert volume has increased using `TotalTransactions` CW metric
 3. Defer to `dsql` skill for query-level diagnostics
 
@@ -167,7 +167,7 @@ Storage reads to validate unique key constraints for non-primary columns.
 
 **Remediation:**
 
-1. Identify query: `sum by (db.query.normalized_text)(db.active_sessions.avg{"db.wait.event"="UniqueConstraintCheck", ...})`
+1. Identify query: `sum by ("db.query.normalized_text")({__name__="db.active_sessions.avg", "db.wait.event"="UniqueConstraintCheck", ...})`
 2. Defer to `dsql` skill for query-level diagnostics
 
 ---
@@ -210,6 +210,6 @@ Session issued `pg_sleep()` and is waiting for the sleep period to complete.
 
 **Remediation:**
 
-1. Verify intentional: `sum by ("application.name")(db.active_sessions.avg{"db.wait.event"="PgSleep", ...})`
+1. Verify intentional: `sum by ("application.name")({__name__="db.active_sessions.avg", "db.wait.event"="PgSleep", ...})`
 2. If unintentional, remove the `pg_sleep()` call
 3. If consuming too many connections, move the delay to the application layer
