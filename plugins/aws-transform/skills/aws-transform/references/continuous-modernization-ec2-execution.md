@@ -437,8 +437,8 @@ for WORKER_NUM in $(seq 1 $WORKER_COUNT); do
   JOB_ID="fan-rem-w${WORKER_NUM}-${TS}"
 
   # Per-worker remediation script: loops through assigned repos.
-  # Continues on failure. Polls each remediation until terminal (no --wait support
-  # for `remediation create`). Uploads to S3 only for local provider.
+  # Continues on failure. Polls each remediation until terminal status.
+  # Uploads to S3 only for local provider.
   SCRIPT=$(cat <<EOF
 #!/bin/bash
 LOG=/tmp/atxct-${JOB_ID}.log
@@ -455,7 +455,7 @@ for REPO in ${REPOS_FOR_THIS_WORKER}; do
   RID=\$(tail -50 \$LOG | grep -oE '01[A-Z0-9]+' | tail -1)
   echo "\$REPO -> \$RID (rc=\$RC)" >> \$RIDS_FILE
 
-  # Poll until terminal (atx ct remediation create has no --wait flag)
+  # Poll until terminal status
   if [ -n "\$RID" ] && [ \$RC -eq 0 ]; then
     while true; do
       STATUS=\$(sudo docker exec ${CONT} atx ct remediation status --id \$RID --json 2>/dev/null | jq -r .status 2>/dev/null)

@@ -818,7 +818,7 @@ fi
 [ -z "\$RID" ] && { echo "=== \$(date) [ERROR] success but no RID extracted ===" >> \$LOG; exit 1; }
 echo "=== \$(date) [REMED] remediation \$RID started -- polling status ===" >> \$LOG
 
-# Poll every 30s until terminal status (atx ct remediation create does not support --wait)
+# Poll every 30s until terminal status
 STATUS=""
 while true; do
   STATUS=\$(sudo docker exec ${CONTAINER_NAME} bash -c "source /home/atxuser/.nvm/nvm.sh && nvm use 22 >/dev/null 2>&1 && export PATH=/home/atxuser/.local/bin:\\\$PATH && atx ct remediation status --id \$RID --json" 2>>\$LOG | jq -r .status 2>/dev/null)

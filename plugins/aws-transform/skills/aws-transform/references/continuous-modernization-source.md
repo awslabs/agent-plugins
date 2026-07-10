@@ -119,6 +119,10 @@ atx ct repository update --source <source> --labels "migration:v2"
 atx ct repository delete --repo "<source>::<slug>" --source <source>
 ```
 
+## Pagination (nextToken)
+
+Depending on the CLI version, `atx ct source list` and `atx ct repository list` may return only a bounded page — don't assume a fixed response shape. After each call, if the response carries a non-empty `nextToken`, call the command again with `--next-token <token>` (keeping any `--source`/`--labels` filters) and repeat until no `nextToken` remains. Don't treat the first page as the complete set — otherwise sources or repos silently go missing from listings and downstream scoping.
+
 ## Labels
 
 Labels are user-defined identifiers for organizing and filtering groups of repositories.

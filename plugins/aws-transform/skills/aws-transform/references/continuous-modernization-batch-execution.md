@@ -779,7 +779,7 @@ The remediation flow differs by source provider:
 | **bitbucket** | NO `--local` — backend pushes to a result branch                                      | Result branch pushed to source repo and PR is opened |
 | **local**     | `--local` (required) — transform runs in the container, working dir is captured to S3 | `code.zip` per repo in S3                            |
 
-`atx ct remediation create` does NOT support `--wait`, so we poll until terminal status (`complete`, `failed`, or `cancelled`). Use `while true` (no iteration cap) — AWS Batch's job timeout is the upper safety net.
+We poll until terminal status (`complete`, `failed`, or `cancelled`). Use `while true` (no iteration cap) — AWS Batch's job timeout is the upper safety net.
 
 ### Three remediation flag combinations
 
