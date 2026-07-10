@@ -51,49 +51,49 @@ get_promql_label_values(
 ### Total AAS
 
 ```promql
-execute_promql_query(query='sum(db.active_sessions.avg{@resource.aws.auroradsql.cluster_id="CLUSTER_ID"})')
+execute_promql_query(query='sum({__name__="db.active_sessions.avg", "@resource.aws.auroradsql.cluster_id"="CLUSTER_ID"})')
 ```
 
 ### AAS by wait event
 
 ```promql
-execute_promql_query(query='sum by ("db.wait.event")(db.active_sessions.avg{@resource.aws.auroradsql.cluster_id="CLUSTER_ID"})')
+execute_promql_query(query='sum by ("db.wait.event")({__name__="db.active_sessions.avg", "@resource.aws.auroradsql.cluster_id"="CLUSTER_ID"})')
 ```
 
 ### Top 5 SQL by AAS
 
 ```promql
-execute_promql_query(query='topk(5, sum by ("db.query.normalized_text", "db.query.id")(db.active_sessions.avg{@resource.aws.auroradsql.cluster_id="CLUSTER_ID"}))')
+execute_promql_query(query='topk(5, sum by ("db.query.normalized_text", "db.query.id")({__name__="db.active_sessions.avg", "@resource.aws.auroradsql.cluster_id"="CLUSTER_ID"}))')
 ```
 
 ### Top 5 SQL for a specific wait event
 
 ```promql
-execute_promql_query(query='topk(5, sum by ("db.query.normalized_text", "db.query.id")(db.active_sessions.avg{@resource.aws.auroradsql.cluster_id="CLUSTER_ID", "db.wait.event"="WAIT_EVENT"}))')
+execute_promql_query(query='topk(5, sum by ("db.query.normalized_text", "db.query.id")({__name__="db.active_sessions.avg", "@resource.aws.auroradsql.cluster_id"="CLUSTER_ID", "db.wait.event"="WAIT_EVENT"}))')
 ```
 
 ### Top 5 IAM roles
 
 ```promql
-execute_promql_query(query='topk(5, sum by ("aws.auroradsql.session.role.arn")(db.active_sessions.avg{@resource.aws.auroradsql.cluster_id="CLUSTER_ID"}))')
+execute_promql_query(query='topk(5, sum by ("aws.auroradsql.session.role.arn")({__name__="db.active_sessions.avg", "@resource.aws.auroradsql.cluster_id"="CLUSTER_ID"}))')
 ```
 
 ### Top 5 applications
 
 ```promql
-execute_promql_query(query='topk(5, sum by ("application.name")(db.active_sessions.avg{@resource.aws.auroradsql.cluster_id="CLUSTER_ID"}))')
+execute_promql_query(query='topk(5, sum by ("application.name")({__name__="db.active_sessions.avg", "@resource.aws.auroradsql.cluster_id"="CLUSTER_ID"}))')
 ```
 
 ### AAS for a specific query ID
 
 ```promql
-execute_promql_query(query='sum by ("db.wait.event")(db.active_sessions.avg{@resource.aws.auroradsql.cluster_id="CLUSTER_ID", "db.query.id"="QUERY_ID"})')
+execute_promql_query(query='sum by ("db.wait.event")({__name__="db.active_sessions.avg", "@resource.aws.auroradsql.cluster_id"="CLUSTER_ID", "db.query.id"="QUERY_ID"})')
 ```
 
 ### Cross-cluster comparison
 
 ```promql
-execute_promql_query(query='sum by (@resource.aws.auroradsql.cluster_id)(db.active_sessions.avg)')
+execute_promql_query(query='sum by ("@resource.aws.auroradsql.cluster_id")({__name__="db.active_sessions.avg"})')
 ```
 
 ---
@@ -106,7 +106,7 @@ execute_promql_query(query='sum by (@resource.aws.auroradsql.cluster_id)(db.acti
 
 ```promql
 execute_promql_range_query(
-  query='sum by ("db.wait.event")(db.active_sessions.avg{@resource.aws.auroradsql.cluster_id="CLUSTER_ID"})',
+  query='sum by ("db.wait.event")({__name__="db.active_sessions.avg", "@resource.aws.auroradsql.cluster_id"="CLUSTER_ID"})',
   start="START_TIME", end="END_TIME", step="60s"
 )
 ```
@@ -115,7 +115,7 @@ execute_promql_range_query(
 
 ```promql
 execute_promql_range_query(
-  query='sum(db.active_sessions.avg{@resource.aws.auroradsql.cluster_id="CLUSTER_ID"})',
+  query='sum({__name__="db.active_sessions.avg", "@resource.aws.auroradsql.cluster_id"="CLUSTER_ID"})',
   start="START_TIME", end="END_TIME", step="60s"
 )
 ```
@@ -124,7 +124,7 @@ execute_promql_range_query(
 
 ```promql
 execute_promql_range_query(
-  query='topk(5, sum by ("db.query.normalized_text", "db.query.id")(db.active_sessions.avg{@resource.aws.auroradsql.cluster_id="CLUSTER_ID"}))',
+  query='topk(5, sum by ("db.query.normalized_text", "db.query.id")({__name__="db.active_sessions.avg", "@resource.aws.auroradsql.cluster_id"="CLUSTER_ID"}))',
   start="START_TIME", end="END_TIME", step="300s"
 )
 ```

@@ -73,11 +73,11 @@ QP is sending data to the application.
 - Large result sets saturating network buffers
 - Client-side GC pauses or I/O blocking
 
-**Remediation:**
+**Observe-only steps:**
 
 1. Identify app: `sum by ("application.name")(db.active_sessions.avg{"db.wait.event"="ClientWrite", ...})`
-2. Add `LIMIT` or pagination to reduce result size
-3. Check client network throughput and TCP buffers
+2. Check client-side factors this skill can observe: network throughput and TCP buffers, client GC/IO pauses
+3. If a large result set is suspected, hand the query off to Workflow 9 — reducing result size (`LIMIT` / pagination) is a query rewrite, and query rewrites are Workflow 9's responsibility, not this skill's
 
 ---
 
@@ -85,7 +85,7 @@ QP is sending data to the application.
 
 QP has issued a scan of a contiguous range of tuples. This is a storage-layer range read — it is **not** synonymous with a `Seq Scan` / Full Scan plan node, and high AAS here most often reflects high concurrency or call frequency rather than a slow query. An `Index Only Scan` on a well-chosen key still issues contiguous range reads and surfaces under this event.
 
-**Possible causes (confirm in Workflow 9 — do NOT report from AAS alone):**
+**Possible causes** (candidates to confirm in Workflow 9 — see the observe-only guardrail above):
 
 - Many concurrent/high-frequency executions of an efficient indexed query (most common; not a defect)
 - Missing index for the WHERE clause
@@ -104,7 +104,7 @@ QP has issued a scan of a contiguous range of tuples. This is a storage-layer ra
 
 QP has issued one or more non-contiguous tuple reads.
 
-**Possible causes (confirm in Workflow 9 — do NOT report from AAS alone):**
+**Possible causes** (candidates to confirm in Workflow 9 — see the observe-only guardrail above):
 
 - Query performing lookups across non-contiguous storage locations
 - Secondary index lookup followed by wide data fetch
@@ -123,7 +123,7 @@ QP has issued one or more non-contiguous tuple reads.
 
 QP is reading a tuple returned by a streamed storage operation.
 
-**Possible causes (confirm in Workflow 9 — do NOT report from AAS alone):**
+**Possible causes** (candidates to confirm in Workflow 9 — see the observe-only guardrail above):
 
 - A query called at very high frequency (each call is fast but volume accumulates AAS)
 - ORM lazy-loading relationships triggering many individual lookups

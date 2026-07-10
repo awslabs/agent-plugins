@@ -136,9 +136,9 @@ The plugin's `.mcp.json` pre-configures it as:
 To enable it:
 
 1. Set `AWS_REGION` to the cluster's region and `AWS_PROFILE` to a profile with CloudWatch
-   read permissions (`cloudwatch:GetMetricData`, and the CloudWatch PromQL / `aps` query
-   permissions). The server uses the standard AWS credential chain, so `--profile` on the
-   command line or `AWS_PROFILE` in `env` both work.
+   read permissions — `cloudwatch:GetMetricData` and `cloudwatch:ListMetrics` (the actions the
+   CloudWatch PromQL query path uses). The server uses the standard AWS credential chain, so
+   `--profile` on the command line or `AWS_PROFILE` in `env` both work.
 2. Set `"disabled": false`.
 
 **Region matters.** The server must run in the **same region as the DSQL cluster**, and

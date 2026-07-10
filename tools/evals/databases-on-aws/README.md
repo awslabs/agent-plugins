@@ -14,7 +14,7 @@ scripts, and unit tests for that database's skill.
 tools/evals/databases-on-aws/
 ├── README.md                        # This file — top-level index
 └── dsql/                            # Aurora DSQL skill evals
-    ├── evals.json                   # Tier 2: functional evals (15 prompts, 54 assertions)
+    ├── evals.json                   # Tier 2: functional evals (16 prompts, 59 assertions)
     ├── trigger_evals.json           # Tier 1: triggering evals (37 test cases)
     ├── safe_query_evals.json        # Tier 3: safe_query enforcement (6 prompts, ~30 expectations)
     ├── query_explainability_evals.json  # Workflow 9: query plan diagnostics (9 prompts, 70 assertions)
@@ -81,25 +81,26 @@ python tools/evals/databases-on-aws/dsql/scripts/run_functional_evals.py \
   --verbose
 ```
 
-**What it checks** (15 eval prompts, 54 assertions total):
+**What it checks** (16 eval prompts, 59 assertions total):
 
-| Eval                           | Focus                 | Grader    | Key assertions                                                                                                        |
-| ------------------------------ | --------------------- | --------- | --------------------------------------------------------------------------------------------------------------------- |
-| 1. Transaction limits          | MCP delegation        | regex     | Calls `awsknowledge`, cites 3,000 row limit, recommends batching                                                      |
-| 2. Multi-tenant schema         | Correctness           | regex     | Uses `tenant_id`, `CREATE INDEX ASYNC`, no foreign keys, separate DDL txns                                            |
-| 3. Index limits                | MCP delegation        | regex     | Calls `awsknowledge`, cites 24 index limit, suggests alternatives                                                     |
-| 4. Python connection           | Language routing      | regex     | Recommends DSQL Python Connector, IAM auth, 15-min token expiry, SSL                                                  |
-| 5. Column type change          | DDL migration routing | regex     | Table Recreation Pattern, DROP TABLE warning, batching, user confirmation                                             |
-| 6. JSON column storage         | Type guidance         | LLM judge | Recommends `JSONB` (or `JSON`) as the column type for queryable structured data                                       |
-| 7. Array storage               | Type guidance         | LLM judge | Flags `TEXT[]` / array column as unsupported, recommends storing the array as `JSONB`                                 |
-| 8. INACTIVE cluster error      | Troubleshooting       | LLM judge | Identifies INACTIVE state, uses `aws dsql get-cluster` to poll until `ACTIVE`, retries afterwards                     |
-| 9. Backup on IDLE/INACTIVE     | Troubleshooting       | LLM judge | Identifies `FailedPrecondition`, connects to wake cluster to ACTIVE, retries backup                                   |
-| 10. Loader stuck at 3K rec/s   | Data loading          | LLM judge | Identifies partition-constrained fresh table, advises to keep running, does NOT recommend more workers                |
-| 11. Loader crash lost manifest | Data loading          | LLM judge | Identifies /tmp as tmpfs, recommends --on-conflict do-nothing for recovery, --manifest-dir for prevention             |
-| 12. Header row parse error     | Data loading          | LLM judge | Identifies missing --header flag, explains default behavior, recommends fix                                           |
-| 13. EF Core data layer setup   | ORM routing (.NET)    | LLM judge | Recommends Amazon.AuroraDsql.EntityFrameworkCore, Guid keys w/ gen_random_uuid(), app-layer FK, DsqlExecutionStrategy |
-| 14. .NET / C# support          | Language routing      | LLM judge | Confirms .NET support, recommends Npgsql connector for IAM auth and EF Core adapter                                   |
-| 15. System diagnostics (W12)   | AAS interpretation    | LLM judge | Identifies the shifted wait event vs baseline, rules out load growth, no absolute-AAS claim, defers to Workflow 9     |
+| Eval                           | Focus                 | Grader    | Key assertions                                                                                                                      |
+| ------------------------------ | --------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Transaction limits          | MCP delegation        | regex     | Calls `awsknowledge`, cites 3,000 row limit, recommends batching                                                                    |
+| 2. Multi-tenant schema         | Correctness           | regex     | Uses `tenant_id`, `CREATE INDEX ASYNC`, no foreign keys, separate DDL txns                                                          |
+| 3. Index limits                | MCP delegation        | regex     | Calls `awsknowledge`, cites 24 index limit, suggests alternatives                                                                   |
+| 4. Python connection           | Language routing      | regex     | Recommends DSQL Python Connector, IAM auth, 15-min token expiry, SSL                                                                |
+| 5. Column type change          | DDL migration routing | regex     | Table Recreation Pattern, DROP TABLE warning, batching, user confirmation                                                           |
+| 6. JSON column storage         | Type guidance         | LLM judge | Recommends `JSONB` (or `JSON`) as the column type for queryable structured data                                                     |
+| 7. Array storage               | Type guidance         | LLM judge | Flags `TEXT[]` / array column as unsupported, recommends storing the array as `JSONB`                                               |
+| 8. INACTIVE cluster error      | Troubleshooting       | LLM judge | Identifies INACTIVE state, uses `aws dsql get-cluster` to poll until `ACTIVE`, retries afterwards                                   |
+| 9. Backup on IDLE/INACTIVE     | Troubleshooting       | LLM judge | Identifies `FailedPrecondition`, connects to wake cluster to ACTIVE, retries backup                                                 |
+| 10. Loader stuck at 3K rec/s   | Data loading          | LLM judge | Identifies partition-constrained fresh table, advises to keep running, does NOT recommend more workers                              |
+| 11. Loader crash lost manifest | Data loading          | LLM judge | Identifies /tmp as tmpfs, recommends --on-conflict do-nothing for recovery, --manifest-dir for prevention                           |
+| 12. Header row parse error     | Data loading          | LLM judge | Identifies missing --header flag, explains default behavior, recommends fix                                                         |
+| 13. EF Core data layer setup   | ORM routing (.NET)    | LLM judge | Recommends Amazon.AuroraDsql.EntityFrameworkCore, Guid keys w/ gen_random_uuid(), app-layer FK, DsqlExecutionStrategy               |
+| 14. .NET / C# support          | Language routing      | LLM judge | Confirms .NET support, recommends Npgsql connector for IAM auth and EF Core adapter                                                 |
+| 15. System diagnostics (W12)   | AAS interpretation    | LLM judge | Identifies the shifted wait event vs baseline, rules out load growth, no absolute-AAS claim, defers to Workflow 9                   |
+| 16. Wait-event ≠ plan (W12)    | Observe-only boundary | LLM judge | High SequentialScanRead = concurrency not full scan; does NOT claim a full/seq scan or missing/building index; routes to Workflow 9 |
 
 ### Grader modes
 

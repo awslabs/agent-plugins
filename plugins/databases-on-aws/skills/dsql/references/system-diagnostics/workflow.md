@@ -97,8 +97,7 @@ The primary metric is `db.active_sessions.avg` — the average number of session
 - **MUST** filter by cluster using `"@resource.aws.auroradsql.cluster_id"` in all queries
 - **MUST** quote label names that contain `.` or `@` in PromQL selectors
 - **MUST** use the `match` parameter with `get_promql_label_values` — calls without match return empty. When the data you care about is not recent, **also** pass an explicit `start`/`end`, since these lookups default to a window ending "now" and will otherwise miss older data
-- **MUST** compare against temporal baselines — do NOT report absolute AAS values as inherently problematic
-- A >30% change in a wait event's share of total AAS warrants flagging
+- **MUST** compare against temporal baselines — do NOT report absolute AAS values as inherently problematic (the >30%-share-change trigger is defined in Step 7)
 
 **Example:**
 
@@ -188,7 +187,7 @@ execute_promql_query(query='topk(5, sum by ("application.name")({__name__="db.ac
 
 1. Check Commit wait event's share vs baseline (from Phase 1 data)
 2. If Commit share changed, query standard CloudWatch metrics:
-   - `AuroraDSQL` namespace, dimension `ClusterId`
+   - `AWS/AuroraDSQL` namespace, dimension `ClusterId`
    - `TotalTransactions` — commit rate
    - `OccConflicts` — conflict rate
 3. Compare ratios:
@@ -200,14 +199,14 @@ execute_promql_query(query='topk(5, sum by ("application.name")({__name__="db.ac
 
 ```
 get_metric_data(
-  namespace="AuroraDSQL",
+  namespace="AWS/AuroraDSQL",
   metric_name="TotalTransactions",
   dimensions=[{name: "ClusterId", value: "CLUSTER_ID"}],
   statistic="Sum"
 )
 
 get_metric_data(
-  namespace="AuroraDSQL",
+  namespace="AWS/AuroraDSQL",
   metric_name="OccConflicts",
   dimensions=[{name: "ClusterId", value: "CLUSTER_ID"}],
   statistic="Sum"
@@ -228,9 +227,9 @@ get_metric_data(
 
 **Critical rules:**
 
-- **SHOULD** use step: 60s (< 1h), 300s (1–6h), 900s (> 6h), 3600s (> 24h)
+- **SHOULD** use step: 60s (< 1h), 300s (1–6h), 900s (6–24h), 3600s (> 24h)
 - **MUST** specify `start` and `end` in RFC 3339 format
-- Maximum range per query is 7 days — split longer investigations
+- **MUST** keep each query's range at or under 7 days — split longer investigations
 
 **Example:**
 
