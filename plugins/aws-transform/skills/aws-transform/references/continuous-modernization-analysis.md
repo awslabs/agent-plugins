@@ -34,14 +34,20 @@ If the user explicitly asks to disable telemetry, omit `--telemetry` for the res
 - **EC2** -- follow [continuous-modernization-ec2-execution](continuous-modernization-ec2-execution.md)
 - **Batch** -- follow [continuous-modernization-batch-execution](continuous-modernization-batch-execution.md)
 
+## Repository limit per request (max 250)
+
+A single `atx ct analysis run` can be associated with at most **250 repositories**. Before starting an analysis that targets many repos (for example a whole source), check how many repositories are in scope — `atx ct source list` or `atx ct repository list --source <name>` report the per-source count. (Bare `atx ct status` shows workspace-wide totals across all sources, so prefer a scoped form when the analysis targets a single source.)
+
+If the scope exceeds 250 repositories, split it into multiple runs, each targeting at most 250 repos (pass the repos in batches via `--repo <source>::<slug>`), and tell the user you are breaking the work up because of the 250-repo-per-request limit. Never issue a single run associated with more than 250 repositories — it will be rejected. Example: 300 repos → two runs (250 + 50); 600 repos → three runs (250 + 250 + 100).
+
 ## Commands
 
 ```bash
-# Run analysis (returns immediately with analysis ID)
-atx ct analysis run --type <tech-debt-quick|tech-debt-comprehensive|security|agentic-readiness|modernization-readiness|custom> --source <name> [--repo <source>::<slug>] --telemetry "agent=<AGENT>,executionMode=local"
-
-# Run and wait for completion
+# Run analysis. Pass --wait so the command blocks until the run finishes (preferred — see "Running long analyses" below).
 atx ct analysis run --type <tech-debt-quick|tech-debt-comprehensive|security|agentic-readiness|modernization-readiness|custom> --source <name> [--repo <source>::<slug>] --wait --telemetry "agent=<AGENT>,executionMode=local"
+
+# --wait is only in newer CLI versions. If it isn't supported, run the same command without --wait.
+atx ct analysis run --type <tech-debt-quick|tech-debt-comprehensive|security|agentic-readiness|modernization-readiness|custom> --source <name> [--repo <source>::<slug>] --telemetry "agent=<AGENT>,executionMode=local"
 
 # Run custom analysis with a specific transformation definition
 atx ct analysis run --type custom --transformation-name <TD-name> --source <name> --repo <source>::<slug> --wait --telemetry "agent=<AGENT>,executionMode=local"
@@ -67,6 +73,21 @@ atx ct analysis list --category "Tech Debt" --json
 atx ct analysis cancel --id <id>
 atx ct analysis delete --id <id> [--cascade-findings]
 ```
+
+## Running long analyses (--wait, background, logs)
+
+`atx ct analysis run` returns immediately by default with an analysis ID. With `--wait` it blocks until the run completes — and a comprehensive or multi-repo run can take a long time. Prefer `--wait` so the run blocks to completion and you can act on the result in the same step.
+
+**`--wait` is version-gated.** It exists only in newer CLI versions. Before relying on it, confirm the installed CLI supports it — check `atx ct analysis run --help` (or `atx ct --version`). If `--wait` isn't listed, run the command without it; do not invent the flag. If a run fails with an unknown-option error for `--wait`, re-run without it.
+
+**Run long jobs in the background and monitor a log.** A blocking run ties up the session, so start long-running analyses in the background with `&`, redirect output to a log file, and monitor the log:
+
+```bash
+atx ct analysis run --type tech-debt-comprehensive --source <name> --wait --telemetry "agent=<AGENT>,executionMode=local" > /tmp/atx-analysis.log 2>&1 &
+tail -f /tmp/atx-analysis.log
+```
+
+This applies to comprehensive scans, large multi-repo runs, and any analysis the user expects to take a while. Tell the user where the log is and how to check progress.
 
 ## Custom Analysis
 
@@ -199,3 +220,7 @@ If an analysis returns 0 findings on a repo that's obviously stale (Java 8, Node
 `--category` is a client-side grouping; e.g. `"Tech Debt"` matches both `tech-debt-quick` and `tech-debt-comprehensive`. Use it when the user wants both subtypes together.
 
 `--status` and `--type` accept only the canonical values above. Off-canonical input (e.g. `--status completed`, `--type tech-debt`) returns an `INVALID_INPUT` error.
+
+### Pagination (nextToken)
+
+Depending on the CLI version, `atx ct analysis list` may return only a bounded page rather than every result — don't assume a fixed response shape. After each call, check whether the response carries a `nextToken`; if it's present and non-empty, call the command again with `--next-token <token>` and repeat until no `nextToken` remains. Never treat the first page as the complete set when a `nextToken` is present, or you'll silently miss analyses.

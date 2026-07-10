@@ -29,8 +29,9 @@ Format: `--telemetry "agent=<agent>,executionMode=<mode>"`
 If the user explicitly asks to disable telemetry, omit `--telemetry` for the rest of the session.
 
 ```bash
-# Create from finding IDs (uses each finding's fix.transform_name)
-atx ct remediation create --ids <id1,id2> --name "Fix name" --telemetry "agent=<AGENT>,executionMode=local"
+# Create from finding IDs (uses each finding's fix.transform_name).
+# Pass --wait so the command blocks until the remediation finishes (version-gated — see "Running long remediations" below).
+atx ct remediation create --ids <id1,id2> --name "Fix name" --wait --telemetry "agent=<AGENT>,executionMode=local"
 
 # Create from finding IDs with a custom TD override (ignores finding's fix field)
 atx ct remediation create --ids <id1,id2> --transformation-name <TD-name> --telemetry "agent=<AGENT>,executionMode=local"
@@ -56,6 +57,31 @@ atx ct remediation retry --id <id>
 # Delete
 atx ct remediation delete --id <id>
 ```
+
+## Repository limit per request (max 250)
+
+A single `atx ct remediation create` can be associated with at most **250 repositories**. Before creating a remediation that spans many repos, check how many distinct repositories the target findings cover.
+
+If the remediation would span more than 250 repositories, split it into multiple `remediation create` requests, each covering findings from at most 250 repos, and tell the user you are breaking it up because of the 250-repo-per-request limit. Never create a single remediation associated with more than 250 repositories — it will be rejected. Example: findings across 300 repos → two remediations (one for 250 repos, one for the remaining 50).
+
+## Running long remediations (--wait, background, logs)
+
+`atx ct remediation create` returns immediately by default with a remediation ID. With `--wait` it blocks until the remediation completes — and applying transforms across repos can take a long time. Prefer `--wait` so you can act on the result in the same step.
+
+**`--wait` is version-gated** — it exists only in newer CLI versions. Confirm support via `atx ct remediation create --help` (or `atx ct --version`) before relying on it; if it isn't listed, run without `--wait` and do not invent the flag. Only re-run without `--wait` if the command fails with an error that explicitly names `--wait` as an unrecognized option AND returned no remediation ID — do not treat auth, `INVALID_INPUT`, or repo-cap failures as a missing-flag error, and never blindly re-run a `create` that may have already submitted.
+
+**Run long jobs in the background and monitor a log.** Start long-running remediations with `&`, redirect output to a log file, and monitor it:
+
+```bash
+atx ct remediation create --ids <id1,id2> --name "Fix name" --wait --telemetry "agent=<AGENT>,executionMode=local" > /tmp/atx-remediation.log 2>&1 &
+tail -f /tmp/atx-remediation.log
+```
+
+Tell the user where the log is and how to check progress.
+
+## Listing remediations (pagination)
+
+Depending on the CLI version, `atx ct remediation list` may return only a bounded page — don't assume a fixed response shape. After each call, if the response carries a non-empty `nextToken`, call the command again with `--next-token <token>` and repeat until no `nextToken` remains. Don't treat the first page as complete when a `nextToken` is present.
 
 ## Security Remediation
 

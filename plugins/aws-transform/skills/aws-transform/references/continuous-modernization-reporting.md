@@ -26,9 +26,13 @@ atx ct findings list --json
 atx ct remediation list --json
 ```
 
+### Paginate every list to completion (nextToken)
+
+Response shape can vary by CLI version, so don't hard-code it: a list command may return every result at once, a bare array, or an object that wraps the array alongside a top-level `nextToken`. The report is a **static snapshot baked from this data**, so a dropped page silently loses sources, repos, analyses, findings, or remediations. The version-agnostic rule: after each list call, check whether the response carries a non-empty `nextToken`; if it does, call the command again with `--next-token <token>` and repeat until no `nextToken` remains, then concatenate all pages before normalizing. If there is no `nextToken`, the single response is already complete. A truncated `findings` or `remediation` fetch skews every KPI and chart downstream.
+
 ### Raw response shapes
 
-The five commands do NOT return the same envelope. Read each carefully — `repository list` wraps results in `{"items": [...]}`; the other four return a flat array. All field names are snake_case.
+The five commands do NOT return the same envelope, and the exact container can vary by CLI version — `repository list` wraps results in `{"items": [...]}`, while the others may come back as a bare array or (on newer CLIs) an object wrapping the array alongside a `nextToken` (see the pagination note above). Read the records wherever they live and follow `nextToken` when it's present. The shapes below describe the objects **inside** each list. All field names are snake_case.
 
 **`source list --json`** → flat array:
 
