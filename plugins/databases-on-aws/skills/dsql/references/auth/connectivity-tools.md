@@ -62,7 +62,9 @@ and the database tools (`readonly_query`, `transact`, `get_schema`) take no per-
 so a running instance serves exactly the cluster it started with. Re-pointing it at a different
 cluster requires editing `.mcp.json` and **restarting the session**. (This is unlike the
 CloudWatch MCP used by Workflow 12, whose PromQL/`get_metric_data` tools accept `region` and
-`cluster_id` as per-call arguments, so a single configuration serves every cluster.)
+`cluster_id` as per-call arguments — so one running CloudWatch server can query clusters in any
+PromQL-enabled region without reconfiguration, as long as each call passes the region where that
+cluster's metrics live.)
 
 **Decision rule:**
 
@@ -73,14 +75,18 @@ CloudWatch MCP used by Workflow 12, whose PromQL/`get_metric_data` tools accept 
    which generates an IAM auth token and connects with `psql`:
 
    ```bash
-   # Run a single statement against a specific cluster (read-only credentials by default)
+   # Run a single statement against a specific cluster
    ./scripts/psql-connect.sh <cluster-id> --region <region> --command "SELECT count(*) FROM my_table"
 
    # Interactive session
    ./scripts/psql-connect.sh <cluster-id> --region <region>
    ```
 
-   See [scripts/README.md](../../../../scripts/README.md) for the full flag set (`--user`, `--admin`,
+   Note the script connects as the `admin` database user by default (override with `--user`), so
+   the session has full read/write/DDL privileges — it is **not** read-only. Scope the SQL you run
+   accordingly, and use a less-privileged `--user` when you only need reads. `--command` runs a
+   single statement (it rejects multiple statements and comments). See
+   [scripts/README.md](../../../../scripts/README.md) for the full flag set (`--user`, `--admin`,
    `--command`) and IAM prerequisites (`dsql:DbConnect` / `dsql:DbConnectAdmin`).
 3. **You cannot confirm which cluster the MCP targets** → confirm first, or default to the
    CLI/psql path. Running against the wrong cluster is worse than the cost of checking.

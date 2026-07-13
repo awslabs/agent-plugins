@@ -9,7 +9,7 @@ effortless scaling, multi-region viability, among other advantages.
 
 - **SHOULD read guidelines first** - Check [development-guide.md](development-guide.md) before making schema changes
 - **SHOULD use preferred language patterns** - Check [language.md](language.md)
-- **SHOULD Execute queries directly** - PREFER MCP tools for ad-hoc queries
+- **SHOULD Execute queries directly** - PREFER MCP tools for ad-hoc queries **only when the `aurora-dsql` MCP already targets the intended cluster**; otherwise use the CLI + `psql` path rather than reconfiguring — see "Choosing How to Connect" in [SKILL.md](../SKILL.md)
 - **REQUIRED: Follow DDL Guidelines** - Refer to [DDL Rules](#schema-ddl-rules)
 - **SHALL repeatedly generate fresh tokens** - Refer to [Connection Limits](auth/authentication-guide.md#connection-rules)
 - **ALWAYS use ASYNC indexes** - `CREATE INDEX ASYNC` is mandatory
@@ -40,7 +40,7 @@ effortless scaling, multi-region viability, among other advantages.
 
 **For Ad-Hoc Queries and Data Exploration:**
 
-- MUST ALWAYS Execute DIRECTLY using MCP server or psql one-liners
+- MUST ALWAYS Execute DIRECTLY using the MCP server (when it targets the intended cluster) or psql one-liners (`scripts/psql-connect.sh`) otherwise — never reconfigure the MCP mid-task just to switch clusters
 - SHOULD Return results immediately
 
 **Writing Scripts REQUIRES at least 1 of:**

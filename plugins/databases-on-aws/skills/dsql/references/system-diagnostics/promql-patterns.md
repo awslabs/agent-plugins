@@ -30,7 +30,8 @@ get_promql_label_values(
 ```promql
 get_promql_label_values(
   label_name="db.wait.event",
-  match=["{__name__=\"db.active_sessions.avg\", \"@resource.aws.auroradsql.cluster_id\"=\"CLUSTER_ID\"}"]
+  match=["{__name__=\"db.active_sessions.avg\", \"@resource.aws.auroradsql.cluster_id\"=\"CLUSTER_ID\"}"],
+  start="WINDOW_START", end="WINDOW_END"
 )
 ```
 
@@ -39,7 +40,8 @@ get_promql_label_values(
 ```promql
 get_promql_label_values(
   label_name="application.name",
-  match=["{__name__=\"db.active_sessions.avg\", \"@resource.aws.auroradsql.cluster_id\"=\"CLUSTER_ID\"}"]
+  match=["{__name__=\"db.active_sessions.avg\", \"@resource.aws.auroradsql.cluster_id\"=\"CLUSTER_ID\"}"],
+  start="WINDOW_START", end="WINDOW_END"
 )
 ```
 
@@ -48,7 +50,8 @@ get_promql_label_values(
 ```promql
 get_promql_label_values(
   label_name="aws.auroradsql.session.role.arn",
-  match=["{__name__=\"db.active_sessions.avg\", \"@resource.aws.auroradsql.cluster_id\"=\"CLUSTER_ID\"}"]
+  match=["{__name__=\"db.active_sessions.avg\", \"@resource.aws.auroradsql.cluster_id\"=\"CLUSTER_ID\"}"],
+  start="WINDOW_START", end="WINDOW_END"
 )
 ```
 
@@ -109,6 +112,10 @@ execute_promql_query(query='sum by ("@resource.aws.auroradsql.cluster_id")({__na
 ## Range Queries
 
 **Step guidelines** (SHOULD, matching workflow.md): 60s (< 1h), 300s (1–6h), 900s (6–24h), 3600s (> 24h).
+
+`START_TIME`/`END_TIME` (and the `*_HOUR_START` placeholders below) **MUST** be concrete RFC 3339
+timestamps — e.g. `2026-07-13T15:00:00Z` — not `NOW`-relative expressions, which the API rejects.
+Compute the window first (e.g. `date -u -v-1H +%Y-%m-%dT%H:%M:%SZ`), then substitute.
 
 ### AAS by wait event over time
 

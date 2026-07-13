@@ -150,7 +150,7 @@ Storage reads to validate foreign key existence.
 **Observe-only steps:**
 
 1. Identify query: `sum by ("db.query.normalized_text", "db.query.id")({__name__="db.active_sessions.avg", "db.wait.event"="FkExistenceCheck", ...})`
-2. Check if insert volume has increased using the `TotalTransactions` CW metric
+2. Check if insert volume has increased using the `TotalTransactions` CW metric (namespace `AWS/AuroraDSQL`, `statistic="Sum"` — it is a cumulative counter)
 3. Hand the identified query off to Workflow 9 for query-level diagnostics
 
 ---

@@ -29,7 +29,9 @@ To upgrade to full database operations, add `--cluster_endpoint`, `--region`, `-
 > tools when the server is already configured for the cluster you need; if it targets a different
 > cluster (or none), prefer the CLI + `psql` path (`scripts/psql-connect.sh`) rather than
 > reconfiguring. See "Choosing How to Connect" in [SKILL.md](../SKILL.md). (The CloudWatch server
-> below is different — it takes `region`/`cluster_id` per call, so one config serves any cluster.)
+> below is different — its tools take `region`/`cluster_id` per call, so one running server can
+> query clusters in any PromQL-enabled region by passing the region on each call; `AWS_REGION` in
+> its config only sets the default.)
 
 ---
 
@@ -149,11 +151,13 @@ To enable it:
    `--profile` on the command line or `AWS_PROFILE` in `env` both work.
 2. Set `"disabled": false`.
 
-**Region matters.** The server must run in the **same region as the DSQL cluster**, and
-CloudWatch PromQL is only available in a subset of regions — at the time of writing:
-`us-east-1`, `us-west-2`, `eu-west-1`, `ap-southeast-1`, `ap-southeast-2`. If the cluster is
-in another region, PromQL-based diagnostics are not available there; verify the current list
-in the CloudWatch documentation.
+**Region matters.** Each query must target the region where the cluster's metrics live (the
+cluster's own region). Set `AWS_REGION` to that region for the default, and/or pass `region`
+explicitly on each tool call — the PromQL tools accept a per-call `region`, so one running server
+can serve clusters in more than one region. Either way, CloudWatch PromQL is only available in a
+subset of regions — at the time of writing: `us-east-1`, `us-west-2`, `eu-west-1`,
+`ap-southeast-1`, `ap-southeast-2`. If a cluster is in a region not on this list, PromQL-based
+diagnostics are not available for it; verify the current list in the CloudWatch documentation.
 
 **Restart after enabling.** MCP tools are registered when the session starts. If you enable
 the server (or fix its config) mid-session, its tools (`execute_promql_range_query`,

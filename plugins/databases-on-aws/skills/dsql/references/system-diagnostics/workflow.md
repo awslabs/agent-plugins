@@ -1,6 +1,6 @@
 # DSQL System Diagnostics
 
-Diagnose Aurora DSQL cluster performance by querying Active Average Sessions (AAS) via PromQL, detecting temporal anomalies in wait event distribution, and using the `dsql` skill's database tools for root cause analysis.
+Diagnose Aurora DSQL cluster performance by querying Active Average Sessions (AAS) via PromQL and detecting temporal anomalies in wait event distribution. This skill **observes** via CloudWatch — it identifies which queries and workloads changed, then hands them to Workflow 9 (`EXPLAIN ANALYZE`) for per-query root cause. It does not itself diagnose scan types, index state, or query plans.
 
 **Key capabilities:**
 
@@ -32,7 +32,7 @@ Diagnose Aurora DSQL cluster performance by querying Active Average Sessions (AA
 
 1. A specific `cluster_id` to investigate — never proceed without one. Ask the user if not provided.
 2. The CloudWatch MCP server (`awslabs.cloudwatch-mcp-server`) enabled and configured with PromQL access in the **same region** as the DSQL cluster. See [mcp-setup.md](../../mcp/mcp-setup.md#cloudwatch-mcp-server-system-diagnostics--workflow-12) for how to enable it, the region requirement, PromQL-enabled regions, and the required session restart. If its PromQL tools are unavailable, resolve that before starting rather than working around it — see Error Handling below.
-3. The `aurora-dsql` MCP server configured for the target cluster (for per-query investigation via EXPLAIN)
+3. The `aurora-dsql` MCP server configured for the target cluster — not used by this workflow itself, but required for the **Workflow 9** handoff (`EXPLAIN ANALYZE`) that per-query root cause is deferred to
 
 **If the PromQL tools are unavailable** (e.g. `execute_promql_range_query` / `get_promql_label_values` are missing, or a call returns "No such tool available"): the diagnostic cannot run, and there is no substitute — AAS is only readable through these tools, so do not fall back to the AWS CLI, standard CloudWatch metrics, or fabricated numbers. The usual cause is that the CloudWatch server is disabled, misconfigured, or was enabled after this session started (its tools only register at session start). **Tell the user to enable/fix it per [mcp-setup.md](../../mcp/mcp-setup.md#cloudwatch-mcp-server-system-diagnostics--workflow-12) and then restart the session**, since a mid-session enable will show as "Connected" yet still expose no callable tools until restart. Report this as the blocker and the fix, rather than reporting only that data is missing.
 
@@ -141,7 +141,7 @@ execute_promql_range_query(
 
 - **MUST** include `db.query.id` in grouping — stable identifier for Workflow 9 handoff
 - **MUST** compare top-N across periods — a query being #1 is only notable if it wasn't before
-- **MUST NOT** recommend indexing or schema changes — defer to Workflow 9
+- **MUST NOT** recommend indexing or schema changes — hand off to Workflow 9
 
 **Example:**
 
@@ -242,10 +242,11 @@ get_metric_data(
 **Example:**
 
 ```promql
+# Concrete RFC 3339 timestamps; keep the span just under 7 days so it stays within the tool's
+# max-range limit (which counts any lookback). Substitute a recent window for your investigation.
 execute_promql_range_query(
   query='sum by ("db.wait.event")({__name__="db.active_sessions.avg", "@resource.aws.auroradsql.cluster_id"="CLUSTER_ID"})',
-  start="2024-01-15T00:00:00Z",
-  end="2024-01-22T00:00:00Z",
+  start="WINDOW_START", end="WINDOW_END",
   step="3600s"
 )
 ```

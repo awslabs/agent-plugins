@@ -111,8 +111,9 @@ using it for another cluster means editing `.mcp.json` and restarting the sessio
   running against the wrong cluster is worse than the check.
 
 The doc-only MCP tools (`dsql_lint`, `dsql_*_documentation`, `dsql_recommend`) need no cluster.
-The CloudWatch MCP (Workflow 12) takes `region`/`cluster_id` per call, so one config serves any
-cluster. Details: [connectivity-tools.md](references/auth/connectivity-tools.md).
+The CloudWatch MCP (Workflow 12) takes `region`/`cluster_id` per call, so one running server can
+query clusters in any PromQL-enabled region (pass each cluster's region on the call). Details:
+[connectivity-tools.md](references/auth/connectivity-tools.md).
 
 ## MCP Tools Available
 
