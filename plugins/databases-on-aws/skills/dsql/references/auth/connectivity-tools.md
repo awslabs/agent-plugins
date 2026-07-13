@@ -52,6 +52,44 @@ Specific extensions that make existing ORMs work with Aurora DSQL:
 
 ---
 
+## Ad-hoc Queries: `aurora-dsql` MCP vs CLI/psql
+
+For interactive/ad-hoc SQL against a cluster, there are two paths. Choose based on how the
+`aurora-dsql` MCP server is configured — do not silently reconfigure it.
+
+**The MCP server binds one cluster at startup.** Its `--cluster_endpoint` is a launch argument,
+and the database tools (`readonly_query`, `transact`, `get_schema`) take no per-call endpoint —
+so a running instance serves exactly the cluster it started with. Re-pointing it at a different
+cluster requires editing `.mcp.json` and **restarting the session**. (This is unlike the
+CloudWatch MCP used by Workflow 12, whose PromQL/`get_metric_data` tools accept `region` and
+`cluster_id` as per-call arguments, so a single configuration serves every cluster.)
+
+**Decision rule:**
+
+1. **MCP is configured for the target cluster** (its `--cluster_endpoint` matches) → use the
+   `aurora-dsql` MCP tools. This is the preferred path for ad-hoc queries when it applies.
+2. **MCP is unconfigured, disabled, or bound to a different cluster** → do **not** reconfigure it.
+   Use the CLI + `psql` path via [`scripts/psql-connect.sh`](../../../../scripts/psql-connect.sh),
+   which generates an IAM auth token and connects with `psql`:
+
+   ```bash
+   # Run a single statement against a specific cluster (read-only credentials by default)
+   ./scripts/psql-connect.sh <cluster-id> --region <region> --command "SELECT count(*) FROM my_table"
+
+   # Interactive session
+   ./scripts/psql-connect.sh <cluster-id> --region <region>
+   ```
+
+   See [scripts/README.md](../../../../scripts/README.md) for the full flag set (`--user`, `--admin`,
+   `--command`) and IAM prerequisites (`dsql:DbConnect` / `dsql:DbConnectAdmin`).
+3. **You cannot confirm which cluster the MCP targets** → confirm first, or default to the
+   CLI/psql path. Running against the wrong cluster is worse than the cost of checking.
+
+The documentation-only MCP tools (`dsql_lint`, `dsql_search_documentation`,
+`dsql_read_documentation`, `dsql_recommend`) require no cluster connection and are always safe.
+
+---
+
 ## Data Loading Tools
 
 The [DSQL Loader](https://github.com/aws-samples/aurora-dsql-loader) is a fast parallel data loader for DSQL that supports

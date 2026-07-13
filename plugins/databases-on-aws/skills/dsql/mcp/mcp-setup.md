@@ -23,6 +23,14 @@ The plugin's `.mcp.json` is pre-configured as follows:
 
 To upgrade to full database operations, add `--cluster_endpoint`, `--region`, `--database_user`, and optionally `--allow-writes` to the args array, and set `"disabled": false`.
 
+> **One cluster per instance.** `--cluster_endpoint` is a **startup** flag — a running server
+> serves exactly the one cluster it launched with. Pointing it at another cluster means editing
+> this config and restarting the session. Because of that cost, only use the `aurora-dsql` MCP
+> tools when the server is already configured for the cluster you need; if it targets a different
+> cluster (or none), prefer the CLI + `psql` path (`scripts/psql-connect.sh`) rather than
+> reconfiguring. See "Choosing How to Connect" in [SKILL.md](../SKILL.md). (The CloudWatch server
+> below is different — it takes `region`/`cluster_id` per call, so one config serves any cluster.)
+
 ---
 
 # MCP Server Setup Instructions

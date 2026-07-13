@@ -97,6 +97,23 @@ Load these files as needed for detailed guidance:
 
 ---
 
+## Choosing How to Connect: MCP vs CLI/psql
+
+The `aurora-dsql` MCP server binds a **single cluster at startup** (`--cluster_endpoint`), so
+using it for another cluster means editing `.mcp.json` and restarting the session.
+
+- **Use the `aurora-dsql` MCP tools (`readonly_query`, `transact`, `get_schema`) ONLY when the
+  server already targets the cluster you need.**
+- **Otherwise — unconfigured, disabled, or bound to a different cluster — do NOT reconfigure it.**
+  Use the CLI + `psql` path instead: [`scripts/psql-connect.sh`](../../scripts/psql-connect.sh)
+  `<cluster-id> --region <region> --command "SELECT ..."` (mints an IAM token and runs via `psql`).
+- **If you cannot confirm which cluster the MCP targets, confirm first or use the CLI/psql path** —
+  running against the wrong cluster is worse than the check.
+
+The doc-only MCP tools (`dsql_lint`, `dsql_*_documentation`, `dsql_recommend`) need no cluster.
+The CloudWatch MCP (Workflow 12) takes `region`/`cluster_id` per call, so one config serves any
+cluster. Details: [connectivity-tools.md](references/auth/connectivity-tools.md).
+
 ## MCP Tools Available
 
 The `aurora-dsql` MCP server provides these tools:
@@ -153,6 +170,7 @@ See [scripts/README.md](../../scripts/README.md) for usage and hook configuratio
 
 ## Quick Start
 
+0. **Pick a connection path:** confirm the `aurora-dsql` MCP targets your cluster; if not, use the CLI/`psql` path instead — see [Choosing How to Connect](#choosing-how-to-connect-mcp-vs-clipsql). The steps below name MCP tools; the equivalent SQL runs the same way through `psql-connect.sh --command "..."`.
 1. **Explore:** Use `readonly_query` with `information_schema` to list tables. Use `get_schema` for table structure.
 2. **Query:** Use `readonly_query` for SELECT queries. **MUST** include `tenant_id` in WHERE for multi-tenant apps. **MUST** build SQL with `safe_query.build()`.
 3. **Schema changes:** Use `transact` with one DDL per transaction. **MUST** batch DML under 3,000 rows. **MUST** use `CREATE INDEX ASYNC` in a separate call. Use `dsql_lint` to validate first.
