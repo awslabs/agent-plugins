@@ -8,12 +8,20 @@ Reusable PromQL templates for diagnosing Aurora DSQL via `db.active_sessions.avg
 
 ## Discovery Queries
 
+> `get_promql_label_values` defaults to a window ending "now". For a paused, sporadic, or
+> lightly-used cluster whose most recent data is older than that default, it returns an empty
+> list even though the cluster and labels exist. When the data you care about is not recent,
+> **also pass explicit `start`/`end` RFC 3339 timestamps** (as shown in the first template
+> below) covering the period you intend to analyze — an empty result then means "no data in
+> that window", not "no such cluster/label".
+
 ### List available clusters
 
 ```promql
 get_promql_label_values(
   label_name="@resource.aws.auroradsql.cluster_id",
-  match=["{__name__=\"db.active_sessions.avg\"}"]
+  match=["{__name__=\"db.active_sessions.avg\"}"],
+  start="WINDOW_START", end="WINDOW_END"
 )
 ```
 
@@ -100,7 +108,7 @@ execute_promql_query(query='sum by ("@resource.aws.auroradsql.cluster_id")({__na
 
 ## Range Queries
 
-**Step guidelines:** 60s (< 1h), 300s (1–6h), 900s (6–24h), 3600s (> 24h).
+**Step guidelines** (SHOULD, matching workflow.md): 60s (< 1h), 300s (1–6h), 900s (6–24h), 3600s (> 24h).
 
 ### AAS by wait event over time
 
@@ -201,8 +209,12 @@ execute_promql_range_query(
 )
 
 # CW Metrics: TotalTransactions and OccConflicts (detect conflict rate vs volume)
-get_metric_data(namespace="AuroraDSQL", metric_name="TotalTransactions", dimensions=[{name:"ClusterId", value:"CLUSTER_ID"}])
-get_metric_data(namespace="AuroraDSQL", metric_name="OccConflicts", dimensions=[{name:"ClusterId", value:"CLUSTER_ID"}])
+# MUST use namespace="AWS/AuroraDSQL" (bare "AuroraDSQL" returns no data), statistic="Sum"
+# (these are cumulative counters — the default AVG reports ~1.0 per sample), and start_time/
+# end_time matching the AAS window under investigation (get_metric_data otherwise defaults to
+# the last 3 hours, which will not align with the multi-day baselines this analysis compares).
+get_metric_data(namespace="AWS/AuroraDSQL", metric_name="TotalTransactions", dimensions=[{name:"ClusterId", value:"CLUSTER_ID"}], statistic="Sum", start_time="START_TIME", end_time="END_TIME")
+get_metric_data(namespace="AWS/AuroraDSQL", metric_name="OccConflicts", dimensions=[{name:"ClusterId", value:"CLUSTER_ID"}], statistic="Sum", start_time="START_TIME", end_time="END_TIME")
 ```
 
 ### SequentialScanRead growth — identify query
@@ -220,9 +232,11 @@ execute_promql_query(query='sum by ("application.name", "aws.auroradsql.session.
 ### Idle or sporadic cluster detection
 
 ```promql
-# Look for gaps in the time series — missing timestamps indicate no active sessions
+# Look for gaps in the time series — missing timestamps indicate no active sessions.
+# start/end MUST be concrete RFC 3339 timestamps (not NOW-relative); compute a trailing
+# 24h window first, then substitute.
 execute_promql_range_query(
   query='sum({__name__="db.active_sessions.avg", "@resource.aws.auroradsql.cluster_id"="CLUSTER_ID"})',
-  start="NOW-24h", end="NOW", step="300s"
+  start="WINDOW_START", end="WINDOW_END", step="300s"
 )
 ```

@@ -99,25 +99,28 @@ The primary metric is `db.active_sessions.avg` — the average number of session
 - **MUST** use the `match` parameter with `get_promql_label_values` — calls without match return empty. When the data you care about is not recent, **also** pass an explicit `start`/`end`, since these lookups default to a window ending "now" and will otherwise miss older data
 - **MUST** compare against temporal baselines — do NOT report absolute AAS values as inherently problematic (the >30%-share-change trigger is defined in Step 7)
 
-**Example:**
+**Example** (`start`/`end` **MUST** be concrete RFC 3339 timestamps — the API rejects relative
+expressions like `NOW-1h`. Compute the three windows first, e.g. with
+`date -u -v-1H +%Y-%m-%dT%H:%M:%SZ` on macOS or `date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%SZ`
+on Linux, then substitute. The comments below show which window each call covers):
 
 ```promql
-# Current hour
+# Current hour (e.g. start=2026-07-13T15:00:00Z, end=2026-07-13T16:00:00Z)
 execute_promql_range_query(
   query='sum by ("db.wait.event")({__name__="db.active_sessions.avg", "@resource.aws.auroradsql.cluster_id"="CLUSTER_ID"})',
-  start="NOW-1h", end="NOW", step="60s"
+  start="CURRENT_HOUR_START", end="CURRENT_HOUR_END", step="60s"
 )
 
-# Same hour yesterday
+# Same hour yesterday (current window minus 24h)
 execute_promql_range_query(
   query='sum by ("db.wait.event")({__name__="db.active_sessions.avg", "@resource.aws.auroradsql.cluster_id"="CLUSTER_ID"})',
-  start="NOW-25h", end="NOW-24h", step="60s"
+  start="YESTERDAY_HOUR_START", end="YESTERDAY_HOUR_END", step="60s"
 )
 
-# Same hour last week
+# Same hour last week (current window minus 168h)
 execute_promql_range_query(
   query='sum by ("db.wait.event")({__name__="db.active_sessions.avg", "@resource.aws.auroradsql.cluster_id"="CLUSTER_ID"})',
-  start="NOW-169h", end="NOW-168h", step="60s"
+  start="LAST_WEEK_HOUR_START", end="LAST_WEEK_HOUR_END", step="60s"
 )
 ```
 
@@ -198,18 +201,23 @@ execute_promql_query(query='topk(5, sum by ("application.name")({__name__="db.ac
 **Example:**
 
 ```
+# MUST pass start_time/end_time covering the SAME window as the Phase 1 baselines being
+# compared — get_metric_data defaults to only the last 3 hours, which will not line up with
+# the yesterday / last-week AAS windows. Use concrete RFC 3339 timestamps (no NOW-relative form).
 get_metric_data(
   namespace="AWS/AuroraDSQL",
   metric_name="TotalTransactions",
   dimensions=[{name: "ClusterId", value: "CLUSTER_ID"}],
-  statistic="Sum"
+  statistic="Sum",
+  start_time="WINDOW_START", end_time="WINDOW_END"
 )
 
 get_metric_data(
   namespace="AWS/AuroraDSQL",
   metric_name="OccConflicts",
   dimensions=[{name: "ClusterId", value: "CLUSTER_ID"}],
-  statistic="Sum"
+  statistic="Sum",
+  start_time="WINDOW_START", end_time="WINDOW_END"
 )
 ```
 
@@ -276,9 +284,11 @@ A cluster is idle when there is no AAS data for a period. Use a range query and 
 **Pattern: Sporadic workload** — periods of no data interspersed with periods of AAS > 0 indicate a cluster performing scheduled or batch work.
 
 ```promql
+# start/end MUST be concrete RFC 3339 timestamps (not NOW-relative). For a trailing 24h window,
+# compute end = now and start = now - 24h first, then substitute.
 execute_promql_range_query(
   query='sum({__name__="db.active_sessions.avg", "@resource.aws.auroradsql.cluster_id"="CLUSTER_ID"})',
-  start="NOW-24h", end="NOW", step="300s"
+  start="WINDOW_START", end="WINDOW_END", step="300s"
 )
 ```
 

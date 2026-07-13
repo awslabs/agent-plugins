@@ -107,7 +107,7 @@ python tools/evals/databases-on-aws/dsql/scripts/run_functional_evals.py \
 The runner supports two grading strategies; each eval declares which via `"llm_judge": true|false` (default `false`):
 
 - **Regex / tool-call** (evals 1-5): fast, cheap, deterministic. Good for verbatim tokens (`tenant_id`, `CREATE INDEX ASYNC`, the `3,000` row limit) and tool-invocation checks (`Calls awsknowledge with topic=X`).
-- **LLM judge** (evals 6-9): runs `claude -p` once per expectation with the agent's final text, the user prompt, and the assertion. Returns `{passed, evidence}`. Good for semantic assertions where paraphrasing, negation, or synonym coverage makes regex brittle. Costs ~$0.01–0.05 per expectation; slower than regex. Use for assertions like "Does NOT recommend X" where the agent may phrase the refutation a hundred different ways.
+- **LLM judge** (evals 6-16): runs `claude -p` once per expectation with the agent's final text, the user prompt, and the assertion. Returns `{passed, evidence}`. Good for semantic assertions where paraphrasing, negation, or synonym coverage makes regex brittle. Costs ~$0.01–0.05 per expectation; slower than regex. Use for assertions like "Does NOT recommend X" where the agent may phrase the refutation a hundred different ways.
 
 Pin the judge model independently of the subject model via `--judge-model` (defaults to the CLI default). Keep it stable across runs when bumping `--model` so grading stays comparable.
 
