@@ -164,7 +164,7 @@
       "name": "databases-on-aws",
       "source": "./plugins/databases-on-aws",
       "tags": ["aws", "database", "aurora", "dsql", "serverless", "postgresql"],
-      "version": "1.5.0"
+      "version": "1.5.1"
     },
     {
       "category": "deployment",
