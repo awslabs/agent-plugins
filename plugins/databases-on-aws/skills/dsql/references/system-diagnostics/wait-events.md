@@ -199,13 +199,18 @@ Commit process has begun, and QP is waiting for a response.
 
 Waiting for distributed transaction start — the time a session spends while DSQL coordinates the operations needed to begin a new transaction.
 
-This is internal DSQL infrastructure overhead; there are no user-tunable parameters that affect it. Its value in diagnostics is purely **proportional** — a growing share of StartTransaction vs baselines indicates a shift in workload pattern toward more frequent short transactions (each paying the fixed start cost), but no user action can reduce the per-transaction cost itself.
+**Possible causes** (candidates to confirm — see the observe-only guardrail above):
+
+- High transaction frequency (many short transactions, each paying the fixed start cost)
+- Workload shift toward more fine-grained transactions vs fewer large ones
+
+This is internal DSQL infrastructure overhead; there are no user-tunable parameters that affect the per-transaction start cost itself. Its value in diagnostics is purely **proportional** — a growing share indicates a shift in workload pattern.
 
 **Observe-only steps:**
 
-1. Note whether StartTransaction's share of total AAS has changed vs the temporal baseline
-2. If the share grew significantly (>30% shift), it likely reflects an increase in transaction frequency — correlate with the `TotalTransactions` CW metric to confirm
-3. Report the observation. There is no remediation for this event — it is fixed internal overhead per transaction start.
+1. Note whether StartTransaction's proportion of total AAS has changed by >30% vs the temporal baseline: `sum by ("db.wait.event")({__name__="db.active_sessions.avg", "db.wait.event"="StartTransaction", ...})`
+2. If the proportion grew significantly, it likely reflects an increase in transaction frequency — correlate with the `TotalTransactions` CW metric (namespace `AWS/AuroraDSQL`, `statistic="Sum"` — it is a cumulative counter) to confirm
+3. Report the observation — do not recommend transaction batching, connection pooling changes, or other remediations from CloudWatch data alone. This is fixed internal overhead with no user-facing tuning knob.
 
 ---
 
