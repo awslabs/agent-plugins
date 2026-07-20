@@ -21,6 +21,7 @@ Aurora DSQL exposes wait events via the `db.wait.event` label on `db.active_sess
 | FkExistenceCheck      | Validation  | Storage reads to validate foreign key existence                                                            |
 | UniqueConstraintCheck | Validation  | Storage reads to validate unique key constraints for non-primary columns                                   |
 | Commit                | Transaction | Commit process has begun, and QP is waiting for a response                                                 |
+| StartTransaction      | Transaction | Waiting for distributed transaction start                                                                  |
 | PgSleep               | Application | Session issued `pg_sleep()` and is waiting for the sleep period to complete                                |
 
 ---
@@ -191,6 +192,20 @@ Commit process has begun, and QP is waiting for a response.
    - If OccConflicts grows faster than TotalTransactions → conflict-dominated (report this observation)
    - If TotalTransactions grows proportionally to Commit AAS → legitimate load growth (report this observation)
 3. If OCC conflicts are the growing component, hand off to Workflow 9 for transaction-pattern analysis and conflict mitigation — do not prescribe schema or transaction changes from CloudWatch data alone
+
+---
+
+## StartTransaction
+
+Waiting for distributed transaction start — the time a session spends while DSQL coordinates the operations needed to begin a new transaction.
+
+This is internal DSQL infrastructure overhead; there are no user-tunable parameters that affect it. Its value in diagnostics is purely **proportional** — a growing share of StartTransaction vs baselines indicates a shift in workload pattern toward more frequent short transactions (each paying the fixed start cost), but no user action can reduce the per-transaction cost itself.
+
+**Observe-only steps:**
+
+1. Note whether StartTransaction's share of total AAS has changed vs the temporal baseline
+2. If the share grew significantly (>30% shift), it likely reflects an increase in transaction frequency — correlate with the `TotalTransactions` CW metric to confirm
+3. Report the observation. There is no remediation for this event — it is fixed internal overhead per transaction start.
 
 ---
 
