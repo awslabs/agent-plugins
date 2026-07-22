@@ -27,7 +27,12 @@
       ],
       "name": "amazon-location-service",
       "source": "./plugins/amazon-location-service",
-      "tags": ["aws", "location", "maps", "geospatial"],
+      "tags": [
+        "aws",
+        "location",
+        "maps",
+        "geospatial"
+      ],
       "version": "1.0.0"
     },
     {
@@ -45,7 +50,11 @@
       ],
       "name": "aws-amplify",
       "source": "./plugins/aws-amplify",
-      "tags": ["aws", "amplify", "fullstack"],
+      "tags": [
+        "aws",
+        "amplify",
+        "fullstack"
+      ],
       "version": "1.0.0"
     },
     {
@@ -117,7 +126,13 @@
       ],
       "name": "aws-transform",
       "source": "./plugins/aws-transform",
-      "tags": ["aws", "migration", "modernization", "transform", "continuous modernization"],
+      "tags": [
+        "aws",
+        "migration",
+        "modernization",
+        "transform",
+        "continuous modernization"
+      ],
       "version": "1.3.0"
     },
     {
@@ -138,7 +153,12 @@
       ],
       "name": "codebase-documentor-for-aws",
       "source": "./plugins/codebase-documentor-for-aws",
-      "tags": ["aws", "documentation", "architecture", "diagram"],
+      "tags": [
+        "aws",
+        "documentation",
+        "architecture",
+        "diagram"
+      ],
       "version": "0.1.0"
     },
     {
@@ -163,8 +183,15 @@
       ],
       "name": "databases-on-aws",
       "source": "./plugins/databases-on-aws",
-      "tags": ["aws", "database", "aurora", "dsql", "serverless", "postgresql"],
-      "version": "1.6.0"
+      "tags": [
+        "aws",
+        "database",
+        "aurora",
+        "dsql",
+        "serverless",
+        "postgresql"
+      ],
+      "version": "1.6.1"
     },
     {
       "category": "deployment",
@@ -184,7 +211,13 @@
       ],
       "name": "deploy-on-aws",
       "source": "./plugins/deploy-on-aws",
-      "tags": ["aws", "deploy", "infrastructure", "cdk", "diagrams"],
+      "tags": [
+        "aws",
+        "deploy",
+        "infrastructure",
+        "cdk",
+        "diagrams"
+      ],
       "version": "1.3.0"
     },
     {
@@ -203,7 +236,12 @@
       ],
       "name": "sagemaker-ai",
       "source": "./plugins/sagemaker-ai",
-      "tags": ["aws", "sagemaker", "machine-learning", "generative-ai"],
+      "tags": [
+        "aws",
+        "sagemaker",
+        "machine-learning",
+        "generative-ai"
+      ],
       "version": "1.2.1"
     }
   ]
