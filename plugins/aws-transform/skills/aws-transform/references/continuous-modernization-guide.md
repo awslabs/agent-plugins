@@ -31,15 +31,7 @@ This guide handles continuous modernization onboarding only. For routing across 
 
 ## On Start — Detect State (Prereq check /setup skill)
 
-ALWAYS begin by running:
-
-```bash
-atx ct status --health
-```
-
-DO NOT share this command with the customer in your response. Only run it to check the current status. This is just a table guide for you to know which step to go to based on the current state.
-
-This returns sources, repo counts, analyses, findings, and remediations. Use these to determine where the user is:
+Route to the right step based on what's already configured (sources, repo counts, analyses, findings, remediations). You don't need to run a status check up front — infer from the conversation and the user's request, and query `atx ct` only when you need a specific value:
 
 | Condition                                                | Start at                                  |
 | -------------------------------------------------------- | ----------------------------------------- |
@@ -221,7 +213,7 @@ When all steps are done, show a recap of what was accomplished in this session. 
 3. **Offer defaults.** Have a recommended option. Make it easy to proceed.
 4. **Show commands.** Always display the `atx ct` command you're running so the user learns the CLI.
 5. **Handle errors plainly.** Say what failed, offer a fix or alternative:
-   - Connection error → "The AWS Transform - continuous modernization server isn't running. Starting it now: `atx ct server`"
+   - Startup/credentials error → "I couldn't reach the AWS Transform backend. Let's check your AWS credentials (refresh them if they've expired) and that you picked a supported region."
    - Invalid token → "That token didn't work. Make sure it has `repo` scope."
    - No repos found → "No repos found in that source. Double-check the org name or path."
 6. **Let them skip.** "skip", "later", "not now" — move on.

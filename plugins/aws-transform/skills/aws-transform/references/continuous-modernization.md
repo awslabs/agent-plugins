@@ -142,22 +142,22 @@ After a Custom transformation completes successfully, present this message:
 
 ## continuous modernization Skills Reference
 
-| Skill                                                                                      | When to Use                                                                                            |
-| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| [continuous-modernization-guide.md](continuous-modernization-guide.md)                     | New user onboarding, "how do I start?"                                                                 |
-| [continuous-modernization-discovery.md](continuous-modernization-discovery.md)             | Analyze/discover repos from sources                                                                    |
-| [continuous-modernization-analysis.md](continuous-modernization-analysis.md)               | Run security, tech-debt, agentic-readiness, modernization-readiness analyses                           |
-| [continuous-modernization-findings.md](continuous-modernization-findings.md)               | List/filter/manage findings                                                                            |
-| [continuous-modernization-remediation.md](continuous-modernization-remediation.md)         | Create remediation campaigns, auto-fix findings                                                        |
-| [continuous-modernization-status.md](continuous-modernization-status.md)                   | System overview and health check                                                                       |
-| [continuous-modernization-source.md](continuous-modernization-source.md)                   | Manage source connections                                                                              |
-| [continuous-modernization-setup.md](continuous-modernization-setup.md)                     | Infrastructure setup and configuration                                                                 |
-| [continuous-modernization-server.md](continuous-modernization-server.md)                   | Start, stop, or restart the AWS Transform - continuous modernization (continuous modernization) server |
-| [continuous-modernization-ec2-execution.md](continuous-modernization-ec2-execution.md)     | Run CT analysis/remediation on EC2 (new or existing instance)                                          |
-| [continuous-modernization-batch-execution.md](continuous-modernization-batch-execution.md) | Run CT analysis on AWS Batch (Fargate) — single job, AWS-managed compute                               |
-| [continuous-modernization-schedule.md](continuous-modernization-schedule.md)               | Schedule recurring analyses on an existing EC2 instance (EventBridge Scheduler + SSM)                  |
-| [continuous-modernization-reporting.md](continuous-modernization-reporting.md)             | Generate an HTML report of continuous modernization analyses                                           |
-| [continuous-modernization-security-agent.md](continuous-modernization-security-agent.md)   | Security agent setup (admin) and runtime verification (executor)                                       |
+| Skill                                                                                      | When to Use                                                                             |
+| ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| [continuous-modernization-guide.md](continuous-modernization-guide.md)                     | New user onboarding, "how do I start?"                                                  |
+| [continuous-modernization-discovery.md](continuous-modernization-discovery.md)             | Analyze/discover repos from sources                                                     |
+| [continuous-modernization-analysis.md](continuous-modernization-analysis.md)               | Run security, tech-debt, agentic-readiness, modernization-readiness analyses            |
+| [continuous-modernization-findings.md](continuous-modernization-findings.md)               | List/filter/manage findings                                                             |
+| [continuous-modernization-remediation.md](continuous-modernization-remediation.md)         | Create remediation campaigns, auto-fix findings                                         |
+| [continuous-modernization-status.md](continuous-modernization-status.md)                   | System overview and health check                                                        |
+| [continuous-modernization-source.md](continuous-modernization-source.md)                   | Manage source connections                                                               |
+| [continuous-modernization-setup.md](continuous-modernization-setup.md)                     | Infrastructure setup and configuration                                                  |
+| [continuous-modernization-troubleshooting.md](continuous-modernization-troubleshooting.md) | Diagnose setup and command execution failures                                           |
+| [continuous-modernization-ec2-execution.md](continuous-modernization-ec2-execution.md)     | Run remote analysis/remediation on EC2 via `atx ct remote` CLI commands                 |
+| [continuous-modernization-batch-execution.md](continuous-modernization-batch-execution.md) | Run remote analysis/remediation on AWS Batch (Fargate) via `atx ct remote` CLI commands |
+| [continuous-modernization-schedule.md](continuous-modernization-schedule.md)               | Schedule recurring analysis/remediation via `atx ct schedule` CLI commands              |
+| [continuous-modernization-reporting.md](continuous-modernization-reporting.md)             | Generate an HTML report of continuous modernization analyses                            |
+| [continuous-modernization-security-agent.md](continuous-modernization-security-agent.md)   | Security agent setup (admin) and runtime verification (executor)                        |
 
 ## Custom Skills Reference
 

@@ -34,11 +34,11 @@ If the user explicitly asks to disable telemetry, omit `--telemetry` for the res
 - **EC2** -- follow [continuous-modernization-ec2-execution](continuous-modernization-ec2-execution.md)
 - **Batch** -- follow [continuous-modernization-batch-execution](continuous-modernization-batch-execution.md)
 
-## Repository limit per request (max 250)
+## Repository limit per request (max 100)
 
-A single `atx ct analysis run` can be associated with at most **250 repositories**. Before starting an analysis that targets many repos (for example a whole source), check how many repositories are in scope — `atx ct source list` or `atx ct repository list --source <name>` report the per-source count. (Bare `atx ct status` shows workspace-wide totals across all sources, so prefer a scoped form when the analysis targets a single source.)
+A single `atx ct analysis run` can be associated with at most **100 repositories**. Before starting an analysis that targets many repos (for example a whole source), check how many repositories are in scope — `atx ct source list` or `atx ct repository list --source <name>` report the per-source count. (Bare `atx ct status` shows workspace-wide totals across all sources, so prefer a scoped form when the analysis targets a single source.)
 
-If the scope exceeds 250 repositories, split it into multiple runs, each targeting at most 250 repos (pass the repos in batches via `--repo <source>::<slug>`), and tell the user you are breaking the work up because of the 250-repo-per-request limit. Never issue a single run associated with more than 250 repositories — it will be rejected. Example: 300 repos → two runs (250 + 50); 600 repos → three runs (250 + 250 + 100).
+If the scope exceeds 100 repositories, split it into multiple runs, each targeting at most 100 repos (pass the repos in batches via `--repo <source>::<slug>`), and tell the user you are breaking the work up because of the 100-repo-per-request limit. Never issue a single run associated with more than 100 repositories — it will be rejected. Example: 300 repos → three runs (100 + 100 + 100); 600 repos → six runs (100 each).
 
 ## Commands
 
@@ -86,6 +86,8 @@ atx ct analysis delete --id <id> [--cascade-findings]
 atx ct analysis run --type tech-debt-comprehensive --source <name> --wait --telemetry "agent=<AGENT>,executionMode=local" > /tmp/atx-analysis.log 2>&1 &
 tail -f /tmp/atx-analysis.log
 ```
+
+The redirect captures the command's diagnostics — the in-process CLI writes logs to STDERR, which `2>&1` folds into the log file. Only warnings and errors are logged by default; when troubleshooting, prefix the command with `ATXCT_LOG_LEVEL=debug` for verbose output (e.g. `ATXCT_LOG_LEVEL=debug atx ct analysis run ... > /tmp/atx-analysis.log 2>&1 &`).
 
 This applies to comprehensive scans, large multi-repo runs, and any analysis the user expects to take a while. Tell the user where the log is and how to check progress.
 
@@ -149,26 +151,6 @@ When polling with `atx ct analysis get --id <id> --json`, the `status` field is 
 
 **Note:** It's `complete`, NOT `COMPLETED` or `completed`.
 
-## Artifacts
-
-After an analysis completes, its report artifacts can be listed and retrieved:
-
-```bash
-# List all artifacts for an analysis
-atx ct analysis list-artifacts --id <analysis-id> --json
-
-# Get content of a specific artifact
-atx ct analysis get-artifact --id <analysis-id> --repo <source>::<slug> --name <artifact-name>
-```
-
-### Artifact names by analysis type
-
-| Analysis Type           | Artifact Names                                                                                                                                                               |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| tech-debt-comprehensive | `report`, `technical-debt-report/summary`, `technical-debt-report/outdated-components`, `technical-debt-report/maintenance-burden`, `technical-debt-report/remediation-plan` |
-| agentic-readiness       | `ara` (per repo); `_portfolio_ara` (portfolio-level)                                                                                                                         |
-| modernization-readiness | `mod` (per repo); `_portfolio_mod` (portfolio-level)                                                                                                                         |
-
 ## After Analysis Completes
 
 Once an analysis finishes, retrieve its findings by analysis ID and summarize for the user:
@@ -176,12 +158,6 @@ Once an analysis finishes, retrieve its findings by analysis ID and summarize fo
 ```bash
 # Get findings produced by a specific analysis
 atx ct findings list --analysis-id <analysis-id> --json
-
-# List artifacts to see available reports
-atx ct analysis list-artifacts --id <analysis-id> --json
-
-# Read a specific report
-atx ct analysis get-artifact --id <analysis-id> --repo <source>::<slug> --name report
 ```
 
 ## When an analysis returns 0 findings
@@ -224,3 +200,21 @@ If an analysis returns 0 findings on a repo that's obviously stale (Java 8, Node
 ### Pagination (nextToken)
 
 Depending on the CLI version, `atx ct analysis list` may return only a bounded page rather than every result — don't assume a fixed response shape. After each call, check whether the response carries a `nextToken`; if it's present and non-empty, call the command again with `--next-token <token>` and repeat until no `nextToken` remains. Never treat the first page as the complete set when a `nextToken` is present, or you'll silently miss analyses.
+
+## Tags (resource tagging)
+
+The `--tags` flag attaches IAM resource tags to an analysis at creation time, and propagates those tags through to any findings the analysis produces.
+
+```bash
+# Run analysis with tags (comma-separated key=value pairs)
+atx ct analysis run --type tech-debt-comprehensive --source <name> --tags team=alpha,env=prod --wait --telemetry "agent=<AGENT>,executionMode=local"
+```
+
+**Behavior:**
+
+- `--tags key=value,key2=value2` accepts comma-separated pairs in a single flag (e.g. `--tags team=alpha,env=prod`).
+- Tags are optional. If omitted, the analysis and its findings are untagged.
+- Tags are injected into the `--atxct-configuration` payload passed to the transformation agent. When the agent calls `report_finding`, the tags are forwarded to `BatchCreateFindings` — so findings inherit the analysis's tags automatically.
+- If `~/.aws/atx/settings.json` defines `applyTags` (an array of tag maps), those defaults are applied automatically even without explicit `--tags`. An explicit `--tags` override merges **per key** over the settings defaults.
+
+See the [source](continuous-modernization-source.md) skill's Tags section for the full schema, merge semantics, and error behavior.

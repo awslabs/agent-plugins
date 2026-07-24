@@ -42,25 +42,53 @@ If the user's workload-unspecified request matches any of these intents, route t
 
 1. **First-response telemetry notice (once per session).** The first time a request routes here in this session, ALWAYS prepend this line exactly to your reply to the user before doing anything else:
 
-   > Note: this skill collects telemetry. To opt out, see [here](https://docs.aws.amazon.com/transform/latest/userguide/transform-usage-telemetry.html).
+   > Note: this skill and the continuous modernization CLI, (`atx ct`), collect usage telemetry by default during transformation execution. The telemetry consists of different data points, such as, the IDE name (for example, VS Code or Kiro), the AI agent name (for example, Claude Code or OpenAI Codex), and the execution mode (local or remote). This data is used by AWS Transform to prioritize compatibility testing, as well as latency and reliability. To opt out, see [here](https://docs.aws.amazon.com/transform/latest/userguide/transform-usage-telemetry.html).
 
-   Show it exactly once per session. Do NOT repeat it on subsequent continuous modernization requests in the same session. If the user explicitly asks to disable telemetry, omit `--telemetry` for the rest of the session (see each sub-skill's Telemetry section for the flag format).
+   Show it exactly once per session. Do NOT repeat it on subsequent continuous modernization requests in the same session.
+
+   **Telemetry opt-out.** If the user explicitly asks to disable telemetry during the chat session:
+   1. Omit `--telemetry` for the rest of the session (see each sub-skill's Telemetry section for the flag format).
+   2. Prepend `ATX_DISABLE_TELEMETRY=true` inline on **every** `atx ct` command for the rest of the session — not only `analysis`/`remediation`, but also setup and diagnostic commands like `atx ct status`, `atx ct source ...`, and `atx ct setup ...`. The prefix must be on the same command line as the `atx ct` invocation (including inside compound commands, e.g. `which atx && ATX_DISABLE_TELEMETRY=true atx ct ...`), because the shell does not persist env vars between invocations: `ATX_DISABLE_TELEMETRY=true atx ct ...`
+
 2. When invoking AWS Transform - continuous modernization (continuous modernization) commands, use `atx ct` (with a space). `atxct` (no space) is being deprecated; it remains functionally equivalent and hits the same backend, so an `atxct` invocation in the user's environment is not itself a problem. Do not warn the user about `atxct` and do not treat its presence as a failure cause.
-3. Check if `atx ct` is installed AND up to date — run this as a single command:
+
+3. **Verify local CLI dispatch before checking versions or AWS configuration.** Run this without redirecting stderr:
 
    ```
-   INSTALLED=$(atx ct --version 2>/dev/null | head -1); LATEST=$(curl -fsSL "https://transform-cli.awsstatic.com/index.json" 2>/dev/null | grep -o '"latest"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"latest"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/'); echo "Installed: ${INSTALLED:-not found}, Latest: ${LATEST:-unknown}"
+   atx ct --version
    ```
 
-4. If `INSTALLED` is empty or `LATEST` is newer: `curl -fsSL https://transform-cli.awsstatic.com/install.sh | bash && source ~/.bashrc`
-5. If `atx ct` fails after install, the binary itself is rarely the cause — `atx ct` and `atxct` share the same backend and fail identically for env/auth/server reasons. Check those first:
-   - `ATXCT_FES_ENDPOINT` is set on the server process (not just the CLI shell)
+   Classify failures before continuing:
+   - If the shell reports `atx: command not found`, install the AWS Transform CLI: `curl -fsSL https://transform-cli.awsstatic.com/install.sh | bash`, then restart the shell or source its profile.
+   - If an `atx` process runs but reports `unknown command 'ct'`, do NOT reinstall blindly or investigate AWS credentials/region. Follow the [command-resolution troubleshooting](references/continuous-modernization-troubleshooting.md#atx-ct-reports-unknown-command-ct) first.
+   - If the command succeeds, continue with the version comparison.
+
+4. Check whether the working CLI is up to date:
+
+   ```
+   INSTALLED=$(atx ct --version | head -1); LATEST=$(curl -fsSL "https://transform-cli.awsstatic.com/index.json" 2>/dev/null | grep -o '"latest"[[:space:]]*:[[:space:]]*"[^"]*"' | sed 's/.*"latest"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/'); echo "Installed: ${INSTALLED:-not found}, Latest: ${LATEST:-unknown}"
+   ```
+
+   If `LATEST` is known and newer than `INSTALLED`, update with `curl -fsSL https://transform-cli.awsstatic.com/install.sh | bash`, then restart the shell or source its profile.
+
+5. **Credential preflight.** Validate AWS credentials before starting any analysis or remediation — at minimum on the first continuous modernization request of the session (new or returning users), and again before any later run in a long session, since credentials can lapse mid-session:
+
+   ```
+   aws sts get-caller-identity
+   ```
+
+   If it fails or the credentials are expired, refresh them before continuing. Do NOT start any long-running work on expired or soon-to-expire credentials — an analysis started on credentials about to expire can strand the run mid-flight. Run the preflight silently; surface it to the user only if the credentials need refreshing.
+
+6. If local `atx ct` dispatch succeeded but a later command fails, then check runtime configuration:
    - `AWS_PROFILE` points at a valid account with refreshed credentials
-   - The server is running (`atx ct status --health`)
+   - `AWS_REGION` is set to a supported region
+   - `ATX_CUSTOM_ENDPOINT` is set in the environment (only if you use a custom endpoint)
 
-   Only after those check out, verify `atx --help` shows the `ct` subcommand and that `atxct-plugin.mjs` is co-located with the `atx` binary.
-6. Start the server using the [continuous-modernization-server.md](references/continuous-modernization-server.md) skill — it will ask the user for their region, validate it against the supported list, and start with the correct `AWS_REGION`. Wait 5s, then verify with `atx ct status --health`.
-7. Then use the appropriate continuous modernization skill — see [continuous-modernization](references/continuous-modernization.md)
+   An `unknown command 'ct'` failure is a local command-resolution problem, not an AWS configuration problem; return to Step 3 instead.
+
+7. Ensure a supported region has been selected (see [continuous-modernization-setup.md](references/continuous-modernization-setup.md) "Choose your region") and prefixed inline (`AWS_REGION=$ATX_REGION`) on every `atx ct` command.
+
+8. Then use the appropriate continuous modernization skill — see [continuous-modernization](references/continuous-modernization.md)
 
 **When in doubt for a workload-unspecified request → continuous modernization.** This default applies ONLY after Step B has cleared — VMware, SQL, and mainframe never fall through to continuous modernization regardless of how the question is phrased; .NET only routes to continuous modernization after the user picks "analyze for tech debt / security / CVEs" in Step B's intent question (both "modernize" and "assessment for modernization" stay in the .NET workload). Once routed, do NOT manually read source files to find issues — that's what `atx ct analysis run` does.
 

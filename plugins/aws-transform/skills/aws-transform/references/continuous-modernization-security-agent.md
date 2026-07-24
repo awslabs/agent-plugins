@@ -44,10 +44,6 @@ echo "Installed: ${INSTALLED:-not found}, Latest: ${LATEST:-unknown}"
 curl -fsSL "https://transform-cli.awsstatic.com/install.sh" | bash
 source ~/.bashrc
 
-# Start the server if not running
-atx ct server &
-sleep 5
-
 # Deploy security agent infrastructure (creates IAM role, S3 bucket, CloudFormation stack)
 atx ct setup security-agent
 ```
@@ -258,7 +254,7 @@ aws s3 rm s3://atx-source-code-${ACCOUNT_ID}/temp/security_agent_config.json
 
 Once permissions are verified, proceed with the normal analysis flow using `--type security`.
 
-The executor IAM policy required for runtime is documented in `AWSTransformSecurityAgentExecutorAccess.json` in the ATXControlTowerPolicies package.
+The executor IAM policy required for runtime is documented in `AWSTransformSecurityAgentExecutorAccess.json` (included with this skill).
 
 ---
 
