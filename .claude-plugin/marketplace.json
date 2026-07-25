@@ -243,6 +243,28 @@
         "generative-ai"
       ],
       "version": "1.2.1"
+    },
+    {
+      "category": "payments",
+      "description": "Enable stateful autonomous agents to pay for x402-paywalled APIs, MCP tools, and web content via microtransactions using AWS AgentCore Payments.",
+      "keywords": [
+        "aws",
+        "payments",
+        "x402",
+        "agentcore",
+        "micropayments",
+        "usdc",
+        "autonomous-agents"
+      ],
+      "name": "aws-agent-payments",
+      "source": "./plugins/aws-agent-payments",
+      "tags": [
+        "aws",
+        "payments",
+        "x402",
+        "agentcore"
+      ],
+      "version": "1.0.0"
     }
   ]
 }

@@ -20,6 +20,7 @@ AWS_BRAND_COLOR = "#FF9900"
 CATEGORY_LABELS = {
     "ai": "AI",
     "fullstack": "Full Stack",
+    "payments": "Payments",
 }
 
 INTERFACE_METADATA = {
@@ -101,6 +102,16 @@ INTERFACE_METADATA = {
             "Plan a SageMaker AI workflow for this project.",
             "Help me fine-tune and deploy a model on AWS.",
             "Review this ML setup for SageMaker best practices.",
+        ],
+    },
+    "aws-agent-payments": {
+        "displayName": "AWS Agent Payments (x402)",
+        "shortDescription": "Pay for x402-paywalled APIs and content via AgentCore Payments.",
+        "longDescription": "Enable agents to transparently pay for x402-paywalled APIs, MCP tools, and web content via microtransactions using AWS AgentCore Payments.",
+        "defaultPrompt": [
+            "Pay for this x402-paywalled URL.",
+            "Set up x402 payments with my Coinbase CDP credentials.",
+            "Check my payment session status.",
         ],
     },
 }

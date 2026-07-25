@@ -1,0 +1,28 @@
+{
+  "author": {
+    "name": "Amazon Web Services"
+  },
+  "description": "Enable stateful autonomous agents to pay for x402-paywalled APIs, MCP tools, and web content via microtransactions using AWS AgentCore Payments. Supports Coinbase CDP and Stripe/Privy wallet providers.",
+  "homepage": "https://github.com/awslabs/agent-plugins",
+  "keywords": [
+    "aws",
+    "payments",
+    "x402",
+    "agentcore",
+    "bedrock-agentcore",
+    "micropayments",
+    "usdc",
+    "crypto",
+    "paywall",
+    "coinbase",
+    "stripe",
+    "privy",
+    "base",
+    "web3",
+    "autonomous-agents"
+  ],
+  "license": "Apache-2.0",
+  "name": "aws-agent-payments",
+  "repository": "https://github.com/awslabs/agent-plugins",
+  "version": "1.0.0"
+}
