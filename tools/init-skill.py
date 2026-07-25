@@ -120,7 +120,7 @@ def main() -> int:
     print("Next steps:")
     print(f"  1. Edit {rel_path}/SKILL.md — fill in the [FILL] sections")
     print(f"  2. Add reference files to {rel_path}/references/")
-    print(f"  3. Run: mise run validate")
+    print("  3. Run: mise run validate")
 
     return 0
 

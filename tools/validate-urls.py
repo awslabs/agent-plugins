@@ -19,7 +19,11 @@ import os
 import re
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 from urllib.parse import urldefrag
+
+if TYPE_CHECKING:
+    import httpx
 
 ROOT = Path(__file__).resolve().parent.parent
 IGNORE_FILE = ROOT / ".url-check-ignore"

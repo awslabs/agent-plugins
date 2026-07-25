@@ -199,7 +199,6 @@ def fix_placement(tree: ET.ElementTree, verbose: bool = False) -> int:
             cloud_x = aws_cloud_geom["x"]
             cloud_x2 = cloud_x + aws_cloud_geom["w"]
             actor_x = g["x"]
-            actor_x2 = actor_x + g["w"]
 
             # Check if actor overlaps AWS Cloud horizontally
             if actor_x >= cloud_x and actor_x < cloud_x2:

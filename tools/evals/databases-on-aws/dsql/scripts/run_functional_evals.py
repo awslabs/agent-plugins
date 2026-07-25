@@ -279,7 +279,7 @@ def grade_eval(eval_item: dict, run_result: dict, judge_model: str | None = None
                 if re.search(r"(awsknowledge|aws___search_documentation)", full_text):
                     if not topic or topic in full_text:
                         passed = True
-                        evidence = f"Found awsknowledge reference in transcript text"
+                        evidence = "Found awsknowledge reference in transcript text"
 
             if not passed:
                 evidence = f"No awsknowledge call found{' for topic: ' + topic if topic else ''}"

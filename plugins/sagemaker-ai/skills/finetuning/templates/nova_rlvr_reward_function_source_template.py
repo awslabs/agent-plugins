@@ -6,6 +6,10 @@ at: https://docs.aws.amazon.com/sagemaker/latest/dg/customize-model.html.
 - Do not remove the lambda_handler() function or modify its schema as it is required to create the reward function
 """
 
+# Starter template: the imports and example variables below are intentional
+# scaffolding for the reader to build on, so unused-name rules do not apply.
+# ruff: noqa: F401, F841
+
 import json  # For JSON parsing - adjust imports based on your use case
 import re    # For pattern matching and validation
 from typing import Dict, Any, List, Optional, Union # For type hints

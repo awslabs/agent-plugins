@@ -361,9 +361,6 @@ def generate_html(result: dict) -> str:
 
     rules_pct = _pct(s["implemented_rules"], s["total_rules"])
     reqs_pct = _pct(s["implemented_requirements"], s["total_requirements"])
-    overall_total = s["total_rules"] + s["total_requirements"]
-    overall_impl = s["implemented_rules"] + s["implemented_requirements"]
-    overall_pct = _pct(overall_impl, overall_total)
 
     # Build per-function rows for summary table
     func_rows = ""
@@ -666,7 +663,7 @@ def main():
     # Print summary to stdout
     s = result["summary"]
     print(f"\n{'='*60}")
-    print(f"TRACEABILITY VERIFICATION SUMMARY")
+    print("TRACEABILITY VERIFICATION SUMMARY")
     print(f"{'='*60}")
     print(f"Business Rules (captured):           "
           f"{s['implemented_rules']}/{s['total_rules']} "
@@ -675,7 +672,7 @@ def main():
           f"{s['implemented_requirements']}/{s['total_requirements']} "
           f"({_pct(s['implemented_requirements'], s['total_requirements'])})")
     print(f"{'─'*60}")
-    print(f"Scope: Chapters 1–8 of specification files only")
+    print("Scope: Chapters 1–8 of specification files only")
     print(f"{'='*60}")
 
     missing_rules = s["missing_rules"]
@@ -688,8 +685,8 @@ def main():
             print(f"\n⚠  {missing_reqs} REQ-* identifiers NOT found in chapters "
                   f"1–8 of any specification file.")
     else:
-        print(f"\n✅ All business rules and REQ-* identifiers found in "
-              f"chapters 1–8 of specification files.")
+        print("\n✅ All business rules and REQ-* identifiers found in "
+              "chapters 1–8 of specification files.")
 
     # Write HTML dashboard
     dashboard_html = generate_html(result)

@@ -44,7 +44,6 @@ except ImportError:
     pytest = _PytestShim()
 
 from safe_query import (  # noqa: E402
-    INT,
     TENANT_SLUG,
     UUID,
     Safe,

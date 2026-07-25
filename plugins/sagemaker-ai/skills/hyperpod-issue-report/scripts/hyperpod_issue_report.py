@@ -164,7 +164,7 @@ class HyperPodIssueReportCollector:
             
             if 'Eks' in orchestrator:
                 self.cluster_type = 'eks'
-                print(f"Detected cluster type: EKS")
+                print("Detected cluster type: EKS")
                 # Extract EKS cluster ARN
                 eks_config = orchestrator.get('Eks', {})
                 self.eks_cluster_arn = eks_config.get('ClusterArn')
@@ -177,11 +177,11 @@ class HyperPodIssueReportCollector:
                     print("Warning: Could not extract EKS cluster ARN from orchestrator config")
             elif 'Slurm' in orchestrator:
                 self.cluster_type = 'slurm'
-                print(f"Detected cluster type: Slurm")
+                print("Detected cluster type: Slurm")
             else:
                 # If Orchestrator field is missing or doesn't contain Eks/Slurm, assume Slurm
                 self.cluster_type = 'slurm'
-                print(f"Orchestrator field not found or unrecognized, assuming cluster type: Slurm")
+                print("Orchestrator field not found or unrecognized, assuming cluster type: Slurm")
             
             self.cluster_arn = response.get('ClusterArn')
             self.cluster_id = self.extract_cluster_id_from_arn(self.cluster_arn)
@@ -265,7 +265,7 @@ class HyperPodIssueReportCollector:
         # Resolve EKS node names if present
         if eks_node_names:
             if self.cluster_type == 'eks':
-                print(f"Resolving EKS node names to instance IDs...")
+                print("Resolving EKS node names to instance IDs...")
                 for eks_name in eks_node_names:
                     # Extract instance ID from hyperpod-i-* format
                     # Format: hyperpod-i-0123456789abcdef0
@@ -280,13 +280,13 @@ class HyperPodIssueReportCollector:
                         print(f"  Warning: Invalid EKS node name format '{eks_name}'")
             else:
                 print(f"Warning: EKS node names provided but cluster type is {self.cluster_type}")
-                print(f"  EKS node names (hyperpod-i-*) are only supported for EKS clusters")
+                print("  EKS node names (hyperpod-i-*) are only supported for EKS clusters")
                 print(f"  Ignoring: {', '.join(eks_node_names)}")
         
         # Resolve Slurm node names if present
         if slurm_node_names:
             if self.cluster_type == 'slurm':
-                print(f"Resolving Slurm node names to instance IDs...")
+                print("Resolving Slurm node names to instance IDs...")
                 
                 # Build a mapping of Slurm node name to instance ID
                 slurm_to_instance = {}
@@ -308,7 +308,7 @@ class HyperPodIssueReportCollector:
                         print(f"  Warning: Slurm node name '{slurm_name}' not found in cluster")
             else:
                 print(f"Warning: Slurm node names provided but cluster type is {self.cluster_type}")
-                print(f"  Slurm node names (ip-*) are only supported for Slurm clusters")
+                print("  Slurm node names (ip-*) are only supported for Slurm clusters")
                 print(f"  Ignoring: {', '.join(slurm_node_names)}")
         
         return instance_ids
@@ -592,19 +592,19 @@ class HyperPodIssueReportCollector:
                         output_sample = output_sample[-1000:]  # Last 1000 chars
                 
                 error_msg = (
-                    f"Failed to detect shell prompt after 60 seconds.\n"
-                    f"This may indicate:\n"
-                    f"  - Custom SSM session configuration interfering with prompt detection\n"
-                    f"  - Non-standard shell prompt format\n"
-                    f"  - SSM session initialization issues\n"
+                    "Failed to detect shell prompt after 60 seconds.\n"
+                    "This may indicate:\n"
+                    "  - Custom SSM session configuration interfering with prompt detection\n"
+                    "  - Non-standard shell prompt format\n"
+                    "  - SSM session initialization issues\n"
                 )
                 
                 if output_sample:
                     error_msg += f"\nSession output received:\n{output_sample}\n"
                     error_msg += (
-                        f"\nExpected prompt patterns: $ or # followed by space\n"
-                        f"If your cluster uses custom SSM session commands or non-standard prompts,\n"
-                        f"this tool may not be compatible."
+                        "\nExpected prompt patterns: $ or # followed by space\n"
+                        "If your cluster uses custom SSM session commands or non-standard prompts,\n"
+                        "this tool may not be compatible."
                     )
                 else:
                     error_msg += "\nNo output received from SSM session."
@@ -712,11 +712,11 @@ class HyperPodIssueReportCollector:
                     output_sample = output_sample[-1000:]  # Last 1000 chars
             
             error_msg = (
-                f"Operation timed out during command execution.\n"
-                f"This may indicate:\n"
-                f"  - Command taking longer than expected to complete\n"
-                f"  - Custom shell configuration interfering with output detection\n"
-                f"  - Network or SSM session issues\n"
+                "Operation timed out during command execution.\n"
+                "This may indicate:\n"
+                "  - Command taking longer than expected to complete\n"
+                "  - Custom shell configuration interfering with output detection\n"
+                "  - Network or SSM session issues\n"
             )
             
             if output_sample:
@@ -844,9 +844,9 @@ class HyperPodIssueReportCollector:
         
         # Show what will be collected based on cluster type
         if self.cluster_type == 'eks':
-            print(f"Default collections: nvidia-smi, containerd status, kubelet status, EKS log collector, resource config, cluster logs, systemd services, disk usage")
+            print("Default collections: nvidia-smi, containerd status, kubelet status, EKS log collector, resource config, cluster logs, systemd services, disk usage")
         elif self.cluster_type == 'slurm':
-            print(f"Default collections: nvidia-smi, nvidia-bug-report, sinfo, Slurm services, Slurm config, Slurm logs, system logs")
+            print("Default collections: nvidia-smi, nvidia-bug-report, sinfo, Slurm services, Slurm config, Slurm logs, system logs")
         
         if commands:
             print(f"Additional commands: {', '.join(commands)}")
@@ -909,7 +909,7 @@ class HyperPodIssueReportCollector:
         summary_saved = self.save_summary(results)
 
         print("-" * 60)
-        print(f"\nReport collection completed!")
+        print("\nReport collection completed!")
         print(f"Instance reports uploaded to: s3://{self.s3_bucket}/{self.report_s3_key}/instances/")
         if summary_saved:
             print(f"Summary: s3://{self.s3_bucket}/{self.report_s3_key}/summary.json")
@@ -919,7 +919,7 @@ class HyperPodIssueReportCollector:
         # Print statistics
         successful = sum(1 for r in results if r['Success'])
         failed = len(results) - successful
-        print(f"\nStatistics:")
+        print("\nStatistics:")
         print(f"  Total nodes: {len(results)}")
         print(f"  Successful: {successful}")
         print(f"  Failed: {failed}")
@@ -1013,7 +1013,7 @@ class HyperPodIssueReportCollector:
                     print(f"  Failed to download {relative_path}: {e}")
                     failed += 1
             
-            print(f"\n✓ Download completed!")
+            print("\n✓ Download completed!")
             print(f"  Downloaded: {downloaded} files")
             if failed > 0:
                 print(f"  Failed: {failed} files")
@@ -1057,7 +1057,7 @@ class HyperPodIssueReportCollector:
             zip_size = os.path.getsize(zip_filename)
             zip_size_mb = zip_size / (1024 * 1024)
             
-            print(f"\n✓ Zip archive created!")
+            print("\n✓ Zip archive created!")
             print(f"  File: {zip_filename}")
             print(f"  Size: {zip_size_mb:.2f} MB")
             print(f"  Files: {file_count}")
@@ -1144,7 +1144,7 @@ class HyperPodIssueReportCollector:
                     region = arn_parts[3]
                     
                     print("\n" + "!" * 60)
-                    print(f"ERROR: kubectl context does not match EKS cluster")
+                    print("ERROR: kubectl context does not match EKS cluster")
                     print(f"Current context: {current_context}")
                     print(f"Expected cluster: {self.eks_cluster_name}")
                     print("!" * 60)
@@ -1362,7 +1362,7 @@ class HyperPodIssueReportCollector:
             
             self.s3_client.upload_file(tarball_path, self.s3_bucket, s3_key)
             
-            print(f"✓ Successfully uploaded kubectl resource information to S3")
+            print("✓ Successfully uploaded kubectl resource information to S3")
             print(f"  Location: s3://{self.s3_bucket}/{s3_key}")
 
         except Exception as e:

@@ -538,7 +538,7 @@ def _validate_samples(samples: list[dict], expected_format: FormatType, line_num
                     errors.append(ValidationError(
                         line_number=line_num,
                         error_type="invalid_structure",
-                        message=f"Field 'messages' must be a list"
+                        message="Field 'messages' must be a list"
                     ))
                     skip_messages = True
                 elif prefix:
