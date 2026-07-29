@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/validate-drawio.sh",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/validate-drawio.sh\"",
             "timeout": 30
           }
         ]

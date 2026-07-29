@@ -8,9 +8,9 @@ AWS Transform is AWS's AI-powered code and workload modernization service. This 
 
 ## Skills
 
-| Skill           | Description                                                                                         |
-| --------------- | --------------------------------------------------------------------------------------------------- |
-| `aws-transform` | Assessment, planning, and execution for .NET, mainframe, VMware, SQL, language/SDK upgrades, custom |
+| Skill           | Description                                                                                                                                                                                     |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `aws-transform` | Assessment, planning, and execution for .NET, mainframe, VMware, SQL, language/SDK upgrades. Analyze codebases for tech debt, security issues, modernization opportunities, and remediate them. |
 
 ## MCP Servers
 

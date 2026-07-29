@@ -2,6 +2,23 @@
 
 Exact SQL for interrogating optimizer statistics and actual cardinalities against the DSQL cluster.
 
+**Placeholder substitution:** All queries in this file use `{...}` placeholders. MUST substitute via `safe_query.build()` — see input-validation.md. Use the correct helper per position:
+
+- **Identifier positions** (FROM clause, GROUP BY, column aliases): `ident()` → emits `"value"`
+- **String-literal positions** (WHERE `= {schema}`, `IN ({table})`, equality comparisons against catalog columns): `allow()` or `regex()` → emits `'value'`
+
+Worked example:
+
+```python
+safe_query.build(
+    "SELECT reltuples FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+    "WHERE n.nspname = {schema} AND c.relname IN ({t1}, {t2})",
+    schema=regex(r"^[a-z_]+$", user_schema),
+    t1=regex(r"^[a-z_]+$", table1),
+    t2=regex(r"^[a-z_]+$", table2),
+)
+```
+
 ## Table of Contents
 
 1. [Table-Level Statistics (pg_class)](#table-level-statistics)
@@ -9,7 +26,10 @@ Exact SQL for interrogating optimizer statistics and actual cardinalities agains
 3. [Index Definitions](#index-definitions)
 4. [Actual Row Counts](#actual-row-counts)
 5. [Actual Distinct Counts](#actual-distinct-counts)
-6. [Value Distribution Analysis](#value-distribution-analysis)
+6. [Column Types for Predicate Columns](#column-types-for-predicate-columns)
+7. [B-Tree Cross-Type Operator Support](#b-tree-cross-type-operator-support)
+8. [Indexed Column Types](#indexed-column-types)
+9. [Value Distribution Analysis](#value-distribution-analysis)
 
 ---
 
@@ -25,8 +45,8 @@ SELECT
   relpages
 FROM pg_class c
 JOIN pg_namespace n ON n.oid = c.relnamespace
-WHERE n.nspname = '{schema}'
-  AND c.relname IN ('{table1}', '{table2}', '{table3}');
+WHERE n.nspname = {schema}
+  AND c.relname IN ({table1}, {table2}, {table3});
 ```
 
 Compare `reltuples` against actual `COUNT(*)`. A divergence >20% on the table-stats snapshot indicates stale `reltuples` requiring `ANALYZE`. This is distinct from the row-estimate-vs-actual error thresholds used for plan findings (see plan-interpretation.md: 2x–5x minor, 5x–50x significant, 50x+ severe).
@@ -46,9 +66,9 @@ SELECT
   histogram_bounds,
   correlation
 FROM pg_stats
-WHERE schemaname = '{schema}'
-  AND tablename = '{table}'
-  AND attname IN ('{col1}', '{col2}');
+WHERE schemaname = {schema}
+  AND tablename = {table}
+  AND attname IN ({col1}, {col2});
 ```
 
 **Key fields:**
@@ -71,8 +91,8 @@ SELECT
   indexname,
   indexdef
 FROM pg_indexes
-WHERE schemaname = '{schema}'
-  AND tablename IN ('{table1}', '{table2}', '{table3}')
+WHERE schemaname = {schema}
+  AND tablename IN ({table1}, {table2}, {table3})
 ORDER BY tablename, indexname;
 ```
 
@@ -102,6 +122,85 @@ Compare against `pg_stats.n_distinct`:
 
 - If `n_distinct` is positive: compare directly
 - If `n_distinct` is negative: multiply absolute value by actual row count to get estimated distinct count
+
+## Column Types for Predicate Columns
+
+Retrieve the declared types for columns used in WHERE predicates and JOIN conditions, to detect type coercion index bypass (see plan-interpretation.md):
+
+```sql
+SELECT
+  c.table_name,
+  c.column_name,
+  c.data_type,
+  c.udt_name,
+  c.is_nullable
+FROM information_schema.columns c
+WHERE c.table_schema = {schema}
+  AND c.table_name IN ({table1}, {table2})
+  AND c.column_name IN ({col1}, {col2});
+```
+
+Cross-reference the column type against predicate literals visible in the EXPLAIN output. When the types differ, use the B-Tree Cross-Type Operator Support query below to determine whether the mismatch prevents index usage.
+
+## B-Tree Cross-Type Operator Support
+
+Determine which type pairs the DSQL B-Tree access method supports for index scans. If a (predicate-type, column-type) pair has no registered operator, the index cannot be used for that comparison:
+
+```sql
+SELECT DISTINCT
+  lt.typname AS left_type,
+  rt.typname AS right_type
+FROM pg_amop ao
+JOIN pg_type lt ON lt.oid = ao.amoplefttype
+JOIN pg_type rt ON rt.oid = ao.amoprighttype
+-- 10003 is DSQL's B-Tree OID (PG mainline is 403).
+-- Verify with: SELECT oid FROM pg_am WHERE amname = 'btree_index'
+WHERE ao.amopmethod = 10003
+  AND ao.amoplefttype != ao.amoprighttype
+ORDER BY lt.typname, rt.typname;
+```
+
+This returns only the cross-type pairs (where left and right types differ). Same-type pairs are always supported. Use this to confirm whether a suspected type mismatch actually prevents index usage — if the pair appears in the result, the index CAN be used and the issue lies elsewhere.
+
+To check a specific pair:
+
+```sql
+SELECT EXISTS (
+  SELECT 1
+  FROM pg_amop ao
+  JOIN pg_type lt ON lt.oid = ao.amoplefttype
+  JOIN pg_type rt ON rt.oid = ao.amoprighttype
+  -- 10003 = DSQL B-Tree OID; verify with: SELECT oid FROM pg_am WHERE amname = 'btree_index'
+  WHERE ao.amopmethod = 10003
+    AND lt.typname = {predicate_type}
+    AND rt.typname = {column_type}
+) AS index_usable;
+```
+
+## Indexed Column Types
+
+Retrieve index definitions together with their column types to identify type coercion bypass candidates:
+
+```sql
+SELECT
+  i.indexname,
+  i.tablename,
+  a.attname AS column_name,
+  t.typname AS column_type,
+  i.indexdef
+FROM pg_indexes i
+JOIN pg_class ic ON ic.relname = i.indexname
+JOIN pg_index ix ON ix.indexrelid = ic.oid
+JOIN pg_attribute a ON a.attrelid = ix.indrelid
+  AND a.attnum = ANY(ix.indkey)
+JOIN pg_type t ON t.oid = a.atttypid
+JOIN pg_namespace n ON n.oid = ic.relnamespace
+WHERE n.nspname = {schema}
+  AND i.tablename IN ({table1}, {table2})
+ORDER BY i.tablename, i.indexname, a.attnum;
+```
+
+Use this when a Full Scan appears despite an apparently usable index — compare the index column's `column_type` against the predicate literal's inferred type.
 
 ## Value Distribution Analysis
 

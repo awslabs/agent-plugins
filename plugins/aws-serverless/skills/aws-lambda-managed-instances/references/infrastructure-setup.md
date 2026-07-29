@@ -224,6 +224,83 @@ Resources:
           CapacityProviderArn: !GetAtt MyCP.Arn
 ```
 
+## Scheduled Scaling (EventBridge Scheduler)
+
+For predictable traffic, adjust `MinExecutionEnvironments`/`MaxExecutionEnvironments` on a schedule using [Amazon EventBridge Scheduler](https://docs.aws.amazon.com/scheduler/latest/UserGuide/managing-targets-universal.html). The schedule calls the Lambda `PutFunctionScalingConfig` API directly as a universal target — no Lambda code or extra glue required.
+
+### 1. Scheduler execution role
+
+Trust policy (allow EventBridge Scheduler to assume the role):
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Principal": { "Service": "scheduler.amazonaws.com" },
+    "Action": "sts:AssumeRole"
+  }]
+}
+```
+
+Permissions (call `PutFunctionScalingConfig` on the target function):
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": "lambda:PutFunctionScalingConfig",
+    "Resource": "arn:aws:lambda:*:*:function:my-lmi-function"
+  }]
+}
+```
+
+### 2. Create schedules
+
+Scale up before peak (08:00 UTC daily):
+
+```bash
+aws scheduler create-schedule \
+  --name ScaleUpLmi \
+  --schedule-expression "cron(0 8 * * ? *)" \
+  --flexible-time-window '{"Mode": "OFF"}' \
+  --target '{
+    "Arn": "arn:aws:scheduler:::aws-sdk:lambda:PutFunctionScalingConfig",
+    "RoleArn": "arn:aws:iam::<account-id>:role/eventbridge-scheduler-role",
+    "Input": "{\"FunctionName\": \"my-lmi-function\", \"Qualifier\": \"$LATEST.PUBLISHED\", \"FunctionScalingConfig\": {\"MinExecutionEnvironments\": 100, \"MaxExecutionEnvironments\": 1000}}"
+  }'
+```
+
+Scale down after peak (18:00 UTC daily):
+
+```bash
+aws scheduler create-schedule \
+  --name ScaleDownLmi \
+  --schedule-expression "cron(0 18 * * ? *)" \
+  --flexible-time-window '{"Mode": "OFF"}' \
+  --target '{
+    "Arn": "arn:aws:scheduler:::aws-sdk:lambda:PutFunctionScalingConfig",
+    "RoleArn": "arn:aws:iam::<account-id>:role/eventbridge-scheduler-role",
+    "Input": "{\"FunctionName\": \"my-lmi-function\", \"Qualifier\": \"$LATEST.PUBLISHED\", \"FunctionScalingConfig\": {\"MinExecutionEnvironments\": 5, \"MaxExecutionEnvironments\": 20}}"
+  }'
+```
+
+Set both values to `0` to deactivate during idle periods; schedule a separate non-zero action to reactivate (a deactivated function does not auto-recover).
+
+### Manual override
+
+Update scaling limits directly at any time:
+
+```bash
+aws lambda put-function-scaling-config \
+  --function-name my-lmi-function \
+  --qualifier '$LATEST.PUBLISHED' \
+  --function-scaling-config MinExecutionEnvironments=5,MaxExecutionEnvironments=20
+```
+
+`MinExecutionEnvironments` and `MaxExecutionEnvironments` accept values from 0 to 15000 and must be set together. Setting them on `$LATEST.PUBLISHED` propagates to future published versions.
+
 ## Cleanup
 
 ```bash
