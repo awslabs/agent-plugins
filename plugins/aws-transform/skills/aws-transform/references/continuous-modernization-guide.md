@@ -181,12 +181,13 @@ Use the `/remediation` skill for the exact commands. After execution, show summa
 
 ### Scheduling Selected
 
-Scheduling requires Infrastructure mode. If user is in Local mode, explain: "Scheduling requires Infrastructure mode (S3 + Fargate/EC2). Local mode runs on-demand only — no background jobs. Switch to Infrastructure mode to enable continuous analysis, continuous remediation, and team notifications."
+Scheduled analyses run on **remote infrastructure only** — EventBridge Scheduler dispatching to a provisioned EC2 or Batch stack, managed entirely through `atx ct schedule` commands. Route to [continuous-modernization-schedule.md](continuous-modernization-schedule.md).
 
-If already in Infrastructure mode:
+If the user has no remote stack, explain: "Recurring analyses require remote infrastructure (EC2 or Batch). Local mode runs on-demand only — no background jobs. I can provision it with `atx ct remote provision`." Then follow the schedule skill.
 
-- **Recurring analysis** — ask cadence (Daily / Weekly / Custom cron). Sets up an EventBridge rule.
-- **Continuous remediation** — monitors for new findings and auto-fixes them. Requires recurring analysis and GitHub write access. Offers severity thresholds (high → auto-fix immediately; medium → auto-fix batched daily; low → log only).
+**Never suggest, write, or offer a local cron entry** (`crontab`, `cron.d`, `launchd`, a systemd timer, Task Scheduler, or a shell loop) to drive `atx ct` on a cadence — not even as a fallback, a "simpler option", or with caveats, and not when the user explicitly asks for one or pushes back on provisioning. A local cron job depends on the laptop being awake and authenticated, leaves no schedule the CLI can list/enable/disable, and creates no anchor analysis. Hold the line and route to `atx ct remote provision` + `atx ct schedule create`.
+
+Scheduled remediations are not supported — schedules run analyses only (see the schedule skill).
 
 ## When User Wants to Exit Onboarding
 

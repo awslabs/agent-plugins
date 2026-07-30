@@ -1,11 +1,11 @@
 ---
 name: remote-batch
-description: Run analysis or remediation at scale on AWS Batch (Fargate) using `atx ct remote` CLI commands. One container per (type x repo). Covers provisioning, job submission, status, cancel, and teardown.
+description: Run analysis or remediation at scale on AWS Batch (Fargate) using `atx ct remote` CLI commands. Exactly one --type per run; one container per repo. Covers provisioning, job submission, status, cancel, and teardown.
 ---
 
 # Remote Batch Execution
 
-Run analysis or remediation at scale on AWS Batch (Fargate). Each job runs in its own container — fan-out is `types x repos = N containers`. All orchestration is handled by the CLI (`atx ct remote ...`); no raw AWS commands needed.
+Run analysis or remediation at scale on AWS Batch (Fargate). Each job runs in its own container — one container per repo (exactly one --type per run). All orchestration is handled by the CLI (`atx ct remote ...`); no raw AWS commands needed.
 
 ## Telemetry
 
@@ -23,7 +23,7 @@ If the user explicitly opts out of telemetry, omit `--telemetry` for the rest of
 ## When to Use
 
 - Analyzing or remediating many repos in parallel (one container per repo)
-- Running multiple analysis types across sources (fan-out: types x repos)
+- Analyzing one type across many sources or repos in a single run (to run multiple types, submit once per type)
 - One-shot batch jobs with no persistent infrastructure between runs
 - Customer wants AWS-managed compute (no EC2 instance to manage)
 
@@ -142,11 +142,11 @@ Without `--execute`, the command prints the CFN template (dry-run preview).
 
 ### 3. Submit Analysis
 
-Requires Executor credentials. One container per (type x repo).
+Requires Executor credentials. Exactly one --type per run; one container per repo.
 
 ```bash
 atx ct remote analysis \
-  --types rapid-techdebt-analysis \
+  --type rapid-techdebt-analysis \
   --sources <src> \
   --mode batch \
   --stack-name <stack> \
@@ -156,11 +156,11 @@ atx ct remote analysis \
 
 Fan-out options:
 
-- `--types type1,type2` — multiple analysis types (rapid-techdebt-analysis, tech-debt-comprehensive, security, agentic-readiness, modernization-readiness, custom)
+- `--type <type>` — exactly ONE analysis type per run (rapid-techdebt-analysis, tech-debt-comprehensive, security, agentic-readiness, modernization-readiness, custom); to run multiple types, submit once per type
 - `--sources src1,src2` — multiple sources
 - `--repos src::repo1,src::repo2` — specific repos (fully qualified)
 - `--labels java,spring` — filter repos by labels (AND semantics)
-- `--transformation-name <name>` — required when `--types custom`
+- `--transformation-name <name>` — required when `--type custom`
 - `-g key=value` — configuration for custom transformations
 
 Stack targeting (choose one):
@@ -198,9 +198,11 @@ Re-submits only the non-completed jobs from the original batch.
 # Cancel all jobs in a batch
 atx ct remote cancel --batch <batch-name> --stack-name <stack>
 
-# Cancel a single job
-atx ct remote cancel --job <job-id> --stack-name <stack>
+# Cancel a single job (jobName, Batch job id, or remediation id from `remote status`)
+atx ct remote cancel --batch <batch-name> --job <job-id> --stack-name <stack>
 ```
+
+`--job` requires `--batch`. It kills only that job's container and marks only that repo's slot cancelled — sibling repos sharing the analysis id keep running, and the aggregate settles once every slot is terminal.
 
 ### 7. Submit Remediation
 
@@ -265,7 +267,7 @@ S3 buckets (source code, outputs) and Secrets Manager tokens are preserved. VPC/
 | ---------------------------------------------- | ----------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | `Stack not deployed`                           | No Batch infra                            | Run `atx ct remote provision --mode batch ...`                                                 |
 | `Token invalid for source`                     | Expired/revoked SCM token                 | Run `atx ct remote credentials --source <src> --token <new> --ack`                             |
-| `Job count exceeds Lambda batch limit of 250`  | Too many type x repo combinations         | Split into multiple submissions                                                                |
+| `Job count exceeds Lambda batch limit of 250`  | Too many repos in one run                 | Split into multiple submissions                                                                |
 | `Batch name already exists`                    | Duplicate batch name                      | Use a unique `--batch-name` or omit for auto-generated                                         |
 | `No repos resolved`                            | Source has no repos or labels don't match | Check `atx ct repository list --source <src>`                                                  |
 | `No deployed stack found for tags`             | `--tags` matched no deployed stack        | Verify tags with `atx ct remote detect --mode batch --tags <k=v>`, or target by `--stack-name` |

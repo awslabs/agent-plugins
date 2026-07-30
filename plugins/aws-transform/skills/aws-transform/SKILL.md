@@ -88,7 +88,7 @@ If the user's workload-unspecified request matches any of these intents, route t
 
 7. Ensure a supported region has been selected (see [continuous-modernization-setup.md](references/continuous-modernization-setup.md) "Choose your region") and prefixed inline (`AWS_REGION=$ATX_REGION`) on every `atx ct` command.
 
-8. Then use the appropriate continuous modernization skill — see [continuous-modernization](references/continuous-modernization.md)
+8. Then use the appropriate continuous modernization skill — see [continuous-modernization](references/continuous-modernization.md). Recurring/scheduled intent ("weekly scan", "every Monday", "on a schedule", "cron") routes to [continuous-modernization-schedule](references/continuous-modernization-schedule.md): scheduling is a real, shipped capability (`atx ct schedule create/list/get/enable/disable/delete`) that runs on remote infrastructure ONLY — never claim it doesn't exist, and never offer a local cron/systemd/launchd entry as a substitute or fallback.
 
 **When in doubt for a workload-unspecified request → continuous modernization.** This default applies ONLY after Step B has cleared — VMware, SQL, and mainframe never fall through to continuous modernization regardless of how the question is phrased; .NET only routes to continuous modernization after the user picks "analyze for tech debt / security / CVEs" in Step B's intent question (both "modernize" and "assessment for modernization" stay in the .NET workload). Once routed, do NOT manually read source files to find issues — that's what `atx ct analysis run` does.
 
