@@ -2,543 +2,410 @@
 
 > **Audience Note**: Keywords MUST, SHOULD, MAY in this document indicate requirements for agent recommendations to users, following RFC 2119.
 
-Validate and standardize addresses before persisting to databases or taking actions.
+Verify and standardize addresses in bulk against authoritative postal data using the Amazon Location Service **Jobs API** (`StartJob` with Action `ValidateAddress`).
 
-**Distinction from Address Input**: The address-input reference covers the UI/UX of collecting addresses from users (autocomplete, type-ahead). This reference covers validation and standardization of addresses AFTER collection, before storage or processing.
+**Distinction from Address Input**: The address-input reference covers the interactive UI/UX of collecting a single address from a user (autocomplete, type-ahead, and resolving a typed address to coordinates with Geocode). This reference covers **postal address validation** — verifying and standardizing addresses against authoritative postal reference data (USPS, Royal Mail, Australia Post, Canada Post) in bulk.
+
+**What Geocode does NOT give you.** Geocode (`geo-places:Geocode`) does return match quality — a `MatchScores` object with an overall score (1.0 = all input tokens matched) plus per-component scores, and an `AddressNumberCorrected` flag — with no opt-in required. So "match confidence" and "did a component change" are _not_ the dividing line. What Geocode lacks, and what `ValidateAddress` adds, is **postal-authority verification and standardization**:
+
+- `ValidationGranularity` — an explicit Premise/Street/LocalityAndPostalCode/Locality verdict for how deep the match validated.
+- Delivery indicators — `Mailable` / `Locatable` from postal-carrier data.
+- Per-component `StatusDetail` — `Corrected` / `Appended` / `Alias` / `StandardizedNoMatch` / `OutOfRange`, telling you _how_ each component was resolved against the postal dataset.
+- Standardized `Output_*` components formatted to official postal standards.
+
+**When to use which.** For a single interactive or ad-hoc address ("does this typed address resolve, and how well?"), Geocode's one synchronous call — including its `MatchScores` — is the correct answer; do NOT stand up a job for it. Reach for the Jobs API (`StartJob` with Action `ValidateAddress`, then `GetJob`/`ListJobs`/`CancelJob`) when you need a postal-deliverability verdict, standardized output, or bulk throughput. Note the Jobs API covers only the US, Canada, UK, and Australia (see [Supported Countries](#supported-countries)); for addresses elsewhere, Geocode is the available option for address resolution.
 
 ## Table of Contents
 
 - [Overview](#overview)
-- [When to Verify Addresses](#when-to-verify-addresses)
-- [Basic Verification](#basic-verification)
-- [Handling Verification Results](#handling-verification-results)
-- [Complete Validation Flows](#complete-validation-flows)
-- [Storage Considerations and Pricing](#storage-considerations-and-pricing)
+- [When to Validate Addresses](#when-to-validate-addresses)
+- [Supported Countries](#supported-countries)
+- [Job Workflow](#job-workflow)
+- [Input Schema](#input-schema)
+- [Starting a Validation Job](#starting-a-validation-job)
+- [Tracking a Job](#tracking-a-job)
+- [Interpreting Results](#interpreting-results)
+- [Handling Partial Matches](#handling-partial-matches)
+- [Listing and Canceling Jobs](#listing-and-canceling-jobs)
 - [Error Handling](#error-handling)
+- [Pricing](#pricing)
 - [Best Practices](#best-practices)
 
 ## Overview
 
-Address verification ensures data quality by:
+Address validation jobs process address data to verify and standardize addresses. The service:
 
-1. **Validating** - Confirming address exists in postal database
-2. **Standardizing** - Converting to canonical format (proper casing, abbreviations)
-3. **Enriching** - Adding coordinates, postal codes, country codes
-4. **Cleaning** - Fixing typos, removing ambiguity
+1. **Validates** - Confirms the address exists and is deliverable by checking it against authoritative postal datasets
+2. **Standardizes** - Formats the address according to official postal standards (consistent abbreviations, casing, punctuation)
+3. **Corrects and completes** - Fixes spelling mistakes and appends missing components such as postal codes or street names
+4. **Enriches (optional)** - Adds geographic coordinates and country-specific postal attributes when requested
 
-Use `geo-places:Geocode` for address verification AFTER user has completed input.
+Validation runs as an **asynchronous bulk job**: you stage input in Amazon S3 as Apache Parquet, submit a job with `StartJob`, poll `GetJob` (or subscribe via EventBridge) until it completes, then read Parquet results from your S3 output location. This is designed for processing many addresses in a single operation, not for real-time single-address lookups during form entry.
 
-## When to Verify Addresses
+## When to Validate Addresses
 
-Verify addresses in these scenarios:
+Use address validation jobs in these scenarios:
 
-- **Before database insertion**: Ensure only valid, standardized addresses are stored
-- **Before shipping/delivery**: Verify delivery address is valid and complete
-- **Before API calls**: Validate address before passing to routing or distance APIs
-- **Batch processing**: Clean existing address databases
-- **Form submission**: Final validation before accepting user submission
-- **Integration imports**: Validate addresses from external systems
+- **Database cleansing**: Clean and standardize existing address databases in bulk
+- **Data migration**: One-time address cleanup during system transitions
+- **Before shipping/logistics**: Validate delivery addresses to reduce failed deliveries
+- **Identity and risk workflows**: Standardize customer addresses for verification, risk assessment, and fraud prevention
+- **Analytics and entity resolution**: Standardize addresses for location-based analytics, demographic analysis, and CRM deduplication
+- **Regulatory reporting**: Validate patient/provider or customer addresses to meet compliance requirements
 
-Do NOT verify on every keystroke (use Autocomplete for that - see address-input reference).
+For interactive, single-address entry during a form session, use Autocomplete + GetPlace instead (see the address-input reference). Do NOT stand up a validation job on every keystroke or form submit.
 
-## Basic Verification
+## Supported Countries
 
-### Single Address Verification
+Address validation supports addresses from: **United States, Canada, United Kingdom, and Australia**. The optional `Position` feature (coordinates) is available only in the United States, Canada, and Australia.
 
-```javascript
-const authHelper = amazonLocationClient.withAPIKey(API_KEY, REGION);
-const client = new amazonLocationClient.GeoPlacesClient(authHelper.getClientConfig());
+## Job Workflow
 
-async function verifyAddress(addressString) {
-  try {
-    const command = new amazonLocationClient.places.GeocodeCommand({
-      QueryText: addressString,
-      MaxResults: 5  // Get multiple matches to detect ambiguity
-    });
-
-    const response = await client.send(command);
-
-    if (response.ResultItems.length === 0) {
-      return {
-        valid: false,
-        reason: 'ADDRESS_NOT_FOUND',
-        message: 'Address not found in postal database'
-      };
-    }
-
-    const topResult = response.ResultItems[0];
-
-    // Check for ambiguous input (multiple strong matches)
-    const isAmbiguous = response.ResultItems.length > 1 &&
-      response.ResultItems[1].Address.Label.toLowerCase() !== topResult.Address.Label.toLowerCase();
-
-    return {
-      valid: true,
-      ambiguous: isAmbiguous,
-      standardized: topResult.Address,
-      coordinates: {
-        lat: topResult.Position[1],
-        lon: topResult.Position[0]
-      },
-      originalInput: addressString,
-      allMatches: response.ResultItems
-    };
-
-  } catch (error) {
-    console.error('Verification error:', error);
-    return {
-      valid: false,
-      reason: 'VERIFICATION_ERROR',
-      message: error.message
-    };
-  }
-}
-
-// Usage
-const result = await verifyAddress("500 E 4th St, Austin, TX 78701");
-
-if (result.valid) {
-  console.log('Valid address:', result.standardized.Label);
-  console.log('Coordinates:', result.coordinates);
-} else {
-  console.log('Invalid:', result.message);
-}
+```
+1. Prepare input   → Write addresses to a Parquet file in Amazon S3
+2. StartJob        → Action=ValidateAddress, ExecutionRoleArn, Input/Output S3 locations
+3. Track           → Poll GetJob (or listen on EventBridge) until Status is terminal
+4. Retrieve        → Read Parquet result files from the S3 output location
 ```
 
-### Structured Address Verification
+Job status transitions: `Pending → Running → Completed` (or `Failed`), and `Cancelling → Cancelled` if you cancel it.
 
-```javascript
-// Verify address from form fields
-async function verifyStructuredAddress(fields) {
-  // Build address string from components
-  const parts = [
-    fields.street,
-    fields.city,
-    fields.state,
-    fields.postalCode,
-    fields.country
-  ].filter(Boolean);
+The Jobs API operations use `LocationClient` (`@aws-sdk/client-location`) with SigV4 (IAM) credentials — these are server-side/back-office operations, not API-key client-side calls.
 
-  const addressString = parts.join(', ');
+## Input Schema
 
-  return await verifyAddress(addressString);
-}
+Input data MUST be Apache Parquet stored in Amazon S3 (limit: 10 GB per file, 1 GB per Parquet row-group). The schema supports free-form address lines, structured components, or a combination:
 
-// Usage
-const formData = {
-  street: "500 E 4th St",
-  city: "Austin",
-  state: "CA",
-  postalCode: "94043",
-  country: "USA"
-};
+| Field                                                         | Description                                                                                                            |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `Id`                                                          | Optional per-record identifier. Mirrored in output as `Input_Id` so you can correlate results to inputs.               |
+| `AddressLines_1` … `AddressLines_5`                           | Free-form address lines. Put single-line input in `AddressLines_1`; order multi-line input as it would appear on mail. |
+| `AddressComponents_Country`                                   | Alpha-2, alpha-3 code, or full country name.                                                                           |
+| `AddressComponents_Region`                                    | State, province, or territory.                                                                                         |
+| `AddressComponents_SubRegion`                                 | County or equivalent.                                                                                                  |
+| `AddressComponents_Locality`                                  | City or town.                                                                                                          |
+| `AddressComponents_PostalCode`                                | Postal / ZIP code.                                                                                                     |
+| `AddressComponents_Street`                                    | Street name.                                                                                                           |
+| `AddressComponents_AddressNumber`                             | House / building number.                                                                                               |
+| `AddressComponents_Unit` / `AddressComponents_UnitDesignator` | Unit value and designator (e.g. `Apt`, `Suite`, `#`).                                                                  |
 
-const verification = await verifyStructuredAddress(formData);
+**Note**: When combining `AddressLines` with `AddressComponents`, put first-line components (`AddressNumber`, `Street`, `Unit`, `UnitDesignator`) in `AddressLines`, and last-line components (`Locality`, `Region`, `SubRegion`, `Country`, `PostalCode`) in `AddressComponents`.
+
+Example: create a Parquet input file with PyArrow.
+
+```python
+import pyarrow as pa
+import pyarrow.parquet as pq
+
+data = [
+    {"Id": "record-001", "AddressLines_1": "Pike Place", "AddressLines_2": "Apartment 4B",
+     "AddressComponents_Country": "USA", "AddressComponents_PostalCode": "98101"},
+    {"Id": "record-002", "AddressLines_1": "2901 E Madison St",
+     "AddressComponents_Country": "USA", "AddressComponents_PostalCode": "98112"},
+]
+
+schema = pa.schema([
+    ("Id", pa.string()),
+    ("AddressLines_1", pa.string()),
+    ("AddressLines_2", pa.string()),
+    ("AddressComponents_Country", pa.string()),
+    ("AddressComponents_PostalCode", pa.string()),
+])
+
+pq.write_table(pa.Table.from_pylist(data, schema=schema), "addresses.parquet")
+# Upload addresses.parquet to your input S3 bucket/prefix.
 ```
 
-## Handling Verification Results
+## Starting a Validation Job
 
-### Perfect Match
+`StartJob` requires the action, an `ExecutionRoleArn` that Amazon Location assumes to read your input and write your output S3 locations, and the input/output configuration. `AdditionalFeatures` is optional.
 
-```javascript
-if (result.valid && !result.ambiguous) {
-  // Address is valid and unambiguous
-  // Store standardized version
-  await saveAddress({
-    original: result.originalInput,
-    standardized: result.standardized.Label,
-    street: result.standardized.Street,
-    addressNumber: result.standardized.AddressNumber,
-    locality: result.standardized.Locality,
-    region: result.standardized.Region?.Code,
-    postalCode: result.standardized.PostalCode,
-    country: result.standardized.Country?.Code2,
-    latitude: result.coordinates.lat,
-    longitude: result.coordinates.lon,
-    verified: true,
-    verifiedAt: new Date().toISOString()
-  });
-}
-```
+**Request shape:**
 
-### Address Not Found
-
-```javascript
-if (!result.valid && result.reason === 'ADDRESS_NOT_FOUND') {
-  // Show error to user
-  showError(
-    'We could not verify this address. Please check for typos and try again.'
-  );
-
-  // Offer suggestions
-  if (result.originalInput.length > 10) {
-    // Suggest using autocomplete
-    showSuggestion(
-      'Try using the address autocomplete field for better results.'
-    );
-  }
-
-  // Still allow submission if user insists
-  showOption(
-    'Submit anyway (address will be marked as unverified)',
-    async () => {
-      await saveAddress({
-        original: result.originalInput,
-        verified: false,
-        verifiedAt: null
-      });
-    }
-  );
-}
-```
-
-### Ambiguous Address
-
-```javascript
-if (result.valid && result.ambiguous) {
-  // Present user with options
-  showAmbiguityDialog(
-    'We found multiple matches for this address. Please select the correct one:',
-    result.allMatches.map(match => ({
-      label: match.Address.Label,
-      details: {
-        locality: match.Address.Locality,
-        region: match.Address.Region?.Name,
-        postalCode: match.Address.PostalCode
-      },
-      onSelect: async () => {
-        await saveAddress({
-          standardized: match.Address.Label,
-          latitude: match.Position[1],
-          longitude: match.Position[0],
-          verified: true
-        });
-      }
-    }))
-  );
-}
-```
-
-### Standardization Differences
-
-```javascript
-// Check if geocoded address differs from input
-if (result.valid) {
-  const inputNormalized = result.originalInput.toLowerCase().trim();
-  const standardizedNormalized = result.standardized.Label.toLowerCase().trim();
-
-  if (inputNormalized !== standardizedNormalized) {
-    // Show user the standardized version
-    const confirmed = await confirmDialog(
-      'We found a slight difference in the address:',
-      {
-        original: result.originalInput,
-        standardized: result.standardized.Label,
-        question: 'Use the standardized version?'
-      }
-    );
-
-    if (confirmed) {
-      // Use standardized
-      await saveAddress({
-        standardized: result.standardized.Label,
-        ...result.coordinates,
-        verified: true
-      });
-    } else {
-      // Keep original but mark as manually confirmed
-      await saveAddress({
-        original: result.originalInput,
-        ...result.coordinates,
-        verified: true,
-        manuallyConfirmed: true
-      });
+```json
+{
+  "Action": "ValidateAddress",
+  "Name": "customer-db-cleanup-2025-06",
+  "ExecutionRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/LocationServiceJobExecutionRole",
+  "InputOptions": {
+    "Format": "Parquet",
+    "Location": "arn:aws:s3:::YOUR_INPUT_BUCKET/addresses.parquet"
+  },
+  "OutputOptions": {
+    "Format": "Parquet",
+    "Location": "arn:aws:s3:::YOUR_OUTPUT_BUCKET/results/"
+  },
+  "ActionOptions": {
+    "ValidateAddress": {
+      "AdditionalFeatures": ["Position", "CountrySpecificAttributes"]
     }
   }
 }
 ```
 
-## Complete Validation Flows
+**`AdditionalFeatures`** (optional, choose 1–2):
 
-### Pre-Submission Validation
+- `Position` - Return WGS 84 longitude/latitude for validated addresses. US, Canada, and Australia only; incurs additional cost.
+- `CountrySpecificAttributes` - Return country-specific postal/census data (e.g. USPS carrier route and delivery point for US; Australia Post / G-NAF identifiers for Australia; Royal Mail UDPRN for UK; Canada Post record type for Canada).
+
+**JavaScript SDK:**
 
 ```javascript
-// Validate form before submission
-async function validateAddressForm(formElement) {
-  const submitButton = formElement.querySelector('button[type="submit"]');
-  const statusDiv = document.getElementById('validation-status');
+import { LocationClient, StartJobCommand } from "@aws-sdk/client-location";
 
-  formElement.addEventListener('submit', async (e) => {
-    e.preventDefault();
+// Server-side: IAM credentials from environment/role
+const client = new LocationClient({ region: "us-east-1" });
 
-    // Show loading state
-    submitButton.disabled = true;
-    statusDiv.innerHTML = 'Verifying address...';
+const response = await client.send(
+  new StartJobCommand({
+    Action: "ValidateAddress",
+    Name: "customer-db-cleanup-2025-06",
+    ExecutionRoleArn:
+      "arn:aws:iam::YOUR_ACCOUNT_ID:role/LocationServiceJobExecutionRole",
+    InputOptions: {
+      Format: "Parquet",
+      Location: "arn:aws:s3:::YOUR_INPUT_BUCKET/addresses.parquet",
+    },
+    OutputOptions: {
+      Format: "Parquet",
+      Location: "arn:aws:s3:::YOUR_OUTPUT_BUCKET/results/",
+    },
+    ActionOptions: {
+      ValidateAddress: { AdditionalFeatures: ["Position"] },
+    },
+  }),
+);
 
-    // Get address from form
-    const addressInput = formElement.querySelector('#address').value;
+// Response: { JobId, JobArn, Status: "Pending", CreatedAt }
+console.log("Started job:", response.JobId, response.Status);
+```
 
-    try {
-      const result = await verifyAddress(addressInput);
+**AWS CLI:**
 
-      if (!result.valid) {
-        statusDiv.innerHTML = `
-          <div class="error">
-            <strong>Address verification failed:</strong>
-            <p>${result.message}</p>
-            <button onclick="submitAnyway()">Submit Anyway</button>
-            <button onclick="editAddress()">Edit Address</button>
-          </div>
-        `;
-        submitButton.disabled = false;
-        return;
+```bash
+aws location start-job \
+  --action ValidateAddress \
+  --execution-role-arn "arn:aws:iam::YOUR_ACCOUNT_ID:role/LocationServiceJobExecutionRole" \
+  --input-options Location=arn:aws:s3:::YOUR_INPUT_BUCKET/addresses.parquet,Format=Parquet \
+  --output-options Location=arn:aws:s3:::YOUR_OUTPUT_BUCKET/results/,Format=Parquet \
+  --action-options '{"ValidateAddress":{"AdditionalFeatures":["Position"]}}' \
+  --region us-east-1
+```
+
+The `ExecutionRoleArn` MUST be an IAM role in the same account that Amazon Location assumes during processing, so you do not pass long-term credentials for S3 access. Two requirements are easy to miss — omit either and `StartJob` succeeds, reports `Pending`, then flips to `Failed`:
+
+**1. Trust policy — the role must let `geo.amazonaws.com` assume it.** The permission policy alone is not enough; without this trust relationship the `AssumeRole` fails. Scope it to your account with an `aws:SourceAccount` condition:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": { "Service": "geo.amazonaws.com" },
+      "Action": "sts:AssumeRole",
+      "Condition": {
+        "StringEquals": { "aws:SourceAccount": "YOUR_ACCOUNT_ID" }
       }
-
-      if (result.ambiguous) {
-        statusDiv.innerHTML = '<div class="warning">Multiple matches found. Please select:</div>';
-        showAmbiguityOptions(result.allMatches);
-        submitButton.disabled = false;
-        return;
-      }
-
-      // Update form with standardized address
-      if (result.standardized.Label !== addressInput) {
-        const useStandardized = confirm(
-          `Use standardized address?\n\nYou entered:\n${addressInput}\n\nStandardized:\n${result.standardized.Label}`
-        );
-
-        if (useStandardized) {
-          formElement.querySelector('#address').value = result.standardized.Label;
-        }
-      }
-
-      // Store coordinates in hidden fields
-      formElement.querySelector('#latitude').value = result.coordinates.lat;
-      formElement.querySelector('#longitude').value = result.coordinates.lon;
-
-      // Mark as verified
-      formElement.querySelector('#verified').value = 'true';
-
-      // Submit form
-      statusDiv.innerHTML = '<div class="success">Address verified!</div>';
-      formElement.submit();
-
-    } catch (error) {
-      statusDiv.innerHTML = `
-        <div class="error">
-          Verification error: ${error.message}
-        </div>
-      `;
-      submitButton.disabled = false;
     }
-  });
+  ]
 }
 ```
 
-### Batch Verification
+**2. Bucket versioning must be enabled** on the input and output buckets — Amazon Location requires it, which is why the input policy needs `s3:GetObjectVersion`. Grant list/version actions on the input bucket, and `PutObject`/`AbortMultipartUpload` (for cleaning up failed multipart uploads of large output files) on the output bucket:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:GetObjectVersion",
+        "s3:ListBucket",
+        "s3:GetBucketVersioning"
+      ],
+      "Resource": [
+        "arn:aws:s3:::YOUR_INPUT_BUCKET",
+        "arn:aws:s3:::YOUR_INPUT_BUCKET/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:AbortMultipartUpload"],
+      "Resource": "arn:aws:s3:::YOUR_OUTPUT_BUCKET/*"
+    }
+  ]
+}
+```
+
+Enable versioning with `aws s3api put-bucket-versioning --bucket YOUR_INPUT_BUCKET --versioning-configuration Status=Enabled` (repeat for the output bucket).
+
+## Tracking a Job
+
+Poll `GetJob` with the `JobId` until `Status` is terminal (`Completed`, `Failed`, or `Cancelled`). For event-driven workflows, subscribe to job status changes via Amazon EventBridge instead of polling.
 
 ```javascript
-// Verify multiple addresses (e.g., cleaning existing database)
-async function batchVerifyAddresses(addresses) {
-  const results = [];
+import { GetJobCommand } from "@aws-sdk/client-location";
 
-  for (const address of addresses) {
-    try {
-      const result = await verifyAddress(address.text);
-
-      results.push({
-        id: address.id,
-        originalAddress: address.text,
-        verified: result.valid,
-        standardized: result.valid ? result.standardized.Label : null,
-        coordinates: result.valid ? result.coordinates : null,
-        ambiguous: result.ambiguous,
-        error: result.valid ? null : result.message
-      });
-
-      // Rate limiting - wait between requests
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-    } catch (error) {
-      results.push({
-        id: address.id,
-        originalAddress: address.text,
-        verified: false,
-        error: error.message
-      });
-    }
-
-    // Progress indicator
-    console.log(`Verified ${results.length}/${addresses.length}`);
+async function waitForJob(client, jobId) {
+  const terminal = new Set(["Completed", "Failed", "Cancelled"]);
+  while (true) {
+    const job = await client.send(new GetJobCommand({ JobId: jobId }));
+    if (terminal.has(job.Status)) return job;
+    // Back off between polls; jobs are asynchronous and may run for a while.
+    await new Promise((r) => setTimeout(r, 30000));
   }
-
-  return results;
 }
 
-// Generate report
-function generateVerificationReport(results) {
-  const stats = {
-    total: results.length,
-    verified: results.filter(r => r.verified && !r.ambiguous).length,
-    ambiguous: results.filter(r => r.ambiguous).length,
-    invalid: results.filter(r => !r.verified).length,
-    errors: results.filter(r => r.error).length
-  };
+const job = await waitForJob(client, jobId);
+if (job.Status === "Failed") {
+  // GetJob returns Error.Code and Error.Messages for failed jobs
+  console.error("Job failed:", job.Error?.Code, job.Error?.Messages);
+} else if (job.Status === "Completed") {
+  // Results are in the OutputOptions.Location S3 prefix
+  console.log("Results at:", job.OutputOptions.Location);
+}
+```
 
-  console.log('Verification Report:', stats);
+`GetJob` also returns the full job configuration (`Action`, `ActionOptions`, `ExecutionRoleArn`, `InputOptions`, `OutputOptions`), timestamps (`CreatedAt`, `UpdatedAt`, `EndedAt`), and `Error` details if it failed.
 
+## Interpreting Results
+
+When a job completes, read the Parquet result files from the S3 output prefix. Output **preserves all input fields with an `Input_` prefix** (so `Id` → `Input_Id`) and adds `Output_`-prefixed result fields. Records that failed to process include `ErrorType` and `ErrorMessage`.
+
+**Overall verdict** (per record):
+
+- `Output_ValidationResults_MatchConfidence` - `High`, `MediumHigh`, `Medium`, `MediumLow`, or `Low`
+- `Output_ValidationResults_MatchConfidenceScore` - Precise score from 0 to 1.0 (1.0 = perfect match)
+- `Output_ValidationResults_ValidationGranularity` - How deep the match validated:
+  - `Premise` - Validated to the address-number level
+  - `Street` - Validated to the street level
+  - `LocalityAndPostalCode` - Locality, postal code, and country validated
+  - `Locality` - Locality and country validated
+
+**Standardized address** (`Output_Address_*` and `Output_AddressLines_*`): canonical, postal-formatted components — `Output_Address_Label`, `Output_Address_Street`, `Output_Address_AddressNumber`, `Output_Address_Locality`, `Output_Address_Region_Code`/`_Name`, `Output_Address_PostalCode`, country codes, secondary-address (unit/floor) components, and per-line output.
+
+**Delivery indicators**: `Output_AddressMetadata_DeliveryIndicators_Mailable` and `_Locatable` (`true`/`false`).
+
+**Per-component status**: each component's status lives in a fully-qualified column of the form `Output_ValidationResults_Components_Address_<Component>_Status` (and `..._StatusDetail`) — the `Components_Address_` infix is part of the real column name. For example, the address-number status is `Output_ValidationResults_Components_Address_AddressNumber_Status`, and the street status is `Output_ValidationResults_Components_Address_Street_Status`. For each component (`Country`, `Region`, `Locality`, `Street`, `AddressNumber`, `PostalCodeDetails_Base`, unit, floor, …):
+
+- `_Status`: `Validated` or `Unconfirmed`
+- `_StatusDetail`: `Exact` (validated unchanged), `Corrected` (fixed from reference data), `Appended` (added from reference data), `Alias` (validated via alias), `StandardizedNoMatch` (parsed/standardized but not found), `OutOfRange` (e.g. address number outside known range), `NotFound` (empty or not found)
+
+**Optional feature output**: `Output_Position_Longitude`/`_Latitude` (if `Position` requested) and `Output_CountrySpecificAttributes_*` (if `CountrySpecificAttributes` requested).
+
+```javascript
+// After reading a result record (e.g. via a Parquet reader):
+function summarizeRecord(rec) {
   return {
-    stats,
-    needsReview: results.filter(r => !r.verified || r.ambiguous)
+    inputId: rec.Input_Id,
+    confidence: rec.Output_ValidationResults_MatchConfidence,
+    score: rec.Output_ValidationResults_MatchConfidenceScore,
+    granularity: rec.Output_ValidationResults_ValidationGranularity,
+    standardized: rec.Output_Address_Label,
+    mailable: rec.Output_AddressMetadata_DeliveryIndicators_Mailable,
+    coordinates: rec.Output_Position_Longitude
+      ? {
+          lon: rec.Output_Position_Longitude,
+          lat: rec.Output_Position_Latitude,
+        }
+      : null,
+    error: rec.ErrorType ? rec.ErrorMessage : null,
   };
 }
-
-// Usage
-const addressesToVerify = [
-  { id: 1, text: "500 E 4th St, Austin, TX 78701" },
-  { id: 2, text: "301 Congress Ave, Austin, TX 78701" },
-  // ... more addresses
-];
-
-const verificationResults = await batchVerifyAddresses(addressesToVerify);
-const report = generateVerificationReport(verificationResults);
 ```
 
-## Storage Considerations and Pricing
+## Handling Partial Matches
 
-**IMPORTANT**: How you store Places API results affects pricing. Review the [Places API Stored Pricing documentation](https://docs.aws.amazon.com/location/latest/developerguide/places-pricing.html#stored-pricing) before implementing storage.
+Some addresses come back with lower `MatchConfidence` and coarser `ValidationGranularity`. Use the overall verdict together with per-component `Status`/`StatusDetail` to decide whether to accept, correct, or reject each record:
 
-### Pricing Tiers Based on Storage
+- **Accept**: `MatchConfidence` is `High`/`MediumHigh`, `ValidationGranularity` is `Premise` (or `Street` if street-level is sufficient), delivery indicators are `Mailable`, and components are `Validated` with `StatusDetail` of `Exact`/`Corrected`/`Alias`/`Appended`. Store the standardized `Output_*` values.
+- **Correct / review**: Medium confidence, or key components `Unconfirmed` with `StandardizedNoMatch` or `OutOfRange` (e.g. a valid street but an out-of-range house number). Route these to a review queue or attempt a corrected re-submission.
+- **Reject / re-collect**: `Low` confidence, `Locality`-only granularity, `NotFound` on street/address number, or not `Mailable`. Ask the source (or user) for a corrected address.
 
-Amazon Location Places API has different pricing based on the `IntendedUse` parameter:
-
-**Stored Pricing** (`IntendedUse: "Storage"`):
-
-- ✅ Can store results indefinitely
-- ✅ Supports all features (Label, Core, Advanced)
-- ✅ Price cap - maximum cost per API call
-- 💰 Higher per-request cost
-- **Use when**: Building applications that cache results long-term or perform analysis on historical data
-
-**Other Pricing Tiers**:
-
-- ⚠️ Label & Core: Results cannot be stored permanently
-- ⚠️ Advanced: Results can be cached temporarily but not stored indefinitely
-- 💰 Lower per-request cost
-- **Use when**: Real-time lookups without long-term storage needs
-
-### Setting Stored Pricing
+Prefer the standardized `Output_*` components over the raw input when a record is accepted, and record the confidence/granularity alongside the stored address for auditability.
 
 ```javascript
-// To enable stored pricing (allows indefinite storage)
-const command = new amazonLocationClient.places.GeocodeCommand({
-  QueryText: addressString,
-  IntendedUse: "Storage",  // Required for long-term storage
-  MaxResults: 1
-});
+function triage(rec) {
+  const conf = rec.Output_ValidationResults_MatchConfidence;
+  const gran = rec.Output_ValidationResults_ValidationGranularity;
+  const mailable = rec.Output_AddressMetadata_DeliveryIndicators_Mailable;
+  // Per-component status columns carry the `Components_Address_` infix — the
+  // bare `AddressNumber_Status` column does not exist in the output.
+  const numberStatus =
+    rec.Output_ValidationResults_Components_Address_AddressNumber_Status;
+
+  if (
+    (conf === "High" || conf === "MediumHigh") &&
+    gran === "Premise" &&
+    mailable
+  ) {
+    return "accept";
+  }
+  if (
+    conf === "Low" ||
+    gran === "Locality" ||
+    !mailable ||
+    numberStatus === "Unconfirmed"
+  ) {
+    return "reject";
+  }
+  return "review";
+}
 ```
 
-### Storage Decision Guide
+## Listing and Canceling Jobs
 
-Ask yourself:
+- **`ListJobs`** - Enumerate your jobs and their statuses (supports filtering and pagination).
+- **`CancelJob`** - Cancel a job that is `Pending` or `Running`; it transitions through `Cancelling` to `Cancelled`.
 
-1. **Do you need to store results indefinitely?**
-   - YES → Use `IntendedUse: "Storage"` and pay stored pricing
-   - NO → Use default pricing, don't store permanently
+```javascript
+import { ListJobsCommand, CancelJobCommand } from "@aws-sdk/client-location";
 
-2. **Will you reuse results to reduce API calls?**
-   - YES → Consider stored pricing for cost-effectiveness over time
-   - NO → Use real-time lookups with default pricing
+const { Entries } = await client.send(new ListJobsCommand({}));
+Entries.forEach((j) => console.log(j.JobId, j.Status, j.CreatedAt));
 
-3. **Are you building analytics on historical place data?**
-   - YES → Use `IntendedUse: "Storage"`
-   - NO → Use default pricing
+await client.send(new CancelJobCommand({ JobId: jobId }));
+```
 
 ## Error Handling
 
-### Validation Error Types
+- **Job-submission errors** (`StartJob`): `ValidationException` (bad request / input constraints, including the 10 GB per-file and 1 GB per-row-group limits), `AccessDeniedException` (caller or execution role lacks permission), `ThrottlingException` (retry with backoff; `StartJob` is rate-limited), `InternalServerException`.
+- **Job-lookup errors** (`GetJob`): `ResourceNotFoundException` if the `JobId` does not exist.
+- **Failed jobs**: a job can reach `Status: Failed` after starting successfully. Call `GetJob` and read `Error.Code` and `Error.Messages` for the cause.
+- **Per-record errors**: individual records that could not be processed carry `ErrorType`/`ErrorMessage` in the output file while the rest of the job succeeds. Always scan output for these.
+- **Common setup mistakes** (each makes the job go `Pending` then `Failed`, not error at `StartJob`): the `ExecutionRoleArn` must (a) trust `geo.amazonaws.com` for `sts:AssumeRole` in its trust policy, (b) grant `s3:GetObject`/`GetObjectVersion`/`ListBucket`/`GetBucketVersioning` on the input bucket and `s3:PutObject`/`AbortMultipartUpload` on the output bucket, and (c) target buckets that have **versioning enabled**. See [Starting a Validation Job](#starting-a-validation-job) for the full trust and permission policies.
 
-```javascript
-async function verifyAddressWithDetailedErrors(addressString) {
-  try {
-    const result = await verifyAddress(addressString);
+## Pricing
 
-    if (!result.valid) {
-      // Classify error
-      if (addressString.length < 10) {
-        return {
-          valid: false,
-          errorCode: 'TOO_SHORT',
-          message: 'Address is too short. Please provide a complete address.',
-          suggestion: 'Include street, city, and state/postal code.'
-        };
-      }
-
-      if (!/\d/.test(addressString)) {
-        return {
-          valid: false,
-          errorCode: 'MISSING_NUMBER',
-          message: 'Address appears to be missing a street number.',
-          suggestion: 'Add the building or house number.'
-        };
-      }
-
-      if (!/[A-Z]{2}/.test(addressString.toUpperCase())) {
-        return {
-          valid: false,
-          errorCode: 'MISSING_STATE',
-          message: 'Please include the state or province.',
-          suggestion: 'Add the 2-letter state code (e.g., CA, NY).'
-        };
-      }
-
-      return {
-        valid: false,
-        errorCode: 'NOT_FOUND',
-        message: 'Address not found in postal database.',
-        suggestion: 'Check for typos or try entering in a different format.'
-      };
-    }
-
-    return result;
-
-  } catch (error) {
-    return {
-      valid: false,
-      errorCode: 'VERIFICATION_FAILED',
-      message: 'Unable to verify address due to technical error.',
-      technicalError: error.message
-    };
-  }
-}
-```
+Address validation is billed as a Jobs API operation, priced per record processed. The optional `Position` feature incurs additional cost and is available only in the US, Canada, and Australia. Review the [Amazon Location Service pricing page](https://aws.amazon.com/location/pricing/) and the Jobs pricing section of the developer guide before running large jobs.
 
 ## Best Practices
 
-### When to Verify
+### Choosing the right tool
 
-- **Always verify before storage**: Prevent bad data from entering database
-- **Verify before critical actions**: Shipping, delivery, routing
-- **Don't verify on every keystroke**: Use autocomplete during input, geocode at submission
-- **Batch verification**: For data imports, verify in batches with rate limiting
+- **Use the Jobs API for a postal-deliverability verdict or bulk standardization**: `StartJob` with Action `ValidateAddress` is the API that returns `ValidationGranularity`, `Mailable`/`Locatable`, and per-component `StatusDetail` against postal-authority data. `SearchText`/`SearchPlaceIndexForText` return places, not a validation verdict, and are not substitutes.
+- **Use Geocode for a single ad-hoc resolve-and-score**: to check whether one typed address resolves and how well it matched, Geocode's synchronous call (with `MatchScores`) is the right tool — do not stand up a job for it. It is also the available option outside the four Jobs-API countries.
+- **Use Autocomplete + GetPlace for interactive entry**: for a live form, help users pick a real address as they type (see address-input) rather than running a job per submission.
 
-### Data Quality
+### Input and jobs
 
-- **Understand pricing implications**: Review stored pricing before implementing long-term storage
-- **Use IntendedUse parameter**: Set `IntendedUse: "Storage"` if storing results indefinitely
-- **Consider caching vs storage**: Temporary session caching doesn't require stored pricing
-- **Handle missing components**: Not all addresses have all fields (street number, etc.)
+- **Batch generously**: the Jobs API is built for bulk — process thousands to millions of addresses per job rather than many tiny jobs.
+- **Respect file limits**: 10 GB per Parquet file, 1 GB per row-group; split larger datasets across files.
+- **Keep `Id` on every record**: it comes back as `Input_Id`, which is how you correlate output to input.
+- **Set `Name`**: name jobs meaningfully so `ListJobs` and audits stay readable.
 
-### User Experience
+### Results and data quality
 
-- **Show what changed**: When standardizing, show user the difference
-- **Allow manual override**: Let users keep their version if they insist
-- **Handle ambiguity gracefully**: Present options, don't guess
-- **Provide helpful errors**: Explain WHY address is invalid and how to fix
+- **Store the standardized components**: prefer `Output_*` values over raw input for accepted records.
+- **Record the verdict**: persist `MatchConfidence`, `MatchConfidenceScore`, and `ValidationGranularity` alongside the address for auditability and downstream triage.
+- **Handle partial matches explicitly**: use per-component `Status`/`StatusDetail` to accept, review, or reject — don't treat every completed record as valid.
+- **Request only the features you need**: `Position` and `CountrySpecificAttributes` add cost; request them only when used.
 
-### Performance
+### Security and operations
 
-- **Cache results**: Cache verification results temporarily within your session
-- **Rate limit batch jobs**: Wait 100ms between batch verifications
-- **Verify once per session**: Don't re-verify address user already confirmed
-- **Use autocomplete first**: Preferred over post-hoc verification
+- **Least-privilege execution role**: scope the `ExecutionRoleArn` to only the specific input/output buckets and prefixes — while still including the required `GetObjectVersion`/`ListBucket`/`GetBucketVersioning` actions on input, `PutObject`/`AbortMultipartUpload` on output, the `geo.amazonaws.com` trust relationship, and versioning-enabled buckets (see [Starting a Validation Job](#starting-a-validation-job)).
+- **Prefer EventBridge over tight polling**: for long-running jobs, subscribe to status changes instead of polling `GetJob` aggressively.
+- **Retry throttling with backoff**: `StartJob` is rate-limited; use exponential backoff on `ThrottlingException`.

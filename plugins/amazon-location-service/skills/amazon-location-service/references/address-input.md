@@ -4,6 +4,8 @@
 
 Create effective address input forms with type-ahead completion that improves input speed and accuracy using Amazon Location Service Places APIs.
 
+**Distinction from Address Verification**: This reference covers the interactive UI/UX of collecting a single address from a user (autocomplete, type-ahead, and resolving a typed address to coordinates). It is NOT postal address validation. To verify and standardize addresses against authoritative postal data — producing a match-confidence verdict and per-component status — use the asynchronous Jobs API (`StartJob` with Action `ValidateAddress`); see the address-verification reference. Geocode returns coordinates and a matched label, not a validation verdict.
+
 ## Table of Contents
 
 - [Overview](#overview)
@@ -19,14 +21,14 @@ Address input forms SHOULD implement this three-stage flow:
 
 1. **Autocomplete** - Type-ahead suggestions as user types
 2. **GetPlace** - Fetch complete details when user selects a suggestion
-3. **Geocode** - Validate if user types complete address without selecting
+3. **Geocode** - Resolve the address to coordinates if the user types a complete address without selecting a suggestion
 
 ## Complete Implementation Flow
 
 ```javascript
 // Stage 1: User types in address field → Autocomplete
 // Stage 2: User selects suggestion → GetPlace
-// Stage 3: User submits without selection → Geocode
+// Stage 3: User submits without selection → Geocode (resolve to coordinates)
 
 // HTML Structure
 <input id="address-input" type="text" placeholder="Enter address">
@@ -87,13 +89,15 @@ Address input forms SHOULD implement this three-stage flow:
 
 ### Geocode
 
-**Purpose**: Validate and standardize a complete address typed by user (when they don't select autocomplete).
+**Purpose**: Resolve a complete address typed by the user (when they don't select an autocomplete suggestion) to coordinates and a matched address label.
 
-**When to use**: On form submission if user typed address but didn't select any autocomplete suggestion.
+**When to use**: On form submission if the user typed an address but didn't select any autocomplete suggestion.
 
 **Input**: Complete address string.
 
-**Returns**: Array of matching addresses with coordinates and standardized formatting.
+**Returns**: Array of matching addresses with coordinates and a formatted label.
+
+**Note**: Geocode is NOT postal address validation. It returns coordinates and a best-match label, not a validation verdict (match confidence, granularity, or per-component status). For verifying and standardizing addresses against authoritative postal data, use the asynchronous Jobs API (`StartJob` with Action `ValidateAddress`) — see the address-verification reference.
 
 ## Code Examples
 
@@ -179,7 +183,7 @@ document.getElementById("suggestions").addEventListener("click", async (e) => {
   }
 });
 
-// Stage 3: User submits without selecting → Geocode
+// Stage 3: User submits without selecting → Geocode (resolve to coordinates)
 document.getElementById("submit").addEventListener("click", async () => {
   if (selectedPlaceId) {
     // User selected from autocomplete, proceed
@@ -187,7 +191,7 @@ document.getElementById("submit").addEventListener("click", async () => {
     return;
   }
 
-  // User typed address without selecting, validate with Geocode
+  // User typed address without selecting; resolve it to coordinates with Geocode
   const query = document.getElementById("address-input").value;
 
   if (!query) {
@@ -223,13 +227,13 @@ document.getElementById("submit").addEventListener("click", async () => {
     submitForm();
   } catch (error) {
     console.error("Geocode error:", error);
-    alert("Failed to validate address");
+    alert("Failed to resolve address");
   }
 });
 
 function submitForm() {
   // Proceed with form submission
-  console.log("Submitting form with validated address");
+  console.log("Submitting form with resolved address");
 }
 ```
 
@@ -265,7 +269,7 @@ function submitForm() {
 - **Always use Address.Label**: Never display the `Title` field - it may be reversed
 - **Show visual feedback**: Loading indicators during API calls
 - **Keyboard navigation**: Allow arrow keys and Enter to navigate suggestions
-- **Clear affordances**: Make it obvious when address is validated
+- **Clear affordances**: Make it obvious when an address suggestion has been selected or resolved
 
 ### Data Handling
 

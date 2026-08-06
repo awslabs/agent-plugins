@@ -9,6 +9,7 @@ Render interactive maps using MapLibre GL JS with Amazon Location Service.
 - [Basic Setup](#basic-setup)
 - [Complete Examples](#complete-examples)
 - [Map Styles](#map-styles)
+- [MapLibre Gotchas](#maplibre-gotchas)
 - [Advanced Features](#advanced-features)
 - [Error Handling](#error-handling)
 - [Best Practices](#best-practices)
@@ -235,6 +236,50 @@ function setMapStyle(styleName) {
     }
   });
 }
+```
+
+## MapLibre Gotchas
+
+### `map.loaded()` goes false after `addSource` — causing hangs
+
+Calling `map.addSource()` or `map.addLayer()` inside a `"load"` callback sets internal dirty flags, making `loaded()` temporarily return `false`. The `"load"` event will **not** re-fire because the map tracks that it already fired once ([`map.ts#L3680`](https://github.com/maplibre/maplibre-gl-js/blob/main/src/ui/map.ts#L3680)).
+
+Any code that runs after an async delay and gates on `map.loaded()` can hang forever:
+
+```javascript
+// In a "load" callback: add a source
+map.once("load", () => {
+  map.addSource("zones", { type: "geojson", data: geojson });
+  // map.loaded() is now FALSE (dirty flags set by addSource)
+});
+
+// Later, after an async API call:
+if (!map.loaded()) {
+  // BUG: loaded() is false, but "load" already fired and won't re-fire → hangs
+  await new Promise((resolve) => map.on("load", resolve));
+}
+```
+
+**Correct patterns:**
+
+- Do all source/layer work inside a single `map.on("load", async () => { ... })` callback — async work inside the callback is fine
+- If you need to wait for sources to settle after load, use `map.once("idle", callback)` which re-fires whenever everything is loaded and stable ([`map.ts#L3705`](https://github.com/maplibre/maplibre-gl-js/blob/main/src/ui/map.ts#L3705))
+- Markers (DOM-based) can be added at any time — they do not need `"load"` or `"idle"`
+
+### Draggable Markers
+
+Use MapLibre's **default marker** with `draggable: true` for reliable drag behavior. Custom HTML element markers (`{ element: el, draggable: true }`) do not handle drag events reliably in MapLibre v5.
+
+```javascript
+// Reliable — default marker with drag
+const marker = new maplibregl.Marker({ color: "#3b82f6", draggable: true })
+  .setLngLat([-122.34, 47.62])
+  .addTo(map);
+
+marker.on("dragend", () => {
+  const lngLat = marker.getLngLat();
+  console.log("Dropped at:", lngLat.lng, lngLat.lat);
+});
 ```
 
 ## Advanced Features
