@@ -1,13 +1,16 @@
 # Custom vs continuous modernization Routing
 
 Route customer requests to the correct skill set. continuous modernization supports local, local-parallel,
-new EC2, existing EC2, and Fargate + AWS Batch as compute options; Custom supports local
+new EC2, existing EC2, Fargate + AWS Batch, and the AWS-managed fleet (`--mode aws-managed`, no customer
+infrastructure) as compute options; Custom supports local
 and Fargate + AWS Batch. The compute choice is independent of the Custom-vs-continuous modernization choice;
 pick routing first, then surface compute options.
 
 ## ⚠️ MANDATORY: Permission Consent After Compute Choice
 
-**When the customer chooses a remote compute option (EC2 or Batch/Fargate), the VERY FIRST response to the customer MUST be the permission consent message from the chosen execution skill. Do NOT ask any setup questions (source, analysis type, region, existing instance, etc.) before showing the consent message. If the customer says no, warn them about potential permission errors but continue anyway.**
+**When the customer chooses a _customer-owned_ remote compute option (EC2 or Batch/Fargate), the VERY FIRST response to the customer MUST be the permission consent message from the chosen execution skill. Do NOT ask any setup questions (source, analysis type, region, existing instance, etc.) before showing the consent message. If the customer says no, warn them about potential permission errors but continue anyway.**
+
+**The AWS-managed fleet (`--mode aws-managed`) is the exception — and the correct route for "no infrastructure" intent.** When the customer says anything like "no infrastructure", "I don't want to set up / manage / provision anything", "no EC2", "no Batch stack", "just run it on AWS for me", or "fully managed", route to [continuous-modernization-aws-managed-execution](continuous-modernization-aws-managed-execution.md) — do NOT offer EC2/Batch or a provisioning-consent message for these requests. aws-managed needs **no** customer infrastructure, **no** CloudFormation, and **no** permission-consent step; the create call is the submission. Note that Batch/Fargate is **not** the "no infrastructure" option — it still deploys a customer-owned stack. `--mode aws-managed` is a real, shipped mode; never claim only `ec2`/`batch` exist.
 
 ## Prerequisite: workload check
 
@@ -142,22 +145,23 @@ After a Custom transformation completes successfully, present this message:
 
 ## continuous modernization Skills Reference
 
-| Skill                                                                                      | When to Use                                                                             |
-| ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| [continuous-modernization-guide.md](continuous-modernization-guide.md)                     | New user onboarding, "how do I start?"                                                  |
-| [continuous-modernization-discovery.md](continuous-modernization-discovery.md)             | Analyze/discover repos from sources                                                     |
-| [continuous-modernization-analysis.md](continuous-modernization-analysis.md)               | Run security, tech-debt, agentic-readiness, modernization-readiness analyses            |
-| [continuous-modernization-findings.md](continuous-modernization-findings.md)               | List/filter/manage findings                                                             |
-| [continuous-modernization-remediation.md](continuous-modernization-remediation.md)         | Create remediation campaigns, auto-fix findings                                         |
-| [continuous-modernization-status.md](continuous-modernization-status.md)                   | System overview and health check                                                        |
-| [continuous-modernization-source.md](continuous-modernization-source.md)                   | Manage source connections                                                               |
-| [continuous-modernization-setup.md](continuous-modernization-setup.md)                     | Infrastructure setup and configuration                                                  |
-| [continuous-modernization-troubleshooting.md](continuous-modernization-troubleshooting.md) | Diagnose setup and command execution failures                                           |
-| [continuous-modernization-ec2-execution.md](continuous-modernization-ec2-execution.md)     | Run remote analysis/remediation on EC2 via `atx ct remote` CLI commands                 |
-| [continuous-modernization-batch-execution.md](continuous-modernization-batch-execution.md) | Run remote analysis/remediation on AWS Batch (Fargate) via `atx ct remote` CLI commands |
-| [continuous-modernization-schedule.md](continuous-modernization-schedule.md)               | Schedule recurring analyses via `atx ct schedule` CLI commands (analyses only)          |
-| [continuous-modernization-reporting.md](continuous-modernization-reporting.md)             | Generate an HTML report of continuous modernization analyses                            |
-| [continuous-modernization-security-agent.md](continuous-modernization-security-agent.md)   | Security agent setup (admin) and runtime verification (executor)                        |
+| Skill                                                                                                  | When to Use                                                                                      |
+| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| [continuous-modernization-guide.md](continuous-modernization-guide.md)                                 | New user onboarding, "how do I start?"                                                           |
+| [continuous-modernization-discovery.md](continuous-modernization-discovery.md)                         | Analyze/discover repos from sources                                                              |
+| [continuous-modernization-analysis.md](continuous-modernization-analysis.md)                           | Run security, tech-debt, agentic-readiness, modernization-readiness analyses                     |
+| [continuous-modernization-findings.md](continuous-modernization-findings.md)                           | List/filter/manage findings                                                                      |
+| [continuous-modernization-remediation.md](continuous-modernization-remediation.md)                     | Create remediation campaigns, auto-fix findings                                                  |
+| [continuous-modernization-status.md](continuous-modernization-status.md)                               | System overview and health check                                                                 |
+| [continuous-modernization-source.md](continuous-modernization-source.md)                               | Manage source connections                                                                        |
+| [continuous-modernization-setup.md](continuous-modernization-setup.md)                                 | Infrastructure setup and configuration                                                           |
+| [continuous-modernization-troubleshooting.md](continuous-modernization-troubleshooting.md)             | Diagnose setup and command execution failures                                                    |
+| [continuous-modernization-ec2-execution.md](continuous-modernization-ec2-execution.md)                 | Run remote analysis/remediation on EC2 via `atx ct remote` CLI commands                          |
+| [continuous-modernization-batch-execution.md](continuous-modernization-batch-execution.md)             | Run remote analysis/remediation on AWS Batch (Fargate) via `atx ct remote` CLI commands          |
+| [continuous-modernization-aws-managed-execution.md](continuous-modernization-aws-managed-execution.md) | Run remote analysis on the AWS-managed fleet (`--mode aws-managed`) — no customer infrastructure |
+| [continuous-modernization-schedule.md](continuous-modernization-schedule.md)                           | Schedule recurring analyses via `atx ct schedule` CLI commands (analyses only)                   |
+| [continuous-modernization-reporting.md](continuous-modernization-reporting.md)                         | Generate an HTML report of continuous modernization analyses                                     |
+| [continuous-modernization-security-agent.md](continuous-modernization-security-agent.md)               | Security agent setup (admin) and runtime verification (executor)                                 |
 
 ## Custom Skills Reference
 
