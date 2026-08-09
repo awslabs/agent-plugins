@@ -31,7 +31,7 @@ This separation ensures that the running agent cannot modify its own payment inf
 }
 ```
 
-3. **Attach permissions** to the role:
+1. **Attach permissions** to the role:
 
 ```json
 {
