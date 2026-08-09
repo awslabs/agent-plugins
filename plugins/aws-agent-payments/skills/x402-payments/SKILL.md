@@ -115,11 +115,11 @@ For the full protocol specification including v2 envelope format, supported asse
 
 **Recommended enforcement (strongest → weakest):**
 
-| Tier | Mechanism | Guarantee |
-|------|-----------|----------|
-| 1 | **Host-native approval gate** — the agent host intercepts `CreatePaymentSession` and surfaces an Approve/Deny prompt to the user. The LLM cannot bypass this. | Hard |
-| 2 | **IAM role separation** — the agent's runtime role only has `ProcessPayment` + `GetPaymentSession`. Sessions are created out-of-band by a human or privileged process. | Hard |
-| 3 | **Conversational confirmation** — the agent asks the user "Create a $5 session?" and waits for affirmative response. | Soft (LLM-enforceable only) |
+| Tier | Mechanism                                                                                                                                                              | Guarantee                   |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| 1    | **Host-native approval gate** — the agent host intercepts `CreatePaymentSession` and surfaces an Approve/Deny prompt to the user. The LLM cannot bypass this.          | Hard                        |
+| 2    | **IAM role separation** — the agent's runtime role only has `ProcessPayment` + `GetPaymentSession`. Sessions are created out-of-band by a human or privileged process. | Hard                        |
+| 3    | **Conversational confirmation** — the agent asks the user "Create a $5 session?" and waits for affirmative response.                                                   | Soft (LLM-enforceable only) |
 
 **Recommendations:**
 
