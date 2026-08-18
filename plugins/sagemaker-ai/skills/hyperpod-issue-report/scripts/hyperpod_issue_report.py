@@ -313,7 +313,7 @@ class HyperPodIssueReportCollector:
         
         return instance_ids
     
-    def generate_collector_script(self, commands: List[str]) -> str:
+    def generate_collector_script(self) -> str:
         """Generate the bash script that will run on each node.
         Instance group and ID are passed as environment variables.
         Script content varies based on cluster type (EKS vs Slurm)."""
@@ -472,24 +472,6 @@ class HyperPodIssueReportCollector:
                 "",
             ])
         
-        # Add each command to the script
-        for i, cmd in enumerate(commands, 1):
-            # Sanitize command for filename - replace problematic characters
-            safe_name = cmd.replace(' ', '_').replace('/', '_').replace('|', '_').replace('>', '_').replace('<', '_').replace('&', '_').replace(';', '_').replace('(', '_').replace(')', '_').replace('$', '_').replace('`', '_').replace('"', '_').replace("'", '_')[:50]
-            output_file = f"command_{i:02d}_{safe_name}.txt"
-
-            # Use shlex.quote() to safely escape the command for display in echo
-            quoted_cmd = shlex.quote(cmd)
-
-            cmd_line = f"{cmd} > \"${{OUTPUT_DIR}}/{output_file}\" 2>&1 || echo \"Command failed with exit code $?\" >> \"${{OUTPUT_DIR}}/{output_file}\""
-
-            script_lines.extend([
-                f"# Command {i}",
-                f"echo 'Running: '{quoted_cmd}",
-                cmd_line,
-                "",
-            ])
-        
         # Add S3 upload logic with new filename format
         script_lines.extend([
             "# Upload results to S3",
@@ -526,7 +508,7 @@ class HyperPodIssueReportCollector:
             raise ValueError("Cluster ID is required for HyperPod SSM targets")
         return f"sagemaker-cluster:{self.cluster_id}_{instance_group_name}-{instance_id}"
     
-    def execute_collection_on_node(self, node: Dict, commands: List[str], script_s3_uri: str) -> Dict:
+    def execute_collection_on_node(self, node: Dict, script_s3_uri: str) -> Dict:
         """Execute the collection script on a single node via SSM using pexpect."""
         instance_id = node['InstanceId']
         instance_group = node.get('NodeGroup', 'unknown')
@@ -770,10 +752,10 @@ class HyperPodIssueReportCollector:
                 except Exception:  # nosec B110 - best-effort cleanup
                     pass
     
-    def execute_with_retry(self, node: Dict, commands: List[str], script_s3_uri: str, max_retries: int = 3) -> Dict:
+    def execute_with_retry(self, node: Dict, script_s3_uri: str, max_retries: int = 3) -> Dict:
         """Execute collection on a node with exponential backoff on throttling errors."""
         for attempt in range(max_retries):
-            result = self.execute_collection_on_node(node, commands, script_s3_uri)
+            result = self.execute_collection_on_node(node, script_s3_uri)
             
             error_msg = result.get('Error', '')
             if 'ThrottlingException' in error_msg or 'Rate exceeded' in error_msg:
@@ -788,7 +770,7 @@ class HyperPodIssueReportCollector:
         
         return result
 
-    def collect_reports(self, commands: List[str], instance_groups: Optional[List[str]] = None, instance_ids: Optional[List[str]] = None, max_workers: int = 16):
+    def collect_reports(self, instance_groups: Optional[List[str]] = None, instance_ids: Optional[List[str]] = None, max_workers: int = 16):
         """Collect reports from all nodes, specific instance groups, or specific instance IDs.
         
         For Slurm clusters, instance_ids can be either:
@@ -848,12 +830,10 @@ class HyperPodIssueReportCollector:
         elif self.cluster_type == 'slurm':
             print(f"Default collections: nvidia-smi, nvidia-bug-report, sinfo, Slurm services, Slurm config, Slurm logs, system logs")
         
-        if commands:
-            print(f"Additional commands: {', '.join(commands)}")
         print("-" * 60)
-        
+
         # Generate and upload the collector script once
-        script_content = self.generate_collector_script(commands)
+        script_content = self.generate_collector_script()
         script_key = f"{self.report_s3_key}/collector_script.sh"
         
         try:
@@ -874,7 +854,7 @@ class HyperPodIssueReportCollector:
         
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_node = {
-                executor.submit(self.execute_with_retry, node, commands, script_s3_uri): node
+                executor.submit(self.execute_with_retry, node, script_s3_uri): node
                 for node in self.nodes
             }
             
@@ -1405,9 +1385,8 @@ Examples:
   # Basic usage - auto-detects cluster type
   python hyperpod_issue_report.py --cluster my-cluster --region us-west-2 --s3-path s3://my-bucket
 
-  # With custom prefix and additional commands
-  python hyperpod_issue_report.py --cluster my-cluster --region us-west-2 --s3-path s3://my-bucket/diagnostics \\
-    --command "df -h" --command "free -h"
+  # With custom S3 prefix
+  python hyperpod_issue_report.py --cluster my-cluster --region us-west-2 --s3-path s3://my-bucket/diagnostics
 
   # Target specific instance groups
   python hyperpod_issue_report.py --cluster my-cluster --region us-west-2 --s3-path s3://my-bucket \\
@@ -1422,7 +1401,6 @@ Examples:
     parser.add_argument('--cluster', '-c', required=True, help='HyperPod cluster name (EKS or Slurm)')
     parser.add_argument('--region', '-r', help='AWS region (uses default boto3 region if not specified)')
     parser.add_argument('--s3-path', '-s', required=True, help='S3 path for storing reports (e.g., s3://bucket-name/prefix or s3://bucket-name)')
-    parser.add_argument('--command', '-cmd', action='append', help='Additional command to execute on nodes (can be specified multiple times)')
     parser.add_argument('--instance-groups', '-g', nargs='+', help='Target specific instance groups (e.g., --instance-groups worker1 worker2)')
     parser.add_argument('--max-workers', '-w', type=int, default=16, help='Maximum concurrent SSM sessions (default: 16, reduce if hitting throttling)')
     parser.add_argument('--nodes', '-n', nargs='+', help='Target specific nodes: instance IDs (i-*), EKS node names (hyperpod-i-*), or Slurm node names (ip-*)')
@@ -1442,16 +1420,8 @@ Examples:
             region=args.region,
             debug=args.debug
         )
-        
-        # User-specified commands
-        commands = []
-        
-        # Add any user-specified commands
-        if args.command:
-            commands.extend(args.command)
-        
+
         collector.collect_reports(
-            commands=commands,
             instance_groups=args.instance_groups,
             instance_ids=args.nodes,
             max_workers=args.max_workers

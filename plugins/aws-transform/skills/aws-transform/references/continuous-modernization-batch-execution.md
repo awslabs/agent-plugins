@@ -25,7 +25,7 @@ If the user explicitly opts out of telemetry, omit `--telemetry` for the rest of
 - Analyzing or remediating many repos in parallel (one container per repo)
 - Analyzing one type across many sources or repos in a single run (to run multiple types, submit once per type)
 - One-shot batch jobs with no persistent infrastructure between runs
-- Customer wants AWS-managed compute (no EC2 instance to manage)
+- Customer wants serverless Fargate compute in **their own account** (no EC2 instance to keep running) — note this still deploys a customer-owned Batch stack. For a run with **no customer infrastructure at all**, use [AWS-managed execution](continuous-modernization-aws-managed-execution.md) (`--mode aws-managed`) instead.
 
 For persistent compute with warm containers, use [remote EC2 execution](continuous-modernization-ec2-execution.md) instead.
 
@@ -187,7 +187,7 @@ Add `--json` for machine-readable output.
 If some jobs in a batch failed:
 
 ```bash
-atx ct remote analysis --resume --batch-name <batch> --mode batch --stack-name <stack>
+atx ct remote analysis --resume-incomplete --batch-name <batch> --mode batch --stack-name <stack>
 ```
 
 Re-submits only the non-completed jobs from the original batch.

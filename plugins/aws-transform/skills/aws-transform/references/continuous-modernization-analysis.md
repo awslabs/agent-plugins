@@ -22,15 +22,17 @@ If the user explicitly asks to disable telemetry, omit `--telemetry` for the res
 
 **Explicit intent overrides repo count.** If the user's prompt contains words like "remotely", "on AWS", "on EC2", "on Fargate", "in the cloud", or "remote execution", route to the corresponding execution skill regardless of how many repos are in scope:
 
+- Mentions "no infrastructure" / "don't want to set up / manage / provision anything" / "no EC2" / "no Batch stack" / "managed" / "just run it for me on AWS" → follow [continuous-modernization-aws-managed-execution](continuous-modernization-aws-managed-execution.md). This is the **no-infrastructure** option (AWS-managed fleet); do NOT offer EC2/Batch or a provisioning step for these requests. **Batch/Fargate is NOT the no-infrastructure option** — it still deploys a customer-owned stack.
 - Mentions EC2 / "on an instance" → follow [continuous-modernization-ec2-execution](continuous-modernization-ec2-execution.md)
 - Mentions Batch / Fargate / "serverless" → follow [continuous-modernization-batch-execution](continuous-modernization-batch-execution.md)
-- Mentions "remotely" / "on AWS" / "in the cloud" (no specific compute) → ask which: EC2 or Batch (Fargate)
+- Mentions "remotely" / "on AWS" / "in the cloud" (no specific compute) → ask which: AWS-managed (no infrastructure), EC2, or Batch (Fargate)
 
 **Otherwise**, for analyses with more than 9 repos, ask the customer:
 
-> "Do you want to run this locally, set up an EC2 instance in your AWS account, or submit to AWS Batch (Fargate)?"
+> "Do you want to run this locally, on the AWS-managed fleet (no infrastructure to set up), set up an EC2 instance in your AWS account, or submit to AWS Batch (Fargate)?"
 
 - **Local** -- proceed with the commands below
+- **AWS-managed** -- follow [continuous-modernization-aws-managed-execution](continuous-modernization-aws-managed-execution.md) (no customer infrastructure)
 - **EC2** -- follow [continuous-modernization-ec2-execution](continuous-modernization-ec2-execution.md)
 - **Batch** -- follow [continuous-modernization-batch-execution](continuous-modernization-batch-execution.md)
 
@@ -73,6 +75,44 @@ atx ct analysis list --category "Tech Debt" --json
 atx ct analysis cancel --id <id>
 atx ct analysis delete --id <id> [--cascade-findings]
 ```
+
+## Local vs remote execution (command differences)
+
+The commands above (`atx ct analysis run`) execute **locally** on this machine. To run on AWS instead, use the **`atx ct remote analysis`** verb with a `--mode`. There are three remote modes; the command surface differs from local in a few important ways:
+
+|                         | Local                            | AWS-managed (`--mode aws-managed`)          | EC2 / Batch (`--mode ec2\|batch`)                    |
+| ----------------------- | -------------------------------- | ------------------------------------------- | ---------------------------------------------------- |
+| Verb                    | `atx ct analysis run`            | `atx ct remote analysis`                    | `atx ct remote analysis`                             |
+| Infrastructure          | none (this machine)              | **none** — the AWS-managed fleet runs it    | customer-owned stack (must `remote provision` first) |
+| Source/repo flags       | `--source` / `--repo` (singular) | `--sources` / `--repos` (plural)            | `--sources` / `--repos` (plural)                     |
+| Region                  | n/a                              | `--region` (optional; any supported region) | `--region` + `--stack-name`                          |
+| Create semantics        | runs in-process                  | create **is** the submission (no dispatch)  | submits jobs to the stack                            |
+| Poll with               | `atx ct analysis get --id <id>`  | `atx ct analysis get --id <id>`             | `atx ct remote status --group\|--batch ...`          |
+| executionMode telemetry | `local`                          | `aws-managed`                               | `ec2` / `fargate`                                    |
+
+AWS-managed is the closest remote analog to a local run — same `analysis get` polling, no infrastructure — just running on AWS compute in the region you choose:
+
+```bash
+# AWS-managed remote analysis (no infrastructure to provision)
+atx ct remote analysis \
+  --type tech-debt-comprehensive \
+  --sources <name> \
+  --mode aws-managed \
+  --region <region> \
+  --telemetry "agent=<AGENT>,executionMode=aws-managed"
+# → prints an analysis id; poll with: atx ct analysis get --id <id> --json
+```
+
+EC2/Batch, by contrast, run on a stack the customer deploys and are polled with `remote status`:
+
+```bash
+# EC2/Batch remote analysis (customer-owned stack; provision first)
+atx ct remote analysis --type tech-debt-comprehensive --sources <name> \
+  --mode batch --stack-name <stack> --telemetry "agent=<AGENT>,executionMode=fargate"
+```
+
+Full details, flag-rejection rules, and output shapes per mode:
+[aws-managed](continuous-modernization-aws-managed-execution.md) · [EC2](continuous-modernization-ec2-execution.md) · [Batch](continuous-modernization-batch-execution.md). For choosing a mode, see "Choose Compute" above.
 
 ## Running long analyses (--wait, background, logs)
 
@@ -178,22 +218,26 @@ If an analysis returns 0 findings on a repo that's obviously stale (Java 8, Node
 
 ## Listing analyses
 
-`atx ct analysis list` exposes three filters. Pick the narrowest combination the question allows.
+`atx ct analysis list` exposes these filters. Pick the narrowest combination the question allows.
 
-| Filter       | Where it runs                           | Allowed values                                                                                                     |
-| ------------ | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `--status`   | server-side (GSI-backed, fast)          | `pending`, `running`, `complete`, `cancelled`, `failed`                                                            |
-| `--type`     | server-side (GSI-backed, fast)          | `tech-debt-quick`, `tech-debt-comprehensive`, `security`, `agentic-readiness`, `modernization-readiness`, `custom` |
-| `--category` | client-side (does not reduce the fetch) | `"Tech Debt"`, `"Security"`, `"Agentic Readiness"`                                                                 |
+| Filter          | Where it runs                           | Allowed values                                                                                                        |
+| --------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `--status`      | server-side (GSI-backed, fast)          | `pending`, `running`, `complete`, `cancelled`, `failed`                                                               |
+| `--type`        | server-side (GSI-backed, fast)          | `tech-debt-quick`, `tech-debt-comprehensive`, `security`, `agentic-readiness`, `modernization-readiness`, `custom`    |
+| `--category`    | client-side (does not reduce the fetch) | `"Tech Debt"`, `"Security"`, `"Agentic Readiness"`                                                                    |
+| `--schedule-id` | server-side                             | a schedule's `sched-` analysisId (from `atx ct schedule list`) — lists that schedule's fired child runs, newest first |
 
 **Recommended shapes:**
 
 - "What completed analyses do we have?" → `atx ct analysis list --status complete --json`
 - "What security analyses ran?" → `atx ct analysis list --type security --json`
 - "Find completed security runs" → `atx ct analysis list --status complete --type security --json`
+- "What has my nightly schedule run so far?" → `atx ct analysis list --schedule-id <sched-id> --json` (the fired child runs of that schedule; get `<sched-id>` from `atx ct schedule list`)
 - One specific run → `atx ct analysis get --id <id> --json` (point lookup; cheaper than list).
 
 `--category` is a client-side grouping; e.g. `"Tech Debt"` matches both `tech-debt-quick` and `tech-debt-comprehensive`. Use it when the user wants both subtypes together.
+
+`--schedule-id` is how you inspect a schedule's history: each fire creates one child analysis, and this lists them newest-first. It **cannot** be combined with `--status` or `--type` (the CLI returns `INVALID_INPUT`). To read one fire's findings, take a child's id and run `atx ct findings list --analysis-id <id> --json`.
 
 `--status` and `--type` accept only the canonical values above. Off-canonical input (e.g. `--status completed`, `--type tech-debt`) returns an `INVALID_INPUT` error.
 

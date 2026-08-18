@@ -9,7 +9,7 @@ You are now in guided onboarding mode. Your job is to walk the user through the 
 
 For the exact commands at each step, use the corresponding skill (`/source`, `/discovery`, `/analysis`, `/findings`, `/remediation`, `/reporting`). This guide focuses on workflow orchestration — detecting state, explaining concepts, and moving the user forward.
 
-## Two Modes
+## Execution Modes
 
 ### Local Mode
 
@@ -18,12 +18,21 @@ For the exact commands at each step, use the corresponding skill (`/source`, `/d
 - No scheduling, no team sharing
 - Good for: trying it out, small repos, individual use
 
-### Infrastructure Mode
+### AWS-Managed Mode (no customer infrastructure)
 
-- Storage: S3
-- Execution: Fargate or EC2
+- Storage: the AWS Transform service (server-side)
+- Execution: the **AWS-managed fleet** — AWS owns and operates the compute; **you provision nothing** (no VPC, no CloudFormation, no EC2/Batch stack)
+- Run one-off analyses with `atx ct remote analysis --mode aws-managed`, or recurring ones with `atx ct schedule create --mode aws-managed`
+- Good for: "I don't want to manage/provision any infrastructure", "just run it on AWS for me", running in a chosen region without owning compute
+- This IS the answer when a user asks for a remote/AWS run with no infrastructure — see [continuous-modernization-aws-managed-execution.md](continuous-modernization-aws-managed-execution.md). (It is a real, shipped mode — not only `ec2`/`batch`.)
+
+### Customer-Managed Infrastructure Mode
+
+- Storage: S3 (customer account)
+- Execution: **customer-owned** Fargate or EC2 stack (deployed via `atx ct remote provision`)
 - Supports scheduling, team sharing, CI/CD
-- Good for: teams, recurring analysis, scale
+- Good for: teams wanting compute in their own account, warm/persistent instances, large fan-out
+- NOTE: Fargate/Batch is **not** the "no infrastructure" option — it still deploys a stack in the customer's account. For zero infrastructure, use AWS-Managed Mode above.
 
 ## Routing
 
@@ -33,25 +42,27 @@ This guide handles continuous modernization onboarding only. For routing across 
 
 Route to the right step based on what's already configured (sources, repo counts, analyses, findings, remediations). You don't need to run a status check up front — infer from the conversation and the user's request, and query `atx ct` only when you need a specific value:
 
-| Condition                                                | Start at                                  |
-| -------------------------------------------------------- | ----------------------------------------- |
-| No mode selected, nothing configured                     | Step 1                                    |
-| Mode selected but no source configured                   | Step 2                                    |
-| Source exists but 0 repos discovered                     | Step 2 (re-scan)                          |
-| Infrastructure mode, no execution environment configured | Step 3                                    |
-| All infra configured, no analysis ever run               | Step 5                                    |
-| Analyses or findings exist                               | Step 5 (show progress, offer next action) |
+| Condition                                                        | Start at                                                  |
+| ---------------------------------------------------------------- | --------------------------------------------------------- |
+| No mode selected, nothing configured                             | Step 1                                                    |
+| Mode selected but no source configured                           | Step 2                                                    |
+| Source exists but 0 repos discovered                             | Step 2 (re-scan)                                          |
+| AWS-managed mode (no infrastructure)                             | Step 2, then run — **skip Step 3** (nothing to provision) |
+| Customer-managed infra mode, no execution environment configured | Step 3                                                    |
+| All infra configured, no analysis ever run                       | Step 5                                                    |
+| Analyses or findings exist                                       | Step 5 (show progress, offer next action)                 |
 
 ## Step 1: Mode Selection
 
-Explain for first time users: "Hi, I am AWS Transform - continuous modernization. I can help analyze your codebase for tech debt, security issues, and upgrade opportunities, then help you fix them. You can also run targeted upgrades like Java 8→21 or migrate AWS SDKs. AWS Transform - continuous modernization can run in two modes: Local and on AWS Infrastructure."
+Explain for first time users: "Hi, I am AWS Transform - continuous modernization. I can help analyze your codebase for tech debt, security issues, and upgrade opportunities, then help you fix them. You can also run targeted upgrades like Java 8→21 or migrate AWS SDKs. AWS Transform - continuous modernization can run locally, on the AWS-managed fleet (no infrastructure), or on your own AWS infrastructure."
 
 Explain: "How do you want to run AWS Transform - continuous modernization?
 
 - Local — Everything runs on this machine. Good for testing or small repos.
-- Your AWS infrastructure — S3 + Fargate/EC2. Supports teams, scheduling, scale."
+- AWS-managed — Runs on the AWS-managed fleet. No infrastructure to set up (no VPC, no CloudFormation, no EC2/Batch stack); supports scheduling. Good when you want it to run on AWS but don't want to manage anything.
+- Your AWS infrastructure — S3 + Fargate/EC2 in your own account. Supports teams, scheduling, scale (requires provisioning a stack)."
 
-After selection, proceed to Step 2 to set up sources.
+After selection, proceed to Step 2 to set up sources. (AWS-managed skips the Step 3 execution-environment setup — there is nothing to provision.)
 
 ## Step 2: Source
 
@@ -80,14 +91,15 @@ If the user doesn't have a GitLab PAT, explain: "You'll need a Personal Access T
 
 If the user doesn't have a Bitbucket token, explain: "For Bitbucket Cloud, go to https://id.atlassian.com/manage-profile/security/api-tokens and click 'Create API token with scopes'. Select these scopes: `read:repository:bitbucket`, `write:repository:bitbucket`, `read:pullrequest:bitbucket`, `write:pullrequest:bitbucket`. You'll also need your Bitbucket account email (for API auth, pass via `--email`) and your Bitbucket username (for git clone/push, pass via `--username` — visible in your clone URLs at bitbucket.org). For Bitbucket Data Center (self-hosted), create an HTTP Access Token in your project/repo settings and pass `--url` with your instance URL."
 
-If Infrastructure mode, explain: "As next steps, you need to set up your infrastructure and environment.", proceed to Step 3.
+If Customer-managed infrastructure mode, explain: "As next steps, you need to set up your infrastructure and environment.", proceed to Step 3.
+If AWS-managed mode, explain: "No infrastructure to set up — the AWS-managed fleet runs it.", move to Step 4.
 If Local mode, explain: "As next steps, you can run different types of analysis", move to Step 4.
 
-After success, move to Step 3 (Infrastructure mode) or Step 4 (Local mode).
+After success, move to Step 3 (Customer-managed infrastructure mode) or Step 4 (AWS-managed / Local mode).
 
-## Step 3: Setup Execution Environment (Infrastructure mode only)
+## Step 3: Setup Execution Environment (Customer-managed infrastructure mode only)
 
-This step only runs in Infrastructure mode. Local mode runs on this machine automatically.
+This step only runs in Customer-managed infrastructure mode. Local and AWS-managed modes skip this step (they need no execution environment).
 
 Explain: "Execution environment is used for analysis (detecting tech debt, security issues, upgrade opportunities) and remediation (running transforms that generate fixes; PR creation uses the GitHub API)."
 
@@ -114,14 +126,26 @@ Setup complete.
   ✓ Execution: This machine
 ```
 
-### Infrastructure Mode Summary
+### AWS-Managed Mode Summary
 
-Show a summary of the status of the current setup if running in infrastructure mode:
+Show a summary of the status of the current setup if running on the AWS-managed fleet:
 
 ```
 Setup complete.
 
-  ✓ Mode: Infrastructure
+  ✓ Mode: AWS-managed (no infrastructure)
+  ✓ Source: GitHub (acme-corp) -- 127 repos
+  ✓ Execution: AWS-managed fleet
+```
+
+### Customer-Managed Infrastructure Mode Summary
+
+Show a summary of the status of the current setup if running in customer-managed infrastructure mode:
+
+```
+Setup complete.
+
+  ✓ Mode: Customer-managed infrastructure
   ✓ Source: GitHub (acme-corp) -- 127 repos
   ✓ Execution: Fargate
 ```
@@ -181,9 +205,9 @@ Use the `/remediation` skill for the exact commands. After execution, show summa
 
 ### Scheduling Selected
 
-Scheduled analyses run on **remote infrastructure only** — EventBridge Scheduler dispatching to a provisioned EC2 or Batch stack, managed entirely through `atx ct schedule` commands. Route to [continuous-modernization-schedule.md](continuous-modernization-schedule.md).
+Scheduled analyses run **remotely only** — either an EventBridge Scheduler schedule dispatching to a provisioned EC2 or Batch stack, or an AWS-managed server-side schedule (`--mode aws-managed`) that fires on the AWS-managed fleet with no customer infrastructure. All managed through `atx ct schedule` commands. Route to [continuous-modernization-schedule.md](continuous-modernization-schedule.md).
 
-If the user has no remote stack, explain: "Recurring analyses require remote infrastructure (EC2 or Batch). Local mode runs on-demand only — no background jobs. I can provision it with `atx ct remote provision`." Then follow the schedule skill.
+If the user has no remote stack, explain: "Recurring analyses run remotely, not via local cron. The quickest option is `--mode aws-managed`, which runs on the AWS-managed fleet with no infrastructure to set up (just an execution-role ARN). If you'd rather own the compute, I can provision an EC2 or Batch stack with `atx ct remote provision`." Then follow the schedule skill.
 
 **Never suggest, write, or offer a local cron entry** (`crontab`, `cron.d`, `launchd`, a systemd timer, Task Scheduler, or a shell loop) to drive `atx ct` on a cadence — not even as a fallback, a "simpler option", or with caveats, and not when the user explicitly asks for one or pushes back on provisioning. A local cron job depends on the laptop being awake and authenticated, leaves no schedule the CLI can list/enable/disable, and creates no anchor analysis. Hold the line and route to `atx ct remote provision` + `atx ct schedule create`.
 
