@@ -262,3 +262,22 @@ atx ct analysis run --type tech-debt-comprehensive --source <name> --tags team=a
 - If `~/.aws/atx/settings.json` defines `applyTags` (an array of tag maps), those defaults are applied automatically even without explicit `--tags`. An explicit `--tags` override merges **per key** over the settings defaults.
 
 See the [source](continuous-modernization-source.md) skill's Tags section for the full schema, merge semantics, and error behavior.
+
+## Prerequisites & errors
+
+AWS credentials must be valid and the CLI must be able to reach the AWS Transform
+backend before starting or reading an analysis. See the [troubleshooting](continuous-modernization-troubleshooting.md)
+skill for the full actionable-error reference. Common cases:
+
+- **`command not found: atx`** — the CLI isn't installed/on PATH. Install it (see
+  the `setup` skill) and verify with `atx --version`.
+- **Connection error** — the CLI can't reach the AWS Transform backend: refresh AWS credentials and confirm `AWS_REGION` is a supported region, then retry.
+- **`AccessDenied` / 403** — refresh AWS credentials,
+  confirm the role's permissions and `AWS_REGION`, then retry.
+- **`required option '--type <type>' not specified`** — `--type` takes a value; run
+  `atx ct analysis run --help` for valid values (e.g. `--type tech-debt-comprehensive`).
+- **Security analysis reports COMPLETED with 0 findings after an error line** — this
+  is _not_ a clean result; the findings fetch failed. Retry; if it persists, verify
+  credentials/region and Security Agent access (`atx ct setup security-agent`).
+- **Analysis stuck / no progress** — do not report success; check `atx ct analysis list`
+  and surface the actual status.
