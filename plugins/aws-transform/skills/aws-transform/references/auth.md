@@ -36,6 +36,12 @@ Common CLI-side conditions:
 - `AccessDeniedException` → AWS credentials expired. Re-run `aws sso login` or refresh env vars.
 - `command not found: atx` → CLI not installed. Use MCP-based transforms instead, or install the CLI.
 
+### WSL: separate AWS config on the Linux and Windows sides
+
+On Windows, running the CLI inside WSL introduces a common footgun. WSL's Linux home directory and the Windows user profile each hold their **own** `~/.aws/config` (WSL: `~/.aws/config`; Windows: `C:\Users\<user>\.aws\config`). `aws sso login` refreshes the cached SSO token only for the environment it was run in — a login in Windows PowerShell does not produce a token the WSL side can read, and vice versa.
+
+When a user on Windows/WSL reports `AccessDenied`, expired-token, or "no credentials" errors from `atx` or `aws` **despite having signed in**, suspect this split before generic re-auth advice. Confirm which environment they run `atx` in (the WSL shell) versus where they ran `aws sso login`. The fix: run `aws sso login --profile <profile>` **in the same WSL shell** where `atx` runs, so it reads the WSL-side `~/.aws/config` and caches the refreshed token under that side's `~/.aws/sso/cache/`. Verify from that same shell with `aws sts get-caller-identity`. (If a user deliberately shares one config across both sides, they must set `AWS_CONFIG_FILE`/`AWS_SHARED_CREDENTIALS_FILE` to the shared path in every shell — but same-environment login is the simpler default.)
+
 ## Environment variables (MCP client config)
 
 Pre-set in `mcp.json` to skip an interactive `configure` call:

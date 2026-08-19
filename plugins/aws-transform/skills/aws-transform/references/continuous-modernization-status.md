@@ -5,10 +5,6 @@ description: Show AWS Transform - continuous modernization (continuous moderniza
 
 # Status
 
-## Prerequisites
-
-Check if the server is running with `atx ct status --health`. If any command fails with a connection error, use the `server` skill to start the server.
-
 ## Commands
 
 ```bash

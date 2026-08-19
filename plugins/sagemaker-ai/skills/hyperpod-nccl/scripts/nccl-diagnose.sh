@@ -226,7 +226,7 @@ detect_orchestrator() {
         warn "Could not auto-detect orchestrator — defaulting to 'eks'"
         warn "Override with: --orchestrator slurm"
     fi
-    success "Orchestrator: ${ORCHESTRATOR^^}"
+    success "Orchestrator: $(printf '%s' "$ORCHESTRATOR" | tr '[:lower:]' '[:upper:]')"
 }
 
 check_prerequisites() {
@@ -937,45 +937,85 @@ analyze_nccl_logs() {
         return
     fi
 
-    declare -A NCCL_PATTERNS=(
-        ["Timeout waiting for"]="TIMEOUT_RENDEZVOUS:Rendezvous timed out — peer ranks not responding"
-        ["Connection refused"]="CONN_REFUSED:TCP refused — check MASTER_ADDR/MASTER_PORT"
-        ["Address already in use"]="PORT_CONFLICT:Port already in use — change MASTER_PORT"
-        ["NCCL WARN Connect to"]="CONNECT_FAIL:NCCL peer connection failed — check SG/NetworkPolicy"
-        ["network is unreachable"]="NET_UNREACHABLE:Network unreachable — VPC/routing issue"
-        ["Error in Store"]="STORE_ERR:Distributed store error — usually rendezvous timeout"
-        ["DistStoreError"]="STORE_ERR:Distributed store error (PyTorch 2.x) — usually rendezvous timeout"
-        ["RendezvousConnectionError"]="RDZV_CONN_ERR:Torch elastic rendezvous connection failed — check MASTER_ADDR DNS + SG"
-        ["RendezvousTimeout"]="RDZV_TIMEOUT:Torch elastic rendezvous timed out — peers not reachable"
-        ["Name or service not known"]="DNS_FAIL:DNS resolution failed for MASTER_ADDR — check headless service or /etc/hosts"
-        ["getaddrinfo failed"]="DNS_FAIL:DNS resolution failed — headless service missing or CoreDNS issue"
-        ["Watchdog timeout"]="WATCHDOG_TIMEOUT:AllReduce watchdog expired — straggler or OOM"
-        ["unhandled system error"]="SYSTEM_ERROR:NCCL system error — GPU/EFA hardware issue"
-        ["unhandled cuda error"]="CUDA_ERROR:CUDA runtime error — GPU driver crash or hardware fault"
-        ["peer access is not supported"]="P2P_FAIL:GPU peer access blocked — ACS enabled or IOMMU misconfigured"
-        ["NCCL WARN Cuda failure"]="CUDA_ERROR:CUDA failure inside NCCL — GPU hardware or driver issue"
-        ["fi_getinfo failed"]="EFA_INIT_FAIL:EFA libfabric init failed — EFA not available or wrong NCCL_SOCKET_IFNAME"
-        ["NCCL_OFI_RDMA"]="OFI_ERROR:aws-ofi-nccl plugin error — check EFA driver and OFI NCCL version"
-        ["Call to ibv_reg_mr failed"]="RDMA_REG_FAIL:EFA/RDMA memory registration failed — memlock limit too low"
-        ["NET/OFI Using TCP"]="EFA_TCP_FALLBACK:NCCL fell back to TCP instead of EFA — 10-100x slower than expected"
-        ["Failed to load NCCL"]="NCCL_LOAD_FAIL:Failed to load NCCL library — libnccl.so missing or LD_LIBRARY_PATH wrong"
-        ["libnccl-net.so"]="OFI_LOAD_FAIL:Failed to load aws-ofi-nccl plugin — libnccl-net.so not found"
-        ["OOMKilled"]="OOM_KILL:Container killed (OOM) — reduce batch size or increase memory limit"
-        ["CUDA out of memory"]="CUDA_OOM:GPU out of memory — reduce batch size or model size"
-        ["cudaMalloc failed"]="CUDA_OOM:GPU cudaMalloc failed — reduce batch size or model size"
-        ["failed to extend /dev/shm"]="SHM_FULL:NCCL shared memory /dev/shm full — mount emptyDir with 10Gi sizeLimit"
-        ["Bus error"]="SHM_FULL:/dev/shm too small or SIGBUS — mount emptyDir with 10Gi sizeLimit"
-        ["NCCL function not found"]="NCCL_VERSION_MISMATCH:NCCL version mismatch across nodes — mixed container images"
-        ["Incompatible NCCL version"]="NCCL_VERSION_MISMATCH:NCCL version mismatch across nodes — mixed container images"
-        ["Could not find interface"]="IFACE_NOT_FOUND:NCCL_SOCKET_IFNAME points to missing interface"
-        ["world_size mismatch"]="WORLD_SIZE_MISMATCH:WORLD_SIZE doesn't match running process count"
-        ["doesn't have NCCL built in"]="NCCL_NOT_BUILT:PyTorch compiled without NCCL — rebuild with USE_NCCL=1 or use AWS DLC image"
-        ["CUDA_VISIBLE_DEVICES"]="CUDA_VIS_DEV:CUDA_VISIBLE_DEVICES misconfigured — GPUs not visible to training process"
-        ["unlink shared memory"]="SHM_STALE:Stale NCCL shared memory from previous run — systemd RemoveIPC=yes or manual cleanup"
-        ["Call to ncclCommAbort"]="NCCL_COMM_ABORT:NCCL communicator aborted — check for straggler node or hardware fault"
-        ["MNNVL topology"]="MNNVL_TOPO_FAIL:NCCL MNNVL topology search failed — memlock=unlimited + stack=unlimited causes 2MB thread stack; fix: ulimit -l 8388608 -s 8192"
-        ["ENOMEM"]="ENOMEM:Memory registration/allocation failed — check memlock limits and available GPU memory"
-        ["invalid alignment"]="CUDA_ALIGN_ERR:CUDA memory alignment error — possible driver/NCCL version incompatibility"
+    local NCCL_PAT_KEYS=(
+        "Timeout waiting for"
+        "Connection refused"
+        "Address already in use"
+        "NCCL WARN Connect to"
+        "network is unreachable"
+        "Error in Store"
+        "DistStoreError"
+        "RendezvousConnectionError"
+        "RendezvousTimeout"
+        "Name or service not known"
+        "getaddrinfo failed"
+        "Watchdog timeout"
+        "unhandled system error"
+        "unhandled cuda error"
+        "peer access is not supported"
+        "NCCL WARN Cuda failure"
+        "fi_getinfo failed"
+        "NCCL_OFI_RDMA"
+        "Call to ibv_reg_mr failed"
+        "NET/OFI Using TCP"
+        "Failed to load NCCL"
+        "libnccl-net.so"
+        "OOMKilled"
+        "CUDA out of memory"
+        "cudaMalloc failed"
+        "failed to extend /dev/shm"
+        "Bus error"
+        "NCCL function not found"
+        "Incompatible NCCL version"
+        "Could not find interface"
+        "world_size mismatch"
+        "doesn't have NCCL built in"
+        "CUDA_VISIBLE_DEVICES"
+        "unlink shared memory"
+        "Call to ncclCommAbort"
+        "MNNVL topology"
+        "ENOMEM"
+        "invalid alignment"
+    )
+    local NCCL_PAT_VALS=(
+        "TIMEOUT_RENDEZVOUS:Rendezvous timed out — peer ranks not responding"
+        "CONN_REFUSED:TCP refused — check MASTER_ADDR/MASTER_PORT"
+        "PORT_CONFLICT:Port already in use — change MASTER_PORT"
+        "CONNECT_FAIL:NCCL peer connection failed — check SG/NetworkPolicy"
+        "NET_UNREACHABLE:Network unreachable — VPC/routing issue"
+        "STORE_ERR:Distributed store error — usually rendezvous timeout"
+        "STORE_ERR:Distributed store error (PyTorch 2.x) — usually rendezvous timeout"
+        "RDZV_CONN_ERR:Torch elastic rendezvous connection failed — check MASTER_ADDR DNS + SG"
+        "RDZV_TIMEOUT:Torch elastic rendezvous timed out — peers not reachable"
+        "DNS_FAIL:DNS resolution failed for MASTER_ADDR — check headless service or /etc/hosts"
+        "DNS_FAIL:DNS resolution failed — headless service missing or CoreDNS issue"
+        "WATCHDOG_TIMEOUT:AllReduce watchdog expired — straggler or OOM"
+        "SYSTEM_ERROR:NCCL system error — GPU/EFA hardware issue"
+        "CUDA_ERROR:CUDA runtime error — GPU driver crash or hardware fault"
+        "P2P_FAIL:GPU peer access blocked — ACS enabled or IOMMU misconfigured"
+        "CUDA_ERROR:CUDA failure inside NCCL — GPU hardware or driver issue"
+        "EFA_INIT_FAIL:EFA libfabric init failed — EFA not available or wrong NCCL_SOCKET_IFNAME"
+        "OFI_ERROR:aws-ofi-nccl plugin error — check EFA driver and OFI NCCL version"
+        "RDMA_REG_FAIL:EFA/RDMA memory registration failed — memlock limit too low"
+        "EFA_TCP_FALLBACK:NCCL fell back to TCP instead of EFA — 10-100x slower than expected"
+        "NCCL_LOAD_FAIL:Failed to load NCCL library — libnccl.so missing or LD_LIBRARY_PATH wrong"
+        "OFI_LOAD_FAIL:Failed to load aws-ofi-nccl plugin — libnccl-net.so not found"
+        "OOM_KILL:Container killed (OOM) — reduce batch size or increase memory limit"
+        "CUDA_OOM:GPU out of memory — reduce batch size or model size"
+        "CUDA_OOM:GPU cudaMalloc failed — reduce batch size or model size"
+        "SHM_FULL:NCCL shared memory /dev/shm full — mount emptyDir with 10Gi sizeLimit"
+        "SHM_FULL:/dev/shm too small or SIGBUS — mount emptyDir with 10Gi sizeLimit"
+        "NCCL_VERSION_MISMATCH:NCCL version mismatch across nodes — mixed container images"
+        "NCCL_VERSION_MISMATCH:NCCL version mismatch across nodes — mixed container images"
+        "IFACE_NOT_FOUND:NCCL_SOCKET_IFNAME points to missing interface"
+        "WORLD_SIZE_MISMATCH:WORLD_SIZE doesn't match running process count"
+        "NCCL_NOT_BUILT:PyTorch compiled without NCCL — rebuild with USE_NCCL=1 or use AWS DLC image"
+        "CUDA_VIS_DEV:CUDA_VISIBLE_DEVICES misconfigured — GPUs not visible to training process"
+        "SHM_STALE:Stale NCCL shared memory from previous run — systemd RemoveIPC=yes or manual cleanup"
+        "NCCL_COMM_ABORT:NCCL communicator aborted — check for straggler node or hardware fault"
+        "MNNVL_TOPO_FAIL:NCCL MNNVL topology search failed — memlock=unlimited + stack=unlimited causes 2MB thread stack; fix: ulimit -l 8388608 -s 8192"
+        "ENOMEM:Memory registration/allocation failed — check memlock limits and available GPU memory"
+        "CUDA_ALIGN_ERR:CUDA memory alignment error — possible driver/NCCL version incompatibility"
     )
 
     local issues_in_logs=false
@@ -1004,9 +1044,11 @@ analyze_nccl_logs() {
             continue
         fi
 
-        for pattern in "${!NCCL_PATTERNS[@]}"; do
+        local _pi
+        for _pi in "${!NCCL_PAT_KEYS[@]}"; do
+            local pattern="${NCCL_PAT_KEYS[$_pi]}"
             if echo "$logs" | grep -qi "$pattern"; then
-                local meaning="${NCCL_PATTERNS[$pattern]}"
+                local meaning="${NCCL_PAT_VALS[$_pi]}"
                 local code="${meaning%%:*}"
                 local desc="${meaning#*:}"
                 error "  DETECTED [$code]: $desc"
@@ -1490,7 +1532,7 @@ _ssm_run() {
 
 # Self-contained bash script executed on each HyperPod compute node via SSM.
 # Covers GPU, EFA, NCCL library, network, memory, and process health.
-_NODE_DIAG_SCRIPT=$(cat <<'NODE_SCRIPT'
+IFS= read -r -d '' _NODE_DIAG_SCRIPT <<'NODE_SCRIPT' || true
 #!/bin/bash
 # HyperPod NCCL Node Hardware Diagnostics
 # Runs ON the compute node via SSM — NOT on the local machine.
@@ -2048,7 +2090,6 @@ echo ""
 
 echo "=== END NODE DIAGNOSTICS ==="
 NODE_SCRIPT
-)
 
 # Strategy for 100s of nodes:
 #   1. Resolve all Running compute nodes via HyperPod API (paginated)
@@ -2453,7 +2494,7 @@ print_summary() {
     echo ""
     echo -e "  Cluster:      ${BOLD}$CLUSTER_NAME${RESET}"
     echo -e "  Region:       ${BOLD}$REGION${RESET}"
-    echo -e "  Orchestrator: ${BOLD}${ORCHESTRATOR^^}${RESET}"
+    echo -e "  Orchestrator: ${BOLD}$(printf '%s' "$ORCHESTRATOR" | tr '[:lower:]' '[:upper:]')${RESET}"
     [[ "$ORCHESTRATOR" == "eks" ]] && \
         echo -e "  Namespace:    ${BOLD}${NAMESPACE:-all}${RESET}"
     [[ -n "$JOB_NAME" ]]  && echo -e "  Job:          ${BOLD}$JOB_NAME${RESET}"
@@ -2514,7 +2555,7 @@ main() {
 
     echo -e "  Cluster:      ${BOLD}$CLUSTER_NAME${RESET}"
     echo -e "  Region:       ${BOLD}$REGION${RESET}"
-    echo -e "  Orchestrator: ${BOLD}${ORCHESTRATOR^^}${RESET}"
+    echo -e "  Orchestrator: ${BOLD}$(printf '%s' "$ORCHESTRATOR" | tr '[:lower:]' '[:upper:]')${RESET}"
     [[ "$ORCHESTRATOR" == "eks" ]] && echo -e "  Namespace:    ${BOLD}${NAMESPACE:-all}${RESET}"
     info "READ-ONLY DIAGNOSTIC — no cluster state will be modified."
     info "This script collects signals only. The hyperpod-nccl skill interprets findings"

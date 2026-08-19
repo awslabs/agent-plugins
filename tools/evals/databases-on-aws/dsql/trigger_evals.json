@@ -52,6 +52,18 @@
     "should_trigger": true
   },
   {
+    "query": "my Aurora DSQL cluster is performing differently than it was last week — can you diagnose what changed?",
+    "should_trigger": true
+  },
+  {
+    "query": "my dsql cluster feels slow but no single query stands out. how do I find where the time is going — wait events, active sessions, that kind of thing?",
+    "should_trigger": true
+  },
+  {
+    "query": "where is compute time being spent on my Aurora DSQL cluster? I want to see the AAS breakdown by wait event.",
+    "should_trigger": true
+  },
+  {
     "query": "I need to load a 500MB CSV file into my Aurora DSQL table. What's the fastest way?",
     "should_trigger": true
   },

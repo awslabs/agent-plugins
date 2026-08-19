@@ -26,11 +26,11 @@ This skill covers the security agent lifecycle with a clear split between **admi
 
 **The agent MUST NOT execute these commands using agentic tools. Instead, present them as instructions for the customer or their administrator to copy and run.**
 
-The admin provisions the security agent infrastructure: an IAM role, a managed policy, and an S3 bucket, all deployed via a CloudFormation stack.
+The admin provisions the security agent infrastructure: an IAM role, a managed policy, an S3 bucket, and the agent space — all deployed via a single CloudFormation stack.
 
 Tell the customer:
 
-> "This deploys the security agent infrastructure (IAM role, S3 bucket, CloudFormation stack). It requires admin/role-creation permissions. Run it with an admin identity. Read-only or runtime credentials are enough for everything afterward."
+> "This deploys the security agent infrastructure (IAM role, S3 bucket, agent space, CloudFormation stack). It requires admin/role-creation permissions. Run it with an admin identity. Read-only or runtime credentials are enough for everything afterward."
 >
 > For reference, the executor policy this skill expects is in https://github.com/awslabs/agent-plugins/blob/main/plugins/aws-transform/skills/aws-transform/references/AWSTransformSecurityAgentExecutorAccess.json
 
@@ -44,80 +44,23 @@ echo "Installed: ${INSTALLED:-not found}, Latest: ${LATEST:-unknown}"
 curl -fsSL "https://transform-cli.awsstatic.com/install.sh" | bash
 source ~/.bashrc
 
-# Start the server if not running
-atx ct server &
-sleep 5
-
-# Deploy security agent infrastructure (creates IAM role, S3 bucket, CloudFormation stack)
+# Deploy security agent infrastructure (single CFN deploy — creates IAM role, S3 bucket, agent space)
 atx ct setup security-agent
 ```
 
 ### What Admin Setup Creates
 
-| Resource             | Name Pattern                              | Purpose                                 |
-| -------------------- | ----------------------------------------- | --------------------------------------- |
-| CloudFormation stack | `kct-security-agent-<suffix>`             | Manages all resources atomically        |
-| IAM role             | `security-agent-kct-agent-space-<suffix>` | Role the security agent service assumes |
-| IAM managed policy   | `kct-security-agent-<suffix>`             | Permissions attached to the role        |
-| S3 bucket            | `kct-security-agent-<suffix>`             | Stores source code zips for scanning    |
+| Resource             | Name Pattern                              | Purpose                                          |
+| -------------------- | ----------------------------------------- | ------------------------------------------------ |
+| CloudFormation stack | `AtxSecurityAgentStack-<suffix>`          | Manages all resources atomically (single deploy) |
+| Agent space          | `atx-agent-space-<suffix>`                | The Security Agent workspace (CFN-managed)       |
+| IAM role             | `security-agent-atx-agent-space-<suffix>` | Role the security agent service assumes          |
+| IAM managed policy   | (inline in stack)                         | Permissions attached to the role                 |
+| S3 bucket            | `atx-security-agent-<suffix>`             | Stores source code zips for scanning             |
 
-### Admin Setup for EC2/Batch Job Roles
+### Remote Execution (EC2/Batch)
 
-When using security analysis on EC2 or Batch, the **admin** must also attach executor permissions to the compute role. Present these commands as instructions:
-
-> "The compute role needs security agent permissions added. This modifies IAM policies, so it requires admin/role-creation permissions. Run these with an admin identity:"
-
-**For Batch (ATXBatchJobRole):**
-
-```bash
-# Get security agent config values
-SEC_BUCKET=$(jq -r '.s3Bucket' ~/.atxct/shared/security_agent_config.json)
-SEC_AGENT_ROLE_ARN=$(jq -r '.role_arn // .roleArn' ~/.atxct/shared/security_agent_config.json)
-ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-
-# 1. Security Agent API access
-aws iam put-role-policy --role-name ATXBatchJobRole \
-  --policy-name AtxCtSecurityAgentAPI \
-  --policy-document "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"securityagent:ListAgentSpaces\",\"securityagent:CreateAgentSpace\",\"securityagent:CreateCodeReview\",\"securityagent:StartCodeReviewJob\",\"securityagent:ListCodeReviewJobsForCodeReview\",\"securityagent:ListFindings\",\"securityagent:BatchGetFindings\",\"securityagent:StartCodeRemediation\"],\"Resource\":\"arn:aws:securityagent:*:*:agent-space*\",\"Condition\":{\"StringEquals\":{\"aws:ResourceAccount\":\"${ACCOUNT_ID}\"}}}]}"
-
-# 2. S3 access for security agent bucket
-aws iam put-role-policy --role-name ATXBatchJobRole \
-  --policy-name AtxCtSecurityAgentS3Access \
-  --policy-document "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"s3:PutObject\",\"s3:GetObject\",\"s3:ListBucket\"],\"Resource\":[\"arn:aws:s3:::${SEC_BUCKET}\",\"arn:aws:s3:::${SEC_BUCKET}/*\"]}]}"
-
-# 3. PassRole for security agent role
-aws iam put-role-policy --role-name ATXBatchJobRole \
-  --policy-name AtxCtSecurityAgentPassRole \
-  --policy-document "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"iam:PassRole\",\"Resource\":\"${SEC_AGENT_ROLE_ARN}\",\"Condition\":{\"StringEquals\":{\"iam:PassedToService\":\"securityagent.amazonaws.com\"}}}]}"
-```
-
-**For EC2 (stack-managed role):**
-
-```bash
-SEC_BUCKET=$(jq -r '.s3Bucket' ~/.atxct/shared/security_agent_config.json)
-SEC_AGENT_ROLE_ARN=$(jq -r '.role_arn // .roleArn' ~/.atxct/shared/security_agent_config.json)
-STACK_NAME="<the-ec2-stack-name>"
-REGION="${AWS_REGION:-us-east-1}"
-
-ROLE_NAME=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region $REGION \
-  --query 'Stacks[0].Outputs[?OutputKey==`RoleArn`].OutputValue' --output text | awk -F/ '{print $NF}')
-
-# 1. Security Agent API access
-ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-aws iam put-role-policy --role-name "$ROLE_NAME" \
-  --policy-name AtxCtSecurityAgentAPI \
-  --policy-document "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"securityagent:ListAgentSpaces\",\"securityagent:CreateAgentSpace\",\"securityagent:CreateCodeReview\",\"securityagent:StartCodeReviewJob\",\"securityagent:ListCodeReviewJobsForCodeReview\",\"securityagent:ListFindings\",\"securityagent:BatchGetFindings\",\"securityagent:StartCodeRemediation\"],\"Resource\":\"arn:aws:securityagent:*:*:agent-space*\",\"Condition\":{\"StringEquals\":{\"aws:ResourceAccount\":\"${ACCOUNT_ID}\"}}}]}"
-
-# 2. S3 access to the security agent bucket
-aws iam put-role-policy --role-name "$ROLE_NAME" \
-  --policy-name AtxCtSecurityAgentS3Access \
-  --policy-document "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"s3:PutObject\",\"s3:GetObject\",\"s3:ListBucket\"],\"Resource\":[\"arn:aws:s3:::${SEC_BUCKET}\",\"arn:aws:s3:::${SEC_BUCKET}/*\"]}]}"
-
-# 3. PassRole for security agent role
-aws iam put-role-policy --role-name "$ROLE_NAME" \
-  --policy-name AtxCtSecurityAgentPassRole \
-  --policy-document "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"iam:PassRole\",\"Resource\":\"${SEC_AGENT_ROLE_ARN}\",\"Condition\":{\"StringEquals\":{\"iam:PassedToService\":\"securityagent.amazonaws.com\"}}}]}"
-```
+Security agent permissions for EC2 and Batch compute roles are **already included** in the CFN templates deployed by `atx ct remote provision`. No manual `put-role-policy` commands are needed — the BatchJobRole and EC2 TransformRole inline policies include `securityagent:*`, S3 access to the security agent bucket, and `iam:PassRole` for the security agent role.
 
 ### Check Admin Setup Status
 
@@ -125,13 +68,22 @@ aws iam put-role-policy --role-name "$ROLE_NAME" \
 atx ct setup security-agent --status
 ```
 
-Returns: `configured`, `setup_in_progress`, `failed`, or `not_configured`.
+Returns: `configured` or `not_configured`.
 
 ### Delete (Teardown)
 
 ```bash
 atx ct setup security-agent --delete
 ```
+
+This deletes the CloudFormation stack and all resources it manages (agent space, role, bucket, policy).
+
+### Migration from Legacy Setup
+
+If the account has an old `kct-security-agent-*` stack (from a previous CLI version), the CLI will detect it and prompt:
+
+> Delete it with: `aws cloudformation delete-stack --stack-name <legacy-stack-name>`
+> Then re-run `atx ct setup security-agent` to provision the new stack.
 
 ---
 
@@ -141,68 +93,14 @@ This is what the agent does at runtime after admin setup is complete. The agent 
 
 ### Step 1: Verify Security Agent is Configured
 
-Check that the security agent config file exists:
-
 ```bash
-cat ~/.atxct/shared/security_agent_config.json
+atx ct setup security-agent --status
 ```
 
-**If the file does NOT exist**: Try to reconstruct it from the existing CloudFormation stack before asking the customer to re-run admin setup. This allows any team member with AWS account access to self-service without needing the original admin.
+- If `configured` → proceed to Step 2.
+- If `not_configured` → tell the customer:
 
-#### Reconstruct Config from Existing Stack
-
-```bash
-# Find the security agent stack (tagged during admin setup)
-STACK_NAME=$(aws cloudformation describe-stacks \
-  --query "Stacks[?Tags[?Key=='atx-remote-infra' && Value=='true']].StackName" \
-  --output text --no-cli-pager --region us-east-1)
-
-# If not found by tag, try prefix match
-if [ -z "$STACK_NAME" ]; then
-  STACK_NAME=$(aws cloudformation list-stacks \
-    --stack-status-filter CREATE_COMPLETE UPDATE_COMPLETE \
-    --query "StackSummaries[?starts_with(StackName,'kct-security-agent-')].StackName" \
-    --output text --no-cli-pager --region us-east-1)
-fi
-
-echo "Found stack: ${STACK_NAME:-none}"
-```
-
-**If a stack is found**, extract the config and write it locally:
-
-```bash
-# Extract parameters and outputs from the stack
-ACCOUNT_ID=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region us-east-1 \
-  --query "Stacks[0].Parameters[?ParameterKey=='AccountId'].ParameterValue" --output text --no-cli-pager)
-AGENT_SPACE_NAME=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region us-east-1 \
-  --query "Stacks[0].Parameters[?ParameterKey=='AgentSpaceName'].ParameterValue" --output text --no-cli-pager)
-S3_BUCKET=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region us-east-1 \
-  --query "Stacks[0].Parameters[?ParameterKey=='S3Resource'].ParameterValue" --output text --no-cli-pager)
-ROLE_ARN=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region us-east-1 \
-  --query "Stacks[0].Outputs[?OutputKey=='RoleArn'].OutputValue" --output text --no-cli-pager)
-AGENT_SPACE_ID=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region us-east-1 \
-  --query "Stacks[0].Outputs[?OutputKey=='AgentSpaceId'].OutputValue" --output text --no-cli-pager)
-
-# Write the config file
-mkdir -p ~/.atxct/shared
-cat > ~/.atxct/shared/security_agent_config.json << EOF
-{
-  "agentSpaceId": "${AGENT_SPACE_ID}",
-  "agentSpaceName": "${AGENT_SPACE_NAME}",
-  "s3Bucket": "${S3_BUCKET}",
-  "roleArn": "${ROLE_ARN}",
-  "accountId": "${ACCOUNT_ID}",
-  "stackName": "${STACK_NAME}",
-  "configuredAt": "$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
-}
-EOF
-
-cat ~/.atxct/shared/security_agent_config.json
-```
-
-**If no stack is found**: Tell the customer:
-
-> "Security agent is not configured and no existing stack was found in this account. An administrator needs to run the initial setup:"
+> "Security agent is not configured in this account. An administrator needs to run the initial setup:"
 >
 > ```bash
 > atx ct setup security-agent
@@ -210,73 +108,36 @@ cat ~/.atxct/shared/security_agent_config.json
 >
 > "Once complete, let me know and I'll continue."
 
-Do NOT proceed until the config file exists.
+Do NOT proceed until status is `configured`.
 
-### Step 2: Read Config Values
+### Step 2: Proceed with Analysis
 
-```bash
-SEC_BUCKET=$(jq -r '.s3Bucket' ~/.atxct/shared/security_agent_config.json)
-SEC_AGENT_ROLE_ARN=$(jq -r '.role_arn // .roleArn' ~/.atxct/shared/security_agent_config.json)
-AGENT_SPACE_NAME=$(jq -r '.agentSpaceName' ~/.atxct/shared/security_agent_config.json)
-ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-```
-
-### Step 3: Verify Executor Permissions (Read-Only Check)
-
-For EC2/Batch compute roles, verify the required inline policies exist:
+Once setup is verified, proceed with the normal analysis flow using `--type security`. The CLI discovers the security agent configuration from CloudFormation at runtime — no manual config steps are needed.
 
 ```bash
-aws iam get-role-policy --role-name <ROLE_NAME> --policy-name AtxCtSecurityAgentAPI 2>&1
-aws iam get-role-policy --role-name <ROLE_NAME> --policy-name AtxCtSecurityAgentS3Access 2>&1
-aws iam get-role-policy --role-name <ROLE_NAME> --policy-name AtxCtSecurityAgentPassRole 2>&1
+atx ct analysis run --type security --sources <source-name>
 ```
 
-**If any returns `NoSuchEntity`**: Do NOT add the policy. Instead, tell the customer:
-
-> "The compute role is missing security agent permissions. This requires admin/role-creation privileges to fix. Run the following with an admin identity:"
-
-Then show the relevant commands from the Admin Setup section above.
-
-### Step 4: Sync Config to Compute (EC2 only)
-
-For EC2, sync the security agent config into the container(s):
-
-```bash
-aws s3 cp ~/.atxct/shared/security_agent_config.json \
-  s3://atx-source-code-${ACCOUNT_ID}/temp/security_agent_config.json
-
-ssm_run "aws s3 cp s3://atx-source-code-${ACCOUNT_ID}/temp/security_agent_config.json /tmp/sa.json && \
-  for c in \$(sudo docker ps --filter name=atx-ct --format '{{.Names}}'); do \
-    sudo docker cp /tmp/sa.json \$c:/home/atxuser/.atxct/shared/security_agent_config.json && \
-    sudo docker exec \$c chown 1000:1000 /home/atxuser/.atxct/shared/security_agent_config.json; \
-  done"
-
-aws s3 rm s3://atx-source-code-${ACCOUNT_ID}/temp/security_agent_config.json
-```
-
-### Step 5: Proceed with Analysis
-
-Once permissions are verified, proceed with the normal analysis flow using `--type security`.
-
-The executor IAM policy required for runtime is documented in `AWSTransformSecurityAgentExecutorAccess.json` in the ATXControlTowerPolicies package.
+The executor IAM policy required for runtime is documented in `AWSTransformSecurityAgentExecutorAccess.json` (included with this skill).
 
 ---
 
 ## Error Handling
 
-| Error                                      | Cause                                                  | Resolution                                   |
-| ------------------------------------------ | ------------------------------------------------------ | -------------------------------------------- |
-| `Access denied calling Security Agent API` | Missing `AtxCtSecurityAgentAPI` policy on compute role | Admin must add the policy (see Admin Setup)  |
-| `s3:PutObject` access denied               | Missing `AtxCtSecurityAgentS3Access` policy            | Admin must add S3 policy                     |
-| `iam:PassRole` denied                      | Missing `AtxCtSecurityAgentPassRole` policy            | Admin must add PassRole policy               |
-| Config file not found                      | Admin setup never ran                                  | Admin must run `atx ct setup security-agent` |
-| `not_configured` status                    | Setup failed or never completed                        | Admin must re-run setup                      |
+| Error                                           | Cause                                         | Resolution                                                                                                                          |
+| ----------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `Access denied calling Security Agent API`      | Missing SecurityAgent permissions on the role | For local: attach `AWSTransformSecurityAgentExecutorAccess` policy. For remote: update the EC2/Batch stack (`atx ct remote update`) |
+| `s3:PutObject` access denied on security bucket | S3 bucket permissions missing                 | Same as above — update stack or attach policy                                                                                       |
+| `iam:PassRole` denied                           | Missing PassRole for securityagent service    | Same as above                                                                                                                       |
+| `not_configured` status                         | Admin setup never ran or stack was deleted    | Admin must run `atx ct setup security-agent`                                                                                        |
+| `Found a legacy "kct-security-agent-*" stack`   | Old stack from previous CLI version           | Delete the old stack, then re-run setup (see Migration section)                                                                     |
 
 ---
 
 ## IAM Policy Reference
 
-| Policy                | File                                           | Purpose                                                               | Who Uses It                       |
-| --------------------- | ---------------------------------------------- | --------------------------------------------------------------------- | --------------------------------- |
-| Full admin + executor | `AWSTransformSecurityAnalysisAccess.json`      | All permissions including CFN, CreateRole, CreateBucket               | Administrator (setup)             |
-| Executor only         | `AWSTransformSecurityAgentExecutorAccess.json` | Runtime permissions only: SecurityAgent API, S3 read/upload, PassRole | Compute role (EC2/Batch job role) |
+| Policy                | File                                           | Purpose                                                                         | Who Uses It           |
+| --------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------- | --------------------- |
+| Full admin + executor | `AWSTransformSecurityAnalysisAccess.json`      | All permissions including CFN, CreateRole, CreateBucket                         | Administrator (setup) |
+| Executor only         | `AWSTransformSecurityAgentExecutorAccess.json` | Runtime permissions: SecurityAgent API, S3 read/upload, PassRole, CFN discovery | Local executor role   |
+| Compute (remote)      | (inline in CFN stack)                          | Same runtime permissions, baked into BatchJobRole / EC2 TransformRole           | EC2/Batch containers  |
