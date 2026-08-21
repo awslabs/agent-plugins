@@ -62,35 +62,26 @@ Migrate iOS applications from Google Maps SDK for iOS to Amazon Location Service
 4. Add **MapLibre**:
    - URL: `https://github.com/maplibre/maplibre-gl-native-distribution`
 
-**Using CocoaPods - Add to your `Podfile`:**
-
-```ruby
-# Amazon Location Mobile Auth SDK (recommended)
-pod 'AmazonLocationiOSAuthSDK'
-
-# MapLibre for map display
-pod 'MapLibre', '~> 6.0'
-
-# AWS SDK for Swift
-pod 'AWSGeoPlaces'
-pod 'AWSGeoRoutes'
-pod 'AWSGeoMaps'
-pod 'AWSLocation'
-```
+**Note:** Amazon Location's Swift packages (`AWSGeoPlaces`, `AWSGeoRoutes`, `AWSGeoMaps`, `AWSLocation`, and `AmazonLocationiOSAuthSDK`) are distributed via Swift Package Manager only — they are not published to CocoaPods. Use SPM as shown above.
 
 **Note:** MapLibre is the open-source fork of Mapbox GL Native and is the recommended way to display maps with Amazon Location Service on iOS.
 
-### Update Info.plist
+### Update AppDelegate and Info.plist
 
-**Remove Google Maps API key:**
+**Remove the Google Maps API key setup:** Google Maps for iOS registers its API key with a `GMSServices.provideAPIKey(...)` call in `AppDelegate.swift` — not via an `Info.plist` entry. Remove that call:
 
-```xml
-<!-- Remove this -->
-<key>GMSServicesApiKey</key>
-<string>YOUR_GOOGLE_API_KEY</string>
+```swift
+// Remove this from AppDelegate.swift
+import GoogleMaps
+
+func application(_ application: UIApplication,
+                didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+    GMSServices.provideAPIKey("YOUR_GOOGLE_API_KEY")  // ← remove this line
+    return true
+}
 ```
 
-**Add location permissions (if not already present):**
+**Add location permissions to `Info.plist` (if not already present):**
 
 ```xml
 <key>NSLocationWhenInUseUsageDescription</key>
@@ -158,8 +149,8 @@ class PlacesViewController: UIViewController {
 
             // Use client for API calls
             let input = SearchTextInput(
-                queryText: "coffee shops",
-                biasPosition: [-97.7431, 30.2747]
+                biasPosition: [-97.7431, 30.2747],
+                queryText: "coffee shops"
             )
             let response = try await placesClient?.searchText(input: input)
         }
@@ -241,11 +232,11 @@ let placesClient = try await AmazonLocationAuth.createPlacesClient()
 let deviceLocation: [Double] = [-97.7431, 30.2747] // [lng, lat]
 
 let input = SearchNearbyInput(
-    queryPosition: deviceLocation,
+    filter: GeoPlacesClientTypes.SearchNearbyFilter(
+        includeCategories: ["restaurant"]
+    ),
     maxResults: 20,
-    filter: SearchNearbyInputFilter(
-        includeCategories: ["Restaurant"]
-    )
+    queryPosition: deviceLocation
 )
 
 let response = try await placesClient.searchNearby(input: input)
@@ -257,25 +248,24 @@ response.resultItems?.forEach { place in
 
 ### Geocoding API
 
-| Google Maps iOS                          | Amazon Location iOS     | Migration Notes                           |
-| ---------------------------------------- | ----------------------- | ----------------------------------------- |
-| `GMSGeocoder.geocodeAddressString()`     | `GeocodeCommand`        | Forward geocoding (address → coordinates) |
-| `GMSGeocoder.reverseGeocodeCoordinate()` | `ReverseGeocodeCommand` | Reverse geocoding (coordinates → address) |
+| Google Maps iOS                          | Amazon Location iOS      | Migration Notes                                                                           |
+| ---------------------------------------- | ------------------------ | ----------------------------------------------------------------------------------------- |
+| Google Geocoding web API (HTTP)          | `geocode(input:)`        | Forward geocoding — Google's iOS SDK has no forward geocoder, so you call the web service |
+| `GMSGeocoder.reverseGeocodeCoordinate()` | `reverseGeocode(input:)` | Reverse geocoding (coordinates → address)                                                 |
 
 **Example - Geocoding:**
 
 ```swift
 // Google Maps (Before)
-import GoogleMaps
-
-let geocoder = GMSGeocoder()
-geocoder.geocodeAddressString("Austin, TX") { response, error in
-    guard let response = response, let result = response.firstResult() else {
-        return
-    }
-
-    print("Lat: \(result.coordinate.latitude), Lng: \(result.coordinate.longitude)")
-}
+// Google's iOS Maps SDK does NOT support forward geocoding; call the web service:
+let apiKey = "YOUR_GOOGLE_API_KEY"
+let query = "Austin, TX".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
+let url = URL(string: "https://maps.googleapis.com/maps/api/geocode/json?address=\(query)&key=\(apiKey)")!
+URLSession.shared.dataTask(with: url) { data, _, error in
+    guard let data = data else { return }
+    let result = try? JSONDecoder().decode(GeocodeResponse.self, from: data)
+    // result.results[0].geometry.location.lat / .lng
+}.resume()
 
 // Amazon Location (After)
 import AmazonLocationiOSAuthSDK
@@ -284,8 +274,8 @@ import AWSGeoPlaces
 let placesClient = try await AmazonLocationAuth.createPlacesClient()
 
 let input = GeocodeInput(
-    queryText: "Austin, TX",
-    maxResults: 1
+    maxResults: 1,
+    queryText: "Austin, TX"
 )
 
 let response = try await placesClient.geocode(input: input)
@@ -330,10 +320,10 @@ import AWSGeoRoutes
 let routesClient = try await AmazonLocationAuth.createRoutesClient()
 
 let input = CalculateRoutesInput(
-    origin: [-97.7431, 30.2747], // Austin [lng, lat]
     destination: [-96.7970, 32.7767], // Dallas [lng, lat]
-    travelMode: .car,
-    legAdditionalFeatures: [.summary]
+    legAdditionalFeatures: [.summary],
+    origin: [-97.7431, 30.2747], // Austin [lng, lat]
+    travelMode: .car
 )
 
 let response = try await routesClient.calculateRoutes(input: input)
@@ -420,12 +410,16 @@ Google Maps SDK includes utility classes for geometry operations. For Amazon Loc
 
 ### Polyline Encoding/Decoding
 
-| Google Maps iOS             | Amazon Location Alternative | Package                            |
-| --------------------------- | --------------------------- | ---------------------------------- |
-| `GMSPath(fromEncodedPath:)` | Custom implementation       | Implement using polyline algorithm |
-| `GMSPath.encodedPath()`     | Custom implementation       | Implement using polyline algorithm |
+| Google Maps iOS             | Amazon Location Alternative          | Package                                                                 |
+| --------------------------- | ------------------------------------ | ----------------------------------------------------------------------- |
+| `GMSPath(fromEncodedPath:)` | `Polyline.decodeToLineStringFeature` | [`aws-geospatial/polyline`](https://github.com/aws-geospatial/polyline) |
+| `GMSPath.encodedPath()`     | `Polyline.encodeFromLineString`      | [`aws-geospatial/polyline`](https://github.com/aws-geospatial/polyline) |
 
-**Example - Polyline Decoding (Custom Implementation):**
+**Example - Polyline Decoding (using `aws-geospatial/polyline`):**
+
+Amazon Location routing returns **FlexiblePolyline**, not Google's Polyline5. A hand-rolled `/ 1e5` decoder assumes Polyline5 precision and produces wrong coordinates. Use the official [`aws-geospatial/polyline`](https://github.com/aws-geospatial/polyline) library, which decodes FlexiblePolyline directly into MapLibre-ready GeoJSON.
+
+Add via Swift Package Manager: `https://github.com/aws-geospatial/polyline/`
 
 ```swift
 // Google Maps (Before)
@@ -433,50 +427,12 @@ import GoogleMaps
 
 let path = GMSPath(fromEncodedPath: encodedPolyline)
 
-// Amazon Location (After) - Custom implementation
-class PolylineDecoder {
-    static func decode(_ encodedPolyline: String) -> [CLLocationCoordinate2D] {
-        var coordinates: [CLLocationCoordinate2D] = []
-        var index = encodedPolyline.startIndex
-        var lat = 0
-        var lng = 0
+// Amazon Location (After) - official library
+import Polyline
 
-        while index < encodedPolyline.endIndex {
-            var result = 1
-            var shift = 0
-            var b: Int
-
-            repeat {
-                b = Int(encodedPolyline[index].asciiValue!) - 63 - 1
-                index = encodedPolyline.index(after: index)
-                result += b << shift
-                shift += 5
-            } while b >= 0x1f
-
-            lat += (result & 1) != 0 ? ~(result >> 1) : (result >> 1)
-
-            result = 1
-            shift = 0
-
-            repeat {
-                b = Int(encodedPolyline[index].asciiValue!) - 63 - 1
-                index = encodedPolyline.index(after: index)
-                result += b << shift
-                shift += 5
-            } while b >= 0x1f
-
-            lng += (result & 1) != 0 ? ~(result >> 1) : (result >> 1)
-
-            let coordinate = CLLocationCoordinate2D(
-                latitude: Double(lat) / 1e5,
-                longitude: Double(lng) / 1e5
-            )
-            coordinates.append(coordinate)
-        }
-
-        return coordinates
-    }
-}
+// Decode the FlexiblePolyline returned by Amazon Location routing
+let feature = Polyline.decodeToLineStringFeature(encodedPolyline)
+// `feature` is a GeoJSON LineString Feature, ready to add to a MapLibre source
 ```
 
 ### Geometry Operations
@@ -590,8 +546,8 @@ class AutocompleteViewController: UIViewController, UISearchBarDelegate {
 
         Task {
             let input = AutocompleteInput(
-                queryText: searchText,
-                maxResults: 5
+                maxResults: 5,
+                queryText: searchText
             )
 
             let response = try await placesClient.autocomplete(input: input)

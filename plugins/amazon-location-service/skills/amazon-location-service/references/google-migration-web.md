@@ -181,7 +181,7 @@ The Migration SDK supports most commonly-used Google Maps APIs:
 - ✅ DirectionsService (route method)
 - ✅ DirectionsRenderer
 - ✅ DistanceMatrixService
-- ⚠️ Travel modes: DRIVING and WALKING only (no TRANSIT, BICYCLING)
+- ⚠️ Travel modes: DRIVING, WALKING, TRANSIT (no BICYCLING)
 
 **Geocoding Library:**
 
@@ -205,7 +205,7 @@ For the complete list with detailed limitations, see [Migration SDK Supported AP
 
 **Not supported by Migration SDK:**
 
-- **Transit routing** - No TRANSIT or BICYCLING travel modes
+- **Bicycling routing** - No BICYCLING travel mode (TRANSIT is supported)
 - **Street View** - Not available in Amazon Location
 - **3D Maps** - No Maps3D support
 - **Elevation API** - Not available in Amazon Location
@@ -440,7 +440,7 @@ Amazon Location returns route geometry in two formats via the `LegGeometryFormat
 - **`Simple`** (recommended for migration) - Returns coordinate arrays `[[lng, lat], ...]` ready for MapLibre rendering, no decoder needed
 - **`FlexiblePolyline`** - Returns encoded string, 5-10x smaller but requires decoding with `@aws/polyline`
 
-For straightforward migration from Google Maps, use `LegGeometryFormat: "Simple"` (the default). For bandwidth optimization in mobile apps or high-volume scenarios, see [Choosing Route Geometry Formats](./calculate-routes.md#choosing-between-simple-and-flexiblepolyline-geometry-formats) in the Calculate Routes reference.
+For straightforward migration from Google Maps, set `LegGeometryFormat: "Simple"` explicitly. For bandwidth optimization in mobile apps or high-volume scenarios, see [Choosing Route Geometry Formats](./calculate-routes.md#choosing-between-simple-and-flexiblepolyline-geometry-formats) in the Calculate Routes reference.
 
 **For detailed routing usage, see [Calculate Routes reference](./calculate-routes.md).**
 
@@ -748,7 +748,7 @@ const placesClient = new amazonLocationClient.GeoPlacesClient(
 
 const command = new amazonLocationClient.places.SearchNearbyCommand({
   QueryPosition: [-97.7431, 30.2747], // [lng, lat]
-  MaxDistance: 5000, // meters
+  QueryRadius: 5000, // meters
   Filter: {
     IncludeCategories: ["restaurant"], // Use valid Category IDs
   },
@@ -832,7 +832,7 @@ When migrating, verify category names match Amazon Location's supported Category
 **Issue:** Routes not calculating
 
 - **Cause:** Coordinate order or travel mode not supported
-- **Fix:** Verify [lng, lat] order and use supported travel modes (Car, Walking, Truck)
+- **Fix:** Verify [lng, lat] order and use supported travel modes (Car, Pedestrian, Scooter, Truck)
 
 ### Getting Help
 

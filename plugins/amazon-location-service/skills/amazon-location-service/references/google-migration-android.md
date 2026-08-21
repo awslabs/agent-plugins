@@ -70,28 +70,18 @@ dependencies {
 }
 ```
 
-**In your project-level `build.gradle.kts`, add the MapLibre repository:**
+**In your project-level `build.gradle.kts`, ensure the standard repositories are present:**
 
 ```kotlin
 allprojects {
     repositories {
         google()
-        mavenCentral()
-        // Add MapLibre repository
-        maven {
-            url = uri("https://api.mapbox.com/downloads/v2/releases/maven")
-            authentication {
-                create<BasicAuthentication>("basic")
-            }
-            credentials {
-                username = "mapbox"
-                password = project.findProperty("MAPBOX_DOWNLOADS_TOKEN") as String?
-                    ?: System.getenv("MAPBOX_DOWNLOADS_TOKEN")
-            }
-        }
+        mavenCentral() // MapLibre (org.maplibre.gl:android-sdk) is published here
     }
 }
 ```
+
+**Note:** MapLibre is available on Maven Central — no token-gated Mapbox repository is required. (The `api.mapbox.com` Maven repo is only needed for Mapbox's own proprietary SDK, not for MapLibre.)
 
 **Note:** MapLibre is the open-source fork of Mapbox GL Native and is the recommended way to display maps with Amazon Location Service on Android.
 
@@ -122,36 +112,35 @@ Amazon Location Service supports API Key and Cognito authentication.
 
 **Create a credential provider:**
 
+An Amazon Location API key is **not** an IAM access-key pair, so it must not be passed as a SigV4 access key. Use the Amazon Location Auth SDK's `AuthHelper.withApiKey`, which configures the client to send the key correctly (and attaches `X-Android-Package` / `X-Android-Cert` headers for app-restricted keys).
+
 ```kotlin
-import aws.sdk.kotlin.runtime.auth.credentials.StaticCredentialsProvider
+import android.content.Context
+import software.amazon.location.auth.AuthHelper
 import aws.sdk.kotlin.services.geoplaces.GeoPlacesClient
-import aws.smithy.kotlin.runtime.auth.awscredentials.Credentials
+import aws.sdk.kotlin.services.georoutes.GeoRoutesClient
 
 class AmazonLocationAuth {
     companion object {
         private const val API_KEY = "YOUR_AMAZON_LOCATION_API_KEY"
         private const val REGION = "us-west-2"
 
-        // Create credentials provider for API Key
-        fun getApiKeyCredentials(): StaticCredentialsProvider {
-            return StaticCredentialsProvider(
-                Credentials.invoke(
-                    accessKeyId = API_KEY,
-                    secretAccessKey = ""
-                )
-            )
+        // Create a Places client using the Amazon Location Auth SDK
+        suspend fun createPlacesClient(context: Context): GeoPlacesClient {
+            val authHelper = AuthHelper.withApiKey(API_KEY, REGION, context)
+            return GeoPlacesClient(authHelper.getGeoPlacesClientConfig())
         }
 
-        // Create a Places client
-        suspend fun createPlacesClient(): GeoPlacesClient {
-            return GeoPlacesClient {
-                region = REGION
-                credentialsProvider = getApiKeyCredentials()
-            }
+        // Create a Routes client using the Amazon Location Auth SDK
+        suspend fun createRoutesClient(context: Context): GeoRoutesClient {
+            val authHelper = AuthHelper.withApiKey(API_KEY, REGION, context)
+            return GeoRoutesClient(authHelper.getGeoRoutesClientConfig())
         }
     }
 }
 ```
+
+Add the Auth SDK dependency: `implementation("software.amazon.location:auth:<version>")`.
 
 **Usage:**
 
@@ -167,7 +156,7 @@ class MyActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         scope.launch {
-            val placesClient = AmazonLocationAuth.createPlacesClient()
+            val placesClient = AmazonLocationAuth.createPlacesClient(applicationContext)
             // Use client for API calls
         }
     }
@@ -240,10 +229,7 @@ placesClient.findCurrentPlace(request).addOnSuccessListener { response ->
 import aws.sdk.kotlin.services.geoplaces.GeoPlacesClient
 import aws.sdk.kotlin.services.geoplaces.model.SearchNearbyRequest
 
-val placesClient = GeoPlacesClient {
-    region = "us-west-2"
-    credentialsProvider = AmazonLocationAuth.getApiKeyCredentials()
-}
+val placesClient = AmazonLocationAuth.createPlacesClient(applicationContext)
 
 // Assume you have the device location
 val deviceLocation = listOf(-97.7431, 30.2747) // [lng, lat]
@@ -324,10 +310,7 @@ Log.i(TAG, "Distance: ${directions.routes[0].legs[0].distance}")
 import aws.sdk.kotlin.services.georoutes.GeoRoutesClient
 import aws.sdk.kotlin.services.georoutes.model.CalculateRoutesRequest
 
-val routesClient = GeoRoutesClient {
-    region = "us-west-2"
-    credentialsProvider = AmazonLocationAuth.getApiKeyCredentials()
-}
+val routesClient = AmazonLocationAuth.createRoutesClient(applicationContext)
 
 val response = routesClient.calculateRoutes(CalculateRoutesRequest {
     origin = listOf(-97.7431, 30.2747) // Austin [lng, lat]
@@ -375,6 +358,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
 }
 
 // Amazon Location (After)
+import org.maplibre.android.MapLibre
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.Style
@@ -389,6 +373,7 @@ class MapActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        MapLibre.getInstance(this)
         mapView = MapView(this)
         setContentView(mapView)
 
@@ -422,12 +407,16 @@ Google Maps SDK includes utility classes for geometry operations. For Amazon Loc
 
 ### Polyline Encoding/Decoding
 
-| Google Maps Android | Amazon Location Alternative                       | Package                            |
-| ------------------- | ------------------------------------------------- | ---------------------------------- |
-| `PolyUtil.encode()` | Use custom implementation or AWS polyline utility | N/A (implement or use server-side) |
-| `PolyUtil.decode()` | Use custom implementation or AWS polyline utility | N/A (implement or use server-side) |
+| Google Maps Android | Amazon Location Alternative          | Package                                                                 |
+| ------------------- | ------------------------------------ | ----------------------------------------------------------------------- |
+| `PolyUtil.encode()` | `Polyline.encodeFromLineString`      | [`aws-geospatial/polyline`](https://github.com/aws-geospatial/polyline) |
+| `PolyUtil.decode()` | `Polyline.decodeToLineStringFeature` | [`aws-geospatial/polyline`](https://github.com/aws-geospatial/polyline) |
 
-**Example - Polyline Decoding (Custom Implementation):**
+**Example - Polyline Decoding (using `aws-geospatial/polyline`):**
+
+Amazon Location routing returns **FlexiblePolyline**, not Google's Polyline5. A hand-rolled `/ 1e5` decoder assumes Polyline5 precision and produces wrong coordinates. Use the official [`aws-geospatial/polyline`](https://github.com/aws-geospatial/polyline) library, which decodes FlexiblePolyline directly into MapLibre-ready GeoJSON.
+
+Add the dependency: `implementation("software.amazon.location:polyline:0.1.0")`.
 
 ```kotlin
 // Google Maps (Before)
@@ -435,42 +424,13 @@ import com.google.maps.android.PolyUtil
 
 val points = PolyUtil.decode(encodedPolyline)
 
-// Amazon Location (After) - Custom implementation
-object PolylineDecoder {
-    fun decode(encoded: String): List<Pair<Double, Double>> {
-        val poly = ArrayList<Pair<Double, Double>>()
-        var index = 0
-        var lat = 0
-        var lng = 0
+// Amazon Location (After) - official library
+import software.amazon.location.polyline.Polyline
 
-        while (index < encoded.length) {
-            var result = 1
-            var shift = 0
-            var b: Int
-            do {
-                b = encoded[index++].code - 63 - 1
-                result += b shl shift
-                shift += 5
-            } while (b >= 0x1f)
-            lat += if (result and 1 != 0) (result shr 1).inv() else result shr 1
-
-            result = 1
-            shift = 0
-            do {
-                b = encoded[index++].code - 63 - 1
-                result += b shl shift
-                shift += 5
-            } while (b >= 0x1f)
-            lng += if (result and 1 != 0) (result shr 1).inv() else result shr 1
-
-            poly.add(Pair(lat / 1e5, lng / 1e5))
-        }
-        return poly
-    }
-}
+// Decode the FlexiblePolyline returned by Amazon Location routing
+val feature = Polyline.decodeToLineStringFeature(encodedPolyline)
+// `feature` is a GeoJSON LineString Feature, ready to add to a MapLibre source
 ```
-
-**Recommendation:** For complex polyline operations, consider using the server-side AWS SDK or implement a lightweight utility based on the polyline algorithm.
 
 ### Geometry Operations
 
@@ -771,7 +731,7 @@ fun List<Double>.toLatLng(): LatLng = LatLng(this[1], this[0])
 **Issue:** Build errors after adding dependencies
 
 - **Cause:** Dependency conflicts or missing repositories
-- **Fix:** Check MapLibre repository is added, verify dependency versions
+- **Fix:** Verify `google()` and `mavenCentral()` are present in your repositories, check dependency versions
 
 ### Getting Help
 

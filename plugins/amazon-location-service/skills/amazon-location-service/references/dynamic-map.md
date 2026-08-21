@@ -242,7 +242,7 @@ function setMapStyle(styleName) {
 
 ### `map.loaded()` goes false after `addSource` — causing hangs
 
-Calling `map.addSource()` or `map.addLayer()` inside a `"load"` callback sets internal dirty flags, making `loaded()` temporarily return `false`. The `"load"` event will **not** re-fire because the map tracks that it already fired once ([`map.ts#L3680`](https://github.com/maplibre/maplibre-gl-js/blob/main/src/ui/map.ts#L3680)).
+Calling `map.addSource()` or `map.addLayer()` inside a `"load"` callback sets internal dirty flags, making `loaded()` temporarily return `false`. The `"load"` event will **not** re-fire because the map tracks that it already fired once ([`map.ts#L4326`](https://github.com/maplibre/maplibre-gl-js/blob/v6.4.1/src/ui/map.ts#L4326)).
 
 Any code that runs after an async delay and gates on `map.loaded()` can hang forever:
 
@@ -263,7 +263,7 @@ if (!map.loaded()) {
 **Correct patterns:**
 
 - Do all source/layer work inside a single `map.on("load", async () => { ... })` callback — async work inside the callback is fine
-- If you need to wait for sources to settle after load, use `map.once("idle", callback)` which re-fires whenever everything is loaded and stable ([`map.ts#L3705`](https://github.com/maplibre/maplibre-gl-js/blob/main/src/ui/map.ts#L3705))
+- If you need to wait for sources to settle after load, use `map.once("idle", callback)` which re-fires whenever everything is loaded and stable ([`map.ts#L4350`](https://github.com/maplibre/maplibre-gl-js/blob/v6.4.1/src/ui/map.ts#L4350))
 - Markers (DOM-based) can be added at any time — they do not need `"load"` or `"idle"`
 
 ### Draggable Markers

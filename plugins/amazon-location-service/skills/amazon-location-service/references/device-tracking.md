@@ -59,7 +59,7 @@ await client.send(
         SampleTime: new Date().toISOString(),
         Accuracy: { Horizontal: 10.0 }, // meters, optional but recommended
         PositionProperties: {
-          // up to 3 key-value pairs
+          // up to 4 key-value pairs
           VehicleType: "Truck",
           DriverId: "D-1234",
         },
@@ -282,7 +282,7 @@ if (response.Errors?.length > 0) {
 ## Best Practices
 
 - Set `Accuracy.Horizontal` on every update when available — it improves position filtering and geofence evaluation precision
-- Use `PositionProperties` (max 3 key-value pairs) for device metadata that should travel with position data (vehicle type, driver ID, cargo status)
+- Use `PositionProperties` (max 4 key-value pairs) for device metadata that should travel with position data (vehicle type, driver ID, cargo status)
 - Paginate `ListDevicePositions` and `GetDevicePositionHistory` — don't assume all results fit in one response
 - Match update frequency to your use case — over-reporting wastes cost, under-reporting misses events
 - For fleet dashboards, poll `ListDevicePositions` at a slower rate than devices report (e.g., poll every 15s even if devices report every 5s)

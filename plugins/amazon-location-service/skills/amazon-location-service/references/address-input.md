@@ -4,7 +4,7 @@
 
 Create effective address input forms with type-ahead completion that improves input speed and accuracy using Amazon Location Service Places APIs.
 
-**Distinction from Address Verification**: This reference covers the interactive UI/UX of collecting a single address from a user (autocomplete, type-ahead, and resolving a typed address to coordinates). It is NOT postal address validation. To verify and standardize addresses against authoritative postal data — producing a match-confidence verdict and per-component status — use the asynchronous Jobs API (`StartJob` with Action `ValidateAddress`); see the address-verification reference. Geocode returns coordinates and a matched label, not a validation verdict.
+**Distinction from Address Verification**: This reference covers the interactive UI/UX of collecting a single address from a user (autocomplete, type-ahead, and resolving a typed address to coordinates). It is NOT postal address validation. To verify and standardize addresses against authoritative postal data — producing a match-confidence verdict and per-component status — use the asynchronous Jobs API (`StartJob` with Action `ValidateAddress`); see the address-verification reference. Geocode returns coordinates and a matched label, not a postal-deliverability verdict.
 
 ## Table of Contents
 
@@ -97,7 +97,7 @@ Address input forms SHOULD implement this three-stage flow:
 
 **Returns**: Array of matching addresses with coordinates and a formatted label.
 
-**Note**: Geocode is NOT postal address validation. It returns coordinates and a best-match label, not a validation verdict (match confidence, granularity, or per-component status). For verifying and standardizing addresses against authoritative postal data, use the asynchronous Jobs API (`StartJob` with Action `ValidateAddress`) — see the address-verification reference.
+**Note**: Geocode is NOT postal address validation. It returns coordinates, a best-match label, and `MatchScores` (match confidence), but not a postal-deliverability verdict (whether an address is mailable/locatable) or standardized per-component validation status. For verifying and standardizing addresses against authoritative postal data, use the asynchronous Jobs API (`StartJob` with Action `ValidateAddress`) — see the address-verification reference.
 
 ## Code Examples
 
