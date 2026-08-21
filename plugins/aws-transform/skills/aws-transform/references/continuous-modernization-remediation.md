@@ -189,3 +189,19 @@ atx ct remediation create --ids <id1,id2> --name "Fix name" --tags team=alpha,en
 - If `~/.aws/atx/settings.json` defines `applyTags` (an array of tag maps), those defaults are applied automatically even without explicit `--tags`. An explicit `--tags` override merges **per key** over the settings defaults.
 
 See the [source](continuous-modernization-source.md) skill's Tags section for the full schema, merge semantics, and error behavior.
+
+## Prerequisites & errors
+
+Remediation shells out to `git`, `atx`, and any provider-specific CLIs, and needs
+valid AWS + provider credentials. See the
+[troubleshooting](continuous-modernization-troubleshooting.md) skill for
+the full actionable-error reference. Common cases:
+
+- **`Required CLI "<tool>" was not found on PATH`** — install the named tool and
+  ensure it's on PATH (the error prints the searched PATH and an install hint).
+- **Connection error** — the CLI can't reach the AWS Transform backend: refresh AWS credentials and confirm `AWS_REGION` is a supported region, then retry.
+- **`AccessDenied` / 403 (AWS)** — refresh AWS credentials, confirm `AWS_REGION`, then retry.
+- **`401` from the provider** — the PAT is invalid/expired; re-add the source with a
+  valid token (`repo` scope; SSO-authorized for the org if required).
+- **A repo shows `blocked` / `failed`** — surface the per-repo error rather than
+  reporting the remediation as done; retry that repo after fixing the cause.
