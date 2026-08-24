@@ -97,4 +97,4 @@ To have the CLI automatically apply tags to every resource it creates (sources, 
 - `--status` checks current state: `configured`, `setup_in_progress`, `failed`, or `not_configured`.
 - `--delete` tears down AWS resources (CloudFormation stack, S3 bucket, config).
 - Requires valid AWS credentials (`aws sts get-caller-identity` must succeed).
-- If credentials are expired, ask the user to refresh them first (`ada credentials update`).
+- If credentials are expired, ask the user to refresh them first.

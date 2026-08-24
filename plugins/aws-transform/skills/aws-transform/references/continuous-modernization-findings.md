@@ -110,3 +110,18 @@ atx ct remediation create --ids <finding-id1,finding-id2> --name "Fix name" --te
 - **Tech-debt / upgrade findings** route to an ATX transform (PR/CR).
 
 See the [remediation](continuous-modernization-remediation.md) skill for outcomes by source provider and for handling findings without a `fix` field.
+
+## Prerequisites & errors
+
+Before listing findings, AWS credentials must be valid and the CLI must be able
+to reach the AWS Transform backend (on a connection error, refresh credentials and confirm `AWS_REGION`). See the [troubleshooting](continuous-modernization-troubleshooting.md)
+skill for the full actionable-error reference.
+
+**An empty findings list is not automatically "clean."** Before reporting "no
+findings":
+
+- If the read errored (auth/connection), surface the error — do not report `0`.
+- Confirm `AWS_REGION` matches where the analysis ran (findings are region-scoped).
+- Confirm an analysis has actually completed (`atx ct analysis list`); no completed
+  analysis means there is nothing to list yet, not a clean bill of health.
+- On `AccessDenied` / 403: credentials likely expired — refresh them and retry.
