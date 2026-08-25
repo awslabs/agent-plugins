@@ -9,7 +9,7 @@ effortless scaling, multi-region viability, among other advantages.
 
 - **SHOULD read guidelines first** - Check [development-guide.md](development-guide.md) before making schema changes
 - **SHOULD use preferred language patterns** - Check [language.md](language.md)
-- **SHOULD Execute queries directly** - PREFER MCP tools for ad-hoc queries
+- **SHOULD Execute queries directly** - PREFER MCP tools for ad-hoc queries **only when the `aurora-dsql` MCP already targets the intended cluster**; otherwise use the CLI + `psql` path rather than reconfiguring — see "Choosing How to Connect" in [SKILL.md](../SKILL.md)
 - **REQUIRED: Follow DDL Guidelines** - Refer to [DDL Rules](#schema-ddl-rules)
 - **SHALL repeatedly generate fresh tokens** - Refer to [Connection Limits](auth/authentication-guide.md#connection-rules)
 - **ALWAYS use ASYNC indexes** - `CREATE INDEX ASYNC` is mandatory
@@ -40,7 +40,7 @@ effortless scaling, multi-region viability, among other advantages.
 
 **For Ad-Hoc Queries and Data Exploration:**
 
-- MUST ALWAYS Execute DIRECTLY using MCP server or psql one-liners
+- MUST ALWAYS Execute DIRECTLY using the MCP server (when it targets the intended cluster) or psql one-liners (`scripts/psql-connect.sh`) otherwise — never reconfigure the MCP mid-task just to switch clusters
 - SHOULD Return results immediately
 
 **Writing Scripts REQUIRES at least 1 of:**
@@ -74,6 +74,11 @@ effortless scaling, multi-region viability, among other advantages.
   - MAXIMUM: **24 indexes per table**
   - MAXIMUM: **8 columns per index**
   - **MUST** verify index is ready before relying on it: `SELECT indisvalid FROM pg_index WHERE indexrelid = 'index_name'::regclass` — queries work but skip the index until `indisvalid = true`
+- MUST use **`ALTER TABLE ASYNC ... VALIDATE CONSTRAINT`** for constraint validation: No synchronous validation
+  - **MUST** add CHECK constraints with `NOT VALID`: `ALTER TABLE t ADD CONSTRAINT c CHECK (expr) NOT VALID`
+  - Then validate asynchronously: `ALTER TABLE ASYNC t VALIDATE CONSTRAINT c` — returns a `job_id`
+  - **MUST** monitor via `sys.jobs` or block with `SELECT sys.wait_for_job('job_id')`
+  - Constraint applies to new rows immediately; existing rows validated in background
 - **Asynchronous Execution:** DDL ALWAYS runs asynchronously
 - To add a column with DEFAULT or NOT NULL:
   1. MUST issue ADD COLUMN specifying only the column name and data type
@@ -124,10 +129,12 @@ instead implementation:
 ### Schema Operations
 
 ```sql
-CREATE INDEX ASYNC idx_name ON table(column);          ← ALWAYS ASYNC
-ALTER TABLE t ADD COLUMN c VARCHAR(50);                ← ONE AT A TIME
-ALTER TABLE t ADD COLUMN c2 INTEGER;                   ← SEPARATE STATEMENT
-UPDATE table SET c = 'default' WHERE c IS NULL;        ← AFTER ADD COLUMN
+CREATE INDEX ASYNC idx_name ON table(column);                        ← ALWAYS ASYNC
+ALTER TABLE t ADD CONSTRAINT c CHECK (age >= 0) NOT VALID;           ← NOT VALID required
+ALTER TABLE ASYNC t VALIDATE CONSTRAINT c;                           ← ALWAYS ASYNC
+ALTER TABLE t ADD COLUMN c VARCHAR(50);                              ← ONE AT A TIME
+ALTER TABLE t ADD COLUMN c2 INTEGER;                                 ← SEPARATE STATEMENT
+UPDATE table SET c = 'default' WHERE c IS NULL;                      ← AFTER ADD COLUMN
 ```
 
 ### Supported Data Types

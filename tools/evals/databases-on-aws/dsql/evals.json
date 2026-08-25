@@ -170,6 +170,34 @@
         "Recommends the Amazon.AuroraDsql.EntityFrameworkCore adapter for EF Core users"
       ],
       "llm_judge": true
+    },
+    {
+      "id": 15,
+      "prompt": "My Aurora DSQL cluster is performing differently than last week and I can't point to one bad query. I pulled the Active Average Sessions (db.active_sessions.avg) broken down by wait event for the same hour, this week vs last week. Last week: OnCpu 226, SequentialScanRead 89, UniqueConstraintCheck 89, Commit 74, everything else flat. This week: OnCpu 213, SequentialScanRead 336, UniqueConstraintCheck 87, Commit 73, everything else flat. What does this tell you and what should I do next?",
+      "expected_output": "Interprets the data as a wait-event distribution shift: SequentialScanRead grew ~3.7x (from ~19% to ~47% of the listed events' total AAS — 89/478 vs 336/709) while every other wait event, including OnCpu and Commit, stayed flat. Concludes this is NOT overall load growth (which would raise all events together) but a shift concentrated in SequentialScanRead. Treats the concentrated shift as an OBSERVATION to investigate — does NOT diagnose a scan type, missing index, or plan regression from the CloudWatch metric alone (a wait event is not a query plan). Does NOT treat any absolute AAS number as inherently bad — reasons from the change vs the temporal baseline. Recommends identifying the top SQL on SequentialScanRead and handing those queries off to per-query EXPLAIN analysis (Workflow 9). Does not recommend schema or index changes from CloudWatch data alone.",
+      "files": [],
+      "expectations": [
+        "Identifies SequentialScanRead as the shifted wait event and quantifies the change relative to the baseline (roughly 3.7x — 336/89 — or, as a share of the listed events, a jump from ~19% to ~47%). Accept any correct quantification of the ~3.7x growth; do NOT require a specific percentage, since exact shares depend on unlisted 'flat' events the prompt does not enumerate",
+        "Concludes the shift is concentrated in SequentialScanRead rather than proportional load growth, citing that OnCpu / Commit / other events stayed flat — and frames this as an observation to investigate, NOT as a diagnosed scan type / missing index / plan regression from the metric alone",
+        "Does NOT claim any absolute AAS value is inherently problematic — reasons from change over time against the temporal baseline",
+        "Recommends identifying the top SQL statements attributed to SequentialScanRead as the next step",
+        "Defers per-query root cause to EXPLAIN / query plan analysis (Workflow 9) and does NOT recommend specific index or schema changes from the CloudWatch metrics alone"
+      ],
+      "llm_judge": true
+    },
+    {
+      "id": 16,
+      "prompt": "I ran Workflow 12 on my DSQL cluster. The top query by AAS is `SELECT NO_O_ID FROM new_order WHERE NO_D_ID = $1 AND NO_W_ID = $2 ORDER BY NO_O_ID ASC LIMIT $0` and its dominant wait event is SequentialScanRead. What is wrong with this query and what should I do?",
+      "expected_output": "Explains that a high SequentialScanRead share most likely reflects high concurrency or call frequency of the query, not a slow or defective query, and that SequentialScanRead is a storage-layer range read, NOT proof of a Seq Scan / Full Scan plan node. Explicitly declines to state a scan type or index state from the wait-event metric alone. Does NOT claim the query is doing a full table scan, and does NOT assert that an index is missing, still building, or unused. Routes the query to Workflow 9 (EXPLAIN ANALYZE) as the only way to establish the actual plan, scan type, and root cause. Treats the wait event as an observation to investigate, not a diagnosis.",
+      "files": [],
+      "expectations": [
+        "Explains high SequentialScanRead AAS as likely high concurrency / call frequency, not inherently a problem, and notes there is no upper bound to AAS",
+        "States that a wait-event label is not an EXPLAIN node type — SequentialScanRead does not establish a Seq Scan / Full Scan",
+        "Does NOT claim the query is performing a full or sequential table scan",
+        "Does NOT assert that an index is missing, still building, or unused based on the CloudWatch metric",
+        "Routes the query to Workflow 9 (EXPLAIN ANALYZE / query plan explainability) to establish the actual plan and root cause, and does not recommend index or schema changes from AAS data alone"
+      ],
+      "llm_judge": true
     }
   ]
 }

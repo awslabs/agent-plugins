@@ -10,13 +10,9 @@ Generate a single self-contained HTML report that walks through everything AWS T
 
 The report is a **static snapshot**: the HTML has all data baked in as JS consts, so it's portable (emailable, openable offline) and reflects the moment the report was generated.
 
-## Prerequisites
-
-- Server running: `atx ct status --health` returns `healthy`. If not, use the `server` skill to start it.
-
 ## Data sources
 
-Populate the report from the live `atx ct` server.
+Populate the report from live `atx ct` reads.
 
 ```bash
 atx ct source list --json
