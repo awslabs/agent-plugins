@@ -10,13 +10,16 @@ Chains all fixers in sequence:
 Reads JSON from stdin (PostToolUse hook format) or accepts file path as argument.
 """
 
+from __future__ import annotations
+
 import argparse
 import importlib.util
 import json
 import os
 import sys
-import defusedxml.ElementTree as ET
 from pathlib import Path
+
+import defusedxml.ElementTree as ET
 
 MAX_FILE_SIZE = 2 * 1024 * 1024  # 2 MB
 
@@ -27,8 +30,19 @@ SCRIPT_DIR = Path(__file__).parent
 
 def _import_from(module_name: str, file_name: str):
     spec = importlib.util.spec_from_file_location(module_name, SCRIPT_DIR / file_name)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Cannot load draw.io fixer module: {file_name}")
     mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
+    previous = sys.modules.get(module_name)
+    sys.modules[module_name] = mod
+    try:
+        spec.loader.exec_module(mod)
+    except Exception:
+        if previous is None:
+            sys.modules.pop(module_name, None)
+        else:
+            sys.modules[module_name] = previous
+        raise
     return mod
 
 
@@ -199,7 +213,6 @@ def fix_placement(tree: ET.ElementTree, verbose: bool = False) -> int:
             cloud_x = aws_cloud_geom["x"]
             cloud_x2 = cloud_x + aws_cloud_geom["w"]
             actor_x = g["x"]
-            actor_x2 = actor_x + g["w"]
 
             # Check if actor overlaps AWS Cloud horizontally
             if actor_x >= cloud_x and actor_x < cloud_x2:

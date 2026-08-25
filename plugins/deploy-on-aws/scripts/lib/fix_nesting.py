@@ -15,8 +15,13 @@ This script:
 
 """
 
+from __future__ import annotations
+
 import argparse
+
 import defusedxml.ElementTree as ET
+
+from _xml_format import indent_tree
 
 
 def get_style_dict(style_str: str) -> dict[str, str]:
@@ -157,7 +162,7 @@ def main() -> None:
     if fixed > 0:
         print(f"Regions fixed: {fixed}")
         if not args.dry_run:
-            ET.indent(tree, space="  ")
+            indent_tree(tree, space="  ")
             tree.write(args.file, encoding="unicode", xml_declaration=False)
             print(f"Written: {args.file}")
         else:
