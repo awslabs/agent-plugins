@@ -106,6 +106,29 @@ description = "Scaffold a new skill directory"
 run = "uv run tools/init-skill.py"
 
 # =========
+# TESTING
+# =========
+
+[tasks."test:python"]
+description = "Run Python unit tests with pytest (ephemeral, no repo dependency)"
+# `uv run --with pytest` installs pytest into a cached, throwaway env for this
+# run only — nothing is added to the repo's declared deps. pytest handles
+# discovery/parametrize/fixtures natively. Exit code 5 = "no tests collected",
+# which we treat as success so the build never breaks when tests are absent.
+run = "uv run --with pytest pytest tools plugins || [ $? -eq 5 ]"
+
+[tasks."test:node"]
+description = "Run Node (JS/TS) unit tests when a package.json defines them"
+run = "if [ -f package.json ] && grep -q '\"test\"' package.json; then npm test; else echo 'no package.json test script; skipping'; fi"
+
+[tasks.test]
+description = "Run unit tests across languages"
+run = [
+  { task = "test:python" },
+  { task = "test:node" },
+]
+
+# =========
 # SECURITY
 # =========
 
@@ -167,10 +190,11 @@ run = [
 # ===============
 
 [tasks.build]
-description = "Complete build: lint, format, validate, security scans"
+description = "Complete build: lint, format, validate, test, security scans"
 run = [
     { task = "lint" },
     { task = "fmt:check" },
     { task = "validate" },
+    { task = "test" },
     { task = "security"}
 ]
