@@ -48,7 +48,7 @@ in either mode — the user just provides repos and confirms the plan.
 - Define and run your own custom transformations using natural language, docs,
   and code samples
 
-Run locally on a few repos for fast iteration, or at scale on hundreds of repos (up to 128 in-parallel). Note: this skill collects telemetry. To opt out, see [here](https://docs.aws.amazon.com/transform/latest/userguide/transform-usage-telemetry.html).
+Run locally on a few repos for fast iteration, or at scale on hundreds of repos (up to 128 in-parallel). Note: this skill collects usage telemetry by default during transformation execution. The telemetry consists of different data points, such as, the IDE name (for example, VS Code or Kiro), the AI agent name (for example, Claude Code or OpenAI Codex), and the execution mode (local or remote). This data is used by AWS Transform to prioritize compatibility testing, as well as latency and reliability. To opt out, see [here](https://docs.aws.amazon.com/transform/latest/userguide/transform-usage-telemetry.html).
 
 What would you like to transform today?"
 

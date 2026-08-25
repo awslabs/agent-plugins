@@ -42,7 +42,7 @@ atx ct remediation create --transformation-name <TD-name> --repo <source>::<slug
 # Create with configuration passed to the TD
 atx ct remediation create --transformation-name <TD-name> --repo <source>::<slug> -g "additionalPlanContext=Upgrade to Node.js 22" --telemetry "agent=<AGENT>,executionMode=local"
 
-# Create with local execution (runs ATX transform on the server instead of GitHub Actions)
+# Create with local execution (runs the ATX transform on the server host instead of on managed remote compute)
 atx ct remediation create --ids <id1,id2> --name "Fix name" --local --telemetry "agent=<AGENT>,executionMode=local"
 
 # List all
@@ -58,11 +58,11 @@ atx ct remediation retry --id <id>
 atx ct remediation delete --id <id>
 ```
 
-## Repository limit per request (max 250)
+## Repository limit per request (max 100)
 
-A single `atx ct remediation create` can be associated with at most **250 repositories**. Before creating a remediation that spans many repos, check how many distinct repositories the target findings cover.
+A single `atx ct remediation create` can be associated with at most **100 repositories**. Before creating a remediation that spans many repos, check how many distinct repositories the target findings cover.
 
-If the remediation would span more than 250 repositories, split it into multiple `remediation create` requests, each covering findings from at most 250 repos, and tell the user you are breaking it up because of the 250-repo-per-request limit. Never create a single remediation associated with more than 250 repositories — it will be rejected. Example: findings across 300 repos → two remediations (one for 250 repos, one for the remaining 50).
+If the remediation would span more than 100 repositories, split it into multiple `remediation create` requests, each covering findings from at most 100 repos, and tell the user you are breaking it up because of the 100-repo-per-request limit. Never create a single remediation associated with more than 100 repositories — it will be rejected. Example: findings across 300 repos → three remediations (100 repos each).
 
 ## Running long remediations (--wait, background, logs)
 
@@ -76,6 +76,8 @@ If the remediation would span more than 250 repositories, split it into multiple
 atx ct remediation create --ids <id1,id2> --name "Fix name" --wait --telemetry "agent=<AGENT>,executionMode=local" > /tmp/atx-remediation.log 2>&1 &
 tail -f /tmp/atx-remediation.log
 ```
+
+The redirect captures the command's diagnostics — the in-process CLI writes logs to STDERR, which `2>&1` folds into the log file. Only warnings and errors are logged by default; when troubleshooting, prefix the command with `ATXCT_LOG_LEVEL=debug` for verbose output.
 
 Tell the user where the log is and how to check progress.
 
@@ -163,10 +165,43 @@ When the user asks to remediate with a custom transformation definition, or a fi
 
 ### `--local` flag (remediation create)
 
-When `--local` is passed, the ATX transform runs directly on the server against a cloned copy of the repository instead of dispatching a GitHub Actions workflow. This is useful for:
+When `--local` is passed, the ATX transform runs directly on the server host against a cloned copy of the repository instead of being dispatched to managed remote compute. This is useful for:
 
-- GitHub-sourced repos where you want faster feedback without waiting for CI
-- Environments where GitHub Actions workflows are not configured or available
-- Testing transforms locally before committing to a full workflow run
+- Faster feedback without waiting for a remote job to be scheduled
+- Environments without access to managed remote compute
+- Testing transforms locally before running them on remote compute
 
 The execution mode is persisted on the remediation record (`compute_mode = 'local'`), so subsequent `retry` and `resume` operations automatically honour the original intent without needing to re-specify the flag.
+
+### `--tags` flag (remediation create)
+
+Attaches IAM resource tags to the remediation at creation time.
+
+```bash
+# Create remediation with tags (comma-separated key=value pairs)
+atx ct remediation create --ids <id1,id2> --name "Fix name" --tags team=alpha,env=prod --telemetry "agent=<AGENT>,executionMode=local"
+```
+
+**Behavior:**
+
+- `--tags key=value,key2=value2` accepts comma-separated pairs in a single flag (e.g. `--tags team=alpha,env=prod`).
+- Tags are optional. If omitted, the remediation is untagged.
+- If `~/.aws/atx/settings.json` defines `applyTags` (an array of tag maps), those defaults are applied automatically even without explicit `--tags`. An explicit `--tags` override merges **per key** over the settings defaults.
+
+See the [source](continuous-modernization-source.md) skill's Tags section for the full schema, merge semantics, and error behavior.
+
+## Prerequisites & errors
+
+Remediation shells out to `git`, `atx`, and any provider-specific CLIs, and needs
+valid AWS + provider credentials. See the
+[troubleshooting](continuous-modernization-troubleshooting.md) skill for
+the full actionable-error reference. Common cases:
+
+- **`Required CLI "<tool>" was not found on PATH`** — install the named tool and
+  ensure it's on PATH (the error prints the searched PATH and an install hint).
+- **Connection error** — the CLI can't reach the AWS Transform backend: refresh AWS credentials and confirm `AWS_REGION` is a supported region, then retry.
+- **`AccessDenied` / 403 (AWS)** — refresh AWS credentials, confirm `AWS_REGION`, then retry.
+- **`401` from the provider** — the PAT is invalid/expired; re-add the source with a
+  valid token (`repo` scope; SSO-authorized for the org if required).
+- **A repo shows `blocked` / `failed`** — surface the per-repo error rather than
+  reporting the remediation as done; retry that repo after fixing the cause.

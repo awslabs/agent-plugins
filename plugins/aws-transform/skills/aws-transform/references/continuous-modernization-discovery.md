@@ -5,10 +5,6 @@ description: Scan/discover repositories from GitHub orgs, GitLab group/user, or 
 
 # Discovery
 
-## Prerequisites
-
-Check if the server is running with `atx ct status --health`. If any command fails with a connection error, use the `server` skill to start the server.
-
 ## Local sources: path is set at `source add` time
 
 For local sources, the directory path is provided when the source is first added (`atx ct source add --provider local --name <name> --path <dir>`). It's stored on the source and reused automatically by subsequent `discovery scan --source <name>` calls — no `--path` needed at scan time.

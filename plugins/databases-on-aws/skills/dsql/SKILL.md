@@ -1,9 +1,9 @@
 ---
 name: dsql
-description: "Build with Aurora DSQL — manage schemas, execute queries, handle migrations, diagnose query plans, load data, and develop applications with a serverless, distributed SQL database. Covers IAM auth, multi-tenant patterns, MySQL-to-DSQL and PostgreSQL-to-DSQL schema conversion, FK replacement code generation, OCC retry patterns, ORM migration (Django/EF Core/Hibernate/Rails), DDL operations, query plan explainability, SQL compatibility validation, and bulk data loading. Triggers on phrases like: DSQL, Aurora DSQL, distributed SQL database, serverless PostgreSQL-compatible database, migrate to DSQL, DSQL query plan, DSQL EXPLAIN ANALYZE, DSQL ENUM, DSQL foreign key, DSQL OCC retry, DSQL multi-region, DSQL JSONB, DSQL GIN index, load into DSQL, load CSV into DSQL, bulk load DSQL, aurora-dsql-loader."
+description: "Build with Aurora DSQL — manage schemas, execute queries, handle migrations, diagnose query plans, diagnose cluster performance, load data, and develop applications with a serverless, distributed SQL database. Covers IAM auth, multi-tenant patterns, MySQL-to-DSQL and PostgreSQL-to-DSQL schema conversion, FK replacement code generation, OCC retry patterns, ORM migration (Django/EF Core/Hibernate/Rails), DDL operations, query plan explainability, system diagnostics via CloudWatch AAS, SQL compatibility validation, and bulk data loading. Triggers on phrases like: DSQL, Aurora DSQL, distributed SQL database, serverless PostgreSQL-compatible database, migrate to DSQL, DSQL query plan, DSQL EXPLAIN ANALYZE, DSQL ENUM, DSQL foreign key, DSQL OCC retry, DSQL multi-region, DSQL JSONB, DSQL GIN index, load into DSQL, load CSV into DSQL, bulk load DSQL, aurora-dsql-loader, DSQL slow, DSQL performance, DSQL wait events, DSQL AAS."
 license: Apache-2.0
 metadata:
-  tags: aws, aurora, dsql, distributed-sql, distributed, distributed-database, database, serverless, serverless-database, postgresql, postgres, sql, schema, migration, multi-tenant, iam-auth, aurora-dsql, mcp, orm, enum, foreign-key, occ-retry, django, ef-core, dotnet, csharp, hibernate, rails, multi-region, schema-conversion, type-mapping, data-loading
+  tags: aws, aurora, dsql, distributed-sql, distributed, distributed-database, database, serverless, serverless-database, postgresql, postgres, sql, schema, migration, multi-tenant, iam-auth, aurora-dsql, mcp, orm, enum, foreign-key, occ-retry, django, ef-core, dotnet, csharp, hibernate, rails, multi-region, schema-conversion, type-mapping, data-loading, system-diagnostics, wait-events, aas, performance, cloudwatch
 ---
 
 # Amazon Aurora DSQL Skill
@@ -38,12 +38,12 @@ Load these files as needed for detailed guidance:
 
 ### DDL Migrations:
 
-| Reference                                                                                     | When to Load                                           | Contains                                |
-| --------------------------------------------------------------------------------------------- | ------------------------------------------------------ | --------------------------------------- |
-| [ddl-migrations/overview.md](references/ddl-migrations/overview.md)                           | MUST load for DROP COLUMN, ALTER TYPE, DROP CONSTRAINT | Table recreation pattern, verify & swap |
-| [ddl-migrations/column-operations.md](references/ddl-migrations/column-operations.md)         | DROP COLUMN, ALTER TYPE, SET/DROP NOT NULL/DEFAULT     | Column-level migration patterns         |
-| [ddl-migrations/constraint-operations.md](references/ddl-migrations/constraint-operations.md) | ADD/DROP CONSTRAINT, MODIFY PRIMARY KEY                | Constraint and structural changes       |
-| [ddl-migrations/batched-migration.md](references/ddl-migrations/batched-migration.md)         | Tables exceeding 3,000 rows                            | Batching patterns, progress tracking    |
+| Reference                                                                                     | When to Load                                                 | Contains                                |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------- |
+| [ddl-migrations/overview.md](references/ddl-migrations/overview.md)                           | MUST load for DROP COLUMN, ALTER TYPE, DROP CONSTRAINT       | Table recreation pattern, verify & swap |
+| [ddl-migrations/column-operations.md](references/ddl-migrations/column-operations.md)         | DROP COLUMN, ALTER TYPE, SET/DROP NOT NULL/DEFAULT           | Column-level migration patterns         |
+| [ddl-migrations/constraint-operations.md](references/ddl-migrations/constraint-operations.md) | ADD/DROP CONSTRAINT, VALIDATE CONSTRAINT, MODIFY PRIMARY KEY | Constraint and structural changes       |
+| [ddl-migrations/batched-migration.md](references/ddl-migrations/batched-migration.md)         | Tables exceeding 3,000 rows                                  | Batching patterns, progress tracking    |
 
 ### MySQL Migrations:
 
@@ -75,6 +75,14 @@ Load these files as needed for detailed guidance:
 | --------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | [data-loading.md](references/data-loading.md) | Planning or running bulk loads with `aurora-dsql-loader` | Fresh-vs-warm partitions, resume/retry, `--on-conflict` semantics, throughput diagnostics |
 
+### System Diagnostics:
+
+| Reference                                                                                 | When to Load                                                     | Contains                                                              |
+| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------- |
+| [system-diagnostics/workflow.md](references/system-diagnostics/workflow.md)               | MUST load at Workflow 12 entry — cluster performance diagnostics | Prerequisites, 5 diagnostic phases, temporal comparison, handoff      |
+| [system-diagnostics/wait-events.md](references/system-diagnostics/wait-events.md)         | ALWAYS load when interpreting AAS results                        | Canonical DSQL wait event descriptions and investigation guidance     |
+| [system-diagnostics/promql-patterns.md](references/system-diagnostics/promql-patterns.md) | Load when constructing PromQL queries                            | Reusable query templates for AAS breakdown, top-SQL, temporal compare |
+
 ### Query Plan Explainability:
 
 | Reference                                                                                           | When to Load                                          | Contains                                                                  |
@@ -88,6 +96,24 @@ Load these files as needed for detailed guidance:
 | [query-plan/query-rewrites-dsql-specific.md](references/query-plan/query-rewrites-dsql-specific.md) | SHOULD load at Phase 0; sub-files on-demand           | Index of DSQL-specific rewrite patterns                                   |
 
 ---
+
+## Choosing How to Connect: MCP vs CLI/psql
+
+The `aurora-dsql` MCP server binds a **single cluster at startup** (`--cluster_endpoint`), so
+using it for another cluster means editing `.mcp.json` and restarting the session.
+
+- **Use the `aurora-dsql` MCP tools (`readonly_query`, `transact`, `get_schema`) ONLY when the
+  server already targets the cluster you need.**
+- **Otherwise — unconfigured, disabled, or bound to a different cluster — do NOT reconfigure it.**
+  Use the CLI + `psql` path instead: [`scripts/psql-connect.sh`](../../scripts/psql-connect.sh)
+  `<cluster-id> --region <region> --command "SELECT ..."` (mints an IAM token and runs via `psql`).
+- **If you cannot confirm which cluster the MCP targets, confirm first or use the CLI/psql path** —
+  running against the wrong cluster is worse than the check.
+
+The doc-only MCP tools (`dsql_lint`, `dsql_*_documentation`, `dsql_recommend`) need no cluster.
+The CloudWatch MCP (Workflow 12) takes `region`/`cluster_id` per call, so one running server can
+query clusters in any PromQL-enabled region (pass each cluster's region on the call). Details:
+[connectivity-tools.md](references/auth/connectivity-tools.md).
 
 ## MCP Tools Available
 
@@ -145,10 +171,26 @@ See [scripts/README.md](../../scripts/README.md) for usage and hook configuratio
 
 ## Quick Start
 
+0. **Pick a connection path:** confirm the `aurora-dsql` MCP targets your cluster; if not, use the CLI/`psql` path instead — see [Choosing How to Connect](#choosing-how-to-connect-mcp-vs-clipsql). The steps below name MCP tools; the equivalent SQL runs the same way through `psql-connect.sh --command "..."`.
 1. **Explore:** Use `readonly_query` with `information_schema` to list tables. Use `get_schema` for table structure.
 2. **Query:** Use `readonly_query` for SELECT queries. **MUST** include `tenant_id` in WHERE for multi-tenant apps. **MUST** build SQL with `safe_query.build()`.
 3. **Schema changes:** Use `transact` with one DDL per transaction. **MUST** batch DML under 3,000 rows. **MUST** use `CREATE INDEX ASYNC` in a separate call. Use `dsql_lint` to validate first.
 4. **Bulk load data:** Use `aurora-dsql-loader` for CSV/TSV/Parquet. Load [data-loading.md](references/data-loading.md) for details. Use `--dry-run` first.
+
+---
+
+## Performance Routing
+
+When the user reports a performance problem, use this table to select the correct workflow:
+
+| User signal                                                                                                             | Route to                                                                           |
+| ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| General performance complaint, "cluster is slow", "something changed", latency regression, no specific query identified | **Workflow 12** (System Diagnostics) — observe via CloudWatch first                |
+| Specific query or query_id to investigate, "explain this plan", "why is this query slow"                                | **Workflow 9** (Query Plan Explainability) — direct EXPLAIN analysis               |
+| OCC conflicts, commit errors, retry storms                                                                              | **Workflow 12** (System Diagnostics) — confirm via CW metrics before investigating |
+| Cost optimization, "where is compute time spent"                                                                        | **Workflow 12** (System Diagnostics) — identify top contributors first             |
+
+**Rule:** When in doubt, start with Workflow 12. It identifies specific queries to investigate and routes to Workflow 9 with context.
 
 ---
 
@@ -234,6 +276,14 @@ MUST load [pg-migrations/type-mapping.md](references/pg-migrations/type-mapping.
 ### Workflow 11: ORM Migration (Django/EF Core/Hibernate/Rails)
 
 Load [orm-guides/overview.md](references/orm-guides/overview.md) for adapter names and framework-specific gotchas.
+
+### Workflow 12: System Diagnostics (CloudWatch AAS)
+
+Diagnose cluster performance by querying `db.active_sessions.avg` via PromQL. Detects temporal anomalies in wait event distribution, identifies regressed queries, and routes to Workflow 9 for per-query investigation.
+
+**Requires:** CloudWatch MCP server (`awslabs.cloudwatch-mcp-server`) enabled and configured with PromQL access in the same region as the cluster — see [mcp/mcp-setup.md](mcp/mcp-setup.md#cloudwatch-mcp-server-system-diagnostics--workflow-12) for enabling it, region requirements, and the session restart needed for its tools to register.
+
+MUST load [system-diagnostics/workflow.md](references/system-diagnostics/workflow.md) at entry — it defines prerequisites, 5 diagnostic phases, temporal baselines, and the routing to Workflow 9 for identified queries.
 
 ## Error Scenarios
 
