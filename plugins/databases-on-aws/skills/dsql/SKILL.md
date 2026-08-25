@@ -57,7 +57,7 @@ Load these files as needed for detailed guidance:
 
 | Reference                                                                         | When to Load                                                     | Contains                                           |
 | --------------------------------------------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------- |
-| [pg-migrations/type-mapping.md](references/pg-migrations/type-mapping.md)         | MUST load for PG → DSQL type questions                           | C collation rules, NUMERIC precision, JSON/JSONB   |
+| [pg-migrations/type-mapping.md](references/pg-migrations/type-mapping.md)         | MUST load for DSQL NUMERIC or PG type questions                  | C collation rules, NUMERIC(p,s), JSON/JSONB        |
 | [pg-migrations/fk-replacement.md](references/pg-migrations/fk-replacement.md)     | MUST load for FK validation code generation                      | Tenant-scoped validate_fk_*() template, cascade    |
 | [pg-migrations/index-conversion.md](references/pg-migrations/index-conversion.md) | MUST load for unfixable index diagnostics                        | GIN/GiST/BRIN → btree, partial, expression indexes |
 | [pg-migrations/schema-objects.md](references/pg-migrations/schema-objects.md)     | MUST load for ENUM, materialized views, extensions, multi-schema | ENUM → CHECK, views, role/IAM mapping              |
