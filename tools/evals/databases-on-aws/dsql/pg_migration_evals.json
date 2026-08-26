@@ -258,6 +258,21 @@
         "Does NOT silently narrow or rewrite any invalid declaration to the obsolete precision 38 or scale 37 limits"
       ],
       "llm_judge": true
+    },
+    {
+      "id": 307,
+      "name": "numeric-unspecified-default",
+      "prompt": "Review this PostgreSQL table for migration to Aurora DSQL. Explain how each NUMERIC declaration behaves in DSQL and what must be checked before migrating existing values:\n\nCREATE TABLE invoices (\n  id UUID PRIMARY KEY,\n  amount NUMERIC,\n  tax NUMERIC(20,8)\n);",
+      "expected_output": "Explains that bare NUMERIC defaults to NUMERIC(18,6) in DSQL instead of retaining PostgreSQL's unconstrained behavior, while preserving the valid explicit NUMERIC(20,8) declaration",
+      "files": [],
+      "expectations": [
+        "States that the bare NUMERIC amount column defaults to NUMERIC(18,6) in DSQL",
+        "Explains that PostgreSQL bare NUMERIC is unconstrained and therefore has different migration semantics",
+        "Requires checking existing amount values and choosing explicit precision and scale if they do not fit NUMERIC(18,6)",
+        "Preserves NUMERIC(20,8) because it is within the supported explicit bounds",
+        "Does NOT apply the obsolete DSQL limits of precision 38 or scale 37"
+      ],
+      "llm_judge": true
     }
   ]
 }
