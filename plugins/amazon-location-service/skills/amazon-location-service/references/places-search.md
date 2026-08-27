@@ -153,10 +153,12 @@ searchNear("tacos", [-97.7431, 30.2747]);
 
 **Important:** Amazon Location uses specific Category IDs for filtering. Common examples include `restaurant`, `coffee_shop`, `grocery`, `hotel`, `bank`, `fueling_station`, `pharmacy`, and `hospital`. See the complete list in the [Place Categories Documentation](https://docs.aws.amazon.com/location/latest/developerguide/places-filtering.html#place-categories).
 
+**Note:** Category filtering (`IncludeCategories`) is only supported by `SearchNearby`, not `SearchText` — `SearchText` silently ignores it. To filter by category, use `SearchNearbyCommand` with a `QueryPosition`.
+
 ```javascript
-async function searchByCategory(query, categories) {
-  const command = new amazonLocationClient.places.SearchTextCommand({
-    QueryText: query,
+async function searchByCategory(position, categories) {
+  const command = new amazonLocationClient.places.SearchNearbyCommand({
+    QueryPosition: position, // [lon, lat]
     Filter: {
       IncludeCategories: categories, // Filter by valid category IDs
     },
@@ -167,8 +169,8 @@ async function searchByCategory(query, categories) {
   return response.ResultItems;
 }
 
-// Usage - find only restaurants and coffee shops
-searchByCategory("food near downtown", ["restaurant", "coffee_shop"]);
+// Usage - find only restaurants and coffee shops near a location
+searchByCategory([-97.7431, 30.2747], ["restaurant", "coffee_shop"]);
 ```
 
 ### Search with Bounding Box

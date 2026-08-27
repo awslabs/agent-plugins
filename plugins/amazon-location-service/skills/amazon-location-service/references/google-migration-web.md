@@ -470,8 +470,15 @@ Google Maps provides client-side geometry and math utilities. For Amazon Locatio
 **Example - Polyline Encoding:**
 
 ```javascript
-// Google Maps (Phase 1 - Migration SDK)
-import { encoding } from "google.maps.geometry";
+// Phase 1 - Migration SDK: load via the SDK's Loader, then your existing
+// google.maps.geometry calls keep working unchanged.
+import { Loader } from "@aws/amazon-location-migration-sdk";
+
+const loader = new Loader({
+  apiKey: "<amazon-location-api-key>",
+  region: "us-east-1",
+});
+const { encoding } = await loader.importLibrary("geometry");
 
 const path = [
   new google.maps.LatLng(30.2747, -97.7431),
@@ -479,12 +486,7 @@ const path = [
 ];
 const encoded = encoding.encodePath(path);
 
-// Amazon Location (Phase 2 - with Migration SDK utilities)
-import { MigrationEncoding } from "@aws/amazon-location-migration-sdk";
-
-const encoded = MigrationEncoding.encodePath(path);
-
-// Amazon Location (Phase 2 - Native with @aws/polyline)
+// Phase 2 - Native Amazon Location with @aws/polyline
 import { encodeFromLngLatArray } from "@aws/polyline";
 
 const lngLatArray = [
@@ -515,8 +517,15 @@ npm install @aws/polyline
 **Example - Point in Polygon:**
 
 ```javascript
-// Google Maps (Phase 1 - Migration SDK)
-import { poly } from "google.maps.geometry";
+// Phase 1 - Migration SDK: load via the SDK's Loader, then your existing
+// google.maps.geometry calls keep working unchanged.
+import { Loader } from "@aws/amazon-location-migration-sdk";
+
+const loader = new Loader({
+  apiKey: "<amazon-location-api-key>",
+  region: "us-east-1",
+});
+const { poly } = await loader.importLibrary("geometry");
 
 const point = new google.maps.LatLng(30.2747, -97.7431);
 const polygonPath = [
@@ -528,12 +537,7 @@ const polygonPath = [
 const polygon = new google.maps.Polygon({ paths: polygonPath });
 const contains = poly.containsLocation(point, polygon);
 
-// Amazon Location (Phase 2 - with Migration SDK utilities)
-import { MigrationPoly } from "@aws/amazon-location-migration-sdk";
-
-const contains = MigrationPoly.containsLocation(point, polygon);
-
-// Amazon Location (Phase 2 - Native with Turf.js)
+// Phase 2 - Native Amazon Location with Turf.js
 import * as turf from "@turf/turf";
 
 const turfPoint = turf.point([-97.7431, 30.2747]); // [lng, lat]
@@ -552,8 +556,9 @@ const contains = turf.booleanPointInPolygon(turfPoint, turfPolygon);
 **Example - Distance Between Points:**
 
 ```javascript
-// Google Maps (Phase 1 - Migration SDK)
-import { spherical } from "google.maps.geometry";
+// Google Maps (Phase 1 - Migration SDK): spherical math via the loaded
+// geometry library; existing google.maps.geometry calls keep working.
+const { spherical } = await google.maps.importLibrary("geometry");
 
 const from = new google.maps.LatLng(30.2747, -97.7431);
 const to = new google.maps.LatLng(32.7767, -96.797);
@@ -574,7 +579,7 @@ const distanceMeters = distanceKm * 1000;
 npm install @turf/turf
 ```
 
-**Note:** The Migration SDK includes `MigrationEncoding` and `MigrationPoly` classes that wrap `@aws/polyline` and `@turf/turf`, making Phase 1 → Phase 2 transition smoother. When moving to pure native APIs, use the underlying packages directly.
+**Note:** The Migration SDK does not provide helper/math utilities of its own — it is a drop-in shim for the Google Maps API surface. In Phase 1, keep calling `google.maps.geometry.*` as before. When you move to native Amazon Location (Phase 2), use the underlying open-source packages (`@aws/polyline`, `@turf/turf`) directly.
 
 ### Coordinate System Differences
 

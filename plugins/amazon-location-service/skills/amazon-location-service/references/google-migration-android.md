@@ -54,16 +54,20 @@ dependencies {
 ```kotlin
 dependencies {
     // MapLibre for map display
-    implementation("org.maplibre.gl:android-sdk:11.0.0")
+    implementation("org.maplibre.gl:android-sdk:13.1.0")
+    // Annotation plugin for markers/symbols (SymbolManager, SymbolOptions).
+    // 4.0.0 is built against SDK 13.x. Plugin versions are numbered independently
+    // of the SDK, so check its release notes when bumping android-sdk.
+    implementation("org.maplibre.gl:android-plugin-annotation:4.0.0")
 
     // AWS SDK for Kotlin - add only what you need
-    implementation("aws.sdk.kotlin:geoplaces:1.3.+")  // Places, Geocoding
-    implementation("aws.sdk.kotlin:georoutes:1.3.+")  // Routing
-    implementation("aws.sdk.kotlin:geomaps:1.3.+")    // Static maps
-    implementation("aws.sdk.kotlin:location:1.3.+")   // Geofencing, Tracking
+    implementation("aws.sdk.kotlin:geoplaces:1.8.+")  // Places, Geocoding
+    implementation("aws.sdk.kotlin:georoutes:1.8.+")  // Routing
+    implementation("aws.sdk.kotlin:geomaps:1.8.+")    // Static maps
+    implementation("aws.sdk.kotlin:location:1.8.+")   // Geofencing, Tracking
 
     // For authentication
-    implementation("aws.sdk.kotlin:cognitoidentity:1.3.+")
+    implementation("aws.sdk.kotlin:cognitoidentity:1.8.+")
 
     // Coroutines (required for AWS SDK)
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
@@ -328,12 +332,12 @@ response.routes?.firstOrNull()?.let { route ->
 
 ### Map Display
 
-| Google Maps Android       | Amazon Location Android  | Migration Notes            |
-| ------------------------- | ------------------------ | -------------------------- |
-| `MapFragment` / `MapView` | `MapView` (MapLibre)     | Different rendering engine |
-| `GoogleMap.addMarker()`   | `SymbolManager.create()` | MapLibre marker API        |
-| `GoogleMap.addPolyline()` | Add LineLayer            | GeoJSON-based rendering    |
-| `GoogleMap.moveCamera()`  | `mapboxMap.moveCamera()` | Similar camera API         |
+| Google Maps Android       | Amazon Location Android    | Migration Notes            |
+| ------------------------- | -------------------------- | -------------------------- |
+| `MapFragment` / `MapView` | `MapView` (MapLibre)       | Different rendering engine |
+| `GoogleMap.addMarker()`   | `SymbolManager.create()`   | MapLibre marker API        |
+| `GoogleMap.addPolyline()` | Add LineLayer              | GeoJSON-based rendering    |
+| `GoogleMap.moveCamera()`  | `MapLibreMap.moveCamera()` | Similar camera API         |
 
 **Example - Display Map:**
 
@@ -409,7 +413,7 @@ Google Maps SDK includes utility classes for geometry operations. For Amazon Loc
 
 | Google Maps Android | Amazon Location Alternative          | Package                                                                 |
 | ------------------- | ------------------------------------ | ----------------------------------------------------------------------- |
-| `PolyUtil.encode()` | `Polyline.encodeFromLineString`      | [`aws-geospatial/polyline`](https://github.com/aws-geospatial/polyline) |
+| `PolyUtil.encode()` | `Polyline.encodeFromLngLatArray`     | [`aws-geospatial/polyline`](https://github.com/aws-geospatial/polyline) |
 | `PolyUtil.decode()` | `Polyline.decodeToLineStringFeature` | [`aws-geospatial/polyline`](https://github.com/aws-geospatial/polyline) |
 
 **Example - Polyline Decoding (using `aws-geospatial/polyline`):**

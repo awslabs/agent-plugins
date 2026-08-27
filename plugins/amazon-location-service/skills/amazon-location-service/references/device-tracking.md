@@ -300,6 +300,8 @@ const response = await client.send(
   new VerifyDevicePositionCommand({
     TrackerName: "my-fleet-tracker",
     DeviceState: {
+      DeviceId: "truck-01",
+      SampleTime: new Date().toISOString(),
       Position: [-122.3394, 47.6159],
       Accuracy: { Horizontal: 10.0 },
       Ipv4Address: "203.0.113.25",

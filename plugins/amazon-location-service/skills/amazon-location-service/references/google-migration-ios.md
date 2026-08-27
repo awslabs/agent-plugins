@@ -188,12 +188,12 @@ func createLocationClientWithCognito() async throws -> LocationClient {
 
 ### Places API
 
-| Google Maps iOS                                 | Amazon Location iOS               | Migration Notes                       |
-| ----------------------------------------------- | --------------------------------- | ------------------------------------- |
-| `GMSPlacesClient.currentPlace()`                | `SearchNearbyCommand`             | Use device location with SearchNearby |
-| `GMSPlacesClient.fetchPlace()`                  | `GetPlaceCommand`                 | Fetch place details by PlaceId        |
-| `GMSAutocompleteViewController`                 | `AutocompleteCommand` + custom UI | Address autocomplete                  |
-| `GMSPlacesClient.findAutocompletePredictions()` | `AutocompleteCommand`             | Programmatic autocomplete             |
+| Google Maps iOS                                 | Amazon Location iOS                | Migration Notes                       |
+| ----------------------------------------------- | ---------------------------------- | ------------------------------------- |
+| `GMSPlacesClient.currentPlace()`                | `searchNearby(input:)`             | Use device location with SearchNearby |
+| `GMSPlacesClient.fetchPlace()`                  | `getPlace(input:)`                 | Fetch place details by PlaceId        |
+| `GMSAutocompleteViewController`                 | `autocomplete(input:)` + custom UI | Address autocomplete                  |
+| `GMSPlacesClient.findAutocompletePredictions()` | `autocomplete(input:)`             | Programmatic autocomplete             |
 
 **Example - Place Search:**
 
@@ -290,27 +290,37 @@ if let result = response.resultItems?.first,
 
 ### Directions/Routing API
 
-| Google Maps iOS                          | Amazon Location iOS           | Migration Notes        |
-| ---------------------------------------- | ----------------------------- | ---------------------- |
-| `GMSDirectionsService.fetchDirections()` | `CalculateRoutesCommand`      | Route calculation      |
-| `GMSDistanceMatrixService`               | `CalculateRouteMatrixCommand` | Many-to-many distances |
+| Google Maps iOS                        | Amazon Location iOS            | Migration Notes                                       |
+| -------------------------------------- | ------------------------------ | ----------------------------------------------------- |
+| Directions API (REST web service)      | `calculateRoutes(input:)`      | Google has no native iOS class; call via `URLSession` |
+| Distance Matrix API (REST web service) | `calculateRouteMatrix(input:)` | Google has no native iOS class; call via `URLSession` |
 
 **Example - Directions:**
 
 ```swift
 // Google Maps (Before)
-import GoogleMaps
+// Directions is a Google web service (REST) API — there is no native iOS SDK
+// class for it, so it is called over HTTPS with URLSession.
+import Foundation
 
 let origin = "Austin, TX"
 let destination = "Dallas, TX"
+let apiKey = "YOUR_GOOGLE_API_KEY"
 
-GMSDirectionsService().fetchDirections(from: origin, to: destination) { response, error in
-    guard let response = response, let route = response.routes.first else {
-        return
-    }
+var components = URLComponents(string: "https://maps.googleapis.com/maps/api/directions/json")!
+components.queryItems = [
+    URLQueryItem(name: "origin", value: origin),
+    URLQueryItem(name: "destination", value: destination),
+    URLQueryItem(name: "key", value: apiKey),
+]
 
-    let leg = route.legs.first
-    print("Distance: \(leg?.distance.value ?? 0)")
+let (data, _) = try await URLSession.shared.data(from: components.url!)
+let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+
+if let routes = json?["routes"] as? [[String: Any]],
+   let leg = (routes.first?["legs"] as? [[String: Any]])?.first,
+   let distance = (leg["distance"] as? [String: Any])?["value"] as? Int {
+    print("Distance: \(distance)")
 }
 
 // Amazon Location (After)
@@ -373,7 +383,7 @@ class MapViewController: UIViewController {
 }
 
 // Amazon Location (After)
-import Mapbox  // MapLibre pod imports as Mapbox for compatibility
+import MapLibre
 
 class MapViewController: UIViewController {
     var mapView: MLNMapView!
@@ -413,7 +423,7 @@ Google Maps SDK includes utility classes for geometry operations. For Amazon Loc
 | Google Maps iOS             | Amazon Location Alternative          | Package                                                                 |
 | --------------------------- | ------------------------------------ | ----------------------------------------------------------------------- |
 | `GMSPath(fromEncodedPath:)` | `Polyline.decodeToLineStringFeature` | [`aws-geospatial/polyline`](https://github.com/aws-geospatial/polyline) |
-| `GMSPath.encodedPath()`     | `Polyline.encodeFromLineString`      | [`aws-geospatial/polyline`](https://github.com/aws-geospatial/polyline) |
+| `GMSPath.encodedPath()`     | `Polyline.encodeFromLngLatArray`     | [`aws-geospatial/polyline`](https://github.com/aws-geospatial/polyline) |
 
 **Example - Polyline Decoding (using `aws-geospatial/polyline`):**
 
@@ -539,7 +549,7 @@ import UIKit
 class AutocompleteViewController: UIViewController, UISearchBarDelegate {
     let searchBar = UISearchBar()
     let tableView = UITableView()
-    var suggestions: [GeocodingResultItem] = []
+    var suggestions: [AutocompleteResultItem] = []
 
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         guard searchText.count >= 3 else { return }
@@ -615,7 +625,7 @@ class MapViewController: UIViewController, CLLocationManagerDelegate {
 **Amazon Location:**
 
 ```swift
-import Mapbox  // MapLibre
+import MapLibre
 import CoreLocation
 
 class MapViewController: UIViewController, CLLocationManagerDelegate {
@@ -672,7 +682,7 @@ polyline.map = mapView
 **Amazon Location:**
 
 ```swift
-import Mapbox  // MapLibre
+import MapLibre
 
 // Create polyline from coordinates
 let polyline = MLNPolyline(coordinates: routeCoordinates, count: UInt(routeCoordinates.count))
