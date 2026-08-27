@@ -150,8 +150,9 @@ mise run lint:md:fix   # Lint Markdown with auto-fix
 mise run lint:manifests   # Validate JSON manifests (marketplace, plugin, MCP)
 mise run lint:cross-refs  # Validate cross-references between manifests
 mise run lint          # All linters
+mise run test          # Run unit tests (pytest for Python; npm/jest when a package.json defines tests)
 mise run security      # All security scans (Bandit, SemGrep, Gitleaks, Checkov, Grype, zizmor)
-mise run build         # Full build: lint + fmt:check + security
+mise run build         # Full build: lint + fmt:check + validate + test + security
 ```
 
 See `mise.toml` for the full task list and tool versions.
