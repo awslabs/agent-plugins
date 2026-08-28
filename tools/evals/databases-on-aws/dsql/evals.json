@@ -201,14 +201,14 @@
     },
     {
       "id": 17,
-      "prompt": "We already run Aurora DSQL migrations with `software.amazon.dsql:aurora-dsql-flyway-support`. The official `flyway-database-dsql` PR is merged, but I cannot find that artifact in Maven Central yet. Can I add the new module alongside the AWS adapter to try it? Give me the safest migration path without breaking our existing schema history.",
-      "expected_output": "Treats the deprecated AWS adapter as a maintenance-only continuity path for existing users, waits for a published upstream artifact compatible with the user's Flyway runtime, never loads both adapters together, and gives a non-production dependency-swap validation sequence that preserves existing migration state.",
+      "prompt": "We already run Aurora DSQL migrations with `software.amazon.dsql:aurora-dsql-flyway-support`. Should we keep using it or add the official `flyway-database-dsql` module alongside it? Give me the safest migration path without breaking our existing schema history.",
+      "expected_output": "Selects the official flyway-database-dsql module, identifies the AWS adapter as deprecated, directs existing users to migrate through a tested dependency swap, never loads both adapters together, and preserves existing migration state.",
       "files": [],
       "expectations": [
-        "Does NOT recommend using an unreleased upstream artifact; requires a published release that resolves and is compatible with the user's Flyway runtime",
-        "Says existing users can remain on software.amazon.dsql:aurora-dsql-flyway-support until they are ready to migrate",
-        "Describes the AWS adapter as deprecated and maintenance-only, limited to critical security and compatibility fixes rather than new feature development",
-        "Says to remove the AWS adapter before adding org.flywaydb:flyway-database-dsql and never load both in one Flyway runtime",
+        "Always recommends a published org.flywaydb:flyway-database-dsql release compatible with the user's Flyway runtime",
+        "Identifies software.amazon.dsql:aurora-dsql-flyway-support as deprecated and directs existing users to migrate away from it",
+        "Does NOT select or recommend the deprecated AWS adapter as the target state",
+        "Says to replace the AWS adapter with org.flywaydb:flyway-database-dsql and never load both in one Flyway runtime",
         "Preserves the existing JDBC URL, migration files, schema-history table, and flyway.dsql.* configuration during the dependency swap",
         "Recommends testing outside production and running flyway info and flyway validate before flyway migrate"
       ],

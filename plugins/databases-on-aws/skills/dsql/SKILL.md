@@ -38,13 +38,13 @@ Load these files as needed for detailed guidance:
 
 ### DDL Migrations:
 
-| Reference                                                                                     | When to Load                                                 | Contains                                |
-| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------- |
-| [ddl-migrations/overview.md](references/ddl-migrations/overview.md)                           | MUST load for DROP COLUMN, ALTER TYPE, DROP CONSTRAINT       | Table recreation pattern, verify & swap |
-| [ddl-migrations/column-operations.md](references/ddl-migrations/column-operations.md)         | DROP COLUMN, ALTER TYPE, SET/DROP NOT NULL/DEFAULT           | Column-level migration patterns         |
-| [ddl-migrations/constraint-operations.md](references/ddl-migrations/constraint-operations.md) | ADD/DROP CONSTRAINT, VALIDATE CONSTRAINT, MODIFY PRIMARY KEY | Constraint and structural changes       |
-| [ddl-migrations/batched-migration.md](references/ddl-migrations/batched-migration.md)         | Tables exceeding 3,000 rows                                  | Batching patterns, progress tracking    |
-| [flyway.md](references/flyway.md)                                                             | MUST load for Flyway setup, adapter choice, or migration     | Upstream module, AWS adapter continuity |
+| Reference                                                                                     | When to Load                                                 | Contains                                      |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------- |
+| [ddl-migrations/overview.md](references/ddl-migrations/overview.md)                           | MUST load for DROP COLUMN, ALTER TYPE, DROP CONSTRAINT       | Table recreation pattern, verify & swap       |
+| [ddl-migrations/column-operations.md](references/ddl-migrations/column-operations.md)         | DROP COLUMN, ALTER TYPE, SET/DROP NOT NULL/DEFAULT           | Column-level migration patterns               |
+| [ddl-migrations/constraint-operations.md](references/ddl-migrations/constraint-operations.md) | ADD/DROP CONSTRAINT, VALIDATE CONSTRAINT, MODIFY PRIMARY KEY | Constraint and structural changes             |
+| [ddl-migrations/batched-migration.md](references/ddl-migrations/batched-migration.md)         | Tables exceeding 3,000 rows                                  | Batching patterns, progress tracking          |
+| [flyway.md](references/flyway.md)                                                             | MUST load for Flyway setup, adapter choice, or migration     | Official module, deprecated adapter migration |
 
 ### MySQL Migrations:
 
