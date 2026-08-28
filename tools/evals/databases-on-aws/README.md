@@ -7,22 +7,29 @@ Automated evaluation harnesses for the plugin's skills, created using the skill-
 
 ## Directory Structure
 
-Evals are organized by database service. Each subfolder contains the eval definitions, runner
-scripts, and unit tests for that database's skill.
+Evals are organized by database service. This partial tree highlights the functional corpora,
+their recorded results, and runner files:
 
 ```
 tools/evals/databases-on-aws/
 ├── README.md                        # This file — top-level index
 └── dsql/                            # Aurora DSQL skill evals
     ├── evals.json                   # Tier 2: functional evals (16 prompts, 59 assertions)
+    ├── dsql_lint_evals.json         # dsql_lint workflow (4 prompts, 18 assertions)
+    ├── pg_migration_evals.json      # PostgreSQL migrations (15 prompts, 76 assertions)
+    ├── pg_migration_hallucination_evals.json # Migration hallucinations (3 prompts, 14 assertions)
     ├── trigger_evals.json           # Tier 1: triggering evals (37 test cases)
-    ├── safe_query_evals.json        # Tier 3: safe_query enforcement (6 prompts, ~30 expectations)
+    ├── safe_query_evals.json        # Tier 3: safe_query enforcement (6 prompts, 29 assertions)
     ├── query_explainability_evals.json  # Workflow 9: query plan diagnostics (9 prompts, 70 assertions)
     ├── query_plan_rewrite_evals.json   # Query rewrites: type coercion, subquery unnesting, etc. (11 prompts, manual)
+    ├── data_loading_eval_results.md    # Historical data-loading results
+    ├── dsql_lint_eval_results.md       # Historical dsql_lint eval results
+    ├── pg_migration_hallucination_results.md # Historical migration-hallucination results
     ├── query_plan_rewrite_eval_results.md  # Manual eval results — with-skill vs baseline comparison
     └── scripts/
-        ├── run_functional_evals.py          # Runner/grader for Tier 2
+        ├── run_functional_evals.py          # Runner for functional eval corpora
         ├── run_query_explainability_evals.py # Runner/grader for Workflow 9
+        ├── test_run_functional_evals.py     # Unit tests for the functional runner
         └── test_safe_query.py               # Unit tests for safe_query.py module
 ```
 
@@ -61,9 +68,17 @@ PYTHONPATH="<skill-creator-path>:$PYTHONPATH" python -m scripts.run_eval \
 ### Tier 2: Functional Evals
 
 Tests simple skill correctness: MCP delegation, DSQL-specific guidance, and reference file routing.
+The runner suppresses configured user, project, and local setting sources, restricts MCP
+discovery to the supplied config, runs each subject from a private temporary working directory
+that contains only its generated transact guard, limits built-in tools to `Skill` and reads
+under the DSQL skill subtree, and verifies that the subject
+invoked the `databases-on-aws:dsql` skill. It defaults to the plugin's shipped `.mcp.json`;
+use `--mcp-config` only with a reviewed, trusted configuration.
+The subject intentionally does not use `--bare`: plugin hooks are part of the behavior under
+evaluation, remain enabled, and execute if triggered.
 
 ```bash
-python tools/evals/databases-on-aws/dsql/scripts/run_functional_evals.py \
+mise exec -- python tools/evals/databases-on-aws/dsql/scripts/run_functional_evals.py \
   --evals tools/evals/databases-on-aws/dsql/evals.json \
   --plugin-dir plugins/databases-on-aws \
   --output-dir /tmp/dsql-eval-results \
@@ -73,10 +88,10 @@ python tools/evals/databases-on-aws/dsql/scripts/run_functional_evals.py \
 Run a subset by ID (e.g., just the new type / lifecycle evals):
 
 ```bash
-python tools/evals/databases-on-aws/dsql/scripts/run_functional_evals.py \
+mise exec -- python tools/evals/databases-on-aws/dsql/scripts/run_functional_evals.py \
   --evals tools/evals/databases-on-aws/dsql/evals.json \
   --plugin-dir plugins/databases-on-aws \
-  --output-dir /tmp/dsql-eval-results \
+  --output-dir /tmp/dsql-eval-results-6-8 \
   --eval-ids 6,7,8 \
   --verbose
 ```
@@ -104,26 +119,123 @@ python tools/evals/databases-on-aws/dsql/scripts/run_functional_evals.py \
 
 ### Grader modes
 
-The runner supports two grading strategies; each eval declares which via `"llm_judge": true|false` (default `false`):
+Every eval consumed by `run_functional_evals.py` **MUST** declare one of two grading strategies via
+`"grader": "regex"` or `"grader": "llm_judge"`. Functional corpora use
+`"schema_version": 2`; result artifacts report schema and grading-protocol version `2` because
+the stricter grading and incomplete-run semantics are not directly comparable with older runs.
 
-- **Regex / tool-call** (evals 1-5): fast, cheap, deterministic. Good for verbatim tokens (`tenant_id`, `CREATE INDEX ASYNC`, the `3,000` row limit) and tool-invocation checks (`Calls awsknowledge with topic=X`).
-- **LLM judge** (evals 6-16): runs `claude -p` once per expectation with the agent's final text, the user prompt, and the assertion. Returns `{passed, evidence}`. Good for semantic assertions where paraphrasing, negation, or synonym coverage makes regex brittle. Costs ~$0.01–0.05 per expectation; slower than regex. Use for assertions like "Does NOT recommend X" where the agent may phrase the refutation a hundred different ways.
+- **Regex / tool-call**: fast, cheap, deterministic. Each accepted assertion maps to a registered rule; the schema rejects assertions without one. Dedicated rules validate exact tool behavior and safety constraints. Compatibility rules retained for legacy corpora use polarity-aware keyword scoring. Limit rules bind values to their subject, such as 3,000 rows per transaction, 24 indexes per table, and 8 columns per index.
+- **LLM judge**: runs a tool-free `claude -p` once per expectation with the complete redacted final answer, bounded call and result metadata, a complete tool-name inventory, the user prompt, and the assertion. Answers longer than 18,000 redacted characters are ungraded instead of being truncated. Tool-result bodies are explicitly untrusted and cannot independently satisfy assertions about what the agent presents or explains. The judge returns `{passed, evidence}`. Use it for semantic assertions where paraphrasing, negation, or synonym coverage makes regex brittle, such as "Does NOT recommend X." Each assertion incurs model-dependent cost and latency.
 
-Pin the judge model independently of the subject model via `--judge-model` (defaults to the CLI default). Keep it stable across runs when bumping `--model` so grading stays comparable.
+Select the judge independently of the subject via `--judge-model` (defaults to the CLI default)
+and bound each judge assertion with `--judge-timeout` (defaults to 60 seconds).
+An explicit model argument records the selected string; it does not make a mutable alias
+immutable. Reproducible comparisons require immutable model identifiers for `--model` and
+`--judge-model`, plus immutable MCP server dependency versions rather than floating tags such
+as `latest`. Keep the judge identifier stable when changing the subject.
+
+The runner exits nonzero for assertion failures, turn-limit truncation, missing requested IDs,
+invalid eval files, and subject or judge infrastructure errors. `summary.json` reports
+`requested_total` and `graded_total` separately and sets `overall_pass_rate` to `null` when
+the run is incomplete. Output directories carry a runner ownership marker and an advisory lock.
+After all inputs pass validation, reusing a managed output directory stages a complete
+replacement before promoting its `summary.json` and replacing immediate child directories
+whose names match `eval-<integer>`, where `<integer>` is one or more decimal digits. Other
+entries are preserved. Promotion state is made durable before a `.previous-*` backup becomes
+visible. On the next run, abandoned preparation and `.run-*` work directories, including
+sibling staging directories, are removed,
+committed backups are discarded, and an interrupted promotion is rolled back from its
+`.previous-*` backup before evaluation continues. Nonempty unmarked directories and concurrent
+writers are rejected. Artifacts record
+the subject model,
+judge model, subject and judge timeouts, turn limit, selected eval IDs, passed environment
+names, explicit
+model-selection status, snapshotted input hashes, and separate subject/judge timing and cost.
+Before execution, the runner copies the corpus, plugin tree, and MCP config into a private
+temporary snapshot; hashes and subprocess arguments refer to that snapshot. A missing CLI
+cost field is recorded as `null`, not as zero.
+
+Artifacts use mode `0600` under mode-`0700` directories. `transcript.json` retains a redacted
+answer, ordered event timeline, and redacted tool calls/results while omitting the original
+stream message objects. Redaction is best effort: use only synthetic eval data, treat
+artifacts as potentially sensitive, and review them before publication. Persisted text and
+event collections, corpus size and nesting, and subprocess output are bounded. Timeouts,
+interruptions, and output-limit failures terminate the tracked subject or judge process tree.
+The runner records an infrastructure error for an eval if Linux subreaper tracking or macOS
+`kqueue` and `libproc` tracking cannot be initialized or refreshed.
+
+The subject and judge processes receive the fixed runtime, Claude, and AWS environment
+allowlist. MCP server commands inherit the subject environment. The judge suppresses
+configurable setting sources; administrator-managed policy may still apply. Each eval that
+requires an MCP server declares it in `required_mcp_servers`; preflight validates the consumed
+MCP fields and requires those servers to be enabled. This does not make configured commands or
+URLs trustworthy.
+Use only reviewed
+`--mcp-config` files and repeat `--pass-env NAME` only for additional variables a trusted
+server or judge requires. Explicitly passed values must contain at least four characters and are
+treated as secrets during artifact redaction regardless of variable name. The tool allowlist
+permits documentation, recommendation, and lint tools when the supplied configuration enables
+their MCP servers. Remote MCP URLs must use HTTPS; plaintext HTTP is accepted only with a
+literal loopback address. Plugin runtime and hooks remain enabled because they are part of the behavior
+under test. A generated `PreToolUse` guard exposes `transact` to the subject but denies every call
+before MCP execution, retaining attempted calls in the transcript for ordering and refusal
+assertions. Other cluster-bound tools such as `get_schema` and `readonly_query` are unavailable.
+
+### dsql_lint Workflow Evals
+
+Tests that the agent invokes `dsql_lint`, handles its diagnostics, and observes the applicable
+pre-execution gates. The transact guard makes attempted calls and ordering observable without
+permitting live execution.
+The lint tool does not require a live cluster. The plugin's shipped `.mcp.json`
+disables the Aurora DSQL server, so supply a reviewed config that enables it:
+
+```bash
+mise exec -- python tools/evals/databases-on-aws/dsql/scripts/run_functional_evals.py \
+  --evals tools/evals/databases-on-aws/dsql/dsql_lint_evals.json \
+  --plugin-dir plugins/databases-on-aws \
+  --mcp-config /path/to/reviewed-mcp.json \
+  --output-dir /tmp/dsql-lint-eval-results \
+  --verbose
+```
+
+### PostgreSQL Migration Evals
+
+Tests schema conversion guidance that extends beyond `dsql_lint`:
+
+```bash
+mise exec -- python tools/evals/databases-on-aws/dsql/scripts/run_functional_evals.py \
+  --evals tools/evals/databases-on-aws/dsql/pg_migration_evals.json \
+  --plugin-dir plugins/databases-on-aws \
+  --mcp-config /path/to/reviewed-mcp.json \
+  --output-dir /tmp/dsql-pg-migration-eval-results \
+  --verbose
+```
+
+### PostgreSQL Migration Hallucination Evals
+
+Tests migration answers for unsupported collation and index claims:
+
+```bash
+mise exec -- python tools/evals/databases-on-aws/dsql/scripts/run_functional_evals.py \
+  --evals tools/evals/databases-on-aws/dsql/pg_migration_hallucination_evals.json \
+  --plugin-dir plugins/databases-on-aws \
+  --output-dir /tmp/dsql-pg-migration-hallucination-results \
+  --verbose
+```
 
 ### Tier 3: Safe-Query Enforcement Evals
 
 Tests whether an agent loading the DSQL skill uses `safe_query.build()` when writing DSQL MCP queries, including under social pressure and in write mode.
 
 ```bash
-python tools/evals/databases-on-aws/dsql/scripts/run_functional_evals.py \
+mise exec -- python tools/evals/databases-on-aws/dsql/scripts/run_functional_evals.py \
   --evals tools/evals/databases-on-aws/dsql/safe_query_evals.json \
   --plugin-dir plugins/databases-on-aws \
   --output-dir /tmp/dsql-safe-query-eval-results \
   --verbose
 ```
 
-**What it checks** (6 eval prompts, ~30 expectations total):
+**What it checks** (6 eval prompts, 29 assertions total):
 
 | Eval                           | Focus                  | Key assertions                                                                |
 | ------------------------------ | ---------------------- | ----------------------------------------------------------------------------- |
@@ -134,16 +246,13 @@ python tools/evals/databases-on-aws/dsql/scripts/run_functional_evals.py \
 | 4. Rejects f-string request    | Pushback               | Refuses f-string suggestion, explains why build-every-query is non-negotiable |
 | 5. Application-layer FK check  | Multi-statement flow   | Two build() calls, validates parent_id UUID, uses literal() for free text     |
 
-### Unit Tests (safe_query module)
+### Unit Tests
 
-Deterministic unit tests for the `safe_query.py` helper module:
+Deterministic unit tests for `safe_query.py` and the functional-eval runner:
 
 ```bash
 # From repo root
-python -m pytest tools/evals/databases-on-aws/dsql/scripts/test_safe_query.py -v
-
-# Or without pytest
-python tools/evals/databases-on-aws/dsql/scripts/test_safe_query.py
+mise run test:python
 ```
 
 ### Description Optimization
