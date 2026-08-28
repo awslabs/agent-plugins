@@ -212,7 +212,12 @@ def grade_eval(eval_item: dict, run_result: dict, judge_model: str | None = None
     Otherwise, each expectation falls through to the regex-based elif chain below.
     Hybrid graders that work best with LLM semantic judgment (evals 6-9 in this suite)
     set `llm_judge: true` in `evals.json`; evals grading on verbatim tokens or tool-call
-    presence (evals 1-5) keep regex-based grading where it is both sufficient and faster.
+    presence (evals 1-5, 17) keep regex-based grading where it is both sufficient and faster.
+
+    The regex chain is an ordered if/elif on lowercased expectation substrings, so a new
+    expectation is silently swallowed by the first earlier branch whose phrase it contains.
+    Any new branch MUST therefore be placed above branches keyed on a broader phrase — see the
+    eval 17 branches, which must precede the "table recreation pattern" branch (eval 5).
     """
     text = run_result["result_text"].lower()
     tool_calls = run_result["tool_calls"]
@@ -394,6 +399,71 @@ def grade_eval(eval_item: dict, run_result: dict, judge_model: str | None = None
             else:
                 evidence = "No batching strategy found"
 
+        # --- Assertion: native ALTER TABLE ... DROP COLUMN (eval 17) ---
+        # Graded against `text` (the agent's own final answer), NOT `full_text`. `full_text`
+        # includes tool inputs and tool results, so it contains whatever the agent read out of
+        # references/ddl-migrations/column-operations.md — and that file documents BOTH the native
+        # DROP COLUMN statement and the Table Recreation Pattern. Grading either the positive or
+        # the negative assertion against `full_text` would therefore be satisfied by a mere file
+        # read and would pass a recreation answer, making the eval useless as a regression net.
+        elif "alter table" in exp_lower and "drop column" in exp_lower:
+            # Require a real emitted statement, i.e. a table identifier between ALTER TABLE and
+            # DROP COLUMN. A bare `ALTER TABLE ... DROP COLUMN` with an ellipsis is how the feature
+            # gets referred to in prose — including in the sentence "DSQL does not support
+            # ALTER TABLE ... DROP COLUMN" — so matching it would pass the regressed answer.
+            # The statement must also target the prompt's real table and column. A regressed agent
+            # may print `ALTER TABLE _ddl_probe DROP COLUMN doomed` to *test* whether the feature
+            # exists before falling back to recreation; that is not a recommendation to drop
+            # `orders.legacy_promo_code`, so it must not satisfy this assertion.
+            stmt = re.compile(
+                r'alter\s+table\s+(?:if\s+exists\s+)?(?P<table>["\w][\w".]*)\s+'
+                r'drop\s+column\b(?P<tail>[^\n;]{0,200})'
+            )
+            # And reject the residual case where a named statement IS quoted, but only to say it
+            # is impossible ("you cannot run ALTER TABLE orders DROP COLUMN ... in DSQL").
+            negation = re.compile(r"(not support|unsupported|n't support|cannot|can't|isn't allowed|not allowed|not available|no support)")
+            if not text.strip():
+                evidence = "Agent produced no final answer text (timeout or error) — cannot pass"
+            else:
+                matches = list(stmt.finditer(text))
+                on_target = [
+                    m for m in matches
+                    if "orders" in m.group("table") and "legacy_promo_code" in m.group("tail")
+                ]
+                unnegated = [m for m in on_target if not negation.search(text[max(0, m.start() - 80):m.start()])]
+                if unnegated:
+                    passed = True
+                    evidence = f"Found native DROP COLUMN statement: {unnegated[0].group(0).strip()[:100]!r}"
+                elif on_target:
+                    evidence = f"'{on_target[0].group(0).strip()[:70]}' appears only inside a negation (claims it is unsupported)"
+                elif matches:
+                    evidence = (
+                        "DROP COLUMN appears, but not as a statement against orders.legacy_promo_code "
+                        f"(closest: {matches[0].group(0).strip()[:70]!r})"
+                    )
+                else:
+                    evidence = "No 'ALTER TABLE <table> DROP COLUMN' statement in the agent's answer"
+
+        # --- Assertion: does NOT fall back to the table-recreation sequence (eval 17) ---
+        # MUST stay above the "table recreation pattern" branch below. That branch (eval 5) PASSES
+        # when a recreation IS described; this assertion is its inverse, so if it fell through to
+        # that branch it would be graded exactly backwards — a recreation answer would score PASS.
+        elif "table-recreation sequence" in exp_lower or "table recreation sequence" in exp_lower:
+            recreation_markers = [
+                (r"insert\s+into[\s\S]{0,200}?\bselect\b", "INSERT ... SELECT data copy"),
+                (r"\b\w+_new\b", "_new staging table"),
+                (r"\bdrop\s+table\b", "DROP TABLE"),
+                (r"\brename\s+to\b", "RENAME TO"),
+            ]
+            found = [label for pat, label in recreation_markers if re.search(pat, text)]
+            if not text.strip():
+                evidence = "Agent produced no final answer text (timeout or error) — cannot pass"
+            elif found:
+                evidence = "Answer uses table-recreation steps, which DROP COLUMN must not require: " + ", ".join(found)
+            else:
+                passed = True
+                evidence = "No table-recreation steps (no INSERT ... SELECT, _new table, DROP TABLE, or RENAME TO)"
+
         # --- Assertion: Table Recreation Pattern ---
         elif "table recreation pattern" in exp_lower:
             if re.search(r"(table recreation|recreat|create.{0,40}new.{0,40}table.{0,40}(copy|migrat|move)|new table.{0,40}copy)", full_text):
@@ -453,8 +523,8 @@ def grade_eval(eval_item: dict, run_result: dict, judge_model: str | None = None
         # --- Fallback: keyword search ---
         # Note: evals 6-9 assertions (JSONB column type, TEXT[], INACTIVE/backup lifecycle)
         # are semantic — graded via `_llm_judge` when the eval sets `"llm_judge": true`.
-        # Regex branches below cover only evals 1-5 where verbatim tokens / tool-call topic
-        # matches are the right signal. See `_llm_judge` doc comment for rationale.
+        # Regex branches above cover only evals 1-5 and 17, where verbatim tokens / tool-call
+        # topic matches are the right signal. See `_llm_judge` doc comment for rationale.
         else:
             keywords = re.findall(r'\b[a-z_]{3,}\b', exp_lower)
             significant = [k for k in keywords if k not in (

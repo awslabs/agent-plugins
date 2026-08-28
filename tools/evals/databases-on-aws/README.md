@@ -14,7 +14,7 @@ scripts, and unit tests for that database's skill.
 tools/evals/databases-on-aws/
 ├── README.md                        # This file — top-level index
 └── dsql/                            # Aurora DSQL skill evals
-    ├── evals.json                   # Tier 2: functional evals (16 prompts, 59 assertions)
+    ├── evals.json                   # Tier 2: functional evals (17 prompts, 61 assertions)
     ├── trigger_evals.json           # Tier 1: triggering evals (37 test cases)
     ├── safe_query_evals.json        # Tier 3: safe_query enforcement (6 prompts, ~30 expectations)
     ├── query_explainability_evals.json  # Workflow 9: query plan diagnostics (9 prompts, 70 assertions)
@@ -81,7 +81,7 @@ python tools/evals/databases-on-aws/dsql/scripts/run_functional_evals.py \
   --verbose
 ```
 
-**What it checks** (16 eval prompts, 59 assertions total):
+**What it checks** (17 eval prompts, 61 assertions total):
 
 | Eval                           | Focus                 | Grader    | Key assertions                                                                                                                      |
 | ------------------------------ | --------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------- |
@@ -101,12 +101,13 @@ python tools/evals/databases-on-aws/dsql/scripts/run_functional_evals.py \
 | 14. .NET / C# support          | Language routing      | LLM judge | Confirms .NET support, recommends Npgsql connector for IAM auth and EF Core adapter                                                 |
 | 15. System diagnostics (W12)   | AAS interpretation    | LLM judge | Identifies the shifted wait event vs baseline, rules out load growth, no absolute-AAS claim, defers to Workflow 9                   |
 | 16. Wait-event ≠ plan (W12)    | Observe-only boundary | LLM judge | High SequentialScanRead = concurrency not full scan; does NOT claim a full/seq scan or missing/building index; routes to Workflow 9 |
+| 17. Drop obsolete column       | DDL migration routing | regex     | Uses native `ALTER TABLE ... DROP COLUMN`; does NOT recreate the table (no `_new` table, `INSERT ... SELECT`, `DROP TABLE`)         |
 
 ### Grader modes
 
 The runner supports two grading strategies; each eval declares which via `"llm_judge": true|false` (default `false`):
 
-- **Regex / tool-call** (evals 1-5): fast, cheap, deterministic. Good for verbatim tokens (`tenant_id`, `CREATE INDEX ASYNC`, the `3,000` row limit) and tool-invocation checks (`Calls awsknowledge with topic=X`).
+- **Regex / tool-call** (evals 1-5, 17): fast, cheap, deterministic. Good for verbatim tokens (`tenant_id`, `CREATE INDEX ASYNC`, `ALTER TABLE ... DROP COLUMN`, the `3,000` row limit) and tool-invocation checks (`Calls awsknowledge with topic=X`). Positive assertions match against the whole transcript (agent text + tool calls + tool results); eval 17 deliberately matches against the agent's final answer only, so that merely reading a reference file that documents both approaches cannot satisfy the assertion.
 - **LLM judge** (evals 6-16): runs `claude -p` once per expectation with the agent's final text, the user prompt, and the assertion. Returns `{passed, evidence}`. Good for semantic assertions where paraphrasing, negation, or synonym coverage makes regex brittle. Costs ~$0.01–0.05 per expectation; slower than regex. Use for assertions like "Does NOT recommend X" where the agent may phrase the refutation a hundred different ways.
 
 Pin the judge model independently of the subject model via `--judge-model` (defaults to the CLI default). Keep it stable across runs when bumping `--model` so grading stays comparable.
