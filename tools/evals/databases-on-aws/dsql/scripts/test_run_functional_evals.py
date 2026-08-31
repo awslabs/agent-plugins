@@ -351,6 +351,31 @@ def test_sql_context_scans_are_bounded() -> None:
     assert RUNNER.time.monotonic() - started < 1  # nosec B101
 
 
+def test_malformed_escaped_json_redaction_is_bounded() -> None:
+    malformed = '"password":"' + "\\\\" * 100_000
+
+    started = RUNNER.time.monotonic()
+    redacted = RUNNER._redact_text(malformed)
+
+    assert len(redacted) <= RUNNER.MAX_REDACTION_INPUT  # nosec B101
+    assert RUNNER.time.monotonic() - started < 1  # nosec B101
+
+
+def test_artifact_key_collision_suffixing_is_linear(monkeypatch) -> None:
+    monkeypatch.setattr(
+        RUNNER,
+        "_redact_mapping_key",
+        lambda _key: "<redacted-key>",
+    )
+    value = {f"key-{index}": index for index in range(5_000)}
+
+    started = RUNNER.time.monotonic()
+    redacted = RUNNER._redact_artifact_value(value)
+
+    assert len(redacted) == len(value)  # nosec B101
+    assert RUNNER.time.monotonic() - started < 1  # nosec B101
+
+
 def test_unknown_user_read_path_fails_closed(monkeypatch, tmp_path) -> None:
     events = _subject_events()
     events[0]["message"]["content"].append({
@@ -519,7 +544,7 @@ def test_subject_execution_is_isolated_and_fails_closed(
             "type": "tool_use",
             "id": "transact-1",
             "name": "mcp__aurora-dsql__transact",
-            "input": {"sql": "INSERT INTO t VALUES (1)"},
+            "input": {"sql_list": ["INSERT INTO t VALUES (1)"]},
         })
         events[1]["message"]["content"].append({
             "type": "tool_result",
@@ -1459,7 +1484,7 @@ def test_grading_correlates_tools_redacts_evidence_and_fails_closed(
     transact_call = {
         "id": "transact-1",
         "name": "mcp__aurora-dsql__transact",
-        "input": {"sql": "CREATE TABLE t (id UUID)"},
+        "input": {"sql_list": ["CREATE TABLE t (id UUID)"]},
     }
     lint_result = {
         "type": "tool_result",
@@ -1535,7 +1560,7 @@ def test_grading_correlates_tools_redacts_evidence_and_fails_closed(
     assert presented_grading["summary"]["failed"] == 2  # nosec B101
     unrelated_transact = {
         **transact_call,
-        "input": {"sql": "CREATE TABLE unrelated (id UUID)"},
+        "input": {"sql_list": ["CREATE TABLE unrelated (id UUID)"]},
     }
     unrelated_grading = RUNNER.grade_eval(
         lint_security_eval,
@@ -2973,10 +2998,27 @@ def test_main_covers_both_graders_artifacts_and_incomplete_runs(
     (abandoned_sibling / "partial").write_text("partial")
     abandoned_preparation = recovery_output / ".promotion-injected"
     abandoned_preparation.mkdir()
-    (abandoned_preparation / RUNNER.PROMOTION_STATE).write_text("{}")
+    RUNNER._write_private_json(
+        abandoned_preparation / RUNNER.PROMOTION_STATE,
+        {
+            "old_eval_names": [],
+            "new_eval_names": [],
+            "old_summary": False,
+        },
+        redact=False,
+    )
     abandoned_committed = recovery_output / ".committed-injected"
     abandoned_committed.mkdir()
-    (abandoned_committed / "partially-removed").write_text("committed")
+    RUNNER._write_private_json(
+        abandoned_committed / RUNNER.PROMOTION_STATE,
+        {
+            "old_eval_names": [],
+            "new_eval_names": [],
+            "old_summary": False,
+        },
+        redact=False,
+    )
+    (abandoned_committed / RUNNER.PROMOTION_COMPLETE).write_text("complete\n")
     recovery_lease = RUNNER._prepare_output_directory(recovery_output)
     recovery_lease.close()
     assert recovery_sentinel.read_text() == "prior"  # nosec B101
@@ -3009,7 +3051,7 @@ def test_main_covers_both_graders_artifacts_and_incomplete_runs(
         nonlocal swapped_output
         result = real_replace_durable_at(*args, **kwargs)
         source_name = args[1]
-        if not swapped_output and source_name.startswith(".promotion-"):
+        if not swapped_output and source_name.startswith(".run-promotion-"):
             swapped_output = True
             os.replace(promoted_output, displaced_promoted_output)
             promoted_output.mkdir()
@@ -3101,6 +3143,7 @@ def test_main_covers_both_graders_artifacts_and_incomplete_runs(
         RUNNER._promote_staged_output(journal_output, journal_staged)
     assert not list(journal_output.glob(".previous-*"))  # nosec B101
     assert not list(journal_output.glob(".promotion-*"))  # nosec B101
+    assert not list(journal_output.glob(".run-promotion-*"))  # nosec B101
     monkeypatch.setattr(
         RUNNER,
         "_write_private_json_at",
@@ -3422,7 +3465,6 @@ def test_main_covers_both_graders_artifacts_and_incomplete_runs(
     assert (failed_output / "summary.json").read_text() == (  # nosec B101
         '{"stale": true}'
     )
-
     cleanup_events = []
 
     class CleanupResource:
@@ -3538,3 +3580,603 @@ def test_main_covers_both_graders_artifacts_and_incomplete_runs(
     assert (failed_output / "summary.json").read_text() == (  # nosec B101
         '{"stale": true}'
     )
+
+
+def _lint_grading_result(
+    *,
+    lint_sql: str,
+    transact_sql,
+    answer: str = "Diagnostics include an unfixable issue.",
+) -> dict:
+    lint_call = {
+        "id": "lint-1",
+        "name": RUNNER.DSQL_LINT_TOOL,
+        "input": {"sql": lint_sql, "fix": True},
+    }
+    transact_call = {
+        "id": "transact-1",
+        "name": "mcp__aurora-dsql__transact",
+        "input": {"sql_list": transact_sql},
+    }
+    lint_result = {
+        "type": "tool_result",
+        "tool_use_id": "lint-1",
+        "is_error": False,
+        "content": {
+            "diagnostics": [{"fix_result": {"status": "unfixable"}}],
+        },
+    }
+    transact_result = {
+        "type": "tool_result",
+        "tool_use_id": "transact-1",
+        "is_error": True,
+        "content": "blocked",
+    }
+    return {
+        "result_text": answer,
+        "tool_calls": [lint_call, transact_call],
+        "tool_results": [lint_result, transact_result],
+        "messages": [
+            {"content": [{"type": "tool_use", **lint_call}]},
+            {"content": [lint_result]},
+            {"content": [{"type": "text", "text": answer}]},
+            {"content": [{"type": "tool_use", **transact_call}]},
+            {"content": [transact_result]},
+        ],
+        "infrastructure_error": "",
+        "truncated": False,
+    }
+
+
+def test_real_transact_sql_lists_are_correlated_with_lint_results():
+    eval_item = {
+        "prompt": "Lint before executing.",
+        "expectations": [
+            (
+                "Does NOT execute fixed_sql while any diagnostic has "
+                "fix_result.status == unfixable"
+            ),
+        ],
+        "grader": "regex",
+    }
+    grading = RUNNER.grade_eval(
+        eval_item,
+        _lint_grading_result(
+            lint_sql="CREATE TABLE t (id UUID)",
+            transact_sql=["CREATE TABLE t (id UUID)"],
+        ),
+    )
+    assert grading["summary"]["failed"] == 1  # nosec B101
+
+
+def test_real_transact_sql_lists_pass_after_matching_lint_and_presentation():
+    eval_item = {
+        "prompt": "Lint before executing.",
+        "expectations": [
+            (
+                "Does NOT execute the SQL before dsql_lint returns and "
+                "diagnostics are presented"
+            ),
+        ],
+        "grader": "regex",
+    }
+    grading = RUNNER.grade_eval(
+        eval_item,
+        _lint_grading_result(
+            lint_sql="CREATE TABLE t (id UUID)",
+            transact_sql=["CREATE TABLE t (id UUID)"],
+        ),
+    )
+    assert grading["summary"]["passed"] == 1  # nosec B101
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        'sql = "SELECT * FROM t WHERE tenant_id = \'" + req.tenant + "\'"',
+        'sql = "SELECT * FROM t WHERE tenant_id = \'%s\'" % req.tenant',
+    ],
+)
+def test_literal_sql_interpolation_operators_fail(answer):
+    eval_item = {
+        "prompt": "Build this query safely.",
+        "expectations": [
+            (
+                "Does not use f-string, .format(), %, or + to inject "
+                "req.tenant into the SQL"
+            ),
+        ],
+        "grader": "regex",
+    }
+    grading = RUNNER.grade_eval(
+        eval_item,
+        {
+            "result_text": answer,
+            "tool_calls": [],
+            "tool_results": [],
+            "messages": [],
+            "infrastructure_error": "",
+            "truncated": False,
+        },
+    )
+    assert grading["summary"]["failed"] == 1  # nosec B101
+
+
+def test_promotion_state_is_not_redacted(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        RUNNER,
+        "EXPLICIT_ENVIRONMENT_SECRETS",
+        {"eval-1"},
+    )
+    descriptor = os.open(tmp_path, os.O_RDONLY)
+    try:
+        RUNNER._write_private_json_at(
+            descriptor,
+            RUNNER.PROMOTION_STATE,
+            {
+                "old_eval_names": ["eval-1"],
+                "new_eval_names": [],
+                "old_summary": False,
+            },
+            bounded=False,
+            redact=False,
+        )
+    finally:
+        os.close(descriptor)
+    state = json.loads((tmp_path / RUNNER.PROMOTION_STATE).read_text())
+    assert state["old_eval_names"] == ["eval-1"]  # nosec B101
+
+
+def test_output_lease_rejects_replaced_lock_file(tmp_path):
+    output = tmp_path / "results"
+    lease = RUNNER._prepare_output_directory(output)
+    replacement_descriptor = -1
+    try:
+        os.unlink(output / RUNNER.OUTPUT_LOCK)
+        replacement_descriptor = RUNNER._open_output_lock(
+            output,
+            lease.directory_descriptor,
+        )
+        with pytest.raises(OSError, match="lock.*replaced"):
+            lease.assert_identity()
+    finally:
+        if replacement_descriptor >= 0:
+            RUNNER._release_output_lock(replacement_descriptor)
+        lease.close()
+
+
+def test_replacing_lock_file_cannot_create_a_second_output_lease(tmp_path):
+    output = tmp_path / "results"
+    first_lease = RUNNER._prepare_output_directory(output)
+    try:
+        os.unlink(output / RUNNER.OUTPUT_LOCK)
+        with pytest.raises(OSError, match="already in use"):
+            RUNNER._prepare_output_directory(output)
+    finally:
+        first_lease.close()
+
+
+def test_staging_directory_remains_bound_to_leased_output_inode(tmp_path):
+    output = tmp_path / "results"
+    moved_output = tmp_path / "moved-results"
+    replacement = tmp_path / "results"
+    lease = RUNNER._prepare_output_directory(output)
+    context = RUNNER.DescriptorTemporaryDirectory(
+        lease.directory_descriptor,
+        prefix=".run-",
+    )
+    entry_name = context.entry_name
+    try:
+        output.rename(moved_output)
+        replacement.mkdir()
+        RUNNER._write_private_json_at(
+            context.directory_descriptor,
+            "sentinel.json",
+            {"location": "leased inode"},
+        )
+        assert json.loads(  # nosec B101
+            (moved_output / entry_name / "sentinel.json").read_text()
+        ) == {"location": "leased inode"}
+        assert not (replacement / entry_name).exists()  # nosec B101
+        context.cleanup()
+        assert not (moved_output / entry_name).exists()  # nosec B101
+    finally:
+        context.cleanup()
+        lease.close()
+
+
+def test_recovery_preserves_unmarked_promotion_like_directories(tmp_path):
+    output = tmp_path / "results"
+    lease = RUNNER._prepare_output_directory(output)
+    injected = output / ".promotion-user-data"
+    injected.mkdir()
+    (injected / "keep.txt").write_text("unrelated")
+    try:
+        with pytest.raises(OSError, match="promotion"):
+            RUNNER._recover_abandoned_promotions_at(
+                lease.directory_descriptor,
+            )
+        assert (injected / "keep.txt").read_text() == "unrelated"  # nosec B101
+    finally:
+        lease.close()
+
+
+def test_trusted_artifact_schema_keys_survive_environment_redaction(
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        RUNNER,
+        "EXPLICIT_ENVIRONMENT_SECRETS",
+        {"summary"},
+    )
+    artifact = tmp_path / "artifact.json"
+    RUNNER._write_private_json(
+        artifact,
+        {"summary": {"passed": 1}},
+    )
+    persisted = json.loads(artifact.read_text())
+    assert persisted["summary"]["passed"] == 1  # nosec B101
+
+
+@pytest.mark.parametrize("value", ["--help", "-p", " -danger"])
+def test_model_arguments_cannot_be_parsed_as_nested_cli_options(value):
+    with pytest.raises(
+        RUNNER.argparse.ArgumentTypeError,
+        match="must not start with",
+    ):
+        RUNNER._model_argument(value)
+
+
+def test_subject_command_disables_prompt_suggestions(monkeypatch, tmp_path):
+    plugin = tmp_path / "plugin"
+    (plugin / "skills" / "dsql").mkdir(parents=True)
+    (plugin / ".mcp.json").write_text('{"mcpServers": {}}')
+    captured = {}
+
+    def capture(cmd, **kwargs):
+        captured["cmd"] = cmd
+        return _completed(_subject_stream())
+
+    monkeypatch.setattr(RUNNER, "_run_captured", capture)
+    RUNNER.run_prompt("test", str(plugin), mcp_config=str(plugin / ".mcp.json"))
+    command = captured["cmd"]
+    index = command.index("--prompt-suggestions")
+    assert command[index + 1] == "false"  # nosec B101
+
+
+def test_lint_assertions_require_prompt_sql_and_positive_diagnostic_disclosure():
+    lint_call = {
+        "id": "lint-1",
+        "name": RUNNER.DSQL_LINT_TOOL,
+        "input": {"sql": "SELECT 1", "fix": True},
+    }
+    lint_result = {
+        "type": "tool_result",
+        "tool_use_id": "lint-1",
+        "is_error": False,
+        "content": {"diagnostics": []},
+    }
+    eval_item = {
+        "prompt": (
+            "Check this SQL:\n\n"
+            "CREATE TABLE accounts (id UUID PRIMARY KEY);"
+        ),
+        "expectations": [
+            "Calls the dsql_lint MCP tool with the provided SQL",
+            (
+                "Does NOT execute the SQL before dsql_lint returns and "
+                "diagnostics are presented"
+            ),
+        ],
+        "grader": "regex",
+    }
+    run_result = {
+        "result_text": "I will not present diagnostics or warnings.",
+        "tool_calls": [lint_call],
+        "tool_results": [lint_result],
+        "messages": [
+            {"content": [{"type": "tool_use", **lint_call}]},
+            {"content": [lint_result]},
+            {
+                "content": [{
+                    "type": "text",
+                    "text": "I will not present diagnostics or warnings.",
+                }]
+            },
+        ],
+        "infrastructure_error": "",
+        "truncated": False,
+    }
+    grading = RUNNER.grade_eval(eval_item, run_result)
+    assert grading["summary"]["failed"] == 1  # nosec B101
+    assert grading["expectations"][0]["passed"] is False  # nosec B101
+
+
+def test_legacy_keyword_grading_rejects_contradictory_unsafe_evidence():
+    eval_item = {
+        "prompt": "Write a safe query.",
+        "expectations": [
+            "Calls readonly_query(sql) with the built string",
+        ],
+        "grader": "regex",
+    }
+    grading = RUNNER.grade_eval(
+        eval_item,
+        {
+            "result_text": (
+                "Do not call readonly_query(sql) with the built string. "
+                "Call something else."
+            ),
+            "tool_calls": [],
+            "tool_results": [],
+            "messages": [],
+            "infrastructure_error": "",
+            "truncated": False,
+        },
+    )
+    assert grading["summary"]["failed"] == 1  # nosec B101
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["PYTHONPATH", "LD_PRELOAD", "DYLD_INSERT_LIBRARIES", "NODE_OPTIONS"],
+)
+def test_pass_env_rejects_process_startup_controls(monkeypatch, name):
+    monkeypatch.setenv(name, "unsafe-value")
+    with pytest.raises(
+        RUNNER.EvalSchemaError,
+        match="alter process startup",
+    ):
+        RUNNER._validate_pass_env([name])
+
+
+def test_timeout_values_are_bounded():
+    with pytest.raises(
+        RUNNER.argparse.ArgumentTypeError,
+        match="must be at most",
+    ):
+        RUNNER._positive_int(str(RUNNER.MAX_TIMEOUT_SECONDS + 1))
+
+
+def test_temporal_grading_searches_complete_bounded_assistant_text():
+    answer = "context " * 200 + "Diagnostics include an unfixable issue."
+    eval_item = {
+        "prompt": "Lint before executing.",
+        "expectations": [
+            (
+                "Does NOT execute the SQL before dsql_lint returns and "
+                "diagnostics are presented"
+            ),
+        ],
+        "grader": "regex",
+    }
+    grading = RUNNER.grade_eval(
+        eval_item,
+        _lint_grading_result(
+            lint_sql="CREATE TABLE t (id UUID)",
+            transact_sql=["CREATE TABLE t (id UUID)"],
+            answer=answer,
+        ),
+    )
+    assert grading["summary"]["passed"] == 1  # nosec B101
+
+
+@pytest.mark.parametrize(
+    ("expectation", "answer"),
+    [
+        (
+            (
+                "Uses safe_query.build() for BOTH the existence check and "
+                "the insert (not just one)"
+            ),
+            (
+                "Use safe_query.build() for both the existence check and "
+                "insert; the insert itself can be an f-string UPDATE."
+            ),
+        ),
+        (
+            "Does NOT use f-string interpolation to build the UPDATE",
+            (
+                "Do not use f-strings in general. "
+                'sql = f"UPDATE orders SET status = {status}"'
+            ),
+        ),
+    ],
+)
+def test_legacy_safety_assertions_reject_contradictory_unsafe_code(
+    expectation,
+    answer,
+):
+    grading = RUNNER.grade_eval(
+        {
+            "prompt": "Build the query safely.",
+            "expectations": [expectation],
+            "grader": "regex",
+        },
+        {
+            "result_text": answer,
+            "tool_calls": [],
+            "tool_results": [],
+            "messages": [],
+            "infrastructure_error": "",
+            "truncated": False,
+        },
+    )
+    assert grading["summary"]["failed"] == 1  # nosec B101
+
+
+def test_artifact_schema_keys_are_preserved_without_call_site_opt_in(
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        RUNNER,
+        "EXPLICIT_ENVIRONMENT_SECRETS",
+        {"schema_version", "summary", "passed"},
+    )
+    artifact = tmp_path / "artifact.json"
+    RUNNER._write_private_json(
+        artifact,
+        {
+            "schema_version": 2,
+            "summary": {"passed": 1},
+        },
+    )
+    persisted = json.loads(artifact.read_text())
+    assert persisted == {  # nosec B101
+        "schema_version": 2,
+        "summary": {"passed": 1},
+    }
+
+
+def test_positive_integer_arguments_reject_overflow_sized_values():
+    with pytest.raises(
+        RUNNER.argparse.ArgumentTypeError,
+        match="at most",
+    ):
+        RUNNER._positive_int(str(2**31))
+
+
+def test_transact_guard_invokes_interpreter_explicitly(
+    tmp_path,
+    monkeypatch,
+):
+    interpreter = "/Applications/Python Runtime/bin/python3"
+    monkeypatch.setattr(RUNNER.sys, "executable", interpreter)
+    plugin = tmp_path / "guard"
+    RUNNER._write_transact_guard_plugin(plugin)
+    hooks = json.loads((plugin / "hooks" / "hooks.json").read_text())
+    command = hooks["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
+    expanded = command.replace("${CLAUDE_PLUGIN_ROOT}", str(plugin))
+    assert RUNNER.shlex.split(expanded) == [  # nosec B101
+        interpreter,
+        str(plugin / "block-transact.py"),
+    ]
+
+
+def test_llm_judge_rejects_success_result_with_top_level_errors(monkeypatch):
+    monkeypatch.setattr(
+        RUNNER,
+        "_run_captured",
+        lambda *args, **kwargs: _completed(json.dumps({
+            "subtype": "success",
+            "is_error": False,
+            "errors": ["provider reported an error"],
+            "result": '{"passed": true, "evidence": "unsafe success"}',
+        })),
+    )
+    verdict = RUNNER._llm_judge(
+        prompt="prompt",
+        agent_evidence="answer",
+        expectation="expectation",
+        model=None,
+        timeout=1,
+        pass_env=(),
+    )
+    assert verdict["infrastructure_error"] is True  # nosec B101
+
+
+def test_lint_call_must_use_sql_from_the_prompt():
+    lint_call = {
+        "id": "lint-1",
+        "name": RUNNER.DSQL_LINT_TOOL,
+        "input": {"sql": "CREATE TABLE wrong (id UUID)", "fix": True},
+    }
+    lint_result = {
+        "type": "tool_result",
+        "tool_use_id": "lint-1",
+        "is_error": False,
+        "content": {"diagnostics": []},
+    }
+    grading = RUNNER.grade_eval(
+        {
+            "prompt": (
+                "Check this SQL:\n\n"
+                "CREATE TABLE expected (id UUID);"
+            ),
+            "expectations": [
+                "Calls the dsql_lint MCP tool with the provided SQL"
+            ],
+            "grader": "regex",
+        },
+        {
+            "result_text": "Checked.",
+            "tool_calls": [lint_call],
+            "tool_results": [lint_result],
+            "messages": [
+                {"content": [{"type": "tool_use", **lint_call}]},
+                {"content": [lint_result]},
+            ],
+            "infrastructure_error": "",
+            "truncated": False,
+        },
+    )
+    assert grading["summary"]["failed"] == 1  # nosec B101
+
+
+def test_trusted_artifact_fields_survive_environment_secret_collisions(
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        RUNNER,
+        "EXPLICIT_ENVIRONMENT_SECRETS",
+        {"expected_output", "grading"},
+    )
+    artifact = tmp_path / "metadata.json"
+    RUNNER._write_private_json(
+        artifact,
+        {
+            "artifact_type": "grading",
+            "expected_output": "A redacted payload value",
+        },
+    )
+    persisted = json.loads(artifact.read_text())
+    assert persisted["artifact_type"] == "grading"  # nosec B101
+    assert "expected_output" in persisted  # nosec B101
+
+
+def test_sql_comments_cannot_bypass_unfixable_lint_correlation():
+    eval_item = {
+        "prompt": "Lint before executing.",
+        "expectations": [
+            (
+                "Does NOT execute fixed_sql while any diagnostic has "
+                "fix_result.status == unfixable"
+            ),
+        ],
+        "grader": "regex",
+    }
+    grading = RUNNER.grade_eval(
+        eval_item,
+        _lint_grading_result(
+            lint_sql="CREATE TABLE t (id UUID)",
+            transact_sql=[
+                "/* attempted bypass */ CREATE TABLE t (id UUID)",
+            ],
+        ),
+    )
+    assert grading["summary"]["failed"] == 1  # nosec B101
+
+
+def test_deeply_nested_escaped_credentials_are_redacted():
+    secret = "nested-secret-value"
+    nested = r'{\"password\":\"' + secret + r'\"}'
+    for _ in range(12):
+        nested = json.dumps(nested)
+    redacted = RUNNER._redact_text(nested)
+    assert secret not in redacted  # nosec B101
+
+
+def test_empty_internal_promotion_work_directory_is_recoverable(tmp_path):
+    output = tmp_path / "results"
+    lease = RUNNER._prepare_output_directory(output)
+    lease.close()
+    abandoned = output / ".run-promotion-deadbeef"
+    abandoned.mkdir()
+    recovered = RUNNER._prepare_output_directory(output)
+    try:
+        assert not abandoned.exists()  # nosec B101
+    finally:
+        recovered.close()

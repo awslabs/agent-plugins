@@ -17,6 +17,7 @@ import os
 import re
 import select
 import selectors
+import shlex
 import signal
 import shutil
 import stat
@@ -137,16 +138,97 @@ MAX_JSON_NESTING = 100
 MAX_JSON_NUMBER_LENGTH = 100
 MAX_JSON_KEY_LENGTH = 500
 MAX_REDACTION_INPUT = 2 * MAX_ARTIFACT_TEXT
+MAX_TIMEOUT_SECONDS = 24 * 60 * 60
 DEFAULT_JUDGE_TIMEOUT_SECONDS = 60
 REDACTION_KEY = os.urandom(32)
 EXPLICIT_ENVIRONMENT_SECRETS: set[str] = set()
 ENVIRONMENT_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+UNSAFE_PASSTHROUGH_ENVIRONMENT = re.compile(
+    r"^(?:BASH_ENV|ENV|GCONV_PATH|IFS|NODE_OPTIONS|PERL5OPT|PERLLIB|"
+    r"PYTHONHOME|PYTHONINSPECT|PYTHONPATH|PYTHONSTARTUP|RUBYOPT|"
+    r"LD_.+|DYLD_.+)$"
+)
 UNSAFE_PLUGIN_PATH = re.compile(r"[,()\r\n]")
 INFORMATIONAL_EVENT_TYPES = {
+    "prompt_suggestion",
     "rate_limit_event",
     "tool_progress",
     "tool_use_summary",
 }
+TRUSTED_ARTIFACT_KEYS = frozenset({
+    "PreToolUse",
+    "artifact_type",
+    "assertions",
+    "assertion_failures",
+    "command",
+    "count",
+    "description",
+    "duration_seconds",
+    "eval_id",
+    "eval_name",
+    "expected_output",
+    "evidence",
+    "expectations",
+    "failed",
+    "focus",
+    "graded_total",
+    "grading",
+    "grader",
+    "grading_protocol_version",
+    "hooks",
+    "id",
+    "infrastructure_error",
+    "infrastructure_errors",
+    "input",
+    "is_error",
+    "judge_cost_usd",
+    "judge_duration_seconds",
+    "judge_errors",
+    "matcher",
+    "messages",
+    "name",
+    "overall_pass_rate",
+    "pass_rate",
+    "passed",
+    "prompt",
+    "reason",
+    "requested_total",
+    "result_text",
+    "results",
+    "returncode",
+    "run_configuration",
+    "schema_version",
+    "skill_name",
+    "status",
+    "stderr",
+    "summary",
+    "text",
+    "timing",
+    "tool_calls",
+    "tool_results",
+    "tool_use_id",
+    "total",
+    "total_cost_usd",
+    "total_duration_seconds",
+    "total_evals",
+    "total_expectations",
+    "total_failed",
+    "total_passed",
+    "truncated",
+    "truncated_failures",
+    "truncations",
+    "turn_count",
+    "type",
+    "usage",
+    "version",
+})
+TRUSTED_ARTIFACT_VALUE_KEYS = frozenset({
+    "artifact_type",
+    "grader",
+    "grading_protocol_version",
+    "schema_version",
+    "status",
+})
 
 SUBPROCESS_ENV_KEYS = {
     "ANTHROPIC_API_KEY",
@@ -200,7 +282,7 @@ class OutputDirectoryLease:
         self.lock_descriptor = lock_descriptor
 
     def assert_identity(self) -> None:
-        """Reject replacement of the claimed output directory."""
+        """Reject replacement of the claimed output directory or lock file."""
         if self.directory_descriptor < 0:
             raise OSError("output directory lease is closed")
         try:
@@ -219,13 +301,41 @@ class OutputDirectoryLease:
             raise OSError(
                 f"claimed output directory was replaced: {self.path}"
             )
+        try:
+            lock_path_stat = os.stat(
+                OUTPUT_LOCK,
+                dir_fd=self.directory_descriptor,
+                follow_symlinks=False,
+            )
+        except OSError as error:
+            raise OSError(
+                f"claimed output lock was replaced: {self.path / OUTPUT_LOCK}"
+            ) from error
+        lock_descriptor_stat = os.fstat(self.lock_descriptor)
+        if (
+            not stat.S_ISREG(lock_path_stat.st_mode)
+            or (lock_path_stat.st_dev, lock_path_stat.st_ino)
+            != (
+                lock_descriptor_stat.st_dev,
+                lock_descriptor_stat.st_ino,
+            )
+        ):
+            raise OSError(
+                f"claimed output lock was replaced: {self.path / OUTPUT_LOCK}"
+            )
 
     def close(self) -> None:
         if self.lock_descriptor >= 0:
-            _release_output_lock(self.lock_descriptor)
+            _release_output_lock(
+                self.lock_descriptor,
+                self.directory_descriptor,
+            )
             self.lock_descriptor = -1
         if self.directory_descriptor >= 0:
-            os.close(self.directory_descriptor)
+            try:
+                fcntl.flock(self.directory_descriptor, fcntl.LOCK_UN)
+            finally:
+                os.close(self.directory_descriptor)
             self.directory_descriptor = -1
 
     def __del__(self):
@@ -233,6 +343,79 @@ class OutputDirectoryLease:
             self.close()
         except OSError:
             pass
+
+
+class DescriptorTemporaryDirectory:
+    """Own a temporary child of an already opened directory descriptor."""
+
+    def __init__(self, parent_descriptor: int, *, prefix: str):
+        self.parent_descriptor = parent_descriptor
+        self.directory_descriptor = -1
+        self.entry_name = ""
+        for _ in range(100):
+            entry_name = prefix + os.urandom(12).hex()
+            try:
+                os.mkdir(
+                    entry_name,
+                    mode=0o700,
+                    dir_fd=parent_descriptor,
+                )
+            except FileExistsError:
+                continue
+            self.entry_name = entry_name
+            break
+        if not self.entry_name:
+            raise FileExistsError(
+                "could not allocate a unique descriptor-relative directory"
+            )
+        try:
+            self.directory_descriptor = _open_directory_at(
+                parent_descriptor,
+                self.entry_name,
+            )
+        except BaseException:
+            self.cleanup()
+            raise
+
+    @property
+    def name(self) -> str:
+        """Return a path to the opened temporary directory's current inode."""
+        if self.directory_descriptor < 0:
+            raise OSError("descriptor-relative temporary directory is closed")
+        proc_path = Path(
+            "/proc/self/fd",
+            str(self.directory_descriptor),
+        )
+        if proc_path.is_dir():
+            return str(proc_path)
+        if hasattr(fcntl, "F_GETPATH"):
+            raw_path = fcntl.fcntl(
+                self.directory_descriptor,
+                fcntl.F_GETPATH,
+                bytes(1024),
+            )
+            current_path = raw_path.split(b"\0", 1)[0]
+            if current_path:
+                return os.fsdecode(current_path)
+        raise OSError(
+            "platform does not expose descriptor-relative directory paths"
+        )
+
+    def cleanup(self) -> None:
+        if not self.entry_name:
+            return
+        try:
+            if self.directory_descriptor >= 0:
+                os.close(self.directory_descriptor)
+                self.directory_descriptor = -1
+            _remove_output_entry(
+                self.parent_descriptor,
+                self.entry_name,
+            )
+        except FileNotFoundError:
+            pass
+        finally:
+            self.entry_name = ""
 
 
 class RedactingArgumentParser(argparse.ArgumentParser):
@@ -437,9 +620,8 @@ class _ProcessTreeMonitor:
                 | select.KQ_EV_ENABLE
                 | select.KQ_EV_CLEAR
             ),
-            # Darwin has exposed NOTE_TRACK constants since 10.5 but the
-            # kernel rejects them with ENOTSUP. Poll libproc around fork
-            # notifications instead.
+            # Darwin still declares NOTE_TRACK, but modern kernels reject it
+            # with ENOTSUP. Poll libproc around fork notifications instead.
             fflags=select.KQ_NOTE_EXIT | select.KQ_NOTE_FORK,
         )
         self.kqueue.control([event], 0, 0)
@@ -809,7 +991,7 @@ def _run_captured(
         raise SystemExit(128 + received_signal)
 
     if threading.current_thread() is threading.main_thread():
-        for signal_number in (signal.SIGTERM, signal.SIGHUP):
+        for signal_number in (signal.SIGTERM, signal.SIGHUP, signal.SIGQUIT):
             previous_signal_handlers[signal_number] = signal.getsignal(signal_number)
             signal.signal(signal_number, terminate_on_signal)
 
@@ -826,7 +1008,12 @@ def _run_captured(
         ):
             cleanup_mask = signal.pthread_sigmask(
                 signal.SIG_BLOCK,
-                {signal.SIGINT, signal.SIGTERM, signal.SIGHUP},
+                {
+                    signal.SIGINT,
+                    signal.SIGTERM,
+                    signal.SIGHUP,
+                    signal.SIGQUIT,
+                },
             )
         try:
             if process is not None:
@@ -1134,6 +1321,7 @@ def _write_transact_guard_plugin(plugin_dir: Path) -> str:
             "description": "Blocks DSQL writes while retaining attempted tool calls",
             "version": "1.0.0",
         },
+        redact=False,
     )
     _write_private_json(
         hooks_dir / "hooks.json",
@@ -1144,12 +1332,14 @@ def _write_transact_guard_plugin(plugin_dir: Path) -> str:
                     "hooks": [{
                         "type": "command",
                         "command": (
-                            "${CLAUDE_PLUGIN_ROOT}/block-transact.py"
+                            f"{shlex.quote(sys.executable)} "
+                            '"${CLAUDE_PLUGIN_ROOT}/block-transact.py"'
                         ),
                     }],
                 }],
             },
         },
+        redact=False,
     )
     script = plugin_dir / "block-transact.py"
     descriptor = os.open(
@@ -1159,7 +1349,7 @@ def _write_transact_guard_plugin(plugin_dir: Path) -> str:
     )
     with os.fdopen(descriptor, "w") as script_file:
         script_file.write(
-            f"#!{sys.executable}\n"
+            "#!/usr/bin/env python3\n"
             "import sys\n"
             f"sys.stderr.write({denial_marker!r} + '\\n')\n"
             "sys.exit(2)\n"
@@ -1188,6 +1378,7 @@ def run_prompt(
         "claude", "-p",
         "--output-format", "stream-json",
         "--verbose",
+        "--prompt-suggestions", "false",
         "--plugin-dir", str(resolved_plugin_dir),
         "--max-turns", str(max_turns),
         "--mcp-config", str(resolved_mcp_config),
@@ -1728,6 +1919,8 @@ def _llm_judge(
         system_prompt,
         "--output-format",
         "json",
+        "--prompt-suggestions",
+        "false",
         "--max-turns",
         "1",
         "--tools",
@@ -1803,6 +1996,22 @@ def _llm_judge(
                     "LLM judge total_cost_usd must be a nonnegative finite number",
                     duration_seconds=duration,
                 )
+        outer_errors = outer.get("errors", [])
+        if (
+            not isinstance(outer_errors, list)
+            or any(not isinstance(item, str) for item in outer_errors)
+        ):
+            return _judge_error(
+                "LLM judge outer errors field must be an array of strings",
+                duration_seconds=duration,
+                cost_usd=judge_cost,
+            )
+        if outer_errors:
+            return _judge_error(
+                "LLM judge reported top-level errors",
+                duration_seconds=duration,
+                cost_usd=judge_cost,
+            )
         if (
             outer.get("subtype") != "success"
             or type(outer.get("is_error")) is not bool
@@ -1948,11 +2157,6 @@ GENERIC_ASSIGNMENT = re.compile(
     r"(?P<prefix>\b(?P<name>[A-Za-z][A-Za-z0-9_-]{2,80})\s*[:=]\s*)"
     r"(?P<value>\"(?:\\.|[^\"\\])*\"|'(?:\\.|[^'\\])*'|[^\s,;]+)"
 )
-ESCAPED_SENSITIVE_VALUE = re.compile(
-    r"(?is)(?:\\+[\"'])?\b"
-    + SENSITIVE_NAME_PATTERN
-    + r"\b(?:\\+[\"'])?\s*\\*[:=]\s*\\+[\"'].*?\\+[\"']"
-)
 BEARER_TOKEN = re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._~+/=-]+")
 AUTHORIZATION_HEADER = re.compile(
     r"(?im)\b(?P<name>authorization|proxy-authorization)\s*:[^\r\n]*"
@@ -2009,10 +2213,6 @@ GENERIC_HOME_PATH = re.compile(
     r"[A-Z]:\\Users\\[^\\\s]+|"
     r"(?<![A-Za-z0-9_])~(?=[/\\])"
     r")"
-)
-JSON_KEY_VALUE = re.compile(
-    r'(?P<prefix>"(?P<key>(?:\\u[0-9a-fA-F]{4}|\\.|[^"\\])*)"\s*:\s*)'
-    r'(?P<value>"(?:\\.|[^"\\])*"|[^\s,}\]]+)',
 )
 DOLLAR_QUOTE_START = re.compile(r"\$[A-Za-z_][A-Za-z0-9_]*\$|\$\$")
 SINGLE_QUOTE_START = re.compile(r"(?:[bBeEnNxX]|[uU]&)?'")
@@ -2249,33 +2449,89 @@ def _redact_private_keys(value: str) -> str:
     return "".join(output)
 
 
-def _redact_unicode_escaped_json_secrets(value: str) -> str:
-    """Redact JSON values whose sensitive key uses Unicode escapes."""
-
-    def replace(match: re.Match) -> str:
-        try:
-            decoded_key = _json_loads(f'"{match.group("key")}"')
-        except (json.JSONDecodeError, JsonValidationError):
-            return match.group(0)
-        if isinstance(decoded_key, str) and _is_sensitive_key(decoded_key):
-            return match.group("prefix") + '"<redacted>"'
-        return match.group(0)
-
-    return JSON_KEY_VALUE.sub(replace, value)
-
-
 def _decode_ascii_unicode_escapes(value: str) -> str:
     """Expose escaped ASCII key names to the credential redactors."""
+    output = []
+    index = 0
+    length = len(value)
+    while index < length:
+        if value[index] != "\\":
+            output.append(value[index])
+            index += 1
+            continue
+        run_start = index
+        while index < length and value[index] == "\\":
+            index += 1
+        if (
+            index + 5 <= length
+            and value[index] == "u"
+            and all(
+                character in "0123456789abcdefABCDEF"
+                for character in value[index + 1:index + 5]
+            )
+        ):
+            codepoint = int(value[index + 1:index + 5], 16)
+            if codepoint < 128:
+                output.append(chr(codepoint))
+                index += 5
+                continue
+        output.append(value[run_start:index])
+    return "".join(output)
 
-    def replace(match: re.Match) -> str:
-        codepoint = int(match.group("codepoint"), 16)
-        return chr(codepoint) if codepoint < 128 else match.group(0)
 
-    return re.sub(
-        r"(?:\\)+u(?P<codepoint>[0-9a-fA-F]{4})",
-        replace,
-        value,
-    )
+def _redact_nested_escaped_sensitive_values(value: str) -> str:
+    """Redact arbitrarily escaped JSON-like credentials in one forward scan."""
+    output = []
+    cursor = 0
+    search_from = 0
+    length = len(value)
+    while match := SENSITIVE_KEY.search(value, search_from):
+        search_from = match.end()
+        if match.start() < cursor:
+            continue
+        index = match.end()
+
+        slash_start = index
+        while index < length and value[index] == "\\":
+            index += 1
+        if index == slash_start or index >= length or value[index] not in "\"'":
+            continue
+        index += 1
+        while index < length and value[index].isspace():
+            index += 1
+        if index >= length or value[index] not in ":=":
+            continue
+        index += 1
+        while index < length and value[index].isspace():
+            index += 1
+
+        slash_start = index
+        while index < length and value[index] == "\\":
+            index += 1
+        if index == slash_start or index >= length or value[index] not in "\"'":
+            continue
+        quote = value[index]
+        index += 1
+
+        closing_end = length
+        while index < length:
+            quote_index = value.find(quote, index)
+            if quote_index < 0:
+                break
+            slash_index = quote_index
+            while slash_index > index and value[slash_index - 1] == "\\":
+                slash_index -= 1
+            if slash_index < quote_index:
+                closing_end = quote_index + 1
+                break
+            index = quote_index + 1
+
+        output.append(value[cursor:match.start()])
+        output.append("<redacted-secret>")
+        cursor = closing_end
+        search_from = max(search_from, cursor)
+    output.append(value[cursor:])
+    return "".join(output)
 
 
 def _environment_secret_values() -> set[str]:
@@ -2321,7 +2577,6 @@ def _redact_text(
     redacted = TERMINAL_CONTROL.sub("", redacted)
     redacted = _redact_private_keys(redacted)
     redacted = _decode_ascii_unicode_escapes(redacted)
-    redacted = _redact_unicode_escaped_json_secrets(redacted)
     for home_path in sorted(
         {
             str(Path.home()),
@@ -2358,7 +2613,7 @@ def _redact_text(
         lambda match: f"{match.group('name')}: <redacted>",
         redacted,
     )
-    redacted = ESCAPED_SENSITIVE_VALUE.sub("<redacted-secret>", redacted)
+    redacted = _redact_nested_escaped_sensitive_values(redacted)
     redacted = AWS_ENV_CREDENTIAL.sub("<redacted-aws-credential>", redacted)
     redacted = SENSITIVE_VALUE.sub("<redacted-secret>", redacted)
     redacted = GENERIC_ASSIGNMENT.sub(
@@ -2382,17 +2637,56 @@ def _redact_text(
     return _truncate_text_head_tail(redacted, MAX_REDACTION_INPUT)
 
 
-def _redact_artifact_value(value, key: str = ""):
+def _redact_artifact_value(
+    value,
+    key: str = "",
+    *,
+    trusted_keys: frozenset[str] = frozenset(),
+):
     """Apply final sink redaction to every string in persisted output."""
+    if key in TRUSTED_ARTIFACT_VALUE_KEYS:
+        return value
     if isinstance(key, str) and _is_sensitive_key(key):
         return "<redacted>"
     if isinstance(value, dict):
-        return _redact_mapping(
-            value,
-            lambda item, item_key: _redact_artifact_value(item, item_key),
-        )
+        redacted = {}
+        next_suffix = {}
+        for item_key, item in value.items():
+            output_key = (
+                item_key
+                if item_key in trusted_keys
+                else _redact_mapping_key(item_key)
+            )
+            suffix = next_suffix.get(output_key, 2)
+            base_key = output_key
+            while output_key in redacted:
+                collision = f"<collision:{suffix}>"
+                output_key = (
+                    _truncate_text(
+                        base_key,
+                        MAX_JSON_KEY_LENGTH - len(collision),
+                    )
+                    + collision
+                    if isinstance(base_key, str)
+                    else f"{base_key}{collision}"
+                )
+                suffix += 1
+            next_suffix[base_key] = suffix
+            redacted[output_key] = _redact_artifact_value(
+                item,
+                item_key,
+                trusted_keys=trusted_keys,
+            )
+        return redacted
     if isinstance(value, (list, tuple)):
-        return [_redact_artifact_value(item, key) for item in value]
+        return [
+            _redact_artifact_value(
+                item,
+                key,
+                trusted_keys=trusted_keys,
+            )
+            for item in value
+        ]
     if isinstance(value, str):
         return _redact_text(value, redact_sql_literals=True)
     return value
@@ -2490,10 +2784,11 @@ def _redact_mapping_key(key):
 def _redact_mapping(value: dict, transform) -> dict:
     """Redact keys and preserve colliding entries under deterministic suffixes."""
     redacted = {}
+    next_suffix = {}
     for item_key, item in value.items():
         base_key = _redact_mapping_key(item_key)
         output_key = base_key
-        suffix = 2
+        suffix = next_suffix.get(base_key, 2)
         while output_key in redacted:
             collision = f"<collision:{suffix}>"
             output_key = (
@@ -2506,6 +2801,7 @@ def _redact_mapping(value: dict, transform) -> dict:
                 else f"{base_key}{collision}"
             )
             suffix += 1
+        next_suffix[base_key] = suffix
         redacted[output_key] = transform(item, item_key)
     return redacted
 
@@ -2678,6 +2974,7 @@ def _message_timeline(
     run_result: dict,
     *,
     omit_result_content: bool = False,
+    text_limit: int = 1000,
 ) -> list[dict]:
     """Preserve redacted assistant/tool event order for temporal assertions."""
     events = []
@@ -2704,7 +3001,7 @@ def _message_timeline(
                             str(block.get("text", "")),
                             redact_sql_literals=True,
                         ),
-                        1000,
+                        text_limit,
                     ),
                 })
             elif block_type == "tool_use":
@@ -3063,10 +3360,7 @@ def _has_positive_match(
     upper_bound: bool = False,
 ) -> bool:
     """Return whether at least one occurrence supports the asserted claim."""
-    matches = list(re.finditer(pattern, value, re.IGNORECASE))
-    if not matches:
-        return False
-    for match in matches:
+    for match in re.finditer(pattern, value, re.IGNORECASE):
         prefix = value[max(0, match.start() - 80):match.start()]
         suffix = value[match.end():match.end() + 80]
         if upper_bound and POSITIVE_UPPER_BOUND.search(prefix):
@@ -3212,19 +3506,29 @@ def _legacy_keyword_match(expectation: str, evidence: str) -> tuple[bool, int, i
         criteria.append((keyword, _match_is_positive(expectation, match)))
 
     matched = 0
+    contradicted = False
     for keyword, expected_positive in criteria:
-        evidence_matches = re.finditer(
+        evidence_matches = list(re.finditer(
             rf"\b{re.escape(keyword)}\b",
             evidence,
             re.IGNORECASE,
-        )
+        ))
         if any(
             _match_is_positive(evidence, match) == expected_positive
             for match in evidence_matches
         ):
             matched += 1
+        if any(
+            _match_is_positive(evidence, match) != expected_positive
+            for match in evidence_matches
+        ):
+            contradicted = True
     return (
-        bool(criteria and matched / len(criteria) >= 0.6),
+        bool(
+            criteria
+            and not contradicted
+            and matched / len(criteria) >= 0.6
+        ),
         matched,
         len(criteria),
     )
@@ -3266,7 +3570,34 @@ def _lint_result_is_unfixable(result: dict) -> bool:
 def _normalized_sql(value) -> str:
     if not isinstance(value, str):
         return ""
-    return " ".join(value.strip().rstrip(";").casefold().split())
+    without_comments = _redact_sql_text(value).replace(
+        "<redacted-sql-comment>",
+        " ",
+    )
+    return " ".join(
+        without_comments.strip().rstrip(";").casefold().split()
+    )
+
+
+def _normalized_sql_values(value) -> list[str]:
+    """Normalize every statement in a validated SQL string list."""
+    if (
+        not isinstance(value, list)
+        or not value
+        or any(not isinstance(item, str) or not item.strip() for item in value)
+    ):
+        return []
+    values = value
+    normalized = [_normalized_sql(item) for item in values]
+    return [item for item in normalized if item]
+
+
+def _transact_sql_values(call: dict) -> list[str]:
+    """Return normalized SQL from the transact tool's required sql_list."""
+    call_input = call.get("input")
+    if not isinstance(call_input, dict):
+        return []
+    return _normalized_sql_values(call_input.get("sql_list"))
 
 
 def _lint_result_sql_values(call: dict, result: dict) -> set[str]:
@@ -3301,14 +3632,71 @@ def _sql_matches_lint_result(sql: str, lint_sql_values: set[str]) -> bool:
     )
 
 
+def _prompt_sql_values(prompt: str) -> set[str]:
+    """Extract the SQL payload following the first statement in an eval prompt."""
+    match = re.search(
+        r"(?im)^(?:BEGIN\s*;|CREATE\s+(?:TABLE|INDEX)|"
+        r"ALTER\s+TABLE|INSERT\s+INTO|UPDATE\s+|DELETE\s+FROM|SELECT\s+)",
+        prompt,
+    )
+    if match is None:
+        return set()
+    normalized = _normalized_sql(prompt[match.start():])
+    return {normalized} if normalized else set()
+
+
 def _presents_lint_diagnostics(value: str) -> bool:
-    return bool(
-        value.strip()
-        and re.search(
-            r"\b(?:compatib\w*|diagnostic\w*|error\w*|fixed|issue\w*|"
-            r"unfixable|warning\w*)\b",
+    return bool(value.strip()) and _has_positive_match(
+        value,
+        r"\b(?:compatib\w*|diagnostic\w*|error\w*|fixed|issue\w*|"
+        r"unfixable|warning\w*)\b",
+    )
+
+
+def _has_unsafe_sql_interpolation(value: str) -> bool:
+    """Detect positive guidance or code that interpolates SQL strings."""
+    interpolation_method = (
+        r"(?:f[-\s]?string|\.format\s*\(|percent[-\s]+formatting|"
+        r"string\s+concatenation|\+\s+operator|%\s+operator)"
+    )
+    sql_term = r"\b(?:sql|query|select|insert|update|delete)\b"
+    return (
+        _has_positive_statement(
             value,
-            re.IGNORECASE,
+            interpolation_method,
+            sql_term,
+        )
+        or _has_positive_match(
+            value,
+            r"\b(?:sql|query)\s*=\s*f[\"']",
+        )
+        or _has_positive_match(
+            value,
+            r"f[\"'][^\"'\n]{0,500}"
+            r"\b(?:select|insert|update|delete)\b",
+        )
+        or _has_positive_match(
+            value,
+            r"(?im)^[^\n]{0,1000}(?:sql|query)\s*="
+            r"[^\n]{0,1000}\b(?:select|insert|update|delete)\b"
+            r"[^\n]{0,1000}[\"']\s*(?:\+|%)\s*"
+            r"(?:req\.tenant|[A-Za-z_(])",
+        )
+    )
+
+
+def _legacy_assertion_requires_safe_sql(expectation: str) -> bool:
+    normalized = _normalize_assertion(expectation)
+    return any(
+        marker in normalized
+        for marker in (
+            "safe_query",
+            "f-string",
+            "%-formatting",
+            "interpolation",
+            "validator",
+            "literal()",
+            "validated",
         )
     )
 
@@ -3545,22 +3933,20 @@ def _table_has_tenant_column(body: str) -> bool:
 
 def _sql_example_is_negated(value: str, match: re.Match) -> bool:
     """Return whether nearby prose presents a SQL statement negatively."""
+    prefix = value[max(0, match.start() - 180):match.start()]
     statement_start = max(
-        value.rfind(delimiter, 0, match.start())
+        prefix.rfind(delimiter)
         for delimiter in ("\n", ";", ".", "!", "?")
     ) + 1
-    prefix = value[statement_start:match.start()]
+    prefix = prefix[statement_start:]
+    suffix = value[match.end():min(len(value), match.end() + 180)]
     suffix_end_candidates = [
         position
         for delimiter in ("\n", ";", ".", "!", "?")
-        if (position := value.find(delimiter, match.end())) >= 0
+        if (position := suffix.find(delimiter)) >= 0
     ]
-    suffix_end = (
-        min(suffix_end_candidates)
-        if suffix_end_candidates
-        else min(len(value), match.end() + 180)
-    )
-    suffix = value[match.end():suffix_end]
+    if suffix_end_candidates:
+        suffix = suffix[:min(suffix_end_candidates)]
     negative_prefix = re.search(
         r"\b(?:do\s+not|don't|should\s+not|never|avoid|incorrect|wrong|"
         r"unsupported|not\s+supported|"
@@ -4117,7 +4503,11 @@ def grade_eval(
                 ),
             )
         judge_evidence = _build_judge_evidence(run_result)
-    timeline = _message_timeline(run_result, omit_result_content=False)
+    timeline = _message_timeline(
+        run_result,
+        omit_result_content=False,
+        text_limit=MAX_REDACTION_INPUT,
+    )
     ordered_tool_events = [
         event
         for event in timeline
@@ -4243,11 +4633,19 @@ def grade_eval(
             ) from error
 
         if rule is AssertionRule.DSQL_LINT_CALL:
+            prompt_sql_values = _prompt_sql_values(eval_item["prompt"])
             passed = any(
                 call.get("name") == DSQL_LINT_TOOL
                 and call.get("id") in successful_tool_call_ids
                 and isinstance(call.get("input"), dict)
                 and bool(call["input"].get("sql"))
+                and (
+                    not prompt_sql_values
+                    or _sql_matches_lint_result(
+                        call["input"]["sql"],
+                        prompt_sql_values,
+                    )
+                )
                 for call in tool_calls
             )
             evidence = (
@@ -4257,12 +4655,20 @@ def grade_eval(
             )
 
         elif rule is AssertionRule.DSQL_LINT_FIX:
+            prompt_sql_values = _prompt_sql_values(eval_item["prompt"])
             passed = any(
                 call.get("name") == DSQL_LINT_TOOL
                 and call.get("id") in successful_tool_call_ids
                 and isinstance(call.get("input"), dict)
                 and call["input"].get("fix") is True
                 and bool(call["input"].get("sql"))
+                and (
+                    not prompt_sql_values
+                    or _sql_matches_lint_result(
+                        call["input"]["sql"],
+                        prompt_sql_values,
+                    )
+                )
                 for call in tool_calls
             )
             evidence = (
@@ -4284,39 +4690,43 @@ def grade_eval(
             if transact_records:
                 passed = True
                 for transact_record in transact_records:
-                    transact_input = transact_record["call"].get("input")
-                    transact_sql = (
-                        transact_input.get("sql")
-                        if isinstance(transact_input, dict)
-                        else None
+                    transact_sql_values = _transact_sql_values(
+                        transact_record["call"]
                     )
-                    matching_lints = [
-                        lint_record
-                        for lint_record in lint_records
-                        if (
-                            lint_record["result_position"]
-                            < transact_record["position"]
-                            and _sql_matches_lint_result(
-                                transact_sql,
-                                lint_record["sql_values"],
-                            )
-                        )
-                    ]
-                    if not any(
-                        any(
-                            event.get("type") == "assistant_text"
-                            and _presents_lint_diagnostics(
-                                str(event.get("text", ""))
-                            )
-                            for event in timeline[
-                                lint_record["result_position"] + 1:
-                                transact_record["position"]
-                            ]
-                        )
-                        for lint_record in matching_lints
-                    ):
+                    if not transact_sql_values:
                         passed = False
                         break
+                    for transact_sql in transact_sql_values:
+                        matching_lints = [
+                            lint_record
+                            for lint_record in lint_records
+                            if (
+                                lint_record["result_position"]
+                                < transact_record["position"]
+                                and _sql_matches_lint_result(
+                                    transact_sql,
+                                    lint_record["sql_values"],
+                                )
+                            )
+                        ]
+                        if not any(
+                            any(
+                                event.get("type") == "assistant_text"
+                                and _presents_lint_diagnostics(
+                                    str(event.get("text", ""))
+                                )
+                                for event in timeline[
+                                    lint_record["result_position"] + 1:
+                                    transact_record["position"]
+                                ]
+                            )
+                            for lint_record in matching_lints
+                        ):
+                            passed = False
+                            break
+                    if not passed:
+                        break
+
             if passed and transact_records:
                 evidence = (
                     "Every transact attempt followed matching successful lint "
@@ -4334,30 +4744,33 @@ def grade_eval(
             relevant_unfixable = False
             passed = True
             for transact_record in transact_records:
-                transact_input = transact_record["call"].get("input")
-                transact_sql = (
-                    transact_input.get("sql")
-                    if isinstance(transact_input, dict)
-                    else None
+                transact_sql_values = _transact_sql_values(
+                    transact_record["call"]
                 )
-                matching_lints = sorted(
-                    (
-                        lint_record
-                        for lint_record in lint_records
-                        if (
-                            lint_record["result_position"]
-                            < transact_record["position"]
-                            and _sql_matches_lint_result(
-                                transact_sql,
-                                lint_record["sql_values"],
-                            )
-                        )
-                    ),
-                    key=lambda lint_record: lint_record["result_position"],
-                )
-                if matching_lints and matching_lints[-1]["unfixable"]:
-                    relevant_unfixable = True
+                if not transact_sql_values:
                     passed = False
+                    break
+                for transact_sql in transact_sql_values:
+                    matching_lints = sorted(
+                        (
+                            lint_record
+                            for lint_record in lint_records
+                            if (
+                                lint_record["result_position"]
+                                < transact_record["position"]
+                                and _sql_matches_lint_result(
+                                    transact_sql,
+                                    lint_record["sql_values"],
+                                )
+                            )
+                        ),
+                        key=lambda lint_record: lint_record["result_position"],
+                    )
+                    if matching_lints and matching_lints[-1]["unfixable"]:
+                        relevant_unfixable = True
+                        passed = False
+                        break
+                if not passed:
                     break
             if passed and relevant_unfixable:
                 evidence = (
@@ -4375,27 +4788,7 @@ def grade_eval(
                 )
 
         elif rule is AssertionRule.SAFE_QUERY_NO_INTERPOLATION:
-            interpolation_method = (
-                r"(?:f[-\s]?string|\.format\s*\(|percent[-\s]+formatting|"
-                r"string\s+concatenation|\+\s+operator|%\s+operator)"
-            )
-            sql_term = r"\b(?:sql|query|select|insert|update|delete)\b"
-            unsafe_interpolation = (
-                _has_positive_statement(
-                    text,
-                    interpolation_method,
-                    sql_term,
-                )
-                or _has_positive_match(
-                    text,
-                    r"\b(?:sql|query)\s*=\s*f[\"']",
-                )
-                or _has_positive_match(
-                    text,
-                    r"f[\"'][^\"'\n]{0,500}"
-                    r"\b(?:select|insert|update|delete)\b",
-                )
-            )
+            unsafe_interpolation = _has_unsafe_sql_interpolation(text)
             passed = not unsafe_interpolation
             evidence = (
                 "No positive unsafe SQL interpolation guidance found"
@@ -4408,9 +4801,20 @@ def grade_eval(
                 expectation_text,
                 legacy_search_text,
             )
+            contradictory_interpolation = (
+                _legacy_assertion_requires_safe_sql(expectation_text)
+                and _has_unsafe_sql_interpolation(text)
+            )
+            if passed and contradictory_interpolation:
+                passed = False
             evidence = (
                 f"Matched {matches}/{total_keywords} keywords with "
                 "assertion polarity"
+                + (
+                    "; rejected contradictory unsafe SQL interpolation"
+                    if contradictory_interpolation
+                    else ""
+                )
             )
 
         # --- Assertion: awsknowledge call with topic ---
@@ -4800,12 +5204,24 @@ def _positive_int(value: str) -> int:
     parsed = int(value)
     if parsed < 1:
         raise argparse.ArgumentTypeError("must be at least 1")
+    if parsed > MAX_TIMEOUT_SECONDS:
+        raise argparse.ArgumentTypeError(
+            f"must be at most {MAX_TIMEOUT_SECONDS}"
+        )
     return parsed
 
 
 def _nonempty_argument(value: str) -> str:
     if not value.strip():
         raise argparse.ArgumentTypeError("must be a nonempty value")
+    return value
+
+
+def _model_argument(value: str) -> str:
+    """Reject values that the nested Claude CLI could parse as options."""
+    value = _nonempty_argument(value)
+    if value.lstrip().startswith("-"):
+        raise argparse.ArgumentTypeError("must not start with '-'")
     return value
 
 
@@ -4932,12 +5348,26 @@ def _ensure_private_directory(path: Path) -> None:
     path.chmod(0o700)
 
 
-def _write_private_json(path: Path, value, *, bounded: bool = True):
+def _write_private_json(
+    path: Path,
+    value,
+    *,
+    bounded: bool = True,
+    trusted_keys: set[str] | frozenset[str] = TRUSTED_ARTIFACT_KEYS,
+    redact: bool = True,
+):
     """Write mode-0600 JSON atomically without following a symlink target."""
     if path.is_symlink():
         raise OSError(f"refusing symlink output file: {path}")
 
-    redacted_value = _redact_artifact_value(value)
+    redacted_value = (
+        _redact_artifact_value(
+            value,
+            trusted_keys=frozenset(trusted_keys),
+        )
+        if redact
+        else value
+    )
     serialized_value = (
         _bounded_json_value(redacted_value)
         if bounded
@@ -5017,9 +5447,19 @@ def _open_output_lock(
     output_dir: Path,
     directory_descriptor: int,
 ) -> int:
-    """Open and exclusively lock an output directory's advisory lock file."""
+    """Lock the output inode and its visible advisory lock file."""
+    try:
+        fcntl.flock(
+            directory_descriptor,
+            fcntl.LOCK_EX | fcntl.LOCK_NB,
+        )
+    except BlockingIOError as error:
+        raise OSError(
+            f"output directory is already in use: {output_dir}"
+        ) from error
     lock_path = output_dir / OUTPUT_LOCK
     if lock_path.is_symlink():
+        fcntl.flock(directory_descriptor, fcntl.LOCK_UN)
         raise OSError(f"refusing symlink output lock: {lock_path}")
     flags = os.O_RDWR | os.O_CREAT
     if hasattr(os, "O_NOFOLLOW"):
@@ -5035,19 +5475,28 @@ def _open_output_lock(
         fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError as error:
         os.close(descriptor)
+        fcntl.flock(directory_descriptor, fcntl.LOCK_UN)
         raise OSError(f"output directory is already in use: {output_dir}") from error
     except BaseException:
         os.close(descriptor)
+        fcntl.flock(directory_descriptor, fcntl.LOCK_UN)
         raise
     return descriptor
 
 
-def _release_output_lock(descriptor: int) -> None:
-    """Release and close an advisory output lock descriptor."""
+def _release_output_lock(
+    descriptor: int,
+    directory_descriptor: int | None = None,
+) -> None:
+    """Release the visible lock file and optional output-inode lock."""
     try:
         fcntl.flock(descriptor, fcntl.LOCK_UN)
     finally:
-        os.close(descriptor)
+        try:
+            os.close(descriptor)
+        finally:
+            if directory_descriptor is not None and directory_descriptor >= 0:
+                fcntl.flock(directory_descriptor, fcntl.LOCK_UN)
 
 
 def _remove_output_path(path: Path) -> None:
@@ -5113,9 +5562,18 @@ def _write_private_json_at(
     value,
     *,
     bounded: bool = True,
+    trusted_keys: set[str] | frozenset[str] = TRUSTED_ARTIFACT_KEYS,
+    redact: bool = True,
 ):
     """Write private JSON relative to an already opened directory."""
-    redacted_value = _redact_artifact_value(value)
+    redacted_value = (
+        _redact_artifact_value(
+            value,
+            trusted_keys=frozenset(trusted_keys),
+        )
+        if redact
+        else value
+    )
     serialized_value = (
         _bounded_json_value(redacted_value)
         if bounded
@@ -5356,11 +5814,22 @@ def _rollback_output_promotion(output_dir: Path, backup_dir: Path) -> None:
 
 def _recover_abandoned_promotions(output_dir: Path) -> None:
     """Roll back incomplete promotions and remove committed backups."""
-    for prefix in (r"\.promotion-[A-Za-z0-9_.-]+", r"\.committed-[A-Za-z0-9_.-]+"):
+    for prefix, require_complete in (
+        (r"\.promotion-[A-Za-z0-9_.-]+", False),
+        (r"\.committed-[A-Za-z0-9_.-]+", True),
+    ):
         for child in output_dir.iterdir():
             if re.fullmatch(prefix, child.name) is None:
                 continue
             if child.is_symlink() or not child.is_dir():
+                raise OSError(
+                    f"refusing malformed output promotion directory: {child}"
+                )
+            _promotion_state(child)
+            complete = child / PROMOTION_COMPLETE
+            if require_complete and (
+                complete.is_symlink() or not complete.is_file()
+            ):
                 raise OSError(
                     f"refusing malformed output promotion directory: {child}"
                 )
@@ -5398,9 +5867,9 @@ def _recover_abandoned_promotions(output_dir: Path) -> None:
 def _recover_abandoned_promotions_at(output_descriptor: int) -> None:
     """Recover promotions relative to the leased output descriptor."""
     names = os.listdir(output_descriptor)
-    for prefix in (
-        r"\.promotion-[A-Za-z0-9_.-]+",
-        r"\.committed-[A-Za-z0-9_.-]+",
+    for prefix, require_complete in (
+        (r"\.promotion-[A-Za-z0-9_.-]+", False),
+        (r"\.committed-[A-Za-z0-9_.-]+", True),
     ):
         for name in names:
             if re.fullmatch(prefix, name) is None:
@@ -5414,6 +5883,30 @@ def _recover_abandoned_promotions_at(output_descriptor: int) -> None:
                 raise OSError(
                     f"refusing malformed output promotion directory: {name}"
                 )
+            child_descriptor = _open_directory_at(output_descriptor, name)
+            try:
+                _promotion_state_at(child_descriptor, name)
+                if require_complete:
+                    if not _entry_exists_at(
+                        child_descriptor,
+                        PROMOTION_COMPLETE,
+                    ):
+                        raise OSError(
+                            "refusing malformed output promotion directory: "
+                            f"{name}"
+                        )
+                    complete_stat = os.stat(
+                        PROMOTION_COMPLETE,
+                        dir_fd=child_descriptor,
+                        follow_symlinks=False,
+                    )
+                    if not stat.S_ISREG(complete_stat.st_mode):
+                        raise OSError(
+                            "refusing malformed output promotion directory: "
+                            f"{name}"
+                        )
+            finally:
+                os.close(child_descriptor)
             _remove_output_entry(output_descriptor, name)
 
     previous_names = sorted(
@@ -5481,7 +5974,6 @@ def _prepare_output_directory(requested_path: Path) -> OutputDirectoryLease:
     else:
         output_dir.mkdir(parents=True, mode=0o700)
 
-    output_dir.chmod(0o700)
     directory_flags = os.O_RDONLY
     if hasattr(os, "O_DIRECTORY"):
         directory_flags |= os.O_DIRECTORY
@@ -5490,6 +5982,16 @@ def _prepare_output_directory(requested_path: Path) -> OutputDirectoryLease:
     directory_descriptor = os.open(output_dir, directory_flags)
     lease = None
     try:
+        try:
+            fcntl.flock(
+                directory_descriptor,
+                fcntl.LOCK_EX | fcntl.LOCK_NB,
+            )
+        except BlockingIOError as error:
+            raise OSError(
+                f"output directory is already in use: {output_dir}"
+            ) from error
+        os.fchmod(directory_descriptor, 0o700)
         lock_descriptor = _open_output_lock(
             output_dir,
             directory_descriptor,
@@ -5551,7 +6053,7 @@ def _prepare_output_directory(requested_path: Path) -> OutputDirectoryLease:
 
 def _promote_staged_output(
     output: OutputDirectoryLease | Path,
-    staged_dir: Path,
+    staged: DescriptorTemporaryDirectory | Path,
 ) -> None:
     """Promote artifacts through the leased inode and roll back on failure."""
     close_output_descriptor = False
@@ -5560,14 +6062,18 @@ def _promote_staged_output(
     else:
         output_descriptor = _open_directory(output)
         close_output_descriptor = True
-    stage_descriptor = _open_directory(staged_dir)
+    stage_descriptor = (
+        os.dup(staged.directory_descriptor)
+        if isinstance(staged, DescriptorTemporaryDirectory)
+        else _open_directory(staged)
+    )
     preparation_name = None
     backup_name = None
     cleanup_backup = False
     recovery_backup_published = False
     try:
         suffix = os.urandom(12).hex()
-        preparation_name = f".promotion-{suffix}"
+        preparation_name = f".run-promotion-{suffix}"
         backup_name = f".previous-{suffix}"
         os.mkdir(
             preparation_name,
@@ -5601,6 +6107,7 @@ def _promote_staged_output(
                     ),
                 },
                 bounded=False,
+                redact=False,
             )
             os.fsync(preparation_descriptor)
         finally:
@@ -5750,7 +6257,7 @@ def _snapshot_inputs(
     plugin_dir: Path,
     mcp_config: Path,
 ) -> tuple[Path, Path, Path]:
-    """Copy all execution inputs so provenance matches the bytes under test."""
+    """Copy corpus, plugin, and MCP inputs so provenance matches tested bytes."""
     snapshot_corpus = root / "corpus.json"
     snapshot_plugin = root / "plugin"
     snapshot_mcp = root / "mcp.json"
@@ -5994,6 +6501,10 @@ def _validate_pass_env(names: list[str]) -> tuple[str, ...]:
             raise EvalSchemaError(f"invalid --pass-env name: {name!r}")
         if name == "CLAUDECODE":
             raise EvalSchemaError("--pass-env CLAUDECODE is not allowed")
+        if UNSAFE_PASSTHROUGH_ENVIRONMENT.fullmatch(name):
+            raise EvalSchemaError(
+                f"--pass-env variable can alter process startup: {name}"
+            )
         if name not in os.environ:
             raise EvalSchemaError(f"--pass-env variable is not set: {name}")
         if len(os.environ[name]) < 4:
@@ -6009,7 +6520,9 @@ def _validate_pass_env(names: list[str]) -> tuple[str, ...]:
 def _main_impl(
     argv: list[str] | None,
     leases: list[OutputDirectoryLease],
-    temporary_directories: list[tempfile.TemporaryDirectory],
+    temporary_directories: list[
+        tempfile.TemporaryDirectory | DescriptorTemporaryDirectory
+    ],
 ):
     raw_argv = list(sys.argv[1:] if argv is None else argv)
     parser = RedactingArgumentParser(
@@ -6042,7 +6555,7 @@ def _main_impl(
     parser.add_argument(
         "--model",
         default=None,
-        type=_nonempty_argument,
+        type=_model_argument,
         help=(
             "Model name or alias to use for the subject under test. Model "
             "aliases can move over time."
@@ -6051,7 +6564,7 @@ def _main_impl(
     parser.add_argument(
         "--judge-model",
         default=None,
-        type=_nonempty_argument,
+        type=_model_argument,
         help=(
             "Model to use for evals with grader=llm_judge. Intentionally "
             "separate from --model so that bumping the subject model does not silently swap "
@@ -6188,14 +6701,11 @@ def _main_impl(
         return 1
     leases.append(output_lease)
     output_dir = output_lease.path
-    staged_context = tempfile.TemporaryDirectory(
+    staged_context = DescriptorTemporaryDirectory(
+        output_lease.directory_descriptor,
         prefix=".run-",
-        dir=output_dir,
     )
     temporary_directories.append(staged_context)
-    staged_output_dir = Path(staged_context.name)
-    staged_output_dir.chmod(0o700)
-
     run_configuration = {
         "subject_model": args.model or "claude-cli-default",
         "judge_model": args.judge_model or "claude-cli-default",
@@ -6231,11 +6741,21 @@ def _main_impl(
             pass_env=pass_env,
         )
 
-        eval_dir = staged_output_dir / f"eval-{eval_id}"
+        eval_name = f"eval-{eval_id}"
+        eval_descriptor = -1
         try:
-            _ensure_private_directory(eval_dir)
-            _write_private_json(
-                eval_dir / "transcript.json",
+            os.mkdir(
+                eval_name,
+                mode=0o700,
+                dir_fd=staged_context.directory_descriptor,
+            )
+            eval_descriptor = _open_directory_at(
+                staged_context.directory_descriptor,
+                eval_name,
+            )
+            _write_private_json_at(
+                eval_descriptor,
+                "transcript.json",
                 _redacted_artifact_run_result(
                     run_result,
                     run_configuration,
@@ -6248,6 +6768,9 @@ def _main_impl(
                 file=sys.stderr,
             )
             return 1
+        finally:
+            if eval_descriptor >= 0:
+                os.close(eval_descriptor)
 
         grading = grade_eval(
             eval_item,
@@ -6289,10 +6812,27 @@ def _main_impl(
             "grader": eval_item["grader"],
             "assertions": eval_item["expectations"],
         }
+        eval_descriptor = -1
         try:
-            _write_private_json(eval_dir / "grading.json", grading)
-            _write_private_json(eval_dir / "timing.json", timing)
-            _write_private_json(eval_dir / "eval_metadata.json", metadata)
+            eval_descriptor = _open_directory_at(
+                staged_context.directory_descriptor,
+                eval_name,
+            )
+            _write_private_json_at(
+                eval_descriptor,
+                "grading.json",
+                grading,
+            )
+            _write_private_json_at(
+                eval_descriptor,
+                "timing.json",
+                timing,
+            )
+            _write_private_json_at(
+                eval_descriptor,
+                "eval_metadata.json",
+                metadata,
+            )
         except (OSError, JsonValidationError) as error:
             print(
                 f"ERROR: could not write eval {eval_id} artifacts: "
@@ -6300,6 +6840,9 @@ def _main_impl(
                 file=sys.stderr,
             )
             return 1
+        finally:
+            if eval_descriptor >= 0:
+                os.close(eval_descriptor)
 
         if args.verbose:
             s = grading["summary"]
@@ -6436,12 +6979,13 @@ def _main_impl(
         "results": all_results,
     }
     try:
-        persisted_summary = _write_private_json(
-            staged_output_dir / "summary.json",
+        persisted_summary = _write_private_json_at(
+            staged_context.directory_descriptor,
+            "summary.json",
             summary,
         )
         output_lease.assert_identity()
-        _promote_staged_output(output_lease, staged_output_dir)
+        _promote_staged_output(output_lease, staged_context)
         output_lease.assert_identity()
     except (OSError, JsonValidationError) as error:
         print(
@@ -6481,7 +7025,9 @@ def _main_impl(
 def main(argv: list[str] | None = None):
     """Run the CLI while releasing every acquired resource on all exits."""
     leases: list[OutputDirectoryLease] = []
-    temporary_directories: list[tempfile.TemporaryDirectory] = []
+    temporary_directories: list[
+        tempfile.TemporaryDirectory | DescriptorTemporaryDirectory
+    ] = []
     try:
         return _main_impl(argv, leases, temporary_directories)
     finally:

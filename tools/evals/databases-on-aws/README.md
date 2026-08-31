@@ -137,22 +137,24 @@ as `latest`. Keep the judge identifier stable when changing the subject.
 The runner exits nonzero for assertion failures, turn-limit truncation, missing requested IDs,
 invalid eval files, and subject or judge infrastructure errors. `summary.json` reports
 `requested_total` and `graded_total` separately and sets `overall_pass_rate` to `null` when
-the run is incomplete. Output directories carry a runner ownership marker and an advisory lock.
+the run is incomplete. Output directories carry a runner ownership marker and an advisory lock
+that excludes cooperating runner instances.
 After all inputs pass validation, reusing a managed output directory stages a complete
 replacement before promoting its `summary.json` and replacing immediate child directories
 whose names match `eval-<integer>`, where `<integer>` is one or more decimal digits. Other
 entries are preserved. Promotion state is made durable before a `.previous-*` backup becomes
-visible. On the next run, abandoned preparation and `.run-*` work directories, including
-sibling staging directories, are removed,
+visible. On the next run, validated abandoned preparation directories and internal `.run-*`
+work directories are removed,
 committed backups are discarded, and an interrupted promotion is rolled back from its
 `.previous-*` backup before evaluation continues. Nonempty unmarked directories and concurrent
-writers are rejected. Artifacts record
+cooperating runners are rejected. Artifacts record
 the subject model,
 judge model, subject and judge timeouts, turn limit, selected eval IDs, passed environment
 names, explicit
 model-selection status, snapshotted input hashes, and separate subject/judge timing and cost.
 Before execution, the runner copies the corpus, plugin tree, and MCP config into a private
-temporary snapshot; hashes and subprocess arguments refer to that snapshot. A missing CLI
+temporary snapshot; hashes and the corresponding subprocess arguments refer to that snapshot.
+A missing CLI
 cost field is recorded as `null`, not as zero.
 
 Artifacts use mode `0600` under mode-`0700` directories. `transcript.json` retains a redacted
