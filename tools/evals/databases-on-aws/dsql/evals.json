@@ -198,6 +198,21 @@
         "Routes the query to Workflow 9 (EXPLAIN ANALYZE / query plan explainability) to establish the actual plan and root cause, and does not recommend index or schema changes from AAS data alone"
       ],
       "llm_judge": true
+    },
+    {
+      "id": 17,
+      "prompt": "We already run Aurora DSQL migrations with `software.amazon.dsql:aurora-dsql-flyway-support`. Should we keep using it or add the official `flyway-database-dsql` module alongside it? Give me the safest migration path without breaking our existing schema history.",
+      "expected_output": "Selects the official flyway-database-dsql module, identifies the AWS adapter as deprecated, directs existing users to migrate through a tested dependency swap, never loads both adapters together, and preserves existing migration state.",
+      "files": [],
+      "expectations": [
+        "Always recommends a published org.flywaydb:flyway-database-dsql release compatible with the user's Flyway runtime",
+        "Identifies software.amazon.dsql:aurora-dsql-flyway-support as deprecated and directs existing users to migrate away from it",
+        "Does NOT select or recommend the deprecated AWS adapter as the target state",
+        "Says to replace the AWS adapter with org.flywaydb:flyway-database-dsql and never load both in one Flyway runtime",
+        "Preserves the existing JDBC URL, migration files, schema-history table, and flyway.dsql.* configuration during the dependency swap",
+        "Recommends testing outside production and running flyway info and flyway validate before flyway migrate"
+      ],
+      "llm_judge": true
     }
   ]
 }

@@ -1,9 +1,9 @@
 ---
 name: dsql
-description: "Build with Aurora DSQL — manage schemas, execute queries, handle migrations, diagnose query plans, diagnose cluster performance, load data, and develop applications with a serverless, distributed SQL database. Covers IAM auth, multi-tenant patterns, MySQL-to-DSQL and PostgreSQL-to-DSQL schema conversion, FK replacement code generation, OCC retry patterns, ORM migration (Django/EF Core/Hibernate/Rails), DDL operations, query plan explainability, system diagnostics via CloudWatch AAS, SQL compatibility validation, and bulk data loading. Triggers on phrases like: DSQL, Aurora DSQL, distributed SQL database, serverless PostgreSQL-compatible database, migrate to DSQL, DSQL query plan, DSQL EXPLAIN ANALYZE, DSQL ENUM, DSQL foreign key, DSQL OCC retry, DSQL multi-region, DSQL JSONB, DSQL GIN index, load into DSQL, load CSV into DSQL, bulk load DSQL, aurora-dsql-loader, DSQL slow, DSQL performance, DSQL wait events, DSQL AAS."
+description: "Build with Aurora DSQL — manage schemas, execute queries, handle migrations, diagnose query plans, diagnose cluster performance, load data, and develop applications with a serverless, distributed SQL database. Covers IAM auth, multi-tenant patterns, MySQL-to-DSQL and PostgreSQL-to-DSQL schema conversion, FK replacement code generation, OCC retry patterns, Flyway and ORM migration (Django/EF Core/Hibernate/Rails), DDL operations, query plan explainability, system diagnostics via CloudWatch AAS, SQL compatibility validation, and bulk data loading. Triggers on phrases like: DSQL, Aurora DSQL, distributed SQL database, serverless PostgreSQL-compatible database, migrate to DSQL, DSQL Flyway, flyway-database-dsql, DSQL query plan, DSQL EXPLAIN ANALYZE, DSQL ENUM, DSQL foreign key, DSQL OCC retry, DSQL multi-region, DSQL JSONB, DSQL GIN index, load into DSQL, load CSV into DSQL, bulk load DSQL, aurora-dsql-loader, DSQL slow, DSQL performance, DSQL wait events, DSQL AAS."
 license: Apache-2.0
 metadata:
-  tags: aws, aurora, dsql, distributed-sql, distributed, distributed-database, database, serverless, serverless-database, postgresql, postgres, sql, schema, migration, multi-tenant, iam-auth, aurora-dsql, mcp, orm, enum, foreign-key, occ-retry, django, ef-core, dotnet, csharp, hibernate, rails, multi-region, schema-conversion, type-mapping, data-loading, system-diagnostics, wait-events, aas, performance, cloudwatch
+  tags: aws, aurora, dsql, distributed-sql, distributed, distributed-database, database, serverless, serverless-database, postgresql, postgres, sql, schema, migration, multi-tenant, iam-auth, aurora-dsql, mcp, orm, flyway, enum, foreign-key, occ-retry, django, ef-core, dotnet, csharp, hibernate, rails, multi-region, schema-conversion, type-mapping, data-loading, system-diagnostics, wait-events, aas, performance, cloudwatch
 ---
 
 # Amazon Aurora DSQL Skill
@@ -38,12 +38,13 @@ Load these files as needed for detailed guidance:
 
 ### DDL Migrations:
 
-| Reference                                                                                     | When to Load                                                 | Contains                                |
-| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------- |
-| [ddl-migrations/overview.md](references/ddl-migrations/overview.md)                           | MUST load for DROP COLUMN, ALTER TYPE, DROP CONSTRAINT       | Table recreation pattern, verify & swap |
-| [ddl-migrations/column-operations.md](references/ddl-migrations/column-operations.md)         | DROP COLUMN, ALTER TYPE, SET/DROP NOT NULL/DEFAULT           | Column-level migration patterns         |
-| [ddl-migrations/constraint-operations.md](references/ddl-migrations/constraint-operations.md) | ADD/DROP CONSTRAINT, VALIDATE CONSTRAINT, MODIFY PRIMARY KEY | Constraint and structural changes       |
-| [ddl-migrations/batched-migration.md](references/ddl-migrations/batched-migration.md)         | Tables exceeding 3,000 rows                                  | Batching patterns, progress tracking    |
+| Reference                                                                                     | When to Load                                                 | Contains                                      |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------- |
+| [ddl-migrations/overview.md](references/ddl-migrations/overview.md)                           | MUST load for DROP COLUMN, ALTER TYPE, DROP CONSTRAINT       | Table recreation pattern, verify & swap       |
+| [ddl-migrations/column-operations.md](references/ddl-migrations/column-operations.md)         | DROP COLUMN, ALTER TYPE, SET/DROP NOT NULL/DEFAULT           | Column-level migration patterns               |
+| [ddl-migrations/constraint-operations.md](references/ddl-migrations/constraint-operations.md) | ADD/DROP CONSTRAINT, VALIDATE CONSTRAINT, MODIFY PRIMARY KEY | Constraint and structural changes             |
+| [ddl-migrations/batched-migration.md](references/ddl-migrations/batched-migration.md)         | Tables exceeding 3,000 rows                                  | Batching patterns, progress tracking          |
+| [flyway.md](references/flyway.md)                                                             | MUST load for Flyway setup, adapter choice, or migration     | Official module, deprecated adapter migration |
 
 ### MySQL Migrations:
 
