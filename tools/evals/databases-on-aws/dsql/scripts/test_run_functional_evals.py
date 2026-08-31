@@ -4161,7 +4161,7 @@ def test_sql_comments_cannot_bypass_unfixable_lint_correlation():
 
 
 def test_deeply_nested_escaped_credentials_are_redacted():
-    secret = "nested-secret-value"
+    secret = "nested-secret-value"  # nosec B105 - synthetic redaction fixture
     nested = r'{\"password\":\"' + secret + r'\"}'
     for _ in range(12):
         nested = json.dumps(nested)

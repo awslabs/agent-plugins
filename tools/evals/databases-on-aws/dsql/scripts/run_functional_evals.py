@@ -2123,6 +2123,12 @@ SENSITIVE_KEY = re.compile(
     + r"|endpoint|hostname|account|arn)",
     re.IGNORECASE,
 )
+ESCAPED_SENSITIVE_KEY_TOKEN = re.compile(
+    r"(?i)(?<![A-Za-z0-9])(?:"
+    r"authorization|cookie|credential|passphrase|password|"
+    r"private[_-]?key|secret|session|signature|hmac|token|api[_-]?key"
+    r")(?![A-Za-z0-9])"
+)
 SAFE_TELEMETRY_KEYS = {
     "cache_creation_input_tokens",
     "cache_read_input_tokens",
@@ -2485,7 +2491,7 @@ def _redact_nested_escaped_sensitive_values(value: str) -> str:
     cursor = 0
     search_from = 0
     length = len(value)
-    while match := SENSITIVE_KEY.search(value, search_from):
+    while match := ESCAPED_SENSITIVE_KEY_TOKEN.search(value, search_from):
         search_from = match.end()
         if match.start() < cursor:
             continue
