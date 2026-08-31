@@ -4180,3 +4180,185 @@ def test_empty_internal_promotion_work_directory_is_recoverable(tmp_path):
         assert not abandoned.exists()  # nosec B101
     finally:
         recovered.close()
+
+
+def test_unsafe_sql_interpolation_scan_is_bounded():
+    adversarial_line = (
+        "sql=" * 250
+        + " select " * 125
+        + '"' * 300
+        + "\n"
+    )
+    adversarial = adversarial_line * 35
+    started = RUNNER.time.monotonic()
+    RUNNER._has_unsafe_sql_interpolation(adversarial)
+    assert RUNNER.time.monotonic() - started < 1  # nosec B101
+
+
+def test_escaped_sensitive_assignment_allows_escaped_separator():
+    secret = "hunter2opensesame"  # nosec B105 - synthetic redaction fixture
+    value = (
+        r'prefix {\"password\"\:\"'
+        + secret
+        + r'\"} suffix'
+    )
+    redacted = RUNNER._redact_text(value)
+    assert secret not in redacted  # nosec B101
+    assert "prefix" in redacted and "suffix" in redacted  # nosec B101
+
+
+def test_unterminated_escaped_assignment_preserves_trailing_answer():
+    value = (
+        r'assistant said: {\"token\": \"AKIAIOSFODNN7EXAMPLE '
+        "and then the rest: CREATE TABLE t (id int); lint unfixable"
+    )
+    redacted = RUNNER._redact_text(value)
+    assert "AKIAIOSFODNN7EXAMPLE" not in redacted  # nosec B101
+    assert "CREATE TABLE t (id int); lint unfixable" in redacted  # nosec B101
+
+
+def test_unterminated_escaped_password_redacts_value_and_preserves_tail():
+    secret = "hunter2opensesame"  # nosec B105 - synthetic redaction fixture
+    value = (
+        r'assistant said: {\"password\": \"'
+        + secret
+        + " and then the rest: CREATE TABLE t (id int)"
+    )
+    redacted = RUNNER._redact_text(value)
+    assert secret not in redacted  # nosec B101
+    assert "and then the rest: CREATE TABLE t (id int)" in redacted  # nosec B101
+
+
+def test_output_lease_does_not_reclose_recycled_lock_fd(
+    tmp_path,
+    monkeypatch,
+):
+    output = tmp_path / "results"
+    unrelated_path = tmp_path / "unrelated.txt"
+    unrelated_path.write_text("unrelated")
+    lease = RUNNER._prepare_output_directory(output)
+    original_release = RUNNER._release_output_lock
+    failed_descriptor = lease.lock_descriptor
+    first_call = True
+
+    def fail_after_close(descriptor, directory_descriptor=None):
+        nonlocal first_call
+        if first_call:
+            first_call = False
+            os.close(descriptor)
+            raise OSError("simulated unlock failure")
+        return original_release(descriptor, directory_descriptor)
+
+    monkeypatch.setattr(RUNNER, "_release_output_lock", fail_after_close)
+    with pytest.raises(OSError, match="simulated unlock failure"):
+        lease.close()
+    assert lease.lock_descriptor == -1  # nosec B101
+
+    unrelated = os.open(unrelated_path, os.O_RDONLY)
+    try:
+        assert unrelated == failed_descriptor  # nosec B101
+        lease.close()
+        os.fstat(unrelated)
+    finally:
+        os.close(unrelated)
+
+
+def test_output_lock_release_suppresses_unlock_error_and_closes_fd(
+    tmp_path,
+    monkeypatch,
+):
+    lock_path = tmp_path / "lock"
+    descriptor = os.open(
+        lock_path,
+        os.O_RDWR | os.O_CREAT,
+        0o600,
+    )
+    real_flock = RUNNER.fcntl.flock
+
+    def fail_unlock(target, operation):
+        if target == descriptor and operation == RUNNER.fcntl.LOCK_UN:
+            raise OSError("simulated unlock failure")
+        return real_flock(target, operation)
+
+    monkeypatch.setattr(RUNNER.fcntl, "flock", fail_unlock)
+    RUNNER._release_output_lock(descriptor)
+    with pytest.raises(OSError):
+        os.fstat(descriptor)
+
+
+def test_output_lease_clears_directory_fd_before_unlock(
+    tmp_path,
+    monkeypatch,
+):
+    output = tmp_path / "results"
+    lease = RUNNER._prepare_output_directory(output)
+    RUNNER._release_output_lock(lease.lock_descriptor)
+    lease.lock_descriptor = -1
+    directory_descriptor = lease.directory_descriptor
+    real_flock = RUNNER.fcntl.flock
+
+    def fail_directory_unlock(target, operation):
+        if (
+            target == directory_descriptor
+            and operation == RUNNER.fcntl.LOCK_UN
+        ):
+            raise OSError("simulated directory unlock failure")
+        return real_flock(target, operation)
+
+    monkeypatch.setattr(RUNNER.fcntl, "flock", fail_directory_unlock)
+    lease.close()
+    assert lease.directory_descriptor == -1  # nosec B101
+
+    unrelated = os.open(tmp_path / "unrelated", os.O_RDWR | os.O_CREAT, 0o600)
+    try:
+        assert unrelated == directory_descriptor  # nosec B101
+        lease.close()
+        os.fstat(unrelated)
+    finally:
+        os.close(unrelated)
+
+
+def test_temporary_directory_cleanup_retains_failed_entry(
+    tmp_path,
+    monkeypatch,
+):
+    output = tmp_path / "results"
+    lease = RUNNER._prepare_output_directory(output)
+    context = RUNNER.DescriptorTemporaryDirectory(
+        lease.directory_descriptor,
+        prefix=".run-",
+    )
+    entry_name = context.entry_name
+    real_remove = RUNNER._remove_output_entry
+    first_call = True
+
+    def fail_once(parent_descriptor, name):
+        nonlocal first_call
+        if first_call:
+            first_call = False
+            raise OSError("simulated cleanup failure")
+        return real_remove(parent_descriptor, name)
+
+    monkeypatch.setattr(RUNNER, "_remove_output_entry", fail_once)
+    try:
+        with pytest.raises(OSError, match="simulated cleanup failure"):
+            context.cleanup()
+        assert context.entry_name == entry_name  # nosec B101
+        context.cleanup()
+        assert not (output / entry_name).exists()  # nosec B101
+    finally:
+        context.cleanup()
+        lease.close()
+
+
+def test_trusted_artifact_value_bypass_applies_only_to_scalars():
+    secret = "hunter2opensesame"  # nosec B105 - synthetic redaction fixture
+    redacted = RUNNER._redact_artifact_value({
+        "status": {
+            "leak": f"password={secret}",
+            "nested": [f"token={secret}"],
+        },
+    })
+    serialized = json.dumps(redacted)
+    assert secret not in serialized  # nosec B101
+    assert "<redacted" in serialized  # nosec B101

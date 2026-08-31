@@ -7,6 +7,7 @@ and grades assertions programmatically.
 """
 
 import argparse
+import contextlib
 import fcntl
 import hashlib
 import hmac
@@ -326,17 +327,18 @@ class OutputDirectoryLease:
 
     def close(self) -> None:
         if self.lock_descriptor >= 0:
+            descriptor = self.lock_descriptor
+            self.lock_descriptor = -1
             _release_output_lock(
-                self.lock_descriptor,
+                descriptor,
                 self.directory_descriptor,
             )
-            self.lock_descriptor = -1
         if self.directory_descriptor >= 0:
-            try:
-                fcntl.flock(self.directory_descriptor, fcntl.LOCK_UN)
-            finally:
-                os.close(self.directory_descriptor)
+            descriptor = self.directory_descriptor
             self.directory_descriptor = -1
+            with contextlib.suppress(OSError):
+                fcntl.flock(descriptor, fcntl.LOCK_UN)
+            os.close(descriptor)
 
     def __del__(self):
         try:
@@ -406,16 +408,17 @@ class DescriptorTemporaryDirectory:
             return
         try:
             if self.directory_descriptor >= 0:
-                os.close(self.directory_descriptor)
+                descriptor = self.directory_descriptor
                 self.directory_descriptor = -1
+                os.close(descriptor)
             _remove_output_entry(
                 self.parent_descriptor,
                 self.entry_name,
             )
         except FileNotFoundError:
-            pass
-        finally:
             self.entry_name = ""
+            return
+        self.entry_name = ""
 
 
 class RedactingArgumentParser(argparse.ArgumentParser):
@@ -2505,6 +2508,8 @@ def _redact_nested_escaped_sensitive_values(value: str) -> str:
         index += 1
         while index < length and value[index].isspace():
             index += 1
+        while index < length and value[index] == "\\":
+            index += 1
         if index >= length or value[index] not in ":=":
             continue
         index += 1
@@ -2519,7 +2524,7 @@ def _redact_nested_escaped_sensitive_values(value: str) -> str:
         quote = value[index]
         index += 1
 
-        closing_end = length
+        closing_end = None
         while index < length:
             quote_index = value.find(quote, index)
             if quote_index < 0:
@@ -2531,6 +2536,8 @@ def _redact_nested_escaped_sensitive_values(value: str) -> str:
                 closing_end = quote_index + 1
                 break
             index = quote_index + 1
+        if closing_end is None:
+            continue
 
         output.append(value[cursor:match.start()])
         output.append("<redacted-secret>")
@@ -2650,7 +2657,10 @@ def _redact_artifact_value(
     trusted_keys: frozenset[str] = frozenset(),
 ):
     """Apply final sink redaction to every string in persisted output."""
-    if key in TRUSTED_ARTIFACT_VALUE_KEYS:
+    if key in TRUSTED_ARTIFACT_VALUE_KEYS and isinstance(
+        value,
+        (str, int, float, bool, type(None)),
+    ):
         return value
     if isinstance(key, str) and _is_sensitive_key(key):
         return "<redacted>"
@@ -3683,9 +3693,9 @@ def _has_unsafe_sql_interpolation(value: str) -> bool:
         )
         or _has_positive_match(
             value,
-            r"(?im)^[^\n]{0,1000}(?:sql|query)\s*="
-            r"[^\n]{0,1000}\b(?:select|insert|update|delete)\b"
-            r"[^\n]{0,1000}[\"']\s*(?:\+|%)\s*"
+            r"(?im)^(?=[^\n]{0,1000}?(?:sql|query)\s*=)"
+            r"(?=[^\n]{0,3000}?\b(?:select|insert|update|delete)\b)"
+            r"[^\n]{0,3000}?[\"']\s*(?:\+|%)\s*"
             r"(?:req\.tenant|[A-Za-z_(])",
         )
     )
@@ -5496,13 +5506,15 @@ def _release_output_lock(
 ) -> None:
     """Release the visible lock file and optional output-inode lock."""
     try:
-        fcntl.flock(descriptor, fcntl.LOCK_UN)
+        with contextlib.suppress(OSError):
+            fcntl.flock(descriptor, fcntl.LOCK_UN)
     finally:
         try:
             os.close(descriptor)
         finally:
             if directory_descriptor is not None and directory_descriptor >= 0:
-                fcntl.flock(directory_descriptor, fcntl.LOCK_UN)
+                with contextlib.suppress(OSError):
+                    fcntl.flock(directory_descriptor, fcntl.LOCK_UN)
 
 
 def _remove_output_path(path: Path) -> None:
