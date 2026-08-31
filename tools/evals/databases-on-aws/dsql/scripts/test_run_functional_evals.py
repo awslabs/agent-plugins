@@ -134,6 +134,303 @@ def _main_args(
     ]
 
 
+def _regex_run_result(result_text: str) -> dict:
+    return {
+        "result_text": result_text,
+        "tool_calls": [],
+        "tool_results": [],
+        "messages": [],
+        "stderr": "",
+        "returncode": 0,
+        "truncated": False,
+        "infrastructure_error": "",
+    }
+
+
+def test_safe_query_grading_rejects_explicit_f_string_injection() -> None:
+    eval_item = {
+        "prompt": "Build a tenant-scoped query.",
+        "expectations": [
+            (
+                "Does not use f-string, .format(), %, or + to inject "
+                "req.tenant into the SQL"
+            )
+        ],
+        "grader": "regex",
+    }
+
+    unsafe = RUNNER.grade_eval(
+        eval_item,
+        _regex_run_result(
+            "Use an f-string to inject req.tenant into the SQL."
+        ),
+    )
+    safe = RUNNER.grade_eval(
+        eval_item,
+        _regex_run_result(
+            "Do not use an f-string for SQL. Validate req.tenant and use "
+            "safe_query.build()."
+        ),
+    )
+
+    assert unsafe["summary"]["failed"] == 1  # nosec B101
+    assert safe["summary"]["passed"] == 1  # nosec B101
+
+
+def test_separate_ddl_grading_rejects_combined_transaction() -> None:
+    eval_item = {
+        "prompt": "Create a DSQL schema.",
+        "expectations": [
+            "Issues each DDL statement in its own separate transaction"
+        ],
+        "grader": "regex",
+    }
+
+    combined = RUNNER.grade_eval(
+        eval_item,
+        _regex_run_result(
+            "Put all DDL statements together in a single transaction."
+        ),
+    )
+    separate = RUNNER.grade_eval(
+        eval_item,
+        _regex_run_result(
+            "Run each DDL statement in its own separate transaction."
+        ),
+    )
+
+    assert combined["summary"]["failed"] == 1  # nosec B101
+    assert separate["summary"]["passed"] == 1  # nosec B101
+
+
+def test_create_table_body_scan_is_bounded() -> None:
+    adversarial_answer = "create table t(" * 2_000
+
+    started = RUNNER.time.monotonic()
+    assert RUNNER._create_table_bodies(adversarial_answer) == []  # nosec B101
+    assert RUNNER.time.monotonic() - started < 1  # nosec B101
+
+
+def test_redaction_bounds_decoded_json_keys(monkeypatch) -> None:
+    oversized_key = "a" * 30_000
+    started = RUNNER.time.monotonic()
+    RUNNER._redact_text(json.dumps({oversized_key: 1}))
+    assert RUNNER.time.monotonic() - started < 1  # nosec B101
+    assert list(RUNNER._redact_artifact_value({  # nosec B101
+        oversized_key: "value"
+    }).values()) == ["value"]
+    oversized_sensitive_key = oversized_key + "_password"
+    secret_value = "oversized-key-secret"  # nosec B105 - synthetic fixture
+    oversized_mapping = {oversized_sensitive_key: secret_value}
+    assert secret_value not in json.dumps(  # nosec B101
+        RUNNER._redact_artifact_value(oversized_mapping)
+    )
+    assert secret_value not in json.dumps(  # nosec B101
+        RUNNER._redact_judge_value(oversized_mapping)
+    )
+
+
+def test_redaction_covers_sigv4_signature_names() -> None:
+    for sensitive_key in (
+        "X-Amz-Signature",
+        "signature",
+        "sig",
+        "hmac",
+    ):
+        assert RUNNER._is_sensitive_key(sensitive_key)  # nosec B101
+
+    for safe_key in (
+        "signal",
+        "significant",
+        "sigma",
+        "design",
+        "assignment",
+        "input_tokens",
+        "content",
+        "code",
+        "status",
+    ):
+        assert not RUNNER._is_sensitive_key(safe_key)  # nosec B101
+
+    signature = "a" * 64
+    assert RUNNER._redact_artifact_value({  # nosec B101
+        "X-Amz-Signature": signature
+    })["X-Amz-Signature"] == "<redacted>"
+    assert signature not in RUNNER._redact_text(  # nosec B101
+        f"X-Amz-Signature={signature}"
+    )
+
+
+def test_terminate_process_group_skips_reaped_root_group(monkeypatch) -> None:
+    class ReapedProcess:
+        pid = 12345
+        returncode = 0
+
+        def poll(self):
+            return self.returncode
+
+        def wait(self, timeout=None):
+            return self.returncode
+
+    class ReapedProcessTree:
+        root_pid = 12345
+        known_pids = {12345: 1}
+        exited_pids = {12345}
+
+        def signal(self, signal_number):
+            return None
+
+        def live_pids(self):
+            return set()
+
+    def reject_recycled_process_group(*_args):
+        raise AssertionError("reaped process group must not be signaled")
+
+    monkeypatch.setattr(RUNNER.os, "killpg", reject_recycled_process_group)
+
+    RUNNER._terminate_process_group(ReapedProcess(), ReapedProcessTree())
+
+
+def test_signal_known_skips_exited_root_pid(monkeypatch) -> None:
+    process_tree = RUNNER._ProcessTreeMonitor()
+    process_tree.root_pid = 12345
+    process_tree.known_pids = {}
+    process_tree.exited_pids = {12345}
+    signaled_pids = []
+    monkeypatch.setattr(
+        process_tree,
+        "_signal_pid",
+        lambda pid, signal_number: signaled_pids.append(
+            (pid, signal_number)
+        ),
+    )
+
+    process_tree.signal_known(RUNNER.signal.SIGTERM)
+
+    assert signaled_pids == []  # nosec B101
+
+
+def test_signal_known_rejects_recycled_linux_pid(monkeypatch) -> None:
+    process_tree = RUNNER._ProcessTreeMonitor()
+    process_tree.root_pid = None
+    process_tree.known_pids = {12345: 100}
+    process_tree.exited_pids = set()
+    signaled_pids = []
+    monkeypatch.setattr(RUNNER.sys, "platform", "linux")
+    monkeypatch.setattr(
+        process_tree,
+        "_linux_process_table",
+        lambda: {12345: (1, 101, "S")},
+    )
+    monkeypatch.setattr(
+        process_tree,
+        "_signal_pid",
+        lambda pid, signal_number: signaled_pids.append(
+            (pid, signal_number)
+        ),
+    )
+    monkeypatch.setattr(RUNNER.os, "kill", lambda *args: None)
+
+    process_tree.signal_known(RUNNER.signal.SIGTERM)
+
+    assert signaled_pids == []  # nosec B101
+    assert process_tree.wait_known(0) is True  # nosec B101
+    assert process_tree.exited_pids == {12345}  # nosec B101
+
+
+def test_sql_context_scans_are_bounded() -> None:
+    answer = "CREATE INDEX ASYNC idx ON t (id). " * 4_000
+
+    started = RUNNER.time.monotonic()
+    matches = list(RUNNER._active_sql_matches(
+        answer,
+        RUNNER.ASYNC_CREATE_INDEX,
+    ))
+
+    assert len(matches) == 4_000  # nosec B101
+    assert RUNNER.time.monotonic() - started < 1  # nosec B101
+
+
+def test_unknown_user_read_path_fails_closed(monkeypatch, tmp_path) -> None:
+    events = _subject_events()
+    events[0]["message"]["content"].append({
+        "type": "tool_use",
+        "id": "read-unknown-user",
+        "name": "Read",
+        "input": {"file_path": "~missing-user/private"},
+    })
+    events[1]["message"]["content"].append({
+        "type": "tool_result",
+        "tool_use_id": "read-unknown-user",
+        "is_error": False,
+        "content": "unexpected",
+    })
+    monkeypatch.setattr(
+        RUNNER,
+        "_run_captured",
+        lambda *args, **kwargs: _completed(_event_stream(events)),
+    )
+    real_expanduser = Path.expanduser
+
+    def fail_unknown_user(path):
+        if str(path) == "~missing-user/private":
+            raise RuntimeError("Could not determine home directory.")
+        return real_expanduser(path)
+
+    monkeypatch.setattr(Path, "expanduser", fail_unknown_user)
+
+    result = RUNNER.run_prompt("prompt", tmp_path / "plugin")
+
+    assert "file_path could not be resolved" in result["infrastructure_error"]  # nosec B101
+
+
+def test_output_setup_preserves_unowned_sibling_runs(tmp_path) -> None:
+    output_dir = tmp_path / "results"
+    unrelated_sibling = tmp_path / ".results.run-user-notes"
+    unrelated_sibling.mkdir()
+    sentinel = unrelated_sibling / "keep.txt"
+    sentinel.write_text("not owned by the eval runner")
+
+    lease = RUNNER._prepare_output_directory(output_dir)
+    lease.close()
+
+    assert sentinel.read_text() == "not owned by the eval runner"  # nosec B101
+
+
+def test_output_setup_uses_lease_after_path_replacement(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    output_dir = tmp_path / "results"
+    displaced_output = tmp_path / "displaced-results"
+    real_assert_identity = RUNNER.OutputDirectoryLease.assert_identity
+    swapped = False
+
+    def replace_path_after_identity_check(lease):
+        nonlocal swapped
+        real_assert_identity(lease)
+        if swapped:
+            return
+        swapped = True
+        os.replace(output_dir, displaced_output)
+        output_dir.mkdir()
+
+    monkeypatch.setattr(
+        RUNNER.OutputDirectoryLease,
+        "assert_identity",
+        replace_path_after_identity_check,
+    )
+
+    lease = RUNNER._prepare_output_directory(output_dir)
+    try:
+        assert not (output_dir / RUNNER.OUTPUT_MARKER).exists()  # nosec B101
+        assert (  # nosec B101
+            displaced_output / RUNNER.OUTPUT_MARKER
+        ).read_text() == RUNNER.OUTPUT_MARKER_CONTENT
+    finally:
+        lease.close()
+
+
 def test_subject_execution_is_isolated_and_fails_closed(
     monkeypatch,
     tmp_path,
@@ -2686,7 +2983,7 @@ def test_main_covers_both_graders_artifacts_and_incomplete_runs(
     assert not (recovery_eval / "partial-new-run").exists()  # nosec B101
     assert (recovery_output / "summary.json").read_text() == recovery_summary  # nosec B101
     assert not recovery_backup.exists() and not abandoned_work.exists()  # nosec B101
-    assert not abandoned_sibling.exists()  # nosec B101
+    assert (abandoned_sibling / "partial").read_text() == "partial"  # nosec B101
     assert not abandoned_preparation.exists()  # nosec B101
     assert not abandoned_committed.exists()  # nosec B101
 

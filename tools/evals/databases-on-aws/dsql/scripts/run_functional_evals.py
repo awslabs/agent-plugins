@@ -62,6 +62,7 @@ class AssertionRule(str, Enum):
     LINT_BEFORE_TRANSACT = "lint_before_transact"
     NO_TRANSACT_AFTER_UNFIXABLE = "no_transact_after_unfixable"
     NO_TRANSACT_CALL = "no_transact_call"
+    SAFE_QUERY_NO_INTERPOLATION = "safe_query_no_interpolation"
     LEGACY_KEYWORDS = "legacy_keywords"
 
 
@@ -131,6 +132,7 @@ MAX_CORPUS_EVALS = 100
 MAX_CORPUS_EXPECTATIONS = 100
 MAX_LLM_JUDGE_ASSERTIONS = 200
 MAX_CORPUS_TEXT = 50000
+MAX_SQL_BODY_SCAN = 2 * MAX_CORPUS_TEXT
 MAX_JSON_NESTING = 100
 MAX_JSON_NUMBER_LENGTH = 100
 MAX_JSON_KEY_LENGTH = 500
@@ -587,8 +589,19 @@ class _ProcessTreeMonitor:
     def signal_known(self, signal_number: int) -> None:
         """Signal the last known process set without another discovery pass."""
         known_live_pids = set(self.known_pids) - self.exited_pids
-        if self.root_pid is not None:
-            known_live_pids.add(self.root_pid)
+        if sys.platform.startswith("linux"):
+            table = self._linux_process_table()
+            for pid in tuple(known_live_pids):
+                expected_start = self.known_pids.get(pid)
+                current = table.get(pid)
+                if (
+                    expected_start is None
+                    or current is None
+                    or current[1] != expected_start
+                    or current[2] == "Z"
+                ):
+                    self.exited_pids.add(pid)
+                    known_live_pids.discard(pid)
         for pid in sorted(known_live_pids, reverse=True):
             self._signal_pid(pid, signal_number)
 
@@ -603,7 +616,23 @@ class _ProcessTreeMonitor:
         deadline = time.monotonic() + timeout
         while True:
             live = set()
+            linux_table = (
+                self._linux_process_table()
+                if sys.platform.startswith("linux")
+                else None
+            )
             for pid in set(self.known_pids) - self.exited_pids:
+                if linux_table is not None:
+                    expected_start = self.known_pids.get(pid)
+                    current = linux_table.get(pid)
+                    if (
+                        expected_start is None
+                        or current is None
+                        or current[1] != expected_start
+                        or current[2] == "Z"
+                    ):
+                        self.exited_pids.add(pid)
+                        continue
                 try:
                     os.kill(pid, 0)
                 except ProcessLookupError:
@@ -655,10 +684,11 @@ def _terminate_process_group(
     """Terminate a subprocess and tracked descendants, then reap the root."""
     containment_error = None
     terminated = False
-    try:
-        os.killpg(process.pid, signal.SIGTERM)
-    except ProcessLookupError:
-        pass
+    if getattr(process, "returncode", None) is None:
+        try:
+            os.killpg(process.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
     if process_tree is not None:
         try:
             process_tree.signal(signal.SIGTERM)
@@ -693,10 +723,11 @@ def _terminate_process_group(
         except subprocess.TimeoutExpired:
             terminated = False
     if not terminated:
-        try:
-            os.killpg(process.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
+        if getattr(process, "returncode", None) is None:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
         if process_tree is not None:
             try:
                 process_tree.signal_known(signal.SIGKILL)
@@ -1245,7 +1276,7 @@ def run_prompt(
                 return "Read call must contain a nonempty file_path"
             try:
                 resolved_path = Path(file_path).expanduser().resolve()
-            except OSError:
+            except (OSError, RuntimeError):
                 return "Read call file_path could not be resolved"
             if (
                 resolved_path != resolved_skill_dir
@@ -1875,7 +1906,8 @@ def _judge_error(
 
 SENSITIVE_NAME_PATTERN = (
     r"(?:[A-Za-z0-9]+[_-])*(?:authorization|cookie|credential|passphrase|"
-    r"password|private[_-]?key|secret|session|token|api[_-]?key)"
+    r"password|private[_-]?key|secret|session|signature|hmac|token|"
+    r"api[_-]?key)"
 )
 SENSITIVE_KEY = re.compile(
     r"(?:" + SENSITIVE_NAME_PATTERN
@@ -1888,6 +1920,24 @@ SAFE_TELEMETRY_KEYS = {
     "input_tokens",
     "output_tokens",
 }
+SENSITIVE_EXACT_KEYS = {
+    "hmac",
+    "sig",
+}
+SENSITIVE_NORMALIZED_TOKENS = (
+    "apikey",
+    "authorization",
+    "cookie",
+    "credential",
+    "hmac",
+    "passphrase",
+    "password",
+    "privatekey",
+    "secret",
+    "session",
+    "signature",
+    "token",
+)
 SENSITIVE_VALUE = re.compile(
     r"(?i)(?:\\?[\"'])?\b" + SENSITIVE_NAME_PATTERN
     + r"\b(?:\\?[\"'])?\s*[:=]\s*(?:(?:basic|bearer)\s+)?"
@@ -2024,26 +2074,14 @@ def _literal_placeholder(value: str) -> str:
 
 
 def _is_sensitive_key(value: str) -> bool:
+    folded = value.casefold()
     normalized = re.sub(r"[^a-z0-9]", "", value.casefold())
     return (
-        value.casefold() not in SAFE_TELEMETRY_KEYS
+        folded not in SAFE_TELEMETRY_KEYS
         and (
-            SENSITIVE_KEY.search(value) is not None
-            or any(
-                token in normalized
-                for token in (
-                    "apikey",
-                    "authorization",
-                    "cookie",
-                    "credential",
-                    "passphrase",
-                    "password",
-                    "privatekey",
-                    "secret",
-                    "session",
-                    "token",
-                )
-            )
+            normalized in SENSITIVE_EXACT_KEYS
+            or any(token in normalized for token in SENSITIVE_NORMALIZED_TOKENS)
+            or SENSITIVE_KEY.search(value[:MAX_JSON_KEY_LENGTH]) is not None
         )
     )
 
@@ -2346,9 +2384,7 @@ def _redact_text(
 
 def _redact_artifact_value(value, key: str = ""):
     """Apply final sink redaction to every string in persisted output."""
-    if isinstance(key, str) and _is_sensitive_key(
-        key[:MAX_JSON_KEY_LENGTH]
-    ):
+    if isinstance(key, str) and _is_sensitive_key(key):
         return "<redacted>"
     if isinstance(value, dict):
         return _redact_mapping(
@@ -2481,7 +2517,7 @@ def _is_sql_key(key: str) -> bool:
 
 def _redact_judge_value(value, key: str = ""):
     """Redact sensitive keys, credential shapes, and SQL literals."""
-    if _is_sensitive_key(key[:MAX_JSON_KEY_LENGTH]):
+    if _is_sensitive_key(key):
         return "<redacted>"
     if isinstance(value, dict):
         return _redact_mapping(
@@ -2575,7 +2611,7 @@ def _redact_tool_result_value(value, key: str = ""):
     """Apply best-effort redaction while preserving useful result structure."""
     bounded_key = key[:MAX_JSON_KEY_LENGTH]
     key_lower = bounded_key.lower()
-    if _is_sensitive_key(bounded_key):
+    if _is_sensitive_key(key):
         return "<redacted>"
     if isinstance(value, dict):
         return _redact_mapping(
@@ -2959,6 +2995,8 @@ ASSERTION_RULES.update({
     "does not call transact (user explicitly said don't execute)":
         AssertionRule.NO_TRANSACT_CALL,
     "calls the dsql_lint mcp tool with fix=true": AssertionRule.DSQL_LINT_FIX,
+    "does not use f-string, .format(), %, or + to inject req.tenant into the sql":
+        AssertionRule.SAFE_QUERY_NO_INTERPOLATION,
 })
 NEGATED_MENTION = re.compile(
     r"(?:"
@@ -3545,6 +3583,7 @@ def _create_table_bodies(value: str) -> list[str]:
     masked = _mask_sql_comments(value)
     bodies = []
     malformed = False
+    scan_budget = MAX_SQL_BODY_SCAN
     for start_match in CREATE_TABLE_START.finditer(masked):
         if _sql_example_is_negated(masked, start_match):
             continue
@@ -3552,7 +3591,11 @@ def _create_table_bodies(value: str) -> list[str]:
         depth = 0
         quote = ""
         index = open_index
-        while index < len(masked):
+        if scan_budget <= 0:
+            malformed = True
+            break
+        scan_limit = min(len(masked), open_index + scan_budget)
+        while index < scan_limit:
             character = masked[index]
             if quote:
                 if character == quote:
@@ -3575,6 +3618,7 @@ def _create_table_bodies(value: str) -> list[str]:
             index += 1
         else:
             malformed = True
+        scan_budget -= index - open_index
     return [] if malformed else bodies
 
 
@@ -4330,6 +4374,35 @@ def grade_eval(
                     "unfixable lint result"
                 )
 
+        elif rule is AssertionRule.SAFE_QUERY_NO_INTERPOLATION:
+            interpolation_method = (
+                r"(?:f[-\s]?string|\.format\s*\(|percent[-\s]+formatting|"
+                r"string\s+concatenation|\+\s+operator|%\s+operator)"
+            )
+            sql_term = r"\b(?:sql|query|select|insert|update|delete)\b"
+            unsafe_interpolation = (
+                _has_positive_statement(
+                    text,
+                    interpolation_method,
+                    sql_term,
+                )
+                or _has_positive_match(
+                    text,
+                    r"\b(?:sql|query)\s*=\s*f[\"']",
+                )
+                or _has_positive_match(
+                    text,
+                    r"f[\"'][^\"'\n]{0,500}"
+                    r"\b(?:select|insert|update|delete)\b",
+                )
+            )
+            passed = not unsafe_interpolation
+            evidence = (
+                "No positive unsafe SQL interpolation guidance found"
+                if passed
+                else "Found positive unsafe SQL interpolation guidance"
+            )
+
         elif rule is AssertionRule.LEGACY_KEYWORDS:
             passed, matches, total_keywords = _legacy_keyword_match(
                 expectation_text,
@@ -4528,16 +4601,36 @@ def grade_eval(
             )
 
         elif rule is AssertionRule.SEPARATE_DDL_TRANSACTIONS:
-            passed = any(
+            separate_guidance = any(
                 _has_positive_match(text, pattern)
                 for pattern in (
-                    r"\b(?:separate|individual|own|one|single)"
-                    r".{0,30}\btransactions?\b",
-                    r"\b(?:one|single)\s+ddl.{0,20}\b(?:per|each)\b",
-                    r"\beach.{0,20}\b(?:ddl|create|alter)\b"
-                    r".{0,20}\b(?:own|separate|its\s+own)\b",
+                    r"\b(?:each|every)\s+"
+                    r"(?:ddl(?:\s+statement)?|"
+                    r"(?:create|alter|drop)\s+statement)\b"
+                    r".{0,60}\b(?:own|separate|individual)\b"
+                    r".{0,20}\btransaction\b",
+                    r"\b(?:one|single)\s+"
+                    r"(?:ddl(?:\s+statement)?|"
+                    r"(?:create|alter|drop)\s+statement)\b"
+                    r".{0,20}\b(?:per|each)\s+transaction\b",
+                    r"\b(?:separate|individual)\s+transactions?\b"
+                    r".{0,60}\b(?:for\s+)?(?:each|every)\s+"
+                    r"(?:ddl(?:\s+statement)?|statement)\b",
                 )
             )
+            combined_guidance = (
+                _has_positive_statement(
+                    text,
+                    r"\b(?:all|multiple)\s+(?:ddl\s+)?statements?\b",
+                    r"\b(?:one|single|same)\s+transaction\b",
+                )
+                or _has_positive_statement(
+                    text,
+                    r"\b(?:one|single|same)\s+transaction\b",
+                    r"\b(?:all|multiple)\s+(?:ddl\s+)?statements?\b",
+                )
+            )
+            passed = separate_guidance and not combined_guidance
             evidence = (
                 "Found separate DDL transaction guidance"
                 if passed
@@ -4893,6 +4986,30 @@ def _is_owned_output_directory(path: Path) -> bool:
     try:
         return marker.read_text() == OUTPUT_MARKER_CONTENT
     except (OSError, UnicodeError):
+        return False
+
+
+def _is_owned_output_directory_at(directory_descriptor: int) -> bool:
+    """Check the ownership marker relative to an opened directory."""
+    flags = os.O_RDONLY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        marker_stat = os.stat(
+            OUTPUT_MARKER,
+            dir_fd=directory_descriptor,
+            follow_symlinks=False,
+        )
+        if not stat.S_ISREG(marker_stat.st_mode):
+            return False
+        descriptor = os.open(
+            OUTPUT_MARKER,
+            flags,
+            dir_fd=directory_descriptor,
+        )
+        with os.fdopen(descriptor, encoding="utf-8") as marker_file:
+            return marker_file.read() == OUTPUT_MARKER_CONTENT
+    except (FileNotFoundError, OSError, UnicodeError):
         return False
 
 
@@ -5278,8 +5395,71 @@ def _recover_abandoned_promotions(output_dir: Path) -> None:
         shutil.rmtree(incomplete[0])
 
 
+def _recover_abandoned_promotions_at(output_descriptor: int) -> None:
+    """Recover promotions relative to the leased output descriptor."""
+    names = os.listdir(output_descriptor)
+    for prefix in (
+        r"\.promotion-[A-Za-z0-9_.-]+",
+        r"\.committed-[A-Za-z0-9_.-]+",
+    ):
+        for name in names:
+            if re.fullmatch(prefix, name) is None:
+                continue
+            entry_stat = os.stat(
+                name,
+                dir_fd=output_descriptor,
+                follow_symlinks=False,
+            )
+            if not stat.S_ISDIR(entry_stat.st_mode):
+                raise OSError(
+                    f"refusing malformed output promotion directory: {name}"
+                )
+            _remove_output_entry(output_descriptor, name)
+
+    previous_names = sorted(
+        name
+        for name in os.listdir(output_descriptor)
+        if re.fullmatch(r"\.previous-[A-Za-z0-9_.-]+", name)
+    )
+    incomplete = []
+    for name in previous_names:
+        entry_stat = os.stat(
+            name,
+            dir_fd=output_descriptor,
+            follow_symlinks=False,
+        )
+        if not stat.S_ISDIR(entry_stat.st_mode):
+            raise OSError(
+                f"refusing malformed output promotion backup: {name}"
+            )
+        backup_descriptor = _open_directory_at(output_descriptor, name)
+        try:
+            complete = False
+            if _entry_exists_at(backup_descriptor, PROMOTION_COMPLETE):
+                marker_stat = os.stat(
+                    PROMOTION_COMPLETE,
+                    dir_fd=backup_descriptor,
+                    follow_symlinks=False,
+                )
+                complete = stat.S_ISREG(marker_stat.st_mode)
+        finally:
+            os.close(backup_descriptor)
+        if complete:
+            _remove_output_entry(output_descriptor, name)
+        else:
+            incomplete.append(name)
+    if len(incomplete) > 1:
+        raise OSError(
+            "cannot safely recover multiple interrupted output promotions: "
+            + ", ".join(incomplete)
+        )
+    if incomplete:
+        _rollback_output_promotion_at(output_descriptor, incomplete[0])
+        _remove_output_entry(output_descriptor, incomplete[0])
+
+
 def _prepare_output_directory(requested_path: Path) -> OutputDirectoryLease:
-    """Claim or reset a dedicated output directory after input validation."""
+    """Lock and recover a dedicated output directory after input validation."""
     requested_output_dir = requested_path.expanduser()
     if requested_output_dir.is_symlink():
         raise OSError(
@@ -5320,44 +5500,46 @@ def _prepare_output_directory(requested_path: Path) -> OutputDirectoryLease:
             lock_descriptor,
         )
         lease.assert_identity()
-        marker = output_dir / OUTPUT_MARKER
         unmanaged_entries = [
-            entry
-            for entry in output_dir.iterdir()
-            if entry.name != OUTPUT_LOCK
+            name
+            for name in os.listdir(directory_descriptor)
+            if name != OUTPUT_LOCK
         ]
+        owned_output = _is_owned_output_directory_at(directory_descriptor)
         if (
             unmanaged_entries
-            and not _is_owned_output_directory(output_dir)
+            and not owned_output
         ):
             raise OSError(
                 "refusing nonempty output directory without runner ownership "
                 f"marker: {output_dir}"
             )
-        if not marker.exists():
+        if not _entry_exists_at(directory_descriptor, OUTPUT_MARKER):
+            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+            if hasattr(os, "O_NOFOLLOW"):
+                flags |= os.O_NOFOLLOW
             descriptor = os.open(
-                marker,
-                os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                OUTPUT_MARKER,
+                flags,
                 0o600,
+                dir_fd=directory_descriptor,
             )
             with os.fdopen(descriptor, "w") as marker_file:
                 marker_file.write(OUTPUT_MARKER_CONTENT)
                 marker_file.flush()
                 os.fsync(marker_file.fileno())
-        elif not _is_owned_output_directory(output_dir):
-            raise OSError(f"invalid output directory ownership marker: {marker}")
+            os.fsync(directory_descriptor)
+        elif not owned_output:
+            raise OSError(
+                f"invalid output directory ownership marker: "
+                f"{output_dir / OUTPUT_MARKER}"
+            )
 
-        _recover_abandoned_promotions(output_dir)
-        for child in output_dir.iterdir():
-            if not re.fullmatch(r"\.run-[A-Za-z0-9_.-]+", child.name):
+        _recover_abandoned_promotions_at(directory_descriptor)
+        for name in os.listdir(directory_descriptor):
+            if not re.fullmatch(r"\.run-[A-Za-z0-9_.-]+", name):
                 continue
-            _remove_output_path(child)
-        sibling_run_pattern = re.compile(
-            rf"\.{re.escape(output_dir.name)}\.run-[A-Za-z0-9_.-]+"
-        )
-        for sibling in output_dir.parent.iterdir():
-            if sibling_run_pattern.fullmatch(sibling.name):
-                _remove_output_path(sibling)
+            _remove_output_entry(directory_descriptor, name)
     except BaseException:
         if lease is not None:
             lease.close()
@@ -6007,8 +6189,8 @@ def _main_impl(
     leases.append(output_lease)
     output_dir = output_lease.path
     staged_context = tempfile.TemporaryDirectory(
-        prefix=f".{output_dir.name}.run-",
-        dir=output_dir.parent,
+        prefix=".run-",
+        dir=output_dir,
     )
     temporary_directories.append(staged_context)
     staged_output_dir = Path(staged_context.name)
