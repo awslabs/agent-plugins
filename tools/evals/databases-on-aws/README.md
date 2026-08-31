@@ -14,11 +14,11 @@ their recorded results, and runner files:
 tools/evals/databases-on-aws/
 ├── README.md                        # This file — top-level index
 └── dsql/                            # Aurora DSQL skill evals
-    ├── evals.json                   # Tier 2: functional evals (21 prompts, 85 assertions)
+    ├── evals.json                   # Tier 2: functional evals (23 prompts, 93 assertions)
     ├── dsql_lint_evals.json         # dsql_lint workflow (4 prompts, 20 assertions)
     ├── pg_migration_evals.json      # PostgreSQL migrations (17 prompts, 90 assertions)
     ├── pg_migration_hallucination_evals.json # Migration hallucinations (3 prompts, 14 assertions)
-    ├── trigger_evals.json           # Tier 1: triggering evals (37 test cases)
+    ├── trigger_evals.json           # Tier 1: triggering evals (40 test cases)
     ├── safe_query_evals.json        # Tier 3: safe_query enforcement (5 prompts, 24 assertions)
     ├── query_explainability_evals.json  # Workflow 9: query plan diagnostics (9 prompts, 70 assertions)
     ├── query_plan_rewrite_evals.json   # Query rewrites: type coercion, subquery unnesting, etc. (11 prompts, manual)
@@ -62,8 +62,8 @@ PYTHONPATH="<skill-creator-path>:$PYTHONPATH" python -m scripts.run_eval \
 
 **What it checks:**
 
-- 22 should-trigger prompts (Aurora DSQL, distributed SQL, DSQL migrations, query plan explainability, system diagnostics / cluster performance, data loading, etc.)
-- 15 should-not-trigger prompts (DynamoDB, Aurora/RDS PostgreSQL with EXPLAIN ANALYZE, Redshift, generic SQL, non-DSQL bulk loading, etc.)
+- 24 should-trigger prompts (Aurora DSQL, distributed SQL, DSQL migrations, query plan explainability, system diagnostics / cluster performance, data loading, etc.)
+- 16 should-not-trigger prompts (DynamoDB, Aurora/RDS PostgreSQL with EXPLAIN ANALYZE, Redshift, generic SQL, non-DSQL bulk loading, etc.)
 
 ### Tier 2: Functional Evals
 
@@ -96,7 +96,7 @@ mise exec -- python tools/evals/databases-on-aws/dsql/scripts/run_functional_eva
   --verbose
 ```
 
-**What it checks** (21 eval prompts, 85 assertions total):
+**What it checks** (23 eval prompts, 93 assertions total):
 
 | Eval                           | Focus                 | Grader    | Key assertions                                                                                                                      |
 | ------------------------------ | --------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------- |
@@ -121,6 +121,8 @@ mise exec -- python tools/evals/databases-on-aws/dsql/scripts/run_functional_eva
 | 19. Modify referenced PK       | Constraint migration  | LLM judge | Inbound-FK preflight, retained unique target, approval or abort when relationships would be lost                                    |
 | 20. Direct constraint changes  | Constraint migration  | LLM judge | Direct `DROP CONSTRAINT`, CHECK `NOT VALID`, async validation, no table recreation                                                  |
 | 21. Direct column options      | Column migration      | LLM judge | Direct `DROP NOT NULL` and default changes, no table recreation                                                                     |
+| 22. Drizzle data layer setup   | ORM routing (TS)      | LLM judge | Recommends `@aws/aurora-dsql-drizzle`, required scoped `user`, `transactionWithRetry` with idempotent callback, package `migrate()` |
+| 23. Drizzle migration failure  | ORM migrations (TS)   | LLM judge | Identifies stock migrator batching DDL, routes to `migrate()`, `aurora-dsql-drizzle generate`, keeps `breakpoints: true`            |
 
 ### Grader modes
 

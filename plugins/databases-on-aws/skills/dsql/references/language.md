@@ -109,6 +109,12 @@ or [postgres-js](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/SECTIO
 - [DSQL postgres-js preferred example](https://github.com/aws-samples/aurora-dsql-samples/blob/main/javascript/postgres-js/src/example_preferred.js)
 - See [aurora-dsql-samples/javascript/postgres-js](https://github.com/aws-samples/aurora-dsql-samples/tree/main/javascript/postgres-js)
 
+#### Drizzle
+
+- Adapter: [@aws/aurora-dsql-drizzle](https://github.com/awslabs/aurora-dsql-orms/tree/main/node/drizzle) (rides `drizzle-orm/node-postgres`; no custom dialect)
+- `drizzle({ connection: { host, user, region }, schema })` — `user` is required, so a connection never defaults to `admin`
+- Use `db.transactionWithRetry()` for OCC retry and the package's `migrate()` (one DDL per transaction) instead of the stock `drizzle-orm/node-postgres` migrator — see [orm-guides/overview.md](orm-guides/overview.md) for framework gotchas
+
 #### Prisma
 
 - Custom `directUrl` with token refresh middleware
