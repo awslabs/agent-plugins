@@ -198,6 +198,16 @@
         "Routes the query to Workflow 9 (EXPLAIN ANALYZE / query plan explainability) to establish the actual plan and root cause, and does not recommend index or schema changes from AAS data alone"
       ],
       "llm_judge": true
+    },
+    {
+      "id": 17,
+      "prompt": "We finished a feature-flag rewrite and the legacy_promo_code column on my DSQL orders table (about 80k rows) is dead weight now. What's the safest way to get rid of it?",
+      "expected_output": "Issues the native ALTER TABLE orders DROP COLUMN legacy_promo_code statement in its own transaction. Does NOT reach for the Table Recreation Pattern: no _new staging table, no INSERT ... SELECT copy, no DROP TABLE, no RENAME TO. DSQL supports DROP COLUMN directly and the operation is metadata-only, so the table's 80k rows are irrelevant to the approach.",
+      "files": [],
+      "expectations": [
+        "Uses a native ALTER TABLE ... DROP COLUMN statement to remove the column",
+        "Does NOT use the table-recreation sequence: no INSERT ... SELECT into a _new table, no DROP TABLE, no RENAME TO"
+      ]
     }
   ]
 }

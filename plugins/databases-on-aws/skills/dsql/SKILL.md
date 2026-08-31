@@ -40,8 +40,8 @@ Load these files as needed for detailed guidance:
 
 | Reference                                                                                     | When to Load                                                 | Contains                                |
 | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------- |
-| [ddl-migrations/overview.md](references/ddl-migrations/overview.md)                           | MUST load for DROP COLUMN, ALTER TYPE, DROP CONSTRAINT       | Table recreation pattern, verify & swap |
-| [ddl-migrations/column-operations.md](references/ddl-migrations/column-operations.md)         | DROP COLUMN, ALTER TYPE, SET/DROP NOT NULL/DEFAULT           | Column-level migration patterns         |
+| [ddl-migrations/overview.md](references/ddl-migrations/overview.md)                           | MUST load for ALTER TYPE, DROP CONSTRAINT, MODIFY PRIMARY KEY, or dropping a PK column | Table recreation pattern, verify & swap |
+| [ddl-migrations/column-operations.md](references/ddl-migrations/column-operations.md)         | MUST load for DROP COLUMN, ALTER TYPE, SET/DROP NOT NULL/DEFAULT | Native DROP COLUMN rules; column recreation patterns |
 | [ddl-migrations/constraint-operations.md](references/ddl-migrations/constraint-operations.md) | ADD/DROP CONSTRAINT, VALIDATE CONSTRAINT, MODIFY PRIMARY KEY | Constraint and structural changes       |
 | [ddl-migrations/batched-migration.md](references/ddl-migrations/batched-migration.md)         | Tables exceeding 3,000 rows                                  | Batching patterns, progress tracking    |
 
@@ -251,9 +251,11 @@ Use `aurora-dsql-loader` for CSV, TSV, or Parquet loads. MUST load [data-loading
 
 MUST load [access-control.md](references/access-control.md) for role setup, IAM mapping, and schema permissions.
 
-### Workflow 7: Table Recreation DDL Migration
+### Workflow 7: Column and Constraint DDL Migration
 
-Use the **Table Recreation Pattern** for `ALTER COLUMN TYPE`, `DROP COLUMN`, `DROP CONSTRAINT`, or `MODIFY PRIMARY KEY`. This is a destructive workflow that requires user confirmation at each step. Every generated DDL in the pattern (CREATE new, INSERT ... SELECT, DROP old, RENAME) MUST be validated with `dsql_lint(sql=..., fix=true)` before execution.
+To drop a column, issue the native statement — `transact(["ALTER TABLE orders DROP COLUMN legacy_promo_code"])`. DSQL applies it as a synchronous, metadata-only change. MUST load [ddl-migrations/column-operations.md](references/ddl-migrations/column-operations.md#drop-column) for the `CASCADE`, primary-key, and column-budget rules, and MUST confirm the table and column with the user before issuing it.
+
+Use the **Table Recreation Pattern** for `ALTER COLUMN TYPE`, `DROP CONSTRAINT`, `MODIFY PRIMARY KEY`, or dropping a primary key column. This is a destructive workflow that requires user confirmation at each step. Every generated DDL in the pattern (CREATE new, INSERT ... SELECT, DROP old, RENAME) MUST be validated with `dsql_lint(sql=..., fix=true)` before execution.
 
 MUST load [ddl-migrations/overview.md](references/ddl-migrations/overview.md) before attempting any of these operations.
 
