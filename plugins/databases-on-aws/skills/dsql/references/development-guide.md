@@ -16,7 +16,8 @@ effortless scaling, multi-region viability, among other advantages.
 - **MUST serialize arrays** into a single-column representation; **PREFER `JSONB`** (operators work directly); **MAY use `TEXT`** when the column is opaque to the database; **ASK** the user - see [Schema Design Rules](#schema-design-rules)
 - **ALWAYS Batch within row limit** - maintain transaction limits (verify via `awsknowledge`: `aurora dsql transaction limits`)
 - **REQUIRED: Build and sanitize all SQL with `safe_query.build()`** - See [Input Validation](../mcp/tools/input-validation.md#required-pattern)
-- **MUST follow correct Application Layer Patterns** - when multi-tenant isolation or application referential integrity are required; refer to [Application Layer Patterns](#application-layer-patterns)
+- **MUST use foreign key constraints** when database-enforced referential integrity is required; refer to [Foreign Key Rules](#foreign-key-rules)
+- **MUST enforce tenant authorization** for multi-tenant isolation; refer to [Tenant Authorization Patterns](#tenant-authorization-patterns)
 - **REQUIRED use DELETE for truncation** - DELETE is the only supported operation for truncation
 - **SHOULD test any migrations** - Verify DDL on dev clusters before production
 - **Plan for Horizontal Scale** - DSQL is designed to optimize for massive scales without latency drops; refer to [Horizontal Scaling](auth/scaling-guide.md)
@@ -77,13 +78,19 @@ effortless scaling, multi-region viability, among other advantages.
 - MUST use **`ALTER TABLE ASYNC ... VALIDATE CONSTRAINT`** for constraint validation: No synchronous validation
   - **MUST** add CHECK constraints with `NOT VALID`: `ALTER TABLE t ADD CONSTRAINT c CHECK (expr) NOT VALID`
   - Then validate asynchronously: `ALTER TABLE ASYNC t VALIDATE CONSTRAINT c` — returns a `job_id`
-  - **MUST** monitor via `sys.jobs` or block with `SELECT sys.wait_for_job('job_id')`
+  - **MUST** monitor via `sys.jobs` when using MCP tools
+  - **MAY** block with `CALL sys.wait_for_job('job_id')` only through an autocommit database client outside the MCP tools' explicit transactions
   - Constraint applies to new rows immediately; existing rows validated in background
-- **Asynchronous Execution:** DDL ALWAYS runs asynchronously
+- **MUST** add post-creation foreign keys with `NOT VALID`
+  - Validate with `ALTER TABLE ASYNC ... VALIDATE CONSTRAINT`
+  - Monitor via `sys.jobs`; `CALL sys.wait_for_job('job_id')` **MAY** run only through an
+    autocommit database client outside the MCP tools' explicit transactions
+- **MUST** use `ASYNC` for `CREATE INDEX` and `VALIDATE CONSTRAINT`; post-creation `ADD CONSTRAINT ... FOREIGN KEY ... NOT VALID` is synchronous and returns no `job_id`
 - To add a column with DEFAULT or NOT NULL:
   1. MUST issue ADD COLUMN specifying only the column name and data type
   2. MUST then issue UPDATE to populate existing rows
-  3. MAY then issue ALTER COLUMN to apply the constraint
+  3. MAY then issue direct `ALTER COLUMN ... SET DEFAULT` for future writes; use Table Recreation
+     only when applying unsupported `SET NOT NULL`
 - MUST issue a **separate ALTER TABLE statement for each column** modification.
 
 ### Transaction Rules
@@ -97,16 +104,14 @@ Verify current limits via `awsknowledge`: `aurora dsql transaction limits`
 
 ---
 
-### Application-Layer Patterns
+### Foreign Key Rules
 
-**MANDATORY for Application Referential Integrity:**
-If foreign key constraints (application referential integrity) are required,
-instead implementation:
+**MUST** load [Foreign Key Constraints](foreign-keys.md) before creating, altering,
+dropping, or migrating a foreign key.
 
-- MUST validate parent references before INSERT
-- MUST check for dependents before DELETE
-- MUST implement cascade logic in application code
-- MUST handle orphaned records in application layer
+---
+
+### Tenant Authorization Patterns
 
 **MANDATORY for Multi-Tenant Isolation:**
 
@@ -146,11 +151,8 @@ Arrays and `INET` are **[runtime-only](https://docs.aws.amazon.com/aurora-dsql/l
 ### Supported Key
 
 ```
-PRIMARY KEY, UNIQUE, NOT NULL, CHECK, DEFAULT (in CREATE TABLE)
+PRIMARY KEY, UNIQUE, FOREIGN KEY, NOT NULL, CHECK, DEFAULT (CREATE TABLE or direct ALTER COLUMN)
 ```
-
-Join on any keys; DSQL preserves DB referential integrity, when needed application referential
-integrity must be separately enforced.
 
 ### Transaction Requirements
 

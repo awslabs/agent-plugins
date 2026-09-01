@@ -36,43 +36,13 @@ async function deleteOrder(pool, tenantId, orderId) {
 
 ---
 
-## Application-Layer Referential Integrity
+## Multi-Tenant Foreign Key
 
-SHOULD validate references for custom business rules (DSQL provides database-level integrity).
-
-```javascript
-async function createLineItem(pool, tenantId, lineItemData) {
-  const orderCheck = await pool.query(
-    'SELECT order_id FROM orders WHERE tenant_id = $1 AND order_id = $2',
-    [tenantId, lineItemData.order_id]
-  );
-
-  if (orderCheck.rows.length === 0) {
-    throw new Error('Order does not exist');
-  }
-
-  await pool.query(
-    'INSERT INTO line_items (tenant_id, order_id, product_id, quantity) VALUES ($1, $2, $3, $4)',
-    [tenantId, lineItemData.order_id, lineItemData.product_id, lineItemData.quantity]
-  );
-}
-
-async function deleteProduct(pool, tenantId, productId) {
-  const check = await pool.query(
-    'SELECT COUNT(*) as count FROM line_items WHERE tenant_id = $1 AND product_id = $2',
-    [tenantId, productId]
-  );
-
-  if (parseInt(check.rows[0].count) > 0) {
-    throw new Error('Product has existing orders');
-  }
-
-  await pool.query(
-    'DELETE FROM products WHERE tenant_id = $1 AND product_id = $2',
-    [tenantId, productId]
-  );
-}
-```
+For a tenant-scoped relationship where the database must enforce tenant equality, **MUST** include
+a non-null tenant key in both keys. Under `MATCH SIMPLE`, optional relationship columns **MAY**
+remain nullable. Preserve ordinary foreign keys for shared or globally identified rows. See the
+executable [Foreign Key Pattern](../../mcp/tools/workflow-patterns.md#pattern-5-foreign-key) and
+follow [Foreign Key Constraints](../foreign-keys.md) for operational guidance.
 
 ---
 

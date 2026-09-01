@@ -19,15 +19,15 @@
     },
     {
       "id": 202,
-      "name": "fk-validation-generation",
-      "prompt": "My PostgreSQL schema has:\n\nCREATE TABLE orders (\n  id UUID PRIMARY KEY,\n  customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,\n  product_id UUID REFERENCES products(id)\n);\n\nConvert this for DSQL and generate the FK replacement code.",
-      "expected_output": "Removes FK constraints, generates validate_fk functions for both FKs, generates a cascade_delete function for the ON DELETE CASCADE",
+      "name": "foreign-key-preservation",
+      "prompt": "My PostgreSQL schema has:\n\nCREATE TABLE orders (\n  id UUID PRIMARY KEY,\n  customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,\n  product_id UUID REFERENCES products(id)\n);\n\nConvert this for DSQL while preserving all supported referential integrity.",
+      "expected_output": "Preserves both foreign key constraints and the ON DELETE CASCADE action, and explains DSQL transaction and retry implications",
       "expectations": [
-        "Removes both FOREIGN KEY constraints from the CREATE TABLE",
-        "Generates a validate_fk_orders_customer_id() function that checks customers table",
-        "Generates a validate_fk_orders_product_id() function that checks products table",
-        "Generates a cascade function for the ON DELETE CASCADE (deletes orders when customer is deleted)",
-        "Explains when to call each function (validate before INSERT, cascade before DELETE)"
+        "Preserves the customer_id foreign key to customers",
+        "Preserves the product_id foreign key to products",
+        "Preserves ON DELETE CASCADE for the customer relationship",
+        "States that cascaded rows count toward DSQL transaction limits",
+        "Mentions retrying SQLSTATE 40001 serialization failures from concurrent foreign key conflicts"
       ],
       "grader": "llm_judge"
     },
@@ -63,11 +63,11 @@
       "id": 206,
       "name": "django-migration-guidance",
       "prompt": "I'm migrating my Django app to DSQL. What adapter do I use and what model changes are needed? I currently have ForeignKey fields and ArrayField.",
-      "expected_output": "Recommends aurora-dsql-django adapter, explains ForeignKey replacement with plain fields + validation, ArrayField replacement with JSONField",
+      "expected_output": "Recommends aurora-dsql-django, preserves ForeignKey fields as database constraints, and replaces ArrayField with JSONField",
       "expectations": [
         "Recommends aurora-dsql-django as the database ENGINE",
-        "Explains that ForeignKey fields must be replaced with BigIntegerField or UUIDField",
-        "Suggests adding clean() or signal-based FK validation",
+        "Keeps Django ForeignKey fields and database constraints",
+        "Preserves foreign key constraints and does not recommend db_constraint=False",
         "Explains that ArrayField is not supported and should use JSONField",
         "Mentions OCC retry logic is needed (SQLSTATE 40001)"
       ],
@@ -133,17 +133,49 @@
       "id": 207,
       "name": "full-schema-conversion",
       "prompt": "Convert this complete PostgreSQL schema to DSQL-compatible DDL:\n\nCREATE TYPE status AS ENUM ('active','inactive','suspended');\n\nCREATE TABLE organizations (\n  id SERIAL PRIMARY KEY,\n  name VARCHAR(200) UNIQUE\n);\n\nCREATE TABLE users (\n  id SERIAL PRIMARY KEY,\n  org_id INT REFERENCES organizations(id) ON DELETE CASCADE,\n  email VARCHAR(255) NOT NULL,\n  status status DEFAULT 'active',\n  preferences JSONB,\n  search_tokens TSVECTOR\n);\n\nCREATE INDEX idx_users_search ON users USING gin(search_tokens);\nCREATE INDEX idx_users_active ON users (email) WHERE status = 'active';\n\nCREATE FUNCTION update_search() RETURNS TRIGGER AS $$\nBEGIN\n  NEW.search_tokens = to_tsvector(NEW.email);\n  RETURN NEW;\nEND;\n$$ LANGUAGE plpgsql;",
-      "expected_output": "Comprehensive conversion: SERIAL\u2192IDENTITY, ENUM\u2192CHECK, FK\u2192removed+validation function, JSONB kept as JSONB, TSVECTOR\u2192text, GIN\u2192removed, partial index\u2192full or composite, PL/pgSQL\u2192removed with guidance",
+      "expected_output": "Comprehensive conversion: SERIAL\u2192IDENTITY, ENUM\u2192CHECK, foreign key preserved with cascade, JSONB kept as JSONB, TSVECTOR\u2192text, GIN\u2192removed, partial index\u2192full or composite, PL/pgSQL\u2192removed with guidance",
       "expectations": [
         "Converts SERIAL to IDENTITY or sequence-based approach",
         "Converts ENUM to CHECK constraint",
-        "Removes the FOREIGN KEY and generates a validate_fk function or cascade function",
+        "Preserves the FOREIGN KEY and ON DELETE CASCADE as DSQL constraints",
         "Keeps JSONB as a stored column type (does NOT convert it to json or text)",
         "Converts TSVECTOR to text and notes FTS must move to external service",
         "Removes or converts the GIN index (not supported)",
         "Handles the partial index (WHERE status = 'active') \u2014 removes WHERE or adds status to composite index",
         "Omits per-column COLLATE \"C\" (DSQL uses C collation database-wide; per-column clause is not supported)",
         "Uses CREATE INDEX ASYNC for all indexes"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 212,
+      "name": "existing-table-foreign-key",
+      "prompt": "Add a foreign key to my existing multi-tenant DSQL orders table. It has (tenant_id, customer_id), and customers has PRIMARY KEY (tenant_id, customer_id). The table is large, deletes should cascade, and production writes cannot pause. Show the safe DDL sequence, operational caveats, and how I could later drop only this foreign key without recreating the table.",
+      "expected_output": "Adds a tenant-scoped foreign key with NOT VALID, validates it asynchronously, covers cascade limits and retries, and uses DROP CONSTRAINT for direct removal",
+      "expectations": [
+        "Uses a composite FOREIGN KEY (tenant_id, customer_id) that references customers (tenant_id, customer_id)",
+        "Requires tenant_id to be NOT NULL on both sides of the tenant-scoped foreign key",
+        "Adds the constraint with NOT VALID",
+        "States that ADD CONSTRAINT FOREIGN KEY without NOT VALID is rejected and that ASYNC applies to VALIDATE CONSTRAINT, not ADD CONSTRAINT",
+        "Runs ALTER TABLE ASYNC orders VALIDATE CONSTRAINT as a separate DDL operation",
+        "Captures the returned job_id, polls sys.jobs through submitted, processing, completed, or failed, and verifies pg_constraint.convalidated",
+        "Inspects sys.jobs.details before diagnosing a failed validation as orphaned rows",
+        "Drops the foreign key directly with ALTER TABLE orders DROP CONSTRAINT and does not recreate the table or emit DROP FOREIGN KEY",
+        "States that cascaded rows count toward transaction limits and recommends NO ACTION or RESTRICT when one parent's fan-out can exceed them",
+        "Retries the complete transaction only for retryable SQLSTATE 40001 serialization failures and does not retry SQLSTATE 23503"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 214,
+      "name": "foreign-key-timeless-framing",
+      "prompt": "A teammate says Aurora DSQL recently added foreign keys, so our migration guide should explain the old application-layer replacement pattern before showing the syntax. How should the guide describe foreign keys?",
+      "expected_output": "States directly that Aurora DSQL supports foreign key constraints, recommends ordinary foreign keys by default, and avoids rollout/history framing or legacy application-layer replacement guidance",
+      "expectations": [
+        "States directly that Aurora DSQL supports foreign key constraints",
+        "Recommends using ordinary foreign keys for referential integrity",
+        "Does NOT describe foreign keys as newly, recently, or now supported",
+        "Does NOT recommend teaching the legacy application-layer foreign key replacement pattern"
       ],
       "grader": "llm_judge"
     },

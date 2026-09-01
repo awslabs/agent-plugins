@@ -71,20 +71,6 @@
         "Validates the UUID format at the DSQL boundary rather than trusting upstream"
       ],
       "grader": "regex"
-    },
-    {
-      "id": 5,
-      "name": "application-layer-fk-check",
-      "prompt": "I'm implementing application-layer referential integrity in DSQL. Before inserting a row into objectives (with entity_id FK to entities), check the parent entity exists for this tenant, then insert. parent_id and tenant_id come in as UUIDs from the request, and the objective has a title (free-text user input).",
-      "expected_output": "Two safe_query.build() calls: one SELECT for the existence check, one INSERT. Both validate parent_id via UUID, tenant_id via UUID or TENANT_SLUG. Title (free text) uses literal().",
-      "expectations": [
-        "Uses safe_query.build() for BOTH the existence check and the insert (not just one)",
-        "Validates parent_id with UUID regex",
-        "Validates tenant_id with a validator (UUID or TENANT_SLUG)",
-        "Uses literal() for any free-text fields like title or description",
-        "Checks the parent exists before the insert, and returns/raises an error if it does not"
-      ],
-      "grader": "regex"
     }
   ]
 }

@@ -18,14 +18,15 @@
     {
       "id": 2,
       "prompt": "Create a multi-tenant e-commerce schema in DSQL with customers, orders, and products tables. Include proper indexes.",
-      "expected_output": "Creates tables with tenant_id in primary keys, uses CREATE INDEX ASYNC, does not use foreign keys, issues each DDL in its own transaction",
+      "expected_output": "Creates tables with tenant_id in composite keys, uses tenant-scoped foreign key constraints and CREATE INDEX ASYNC, and issues each DDL in its own transaction",
       "expectations": [
-        "Includes tenant_id column in all tables",
+        "Creates each table with tenant_id defined as NOT NULL and included in a composite PRIMARY KEY or UNIQUE constraint",
         "Uses CREATE INDEX ASYNC (not synchronous CREATE INDEX)",
-        "Does NOT use FOREIGN KEY constraints",
+        "Uses FOREIGN KEY constraints that include tenant_id in both the referenced and referencing key",
+        "Defines tenant_id as NOT NULL on both sides of every tenant-scoped foreign key; under MATCH SIMPLE, optional relationship columns may remain nullable and NULL means no relationship",
         "Issues each DDL statement in its own separate transaction"
       ],
-      "grader": "regex"
+      "grader": "llm_judge"
     },
     {
       "id": 3,
@@ -59,10 +60,11 @@
       "expectations": [
         "Describes the Table Recreation Pattern (create new table, copy data, drop old, rename)",
         "Warns that this involves a destructive DROP TABLE operation",
+        "Inspects inbound foreign keys and dependent views before starting, and requires a separate approved plan when they exist",
         "Mentions batching the data copy for tables exceeding 3,000 rows",
         "Requires or recommends user confirmation before destructive steps"
       ],
-      "grader": "regex"
+      "grader": "llm_judge"
     },
     {
       "id": 6,
@@ -145,11 +147,11 @@
     {
       "id": 13,
       "prompt": "I'm building a new .NET web API with Entity Framework Core and want to use Aurora DSQL as the database. Help me get the data layer set up correctly.",
-      "expected_output": "Recommends the Amazon.AuroraDsql.EntityFrameworkCore adapter with AddDsqlDataSource/UseDsql, and guides toward DSQL-friendly patterns: Guid keys with gen_random_uuid(), application-layer referential integrity, and DsqlExecutionStrategy for OCC retry.",
+      "expected_output": "Recommends the Amazon.AuroraDsql.EntityFrameworkCore adapter with AddDsqlDataSource/UseDsql, and guides toward DSQL-friendly patterns: Guid keys with gen_random_uuid(), foreign key constraints, and DsqlExecutionStrategy for OCC retry.",
       "expectations": [
         "Recommends the Amazon.AuroraDsql.EntityFrameworkCore adapter and AddDsqlDataSource/UseDsql setup",
         "Recommends Guid primary keys with a gen_random_uuid() default (or EnableIdentityColumns for long keys)",
-        "Recommends enforcing referential integrity in the application layer",
+        "Recommends foreign key constraints and notes that cascades count toward transaction limits",
         "Recommends DsqlExecutionStrategy for OCC retry to handle concurrency conflicts"
       ],
       "grader": "llm_judge"
@@ -188,6 +190,70 @@
         "Does NOT claim the query is performing a full or sequential table scan",
         "Does NOT assert that an index is missing, still building, or unused based on the CloudWatch metric",
         "Routes the query to Workflow 9 (EXPLAIN ANALYZE / query plan explainability) to establish the actual plan and root cause, and does not recommend index or schema changes from AAS data alone"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 17,
+      "prompt": "Create a multi-tenant orders table that references a shared countries lookup table. Country codes are globally unique and the countries table has no tenant_id.",
+      "expected_output": "Uses an ordinary single-column foreign key from orders.country_code to countries.code and keeps tenant authorization separate",
+      "expectations": [
+        "Creates an ordinary foreign key from orders.country_code to countries.code",
+        "Does NOT add tenant_id to the shared countries table or the country foreign key",
+        "Keeps tenant_id on the tenant-owned orders table",
+        "States that caller tenant authorization remains an application responsibility"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 18,
+      "prompt": "Add a UNIQUE constraint to the email column of my existing Aurora DSQL users table without recreating the table. Show the supported sequence and readiness checks.",
+      "expected_output": "Builds a unique index asynchronously, waits for it to become valid, then promotes it to a UNIQUE constraint with USING INDEX",
+      "expectations": [
+        "Checks for duplicate email values before building the unique index",
+        "Uses CREATE UNIQUE INDEX ASYNC on users(email)",
+        "Waits for the async job and verifies pg_index.indisvalid = true",
+        "Uses ALTER TABLE users ADD CONSTRAINT ... UNIQUE USING INDEX ...",
+        "Does NOT use the Table Recreation Pattern for this UNIQUE constraint"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 19,
+      "prompt": "Change the primary key of an existing Aurora DSQL parent table from old_id to new_id. Several child tables may reference old_id. Plan the migration safely.",
+      "expected_output": "Inventories inbound foreign keys before creating the replacement and preserves a unique target for every retained relationship",
+      "expectations": [
+        "Queries pg_constraint for inbound foreign keys that reference the current primary key before creating the replacement table",
+        "Identifies which referenced columns would lose PRIMARY KEY or UNIQUE coverage",
+        "Retains a UNIQUE constraint on demoted referenced columns when those relationships must remain",
+        "Requires explicit approval before intentionally dropping any inbound relationship",
+        "Aborts the migration when a retained inbound foreign key cannot be restored"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 20,
+      "prompt": "On an existing Aurora DSQL table, remove a UNIQUE constraint and add a CHECK constraint that requires status IN ('open', 'closed') without scanning existing rows during the add. Show the safe direct DDL path.",
+      "expected_output": "Drops the UNIQUE constraint directly and adds the CHECK constraint with NOT VALID before asynchronous validation",
+      "expectations": [
+        "Confirms the named UNIQUE constraint before dropping it and explains the lost invariant",
+        "Uses ALTER TABLE ... DROP CONSTRAINT directly instead of table recreation",
+        "Adds the CHECK constraint with ALTER TABLE ... ADD CONSTRAINT ... CHECK (...) NOT VALID",
+        "Uses ALTER TABLE ASYNC ... VALIDATE CONSTRAINT for existing rows and verifies the validation job",
+        "Does NOT suggest adding the CHECK constraint through table recreation"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 21,
+      "prompt": "On an existing Aurora DSQL table, remove NOT NULL from optional_note and change status to default to 'pending'. Show the direct DDL path without recreating the table.",
+      "expected_output": "Uses direct ALTER COLUMN DROP NOT NULL and SET DEFAULT statements",
+      "expectations": [
+        "Uses ALTER TABLE ... ALTER COLUMN optional_note DROP NOT NULL",
+        "Uses ALTER TABLE ... ALTER COLUMN status SET DEFAULT 'pending'",
+        "States that the default applies to future inserts and does not backfill existing rows",
+        "Uses one DDL statement per transaction",
+        "Does NOT recommend the Table Recreation Pattern"
       ],
       "grader": "llm_judge"
     }

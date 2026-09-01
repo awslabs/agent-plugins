@@ -10,10 +10,11 @@
         "Calls the dsql_lint MCP tool with the provided SQL",
         "Uses fix=true to get DSQL-compatible output",
         "Surfaces each diagnostic (fixed, fixed_with_warning, unfixable) to the user before executing",
-        "For fixed_with_warning diagnostics, explains application-layer implications before proceeding",
+        "For fixed_with_warning diagnostics, explains the operational implications before proceeding",
+        "Preserves the REFERENCES teams relationship in fixed_sql, allowing formatter whitespace, and does not report the foreign key as unsupported or remove it",
         "Does NOT execute the SQL before dsql_lint returns and diagnostics are presented"
       ],
-      "grader": "regex",
+      "grader": "llm_judge",
       "required_mcp_servers": ["aurora-dsql"]
     },
     {
@@ -24,10 +25,10 @@
         "Calls the dsql_lint MCP tool",
         "Identifies that the SQL has compatibility issues",
         "Splits the multi-DDL transaction into separate transact calls (one DDL per call), not a single transact with all statements",
-        "Warns the user about removed foreign key constraint requiring app-layer enforcement",
+        "Preserves the foreign key constraint and does not report it as an unsupported DSQL feature",
         "Does NOT execute fixed_sql while any diagnostic has fix_result.status == unfixable"
       ],
-      "grader": "regex",
+      "grader": "llm_judge",
       "required_mcp_servers": ["aurora-dsql"]
     },
     {
@@ -39,7 +40,7 @@
         "Reports that the SQL is compatible (diagnostics array is empty, summary errors and warnings are zero)",
         "Does NOT call transact (user explicitly said don't execute)"
       ],
-      "grader": "regex",
+      "grader": "llm_judge",
       "required_mcp_servers": ["aurora-dsql"]
     },
     {
@@ -51,9 +52,10 @@
         "Recognizes that the tool returned a parse_error diagnostic (the PostgreSQL parser short-circuits on AUTO_INCREMENT before reaching SET / ENGINE / PARTITION BY)",
         "Does NOT claim all issues can be auto-fixed",
         "Loads references/mysql-migrations/type-mapping.md and manually scans the source SQL for MySQL-specific syntax (AUTO_INCREMENT, SET column type, ENGINE=, PARTITION BY) rather than trusting a post-fix clean lint as sufficient",
+        "Preserves the foreign key constraint to categories",
         "Proposes conversions for each MySQL-specific construct and offers to re-run dsql_lint on the converted SQL before executing"
       ],
-      "grader": "regex",
+      "grader": "llm_judge",
       "required_mcp_servers": ["aurora-dsql"]
     }
   ]
