@@ -245,6 +245,49 @@
         "Mentions that the connector handles retries automatically with proper backoff"
       ],
       "grader": "llm_judge"
+    },
+    {
+      "id": 305,
+      "name": "numeric-precision-scale-parity",
+      "prompt": "Convert this PostgreSQL table to DSQL-compatible DDL. Briefly explain the NUMERIC choices and state the supported explicit precision and scale bounds:\n\nCREATE TABLE measurements (\n  id UUID PRIMARY KEY,\n  exact_fraction NUMERIC(1000,1000),\n  lower_bound_scale NUMERIC(1,-1000),\n  rounded_thousands NUMERIC(10,-3),\n  fractional_only NUMERIC(3,5)\n);",
+      "expected_output": "Preserves every NUMERIC declaration because DSQL supports PostgreSQL's explicit precision and scale bounds, including negative scales and scales greater than precision",
+      "expectations": [
+        "Preserves NUMERIC(1000,1000) without narrowing the precision or scale",
+        "Preserves NUMERIC(1,-1000), demonstrating minimum precision and minimum scale",
+        "Preserves NUMERIC(10,-3) and explains that negative scales are supported",
+        "Preserves NUMERIC(3,5) and explains that scale may exceed precision",
+        "States that explicit NUMERIC precision ranges from 1 through 1000 and scale ranges from -1000 through 1000",
+        "Does NOT apply the obsolete DSQL limits of precision 38 or scale 37"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 306,
+      "name": "numeric-precision-scale-invalid-boundaries",
+      "prompt": "Review these explicitly declared PostgreSQL NUMERIC types for Aurora DSQL. Identify every invalid declaration, explain the supported bounds, and do not silently narrow any declaration:\n\nCREATE TABLE invalid_measurements (\n  zero_precision NUMERIC(0,0),\n  excessive_precision NUMERIC(1001,0),\n  scale_below_minimum NUMERIC(10,-1001),\n  scale_above_maximum NUMERIC(10,1001)\n);",
+      "expected_output": "Rejects all four declarations as outside DSQL's PostgreSQL-compatible explicit NUMERIC bounds instead of silently narrowing them",
+      "expectations": [
+        "Rejects NUMERIC(0,0) because explicit precision must be at least 1",
+        "Rejects NUMERIC(1001,0) because explicit precision must not exceed 1000",
+        "Rejects NUMERIC(10,-1001) because explicit scale must not be below -1000",
+        "Rejects NUMERIC(10,1001) because explicit scale must not exceed 1000",
+        "Does NOT silently narrow or rewrite any invalid declaration to the obsolete precision 38 or scale 37 limits"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 307,
+      "name": "numeric-unspecified-default",
+      "prompt": "Review this PostgreSQL table for migration to Aurora DSQL. Explain how each NUMERIC declaration behaves in DSQL and what must be checked before migrating existing values:\n\nCREATE TABLE invoices (\n  id UUID PRIMARY KEY,\n  amount NUMERIC,\n  tax NUMERIC(20,8)\n);",
+      "expected_output": "Explains that bare NUMERIC defaults to NUMERIC(18,6) in DSQL instead of retaining PostgreSQL's unconstrained behavior, while preserving the valid explicit NUMERIC(20,8) declaration",
+      "expectations": [
+        "States that the bare NUMERIC amount column defaults to NUMERIC(18,6) in DSQL",
+        "Explains that PostgreSQL bare NUMERIC is unconstrained and therefore has different migration semantics",
+        "Requires checking existing amount values and choosing explicit precision and scale if they do not fit NUMERIC(18,6)",
+        "Preserves NUMERIC(20,8) because it is within the supported explicit bounds",
+        "Does NOT apply the obsolete DSQL limits of precision 38 or scale 37"
+      ],
+      "grader": "llm_judge"
     }
   ]
 }
