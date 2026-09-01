@@ -175,6 +175,16 @@ run = [
   "grype ."
 ]
 
+[tasks."security:zizmor"]
+description = "Run zizmor (GitHub Actions static analysis)"
+# Runs via `uvx` so no repo dependency is added (same ephemeral pattern as
+# tests). Scans .github/ (workflows + actions). ADVISORY for now: the repo has
+# pre-existing findings (see #221), so `|| true` keeps this non-blocking until
+# that backlog is burned down, after which the `|| true` is removed to gate.
+run = [
+  "uvx zizmor@1.26.1 --offline .github/ || true",
+]
+
 [tasks.security]
 description = "Run security scans"
 run = [
@@ -183,6 +193,7 @@ run = [
     { task = "security:gitleaks" },
     { task = "security:checkov" },
     { task = "security:grype" },
+    { task = "security:zizmor" },
 ]
 
 # ===============

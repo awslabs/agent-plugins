@@ -3,7 +3,17 @@
 This file contains common additional errors encountered while working with DSQL and
 guidelines for how to solve them.
 
-Before referring to any listed errors, refer to the complete [DSQL troubleshooting guide](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/troubleshooting.html#troubleshooting-connections)
+Before referring to any listed error, use the routing below and consult
+[Additional Resources](#additional-resources).
+
+## Table of Contents
+
+1. [Connection and Authorization](#connection-and-authorization)
+2. [Cluster Lifecycle](#cluster-lifecycle)
+3. [Foreign Key Addition or Validation Fails](#foreign-key-addition-or-validation-fails)
+4. [Incompatibility](#incompatibility)
+5. [Protocol Compatibility](#protocol-compatibility)
+6. [Additional Resources](#additional-resources)
 
 ## Connection and Authorization
 
@@ -64,11 +74,30 @@ The cluster is `INACTIVE` and waking up. Poll `aws dsql get-cluster --identifier
 
 Connect to the cluster to wake it, then retry the backup.
 
+## Foreign Key Addition or Validation Fails
+
+**Addition failure:** Aurora DSQL rejects `ALTER TABLE ... ADD CONSTRAINT ... FOREIGN KEY`
+without `NOT VALID`. Add the post-creation constraint with `NOT VALID`.
+
+**Validation-job failure:** Inspect `sys.jobs.status` and `sys.jobs.details` first. Repair
+referencing rows only when `details` identifies a foreign key violation. For other failures,
+address the reported cause before rerunning
+`ALTER TABLE ASYNC ... VALIDATE CONSTRAINT`.
+
+For SQLSTATE `40001` during concurrent referenced-row and referencing-row writes, retry the
+complete transaction. For transaction-limit errors during cascades, assess per-parent fan-out.
+When one parent can exceed transaction limits, use `NO ACTION` or `RESTRICT`, process child rows
+in bounded transactions, then change the parent.
+
+### Error: "... violates foreign key constraint"
+
+SQLSTATE `23503` is not retryable. Correct the relationship or apply the intended referential
+action; **MUST NOT** route it through the `40001` OCC retry loop.
+
 ## Incompatibility
 
 When migrating from PostgreSQL, remember DSQL doesn't support:
 
-- **Foreign key constraints** - Enforce referential integrity in application code
 - **SERIAL types** - Use `GENERATED { ALWAYS | BY DEFAULT } AS IDENTITY` with sequences instead
 - **Extensions** - No PL/pgSQL, PostGIS, pgvector, etc.
 - **Triggers** - Implement logic in application layer
@@ -79,16 +108,6 @@ When migrating from PostgreSQL, remember DSQL doesn't support:
 - **Partitioning** - Manage data distribution in application
 
 See [full list of unsupported features](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility-unsupported-features.html).
-
-### Error: "Foreign key constraint not supported"
-
-**Cause:** Attempting to create FOREIGN KEY constraint
-**Solution:**
-
-1. Remove FOREIGN KEY from DDL
-2. Implement validation in application code
-3. Check parent exists before INSERT
-4. Check dependents before DELETE
 
 ### Error: "Datatype array not supported"
 
@@ -139,3 +158,8 @@ CREATE INDEX ASYNC idx_name ON table(column);
 
 - Use officially tested drivers from [aws-samples/aurora-dsql-samples](https://github.com/aws-samples/aurora-dsql-samples)
 - Test client compatibility before production deployment
+
+## Additional Resources
+
+- [Aurora DSQL troubleshooting guide](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/troubleshooting.html#troubleshooting-connections)
+- [Aurora DSQL PostgreSQL compatibility](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with.html)

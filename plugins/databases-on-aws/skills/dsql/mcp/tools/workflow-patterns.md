@@ -85,27 +85,30 @@ inserts = [
 transact(inserts)
 ```
 
-## Pattern 5: Application-Layer Foreign Key Check
+## Pattern 5: Foreign Key
 
 ```python
-from safe_query import build, regex, literal, UUID, TENANT_SLUG
+transact(["""CREATE TABLE entities (
+  tenant_id UUID NOT NULL,
+  entity_id UUID NOT NULL,
+  name TEXT NOT NULL,
+  PRIMARY KEY (tenant_id, entity_id)
+)"""])
 
-check = build(
-    "SELECT entity_id FROM entities "
-    "WHERE entity_id = {eid} AND tenant_id = {tid}",
-    eid=regex(parent_id, UUID),
-    tid=regex(tenant_id, TENANT_SLUG),
-)
-if not readonly_query(check):
-    raise ValueError("Invalid parent reference")
-
-insert = build(
-    "INSERT INTO objectives (objective_id, entity_id, tenant_id, title) "
-    "VALUES ({oid}, {eid}, {tid}, {title})",
-    oid=regex(new_objective_id, UUID),
-    eid=regex(parent_id, UUID),
-    tid=regex(tenant_id, TENANT_SLUG),
-    title=literal(objective_title),
-)
-transact([insert])
+transact(["""CREATE TABLE objectives (
+  tenant_id UUID NOT NULL,
+  objective_id UUID NOT NULL,
+  entity_id UUID NOT NULL,
+  title TEXT NOT NULL,
+  PRIMARY KEY (tenant_id, objective_id),
+  CONSTRAINT objectives_entities_fkey
+    FOREIGN KEY (tenant_id, entity_id)
+    REFERENCES entities (tenant_id, entity_id)
+)"""])
 ```
+
+For a tenant-scoped relationship where the database must enforce tenant equality, **MUST** include
+a non-null tenant key on both sides. Under `MATCH SIMPLE`, optional relationship columns **MAY**
+remain nullable. Preserve ordinary foreign keys for shared or globally identified rows. The FK
+enforces integrity, not caller authorization. See
+[Foreign Key Constraints](../../references/foreign-keys.md) for linting and migration workflows.
