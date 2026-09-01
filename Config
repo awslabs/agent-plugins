@@ -1,0 +1,11 @@
+package.AxdbAgentPluginsStaging = {
+    interfaces = (1.0);
+
+    build-system = custom-build;
+
+    build-tools = {
+        1.0 = {
+            BrazilPath = 1.1;
+        };
+    };
+};

@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+target="${1:-release}"
+
+case "$target" in
+  release)
+    ;;
+  clean)
+    rm -rf build
+    exit 0
+    ;;
+  *)
+    echo "Unsupported build target: $target" >&2
+    exit 2
+    ;;
+esac
+
+required_paths=(
+  ".agents"
+  ".claude-plugin"
+  "plugins"
+  "schemas"
+  "tools"
+  "mise.toml"
+)
+
+for required_path in "${required_paths[@]}"; do
+  if [[ ! -e "$required_path" ]]; then
+    echo "Missing required monorepo path: $required_path" >&2
+    exit 1
+  fi
+done
+
+build_root="$(brazil-path package-build-root)"
+artifact_root="$build_root/agent-plugins-source"
+
+rm -rf "$artifact_root"
+mkdir -p "$artifact_root"
+
+tar \
+  --exclude="./.git" \
+  --exclude="./build" \
+  --exclude="./.tmp" \
+  -cf - . |
+  tar -xf - -C "$artifact_root"
+
+echo "Packaged source at $artifact_root"
