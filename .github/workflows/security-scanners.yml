@@ -151,6 +151,43 @@ jobs:
         run: |
           echo "::error::grype found vulnerabilities"
           exit ${{ steps.grype.outputs.exit_code }}  # nosemgrep: yaml.github-actions.security.curl-eval.curl-eval
+  zizmor:
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    runs-on: ubuntu-latest
+    env:
+      ZIZMOR_VERSION: "1.26.1"
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@e92bafb6253dcd438e0484186d7669ea7a8ca1cc # v6.7.0
+      - name: Run zizmor
+        id: zizmor
+        # ADVISORY: the repo has a pre-existing workflow findings backlog (#221),
+        # so this job reports (SARIF -> code scanning) without failing the build.
+        # zizmor's CLI emits JSON (SARIF v1); convert to SARIF via the built-in
+        # format. Once the backlog is cleared, gate on exit_code to make blocking.
+        run: |
+          set +e
+          uvx "zizmor@${ZIZMOR_VERSION}" --offline --format sarif .github/ > zizmor-report_sarif.json
+          ZIZMOR_EXIT=$?
+          set -e
+          echo "exit_code=$ZIZMOR_EXIT" >> "$GITHUB_OUTPUT"
+          echo "::notice::zizmor exit code $ZIZMOR_EXIT (advisory; not gating — see #221)"
+          exit 0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: zizmor.sarif
+          path: zizmor-report_sarif.json
+          if-no-files-found: error
+      - uses: github/codeql-action/upload-sarif@5e7a52feb2a3dfb87f88be2af33b9e2275f48de6 # v4.32.2
+        continue-on-error: true
+        with:
+          sarif_file: zizmor-report_sarif.json
   checkov:
     permissions:
       actions: read

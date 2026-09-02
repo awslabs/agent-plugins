@@ -6,15 +6,19 @@
 **Evaluation method:** Manual behavioral comparison — subagent run with skill loaded vs. subagent run without skill. Automated grading for these evals is not yet wired into `run_functional_evals.py`; PASS/FAIL is a human assessment of transcripts against the expectations in `dsql_lint_evals.json`.
 
 > **Historical note:** This eval was run when DSQL did not support `JSONB` as a column type, so the skill's "JSON → TEXT" rewrite was correct at the time and the baseline's `JSONB` recommendation was a hallucination. DSQL has since added native `JSON` and `JSONB` support; later `dsql-lint` versions accept both. The pass/fail judgments here are preserved as-is to keep the snapshot accurate.
+>
+> **Historical FK-support note:** Eval 100 and Eval 101 also predate Aurora DSQL foreign key support.
+> Their app-layer-enforcement and FK-removal observations are historical only. Current
+> `dsql_lint` preserves supported FKs, and current evals require agents to preserve them.
 
 ## Summary
 
-| Eval | Scenario                  | With Skill | Baseline        | Delta                                                           |
-| ---- | ------------------------- | ---------- | --------------- | --------------------------------------------------------------- |
-| 100  | pg_dump PostgreSQL schema | **PASS**   | FAIL (3 errors) | Skill corrects JSON, index, transaction handling                |
-| 101  | Django ORM migration      | **PASS**   | FAIL (3 errors) | Skill corrects JSON, index, provides actionable Django guidance |
-| 102  | Clean DSQL-compatible SQL | **PASS**   | N/A             | Tool correctly reports no issues; agent does not execute        |
-| 103  | MySQL unsupported syntax  | **PASS**   | N/A             | Tool returns parse error; agent falls back to mysql-migrations  |
+| Eval | Scenario                  | With Skill | Baseline        | Delta                                                                      |
+| ---- | ------------------------- | ---------- | --------------- | -------------------------------------------------------------------------- |
+| 100  | pg_dump PostgreSQL schema | **PASS**   | FAIL (3 errors) | Historical pre-FK-support snapshot; do not use FK rows as current guidance |
+| 101  | Django ORM migration      | **PASS**   | FAIL (3 errors) | Historical pre-FK-support snapshot; do not use FK rows as current guidance |
+| 102  | Clean DSQL-compatible SQL | **PASS**   | N/A             | Tool correctly reports no issues; agent does not execute                   |
+| 103  | MySQL unsupported syntax  | **PASS**   | N/A             | Tool returns parse error; agent falls back to mysql-migrations             |
 
 The skill demonstrably changes agent behavior. The baseline agent hallucinates incorrect
 DSQL constraints (JSONB support, synchronous indexes) while the skill-guided agent uses
@@ -39,34 +43,34 @@ CREATE INDEX idx_users_email ON users(email);
 
 ### Behavior Comparison
 
-| Behavior                | With Skill                            | Baseline                   | Correct?                                                        |
-| ----------------------- | ------------------------------------- | -------------------------- | --------------------------------------------------------------- |
-| Used deterministic tool | PASS Called `dsql_lint`               | FAIL Relied on memory      | Skill wins                                                      |
-| SERIAL replacement      | BIGINT IDENTITY (CACHE 1)             | UUID gen_random_uuid()     | Both valid, skill matches `dsql_lint` output                    |
-| JSON handling           | PASS TEXT                             | FAIL JSONB                 | **Baseline wrong** — DSQL does not support JSONB as column type |
-| Index handling          | PASS CREATE INDEX ASYNC               | FAIL "Index is fine as-is" | **Baseline wrong** — DSQL requires ASYNC                        |
-| Transaction splitting   | PASS Explicitly stated one DDL per tx | FAIL Not mentioned         | **Baseline misses**                                             |
-| Foreign key guidance    | PASS App-layer enforcement            | PASS App-layer enforcement | Both correct                                                    |
+| Behavior                | With Skill                                       | Baseline                                         | Correct?                                     |
+| ----------------------- | ------------------------------------------------ | ------------------------------------------------ | -------------------------------------------- |
+| Used deterministic tool | PASS Called `dsql_lint`                          | FAIL Relied on memory                            | Skill wins                                   |
+| SERIAL replacement      | BIGINT IDENTITY (CACHE 1)                        | UUID gen_random_uuid()                           | Both valid, skill matches `dsql_lint` output |
+| JSON handling           | **Historical** TEXT                              | **Historical** JSONB                             | Current DSQL supports JSONB                  |
+| Index handling          | PASS CREATE INDEX ASYNC                          | FAIL "Index is fine as-is"                       | **Baseline wrong** — DSQL requires ASYNC     |
+| Transaction splitting   | PASS Explicitly stated one DDL per tx            | FAIL Not mentioned                               | **Baseline misses**                          |
+| Foreign key guidance    | **STALE (pre-FK-support)** App-layer enforcement | **STALE (pre-FK-support)** App-layer enforcement | Current DSQL uses foreign key constraints    |
 
 ### With-Skill Output (summary)
 
 - Called `dsql_lint(sql=..., fix=true)`
-- Reported 4 diagnostics: serial_type, json_type, foreign_key, index_async
-- Presented fixed SQL with IDENTITY, TEXT, removed FK, ASYNC index
-- Explained each warning and what the user needs to do at the application layer
+- Historical result reported 4 diagnostics: serial_type, json_type, foreign_key, index_async
+- Historical fixed SQL used IDENTITY, TEXT, removed FK, and ASYNC index
+- Current `dsql_lint` no longer emits the FK diagnostic; see current `dsql_lint_evals.json`
 - Stated "issue each DDL as a separate transaction"
 
 ### Baseline Output (summary)
 
 - Did NOT use any validation tool
-- Recommended `JSONB` for the JSON column (incorrect — DSQL rejects JSONB as a column type)
+- Historical baseline recommended `JSONB`; current DSQL supports JSONB
 - Said the CREATE INDEX statement "is fine" (incorrect — DSQL requires ASYNC)
 - Did not mention transaction splitting
 - Recommended UUID for SERIAL (valid but different from `dsql_lint`'s IDENTITY approach)
 
 ### Baseline Failures
 
-1. **JSON → JSONB (wrong):** Would cause DDL rejection at execution time
+1. **Historical JSON guidance:** This snapshot predates DSQL JSONB support
 2. **Index "is fine" (wrong):** Synchronous CREATE INDEX is not supported in DSQL
 3. **No transaction guidance:** Agent would likely issue both DDL in one transact call
 
@@ -91,34 +95,34 @@ COMMIT;
 
 ### Behavior Comparison
 
-| Behavior                | With Skill                               | Baseline                                        | Correct?                |
-| ----------------------- | ---------------------------------------- | ----------------------------------------------- | ----------------------- |
-| Used deterministic tool | PASS Called `dsql_lint`                  | FAIL Relied on memory                           | Skill wins              |
-| SERIAL replacement      | BIGINT IDENTITY                          | UUID                                            | Both valid              |
-| JSON handling           | PASS TEXT                                | FAIL JSONB                                      | **Baseline wrong**      |
-| Index handling          | PASS CREATE INDEX ASYNC                  | FAIL "Index is okay"                            | **Baseline wrong**      |
-| Multi-DDL detection     | PASS Split into separate BEGIN/COMMIT    | PARTIAL Said "remove BEGIN/COMMIT" but no split | **Baseline incomplete** |
-| Django-specific advice  | PASS "sqlmigrate → lint → execute fixed" | PARTIAL Generic (custom backend, atomic=False)  | Skill more actionable   |
+| Behavior                | With Skill                               | Baseline                                        | Correct?                    |
+| ----------------------- | ---------------------------------------- | ----------------------------------------------- | --------------------------- |
+| Used deterministic tool | PASS Called `dsql_lint`                  | FAIL Relied on memory                           | Skill wins                  |
+| SERIAL replacement      | BIGINT IDENTITY                          | UUID                                            | Both valid                  |
+| JSON handling           | **Historical** TEXT                      | **Historical** JSONB                            | Current DSQL supports JSONB |
+| Index handling          | PASS CREATE INDEX ASYNC                  | FAIL "Index is okay"                            | **Baseline wrong**          |
+| Multi-DDL detection     | PASS Split into separate BEGIN/COMMIT    | PARTIAL Said "remove BEGIN/COMMIT" but no split | **Baseline incomplete**     |
+| Django-specific advice  | PASS "sqlmigrate → lint → execute fixed" | PARTIAL Generic (custom backend, atomic=False)  | Skill more actionable       |
 
 ### With-Skill Output (summary)
 
 - Called `dsql_lint(sql=..., fix=true)`
-- Reported 5 diagnostics: `serial_type`, `foreign_key`, `json_type`, `index_async`, `multi_ddl_transaction`
+- Historical result reported 5 diagnostics: `serial_type`, `foreign_key`, `json_type`, `index_async`, `multi_ddl_transaction`
 - Produced fixed SQL with each DDL in its own BEGIN/COMMIT block
 - Gave specific Django advice: run sqlmigrate, lint output, execute fixed SQL directly
-- Warned about foreign key removal requiring app-layer enforcement
+- Historical result warned about foreign key removal; this is stale pre-FK-support behavior
 
 ### Baseline Output (summary)
 
 - Did NOT use any validation tool
-- Recommended `JSONB` (incorrect)
+- Historical baseline recommended `JSONB`; current DSQL supports JSONB
 - Said CREATE INDEX "is okay as-is" (incorrect — needs ASYNC)
 - Said "remove BEGIN/COMMIT" but didn't show the correct split pattern
 - Gave generic Django advice (custom backend, atomic=False) without a concrete workflow
 
 ### Baseline Failures
 
-1. **JSON → JSONB (wrong):** Same error as eval 100
+1. **Historical JSON guidance:** This snapshot predates DSQL JSONB support
 2. **Index "is okay" (wrong):** Same error as eval 100
 3. **Incomplete transaction handling:** Told user to remove BEGIN/COMMIT but didn't show
    that each DDL needs its own transaction — user would likely run both DDL bare without
@@ -141,7 +145,7 @@ COMMIT;
 
 ### Verdict
 
-PASS on all four expectations in `dsql_lint_evals.json` eval 102. The skill's "user said don't execute" handling works as documented in [Workflow: Validate & Migrate SQL to DSQL](../../../plugins/databases-on-aws/skills/dsql/references/dsql-lint.md).
+PASS on all three expectations in `dsql_lint_evals.json` eval 102. The skill's "user said don't execute" handling works as documented in [Workflow: Validate & Migrate SQL to DSQL](../../../plugins/databases-on-aws/skills/dsql/references/dsql-lint.md).
 
 ---
 
@@ -166,16 +170,13 @@ PASS on the expectations in `dsql_lint_evals.json` eval 103. Agents MUST cross-c
 
 ## Conclusion
 
-The skill produces measurably better outcomes by:
+This historical snapshot recorded better outcomes for the service behavior at the time:
 
 1. **Eliminating hallucination** — `dsql_lint` provides deterministic validation instead of
    the model guessing at DSQL constraints from training data
-2. **Catching the JSON/JSONB error** — the baseline consistently recommends JSONB (which DSQL
-   rejects as a column type). This is a real data-loss-risk mistake that would fail at DDL
-   execution time.
-3. **Enforcing ASYNC indexes** — the baseline misses this requirement entirely
-4. **Providing actionable migration workflows** — the skill-guided agent gives concrete steps
+2. **Enforcing ASYNC indexes** — the baseline missed this requirement
+3. **Providing actionable migration workflows** — the skill-guided agent gave concrete steps
    (lint → review → execute) rather than generic advice
 
-The iron law holds: **the agent fails without this skill change** (gets JSON wrong, misses
-ASYNC, doesn't split transactions). The skill teaches something the model does not already know.
+The current `dsql_lint_evals.json` corpus supersedes this snapshot for JSON/JSONB and foreign-key
+behavior. Do not use this report as current compatibility guidance.

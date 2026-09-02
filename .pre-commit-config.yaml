@@ -79,6 +79,16 @@ repos:
     hooks:
     -   id: gitleaks
 
+-   repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.26.1
+    hooks:
+    -   id: zizmor
+        # Runs offline (no GitHub API calls) and only on changed workflow/action
+        # files (pre-commit passes changed filenames). The repo has a pre-existing
+        # findings backlog (#221) — those surface only when the relevant workflow
+        # is edited, enforcing "leave it better than you found it" on touched files.
+        args: [ --offline ]
+
 -   repo: local
     hooks:
     -   id: act
@@ -86,5 +96,16 @@ repos:
         pass_filenames: false
         language: system
         entry: act
+        stages: [manual]
+        always_run: true
+    -   id: grype
+        name: grype (dependency vulnerability scan)
+        # No upstream grype pre-commit hook exists, so this wraps the
+        # mise-provided grype. `manual` stage (like `act`) keeps it opt-in —
+        # a full dependency scan is too heavy for every commit; run on demand
+        # via `pre-commit run --hook-stage manual grype` (CI runs it always).
+        pass_filenames: false
+        language: system
+        entry: grype .
         stages: [manual]
         always_run: true
