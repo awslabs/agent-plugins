@@ -493,7 +493,7 @@ const lngLatArray = [
   [-97.7431, 30.2747],
   [-96.797, 32.7767],
 ];
-const encoded = encodeFromLngLatArray(lngLatArray);
+const encodedNative = encodeFromLngLatArray(lngLatArray);
 ```
 
 **Package installation:**
@@ -504,15 +504,15 @@ npm install @aws/polyline
 
 ### Polygon and Geometry Operations
 
-| Google Maps API                                                         | Amazon Location Alternative                                | Package      |
-| ----------------------------------------------------------------------- | ---------------------------------------------------------- | ------------ |
-| `google.maps.geometry.poly.containsLocation(point, polygon)`            | `turf.booleanPointInPolygon(point, polygon)`               | `@turf/turf` |
-| `google.maps.geometry.poly.isLocationOnEdge(point, poly, tolerance)`    | `turf.pointToLineDistance()` + `turf.booleanPointOnLine()` | `@turf/turf` |
-| `google.maps.geometry.spherical.computeDistanceBetween(from, to)`       | `turf.distance(from, to)`                                  | `@turf/turf` |
-| `google.maps.geometry.spherical.computeHeading(from, to)`               | `turf.bearing(from, to)`                                   | `@turf/turf` |
-| `google.maps.geometry.spherical.computeOffset(from, distance, heading)` | `turf.destination(from, distance, bearing)`                | `@turf/turf` |
-| `google.maps.geometry.spherical.computeArea(path)`                      | `turf.area(polygon)`                                       | `@turf/turf` |
-| `google.maps.geometry.spherical.interpolate(from, to, fraction)`        | `turf.along(line, distance)`                               | `@turf/turf` |
+| Google Maps API                                                         | Amazon Location Alternative                                                                               | Package      |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------ |
+| `google.maps.geometry.poly.containsLocation(point, polygon)`            | `turf.booleanPointInPolygon(point, polygon)`                                                              | `@turf/turf` |
+| `google.maps.geometry.poly.isLocationOnEdge(point, poly, tolerance)`    | `turf.pointToLineDistance()` + `turf.booleanPointOnLine()`                                                | `@turf/turf` |
+| `google.maps.geometry.spherical.computeDistanceBetween(from, to)`       | `turf.distance(from, to, { units: "meters" })` (Turf defaults to kilometers)                              | `@turf/turf` |
+| `google.maps.geometry.spherical.computeHeading(from, to)`               | `turf.bearing(from, to)`                                                                                  | `@turf/turf` |
+| `google.maps.geometry.spherical.computeOffset(from, distance, heading)` | `turf.destination(from, distance, bearing, { units: "meters" })` (Turf defaults to kilometers)            | `@turf/turf` |
+| `google.maps.geometry.spherical.computeArea(path)`                      | `turf.area(polygon)`                                                                                      | `@turf/turf` |
+| `google.maps.geometry.spherical.interpolate(from, to, fraction)`        | `turf.along(line, turf.length(line) * fraction)` (`along` takes an absolute distance, not a 0-1 fraction) | `@turf/turf` |
 
 **Example - Point in Polygon:**
 
@@ -550,7 +550,7 @@ const turfPolygon = turf.polygon([
     [-98.0, 30.0], // Close the polygon
   ],
 ]);
-const contains = turf.booleanPointInPolygon(turfPoint, turfPolygon);
+const containsNative = turf.booleanPointInPolygon(turfPoint, turfPolygon);
 ```
 
 **Example - Distance Between Points:**
@@ -569,8 +569,7 @@ import * as turf from "@turf/turf";
 
 const fromPoint = turf.point([-97.7431, 30.2747]);
 const toPoint = turf.point([-96.797, 32.7767]);
-const distanceKm = turf.distance(fromPoint, toPoint, { units: "kilometers" });
-const distanceMeters = distanceKm * 1000;
+const distanceMetersNative = turf.distance(fromPoint, toPoint, { units: "meters" });
 ```
 
 **Package installation:**

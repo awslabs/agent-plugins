@@ -306,7 +306,7 @@ function summarizeRecord(rec) {
     granularity: rec.Output_ValidationResults_ValidationGranularity,
     standardized: rec.Output_Address_Label,
     mailable: rec.Output_AddressMetadata_DeliveryIndicators_Mailable,
-    coordinates: rec.Output_Position_Longitude
+    coordinates: rec.Output_Position_Longitude != null
       ? {
           lon: rec.Output_Position_Longitude,
           lat: rec.Output_Position_Latitude,

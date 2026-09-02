@@ -549,7 +549,7 @@ import UIKit
 class AutocompleteViewController: UIViewController, UISearchBarDelegate {
     let searchBar = UISearchBar()
     let tableView = UITableView()
-    var suggestions: [AutocompleteResultItem] = []
+    var suggestions: [GeoPlacesClientTypes.AutocompleteResultItem] = []
 
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         guard searchText.count >= 3 else { return }

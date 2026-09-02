@@ -174,14 +174,16 @@ map.on("load", async () => {
   );
 
   response.Entries.forEach((device) => {
+    const content = document.createElement("div");
+    const title = document.createElement("h4");
+    title.textContent = device.DeviceId;
+    const lastSeen = document.createElement("p");
+    lastSeen.textContent = `Last seen: ${new Date(device.SampleTime).toLocaleString()}`;
+    content.append(title, lastSeen);
+
     new maplibregl.Marker({ color: "#FF0000" })
       .setLngLat(device.Position)
-      .setPopup(
-        new maplibregl.Popup().setHTML(
-          `<h4>${device.DeviceId}</h4>
-         <p>Last seen: ${new Date(device.SampleTime).toLocaleString()}</p>`,
-        ),
-      )
+      .setPopup(new maplibregl.Popup().setDOMContent(content))
       .addTo(map);
   });
 });

@@ -215,7 +215,7 @@ async function searchNearby(position, radius, categories = null) {
 
   // Optional: specify radius (default is context-dependent)
   if (radius) {
-    params.MaxDistance = radius; // in meters
+    params.QueryRadius = radius; // in meters
   }
 
   const command = new amazonLocationClient.places.SearchNearbyCommand(params);

@@ -220,8 +220,8 @@ Create EventBridge rules to route geofence events to targets like Lambda, SNS (n
   "detail-type": ["Location Geofence Event"],
   "detail": {
     "EventType": ["ENTER"],
-    "GeofenceProperties": { "Type": "Warehouse" },
-    "PositionProperties": { "VehicleType": "Truck" }
+    "GeofenceProperties": { "Type": ["Warehouse"] },
+    "PositionProperties": { "VehicleType": ["Truck"] }
   }
 }
 ```

@@ -854,7 +854,6 @@ The API returns an array of route options (typically one route):
       Summary: {
         Distance: 7845, // Total route distance in meters
         Duration: 1023, // Total route duration in seconds
-        RouteBBox: [-97.7723, 30.2672, -97.7431, 30.2672], // [minLng, minLat, maxLng, maxLat]
       },
       Legs: [
         // Array of route segments between waypoints
@@ -865,24 +864,24 @@ The API returns an array of route options (typically one route):
             Polyline: "BFoz5xJ67i1B...", // FlexiblePolyline format (requires decoding)
           },
           VehicleLegDetails: {
-            // Only present when LegAdditionalFeatures: ["Summary"] is requested
             Summary: {
+              // Only present when LegAdditionalFeatures: ["Summary"] is requested
               Overview: {
                 Distance: 7845, // Leg distance in meters
                 Duration: 1023, // Leg duration in seconds
               },
             },
+            TravelSteps: [
+              // Only present when LegAdditionalFeatures: ["TravelStepInstructions"] is requested
+              {
+                Type: "Turn",
+                Instruction: "Turn right onto Pine St",
+                Distance: 150, // Meters to next instruction
+                Duration: 30, // Seconds to next instruction
+                GeometryOffset: 0,
+              },
+            ],
           },
-          TravelSteps: [
-            // Only present when LegAdditionalFeatures: ["TravelStepInstructions"] is requested
-            {
-              Type: "Turn",
-              Instruction: "Turn right onto Pine St",
-              Distance: 150, // Meters to next instruction
-              Duration: 30, // Seconds to next instruction
-              GeometryOffset: 0,
-            },
-          ],
         },
       ],
     },
@@ -1150,7 +1149,7 @@ const response = await client.send(new CalculateRoutesCommand(params));
 const leg = response.Routes[0].Legs[0];
 
 // Display turn-by-turn instructions
-leg.TravelSteps.forEach((step, i) => {
+leg.VehicleLegDetails.TravelSteps.forEach((step, i) => {
   const distanceMiles = (step.Distance * 0.000621371).toFixed(1);
   console.log(`${i + 1}. ${step.Instruction} (${distanceMiles} mi)`);
 });

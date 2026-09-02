@@ -42,8 +42,10 @@ Migrate Android applications from Google Maps SDK for Android to Amazon Location
 dependencies {
     // ❌ Remove these
     // implementation("com.google.android.gms:play-services-maps:18.2.0")
-    // implementation("com.google.android.gms:play-services-location:21.0.1")
     // implementation("com.google.android.libraries.places:places:3.3.0")
+
+    // ✅ Keep: FusedLocationProviderClient (device location) still comes from this package
+    implementation("com.google.android.gms:play-services-location:21.0.1")
 }
 ```
 
@@ -173,6 +175,7 @@ class MyActivity : AppCompatActivity() {
 import aws.sdk.kotlin.services.cognitoidentity.CognitoIdentityClient
 import aws.sdk.kotlin.services.cognitoidentity.model.GetCredentialsForIdentityRequest
 import aws.sdk.kotlin.services.cognitoidentity.model.GetIdRequest
+import aws.smithy.kotlin.runtime.auth.awscredentials.Credentials
 
 suspend fun getCognitoCredentials(identityPoolId: String): Credentials {
     val cognitoClient = CognitoIdentityClient {

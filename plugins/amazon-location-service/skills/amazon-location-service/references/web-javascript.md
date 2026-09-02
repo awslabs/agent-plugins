@@ -318,7 +318,7 @@ const mapsClient = new amazonLocationClient.GeoMapsClient(
 
 // Get Static Map
 const staticMapCommand = new amazonLocationClient.maps.GetStaticMapCommand({
-  FileName: "map.png",
+  FileName: "map",
   Height: 400,
   Width: 600,
   Center: [-97.7431, 30.2747],
@@ -327,8 +327,8 @@ const staticMapCommand = new amazonLocationClient.maps.GetStaticMapCommand({
 const mapResponse = await mapsClient.send(staticMapCommand);
 
 // Response contains image as blob
-const blob = await mapResponse.Body.transformToByteArray();
-const imageUrl = URL.createObjectURL(new Blob([blob], { type: "image/png" }));
+const blob = mapResponse.Blob; // Uint8Array, not a stream
+const imageUrl = URL.createObjectURL(new Blob([blob], { type: "image/jpeg" }));
 document.getElementById("map-img").src = imageUrl;
 ```
 
