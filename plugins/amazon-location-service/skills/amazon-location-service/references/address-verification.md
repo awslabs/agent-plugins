@@ -336,6 +336,8 @@ function triage(rec) {
   // bare `AddressNumber_Status` column does not exist in the output.
   const numberStatus =
     rec.Output_ValidationResults_Components_Address_AddressNumber_Status;
+  const numberDetail =
+    rec.Output_ValidationResults_Components_Address_AddressNumber_StatusDetail;
 
   if (
     (conf === "High" || conf === "MediumHigh") &&
@@ -348,7 +350,7 @@ function triage(rec) {
     conf === "Low" ||
     gran === "Locality" ||
     !mailable ||
-    numberStatus === "Unconfirmed"
+    (numberStatus === "Unconfirmed" && numberDetail === "NotFound")
   ) {
     return "reject";
   }

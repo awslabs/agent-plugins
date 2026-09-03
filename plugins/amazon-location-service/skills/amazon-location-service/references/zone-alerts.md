@@ -186,7 +186,7 @@ await client.send(
     ],
   }),
 );
-// Returns HTTP 200 with empty body — events are emitted asynchronously to EventBridge
+// Returns 200 with an Errors array for per-entry failures; events are emitted asynchronously to EventBridge
 ```
 
 Both approaches emit `ENTER` and `EXIT` events to Amazon EventBridge when positions cross zone boundaries.
