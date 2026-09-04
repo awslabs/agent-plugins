@@ -1,6 +1,6 @@
 ---
 name: analysis
-description: Run/start/restart/cancel/delete analyses (tech-debt-quick, tech-debt-comprehensive, security, agentic-readiness, modernization-readiness, custom). Detects vulnerabilities, outdated dependencies, migration opportunities, modernization candidates. Custom type runs any TD.
+description: Run/start/restart/cancel/delete analyses (rapid-techdebt-analysis, tech-debt-comprehensive, security, agentic-readiness, modernization-readiness, custom). Detects vulnerabilities, outdated dependencies, migration opportunities, modernization candidates. Custom type runs any TD.
 ---
 
 name: analysis
@@ -46,10 +46,10 @@ If the scope exceeds 100 repositories, split it into multiple runs, each targeti
 
 ```bash
 # Run analysis. Pass --wait so the command blocks until the run finishes (preferred — see "Running long analyses" below).
-atx ct analysis run --type <tech-debt-quick|tech-debt-comprehensive|security|agentic-readiness|modernization-readiness|custom> --source <name> [--repo <source>::<slug>] --wait --telemetry "agent=<AGENT>,executionMode=local"
+atx ct analysis run --type <rapid-techdebt-analysis|tech-debt-comprehensive|security|agentic-readiness|modernization-readiness|custom> --source <name> [--repo <source>::<slug>] --wait --telemetry "agent=<AGENT>,executionMode=local"
 
 # --wait is only in newer CLI versions. If it isn't supported, run the same command without --wait.
-atx ct analysis run --type <tech-debt-quick|tech-debt-comprehensive|security|agentic-readiness|modernization-readiness|custom> --source <name> [--repo <source>::<slug>] --telemetry "agent=<AGENT>,executionMode=local"
+atx ct analysis run --type <rapid-techdebt-analysis|tech-debt-comprehensive|security|agentic-readiness|modernization-readiness|custom> --source <name> [--repo <source>::<slug>] --telemetry "agent=<AGENT>,executionMode=local"
 
 # Run custom analysis with a specific transformation definition
 atx ct analysis run --type custom --transformation-name <TD-name> --source <name> --repo <source>::<slug> --wait --telemetry "agent=<AGENT>,executionMode=local"
@@ -65,7 +65,7 @@ atx ct analysis list --json
 
 # Filter on the server-side index (fast). Combine as needed.
 atx ct analysis list --status <pending|running|complete|cancelled|failed> --json
-atx ct analysis list --type <tech-debt-quick|tech-debt-comprehensive|security|agentic-readiness|modernization-readiness|custom> --json
+atx ct analysis list --type <rapid-techdebt-analysis|tech-debt-comprehensive|security|agentic-readiness|modernization-readiness|custom> --json
 atx ct analysis list --status complete --type security --json
 
 # Category is filtered client-side (does not reduce the fetch); only narrows what's printed.
@@ -165,7 +165,7 @@ When the user asks to run a custom analysis or mentions a capability not covered
 
 ### When to use TD discovery vs built-in types
 
-- If the user's request clearly maps to a built-in type (`tech-debt-quick`, `tech-debt-comprehensive`, `security`, `agentic-readiness`, `modernization-readiness`), use that type directly -- do NOT use custom.
+- If the user's request clearly maps to a built-in type (`rapid-techdebt-analysis`, `tech-debt-comprehensive`, `security`, `agentic-readiness`, `modernization-readiness`), use that type directly -- do NOT use custom.
 - If the request mentions a specific capability not covered by built-in types, or asks about custom/customer-owned TDs, use TD discovery.
 - If the user explicitly names a TD, skip discovery and run it directly with `--type custom --transformation-name <TD>`.
 
@@ -206,7 +206,7 @@ A `0 findings` result does NOT automatically mean the repo is clean. Each analys
 
 | Type                      | What 0 findings means                                                                                               | What to do next                                                                                                                                                   |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tech-debt-quick`         | Metadata files didn't expose any stale versions. **Inconclusive** -- quick scan only inspects manifests.            | Tell the user the result is inconclusive (metadata-only). Offer to run `tech-debt-comprehensive` for a code-level analysis.                                       |
+| `rapid-techdebt-analysis` | Metadata files didn't expose any stale versions. **Inconclusive** -- quick scan only inspects manifests.            | Tell the user the result is inconclusive (metadata-only). Offer to run `tech-debt-comprehensive` for a code-level analysis.                                       |
 | `tech-debt-comprehensive` | Bedrock did not surface tech-debt issues. Repo is likely well-maintained, but other dimensions weren't checked.     | Offer `security` for CVEs, `agentic-readiness` for AI-readiness, and `modernization-readiness` for modernization opportunities. Mention these are separate scans. |
 | `security`                | Security Agent didn't surface CVEs or vulnerable patterns.                                                          | Verify the Security Agent is healthy (`atx ct setup security-agent --status`). If healthy, offer `tech-debt-comprehensive` for non-security issues.               |
 | `agentic-readiness`       | Repo did not show AI-readiness gaps at the framework level.                                                         | Offer `modernization-readiness` for cloud/infrastructure modernization or `tech-debt-comprehensive` for general code health.                                      |
@@ -220,12 +220,12 @@ If an analysis returns 0 findings on a repo that's obviously stale (Java 8, Node
 
 `atx ct analysis list` exposes these filters. Pick the narrowest combination the question allows.
 
-| Filter          | Where it runs                           | Allowed values                                                                                                        |
-| --------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `--status`      | server-side (GSI-backed, fast)          | `pending`, `running`, `complete`, `cancelled`, `failed`                                                               |
-| `--type`        | server-side (GSI-backed, fast)          | `tech-debt-quick`, `tech-debt-comprehensive`, `security`, `agentic-readiness`, `modernization-readiness`, `custom`    |
-| `--category`    | client-side (does not reduce the fetch) | `"Tech Debt"`, `"Security"`, `"Agentic Readiness"`                                                                    |
-| `--schedule-id` | server-side                             | a schedule's `sched-` analysisId (from `atx ct schedule list`) — lists that schedule's fired child runs, newest first |
+| Filter          | Where it runs                           | Allowed values                                                                                                             |
+| --------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `--status`      | server-side (GSI-backed, fast)          | `pending`, `running`, `complete`, `cancelled`, `failed`                                                                    |
+| `--type`        | server-side (GSI-backed, fast)          | `rapid-techdebt-analysis`, `tech-debt-comprehensive`, `security`, `agentic-readiness`, `modernization-readiness`, `custom` |
+| `--category`    | client-side (does not reduce the fetch) | `"Tech Debt"`, `"Security"`, `"Agentic Readiness"`                                                                         |
+| `--schedule-id` | server-side                             | a schedule's `sched-` analysisId (from `atx ct schedule list`) — lists that schedule's fired child runs, newest first      |
 
 **Recommended shapes:**
 
@@ -235,7 +235,7 @@ If an analysis returns 0 findings on a repo that's obviously stale (Java 8, Node
 - "What has my nightly schedule run so far?" → `atx ct analysis list --schedule-id <sched-id> --json` (the fired child runs of that schedule; get `<sched-id>` from `atx ct schedule list`)
 - One specific run → `atx ct analysis get --id <id> --json` (point lookup; cheaper than list).
 
-`--category` is a client-side grouping; e.g. `"Tech Debt"` matches both `tech-debt-quick` and `tech-debt-comprehensive`. Use it when the user wants both subtypes together.
+`--category` is a client-side grouping; e.g. `"Tech Debt"` matches both `rapid-techdebt-analysis` and `tech-debt-comprehensive`. Use it when the user wants both subtypes together.
 
 `--schedule-id` is how you inspect a schedule's history: each fire creates one child analysis, and this lists them newest-first. It **cannot** be combined with `--status` or `--type` (the CLI returns `INVALID_INPUT`). To read one fire's findings, take a child's id and run `atx ct findings list --analysis-id <id> --json`.
 
