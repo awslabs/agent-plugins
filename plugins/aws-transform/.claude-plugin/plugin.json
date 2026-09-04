@@ -31,5 +31,5 @@
   "license": "Apache-2.0",
   "name": "aws-transform",
   "repository": "https://github.com/awslabs/agent-plugins",
-  "version": "1.7.0"
+  "version": "1.8.0"
 }
