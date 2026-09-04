@@ -27,8 +27,8 @@ atx ct discovery scan --source <name> --path <new-dir>
 # Scan a GitHub source (use the bare name from `source add --name`)
 atx ct discovery scan --source <name>
 
-# Check scan status
-atx ct discovery status --source <name>
+# List the repos a scan registered
+atx ct repository list --source <name> --json
 ```
 
 ## After discovery completes
