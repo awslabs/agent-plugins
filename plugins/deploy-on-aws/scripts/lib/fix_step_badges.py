@@ -17,11 +17,16 @@ Improved algorithm (v2):
 
 """
 
+from __future__ import annotations
+
 import argparse
+from dataclasses import dataclass
 import math
 import re
+
 import defusedxml.ElementTree as ET
-from dataclasses import dataclass
+
+from _xml_format import indent_tree
 
 
 @dataclass
@@ -483,7 +488,7 @@ def main() -> None:
     print(f"Badges moved: {moved}")
 
     if not args.dry_run and moved > 0:
-        ET.indent(tree, space="  ")
+        indent_tree(tree, space="  ")
         tree.write(args.file, encoding="unicode", xml_declaration=False)
         print(f"Written: {args.file}")
     elif args.dry_run and moved > 0:
