@@ -1883,12 +1883,12 @@ def test_grading_correlates_tools_redacts_evidence_and_fails_closed(
 
     deterministic_eval = _eval_document()["evals"][0]
     deterministic_eval["expectations"] = [
-        "Mentions the 3,000 row per transaction limit",
+        "Mentions the 3,000 row-modification per transaction limit",
         "Recommends a batching strategy",
     ]
     negated_result = {
         **successful_result,
-        "result_text": "3,000 rows is not the limit. Batching is unnecessary.",
+        "result_text": "3,000 row modifications is not the limit. Batching is unnecessary.",
     }
     negated_grading = RUNNER.grade_eval(
         deterministic_eval,

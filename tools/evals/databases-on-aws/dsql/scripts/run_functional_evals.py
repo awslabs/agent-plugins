@@ -3185,6 +3185,8 @@ ASSERTION_RULES = {
         AssertionRule.AWSKNOWLEDGE_INDEX,
     "mentions the 3,000 row per transaction limit":
         AssertionRule.TRANSACTION_ROW_LIMIT,
+    "mentions the 3,000 row-modification per transaction limit":
+        AssertionRule.TRANSACTION_ROW_LIMIT,
     "recommends a batching strategy for the 10k row migration":
         AssertionRule.BATCHING,
     "recommends a batching strategy": AssertionRule.BATCHING,
@@ -4885,7 +4887,7 @@ def grade_eval(
             if _has_positive_window(
                 text,
                 r"\bbatch(?:es|ed|ing)?\b",
-                r"\b3[,.]?000[\s-]+(?:rows?|records?)\b",
+                r"\b3[,.]?000[\s-]+(?:rows?|records?|row[\s-]+modifications?)\b",
                 r"\b(?:exceed|over|more\s+than|under|fewer|limit|"
                 r"maximum|max|transaction|chunk)",
             ):
@@ -4897,7 +4899,7 @@ def grade_eval(
         # --- Assertion: mentions 3,000 row limit ---
         elif rule is AssertionRule.TRANSACTION_ROW_LIMIT:
             row_limit_patterns = (
-                r"\b3[,.]?000[\s-]+(?:rows?|records?)\b",
+                r"\b3[,.]?000[\s-]+(?:rows?|records?|row[\s-]+modifications?)\b",
                 r"\btransactions?\b",
                 r"\b(?:limit|maximum|max|at\s+most|up\s+to|"
                 r"cannot\s+exceed|can't\s+exceed|"
