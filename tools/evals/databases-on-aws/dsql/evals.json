@@ -256,6 +256,30 @@
         "Does NOT recommend the Table Recreation Pattern"
       ],
       "grader": "llm_judge"
+    },
+    {
+      "id": 22,
+      "prompt": "I'm building a TypeScript API with Drizzle ORM on Aurora DSQL. Which adapter should I use, and what's the recommended setup for connections, transactions, and migrations?",
+      "expected_output": "Recommends the @aws/aurora-dsql-drizzle adapter with drizzle({ connection: { host, user, region }, schema }), notes that user is required so a connection never defaults to admin, recommends db.transactionWithRetry for OCC conflicts with an idempotent callback, and the package's migrate() instead of the stock drizzle-orm/node-postgres migrator.",
+      "expectations": [
+        "Recommends the @aws/aurora-dsql-drizzle adapter rather than a hand-rolled pg.Pool with a token-refresh hook",
+        "States that `user` must be supplied — a database role scoped to the application, not admin",
+        "Recommends db.transactionWithRetry for OCC / SQLSTATE 40001 conflicts and notes the callback must be idempotent because it re-runs on every attempt",
+        "Recommends migrate() from @aws/aurora-dsql-drizzle over the stock drizzle-orm/node-postgres migrator, because the stock one sends every statement in a single transaction"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 23,
+      "prompt": "My Drizzle migrations fail on Aurora DSQL. drizzle-kit generated the SQL and applying it errors with 'multiple ddl statements not supported in a transaction'. How do I fix this?",
+      "expected_output": "Identifies the stock drizzle-orm/node-postgres migrator batching every statement into one transaction as the cause, recommends applying with migrate() from @aws/aurora-dsql-drizzle (one DDL per transaction), recommends `aurora-dsql-drizzle generate`/`transform` to rewrite the DDL through dsql-lint (CREATE INDEX ASYNC, NOT VALID foreign keys, SERIAL widening to review), and says to keep drizzle-kit's breakpoints enabled.",
+      "expectations": [
+        "Identifies the stock drizzle-orm/node-postgres migrator sending all statements in one transaction as the cause",
+        "Recommends applying migrations with migrate() from @aws/aurora-dsql-drizzle, which runs one DDL per transaction",
+        "Recommends `aurora-dsql-drizzle generate` (or `transform`) to rewrite the generated DDL for DSQL, including CREATE INDEX ASYNC",
+        "Says to keep drizzle-kit's breakpoints: true so statements split on --> statement-breakpoint markers"
+      ],
+      "grader": "llm_judge"
     }
   ]
 }

@@ -66,7 +66,7 @@ Concrete example (from `dsql_lint(sql="CREATE INDEX idx ON t (c);", fix=true)`):
 
 ## Workflow: Validate & Migrate SQL to DSQL
 
-Use for any SQL that was not composed by the agent itself from skill knowledge — including user-pasted SQL, migration files, ORM output (Django, Rails, Prisma, TypeORM, Sequelize, SQLAlchemy), pg_dump exports, and hand-written schemas. Applies to DDL and schema-mutating DML; do **not** lint ad-hoc read-only `SELECT`s.
+Use for any SQL that was not composed by the agent itself from skill knowledge — including user-pasted SQL, migration files, ORM output (Django, Rails, Prisma, Drizzle, TypeORM, Sequelize, SQLAlchemy), pg_dump exports, and hand-written schemas. Applies to DDL and schema-mutating DML; do **not** lint ad-hoc read-only `SELECT`s.
 
 1. Obtain source SQL from user (migration file, ORM output, schema dump, or inline SQL). `dsql_lint` accepts multi-statement SQL in a single call — pass the whole batch.
 2. Run `dsql_lint(sql=source_sql, fix=true)`. Default to `fix=true` for any migration scenario; use `fix=false` only when the user explicitly asked for validation-only output, or when re-verifying manually rewritten SQL.
@@ -94,6 +94,13 @@ Use for any SQL that was not composed by the agent itself from skill knowledge �
 - **Django:** Run `python manage.py sqlmigrate <app> <migration>` to get raw SQL, then lint.
 - **Rails (6.1+):** Set `config.active_record.schema_format = :sql`, then run `rails db:schema:dump` (legacy `db:structure:dump` still works in older Rails). Lint the generated `db/structure.sql`.
 - **Prisma:** Use `prisma migrate diff --from-empty --to-schema-datamodel ./prisma/schema.prisma --script` to emit SQL to stdout, then lint.
+- **Drizzle:** Run `npx aurora-dsql-drizzle generate --out ./drizzle -- --config drizzle.config.ts` — the adapter runs `drizzle-kit generate` and pipes each statement through `dsql-lint`, preserving `--> statement-breakpoint` markers (`transform` and `lint` run those steps alone). It lints one statement at a time, so cross-statement fixes do not apply — see [orm-guides/overview.md](orm-guides/overview.md).
+  `aurora-dsql-drizzle` exit codes differ by mode — `generate` and `transform` run `dsql-lint --fix`, `lint` only reports:
+  - `generate`, `transform`: `0` clean — apply the migration; `1` some diagnostics need a hand-written rewrite — see Handling Unfixable Errors below; `3` fixed with advisories — review the flagged statements, then apply. One advisory statement sets `3` for the whole run, e.g. `NOT VALID` added to a foreign key.
+  - `lint`: `0` clean; `1` any diagnostic was reported, including advisories `transform` fixes on its own — run `transform` before hand-writing a rewrite. `lint` never returns `3` and never writes SQL.
+  - `1` also covers failures that say nothing about the SQL — bad arguments, a missing input file, a `drizzle-kit` error, or a missing `dsql-lint` binary. Read the `Error:` line on stderr and confirm diagnostics were printed before treating `1` as a verdict on the SQL.
+
+  When an advisory adds `NOT VALID` to a foreign key, follow it with `ALTER TABLE ASYNC ... VALIDATE CONSTRAINT` in its own chunk — precede the statement with a `--> statement-breakpoint` marker — then verify the job.
 - **TypeORM/Sequelize:** Generate migration SQL to a file, then lint.
 - **SQLAlchemy:** Compile DDL without executing — e.g., `for table in metadata.tables.values(): print(CreateTable(table).compile(engine))`. Do **not** call `metadata.create_all(engine)` with a real engine — it executes the DDL before lint. Alternatively use `create_mock_engine` to capture DDL.
 

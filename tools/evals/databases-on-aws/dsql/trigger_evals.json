@@ -88,6 +88,14 @@
     "should_trigger": true
   },
   {
+    "query": "We're building a TypeScript API with Drizzle ORM on Aurora DSQL — how should I set up the connection and run migrations?",
+    "should_trigger": true
+  },
+  {
+    "query": "drizzle-kit generated my migration but applying it to my dsql cluster fails with multiple ddl statements not supported in a transaction",
+    "should_trigger": true
+  },
+  {
     "query": "I need to set up an Aurora Serverless v2 PostgreSQL cluster with read replicas for my analytics workload",
     "should_trigger": false
   },
@@ -145,6 +153,10 @@
   },
   {
     "query": "Load my parquet files from S3 into Redshift using COPY command",
+    "should_trigger": false
+  },
+  {
+    "query": "I'm using Drizzle ORM against a self-hosted PostgreSQL 16 instance — how do I generate and apply migrations with drizzle-kit?",
     "should_trigger": false
   }
 ]
