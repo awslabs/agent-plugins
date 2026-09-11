@@ -17,6 +17,7 @@ This script:
 
 import argparse
 import defusedxml.ElementTree as ET
+from xml.etree.ElementTree import Element, ElementTree
 
 
 def get_style_dict(style_str: str) -> dict[str, str]:
@@ -54,7 +55,7 @@ def set_style_value(style_str: str, key: str, value: str) -> str:
     return ";".join(parts) + ";"
 
 
-def get_geometry(cell: ET.Element) -> tuple[float, float, float, float] | None:
+def get_geometry(cell: Element) -> tuple[float, float, float, float] | None:
     for geom in cell:
         if geom.tag == "mxGeometry" and geom.get("as") == "geometry":
             x = float(geom.get("x", "0"))
@@ -65,7 +66,7 @@ def get_geometry(cell: ET.Element) -> tuple[float, float, float, float] | None:
     return None
 
 
-def offset_geometry(cell: ET.Element, dx: float, dy: float) -> None:
+def offset_geometry(cell: Element, dx: float, dy: float) -> None:
     for geom in cell:
         if geom.tag == "mxGeometry" and geom.get("as") == "geometry":
             if geom.get("relative") == "1":
@@ -77,7 +78,7 @@ def offset_geometry(cell: ET.Element, dx: float, dy: float) -> None:
             return
 
 
-def is_region_container(cell: ET.Element) -> bool:
+def is_region_container(cell: Element) -> bool:
     style = cell.get("style", "")
     style_dict = get_style_dict(style)
     return (
@@ -86,10 +87,10 @@ def is_region_container(cell: ET.Element) -> bool:
     )
 
 
-def fix_nesting(tree: ET.ElementTree, verbose: bool = False) -> int:
+def fix_nesting(tree: ElementTree, verbose: bool = False) -> int:
     root_elem = tree.getroot()
 
-    cells: dict[str, ET.Element] = {}
+    cells: dict[str, Element] = {}
     for cell in root_elem.iter("mxCell"):
         cid = cell.get("id")
         if cid:

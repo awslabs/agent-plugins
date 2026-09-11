@@ -16,6 +16,7 @@ import json
 import os
 import sys
 import defusedxml.ElementTree as ET
+from xml.etree.ElementTree import Element, ElementTree
 from pathlib import Path
 
 MAX_FILE_SIZE = 2 * 1024 * 1024  # 2 MB
@@ -55,7 +56,7 @@ def get_style_dict(style_str: str) -> dict[str, str]:
     return result
 
 
-def get_geometry(cell: ET.Element) -> dict[str, float] | None:
+def get_geometry(cell: Element) -> dict[str, float] | None:
     for geom in cell:
         if geom.tag == "mxGeometry" and geom.get("as") == "geometry":
             if geom.get("relative") == "1":
@@ -69,7 +70,7 @@ def get_geometry(cell: ET.Element) -> dict[str, float] | None:
     return None
 
 
-def set_geometry(cell: ET.Element, **kwargs: float) -> None:
+def set_geometry(cell: Element, **kwargs: float) -> None:
     for geom in cell:
         if geom.tag == "mxGeometry" and geom.get("as") == "geometry":
             for k, v in kwargs.items():
@@ -78,7 +79,7 @@ def set_geometry(cell: ET.Element, **kwargs: float) -> None:
             return
 
 
-def fix_placement(tree: ET.ElementTree, verbose: bool = False) -> int:
+def fix_placement(tree: ElementTree, verbose: bool = False) -> int:
     """Move external actors outside the AWS Cloud boundary.
 
     External actors must be:
@@ -218,7 +219,7 @@ def fix_placement(tree: ET.ElementTree, verbose: bool = False) -> int:
     return moved
 
 
-def fix_legend_size(tree: ET.ElementTree, verbose: bool = False) -> int:
+def fix_legend_size(tree: ElementTree, verbose: bool = False) -> int:
     """Resize legend panel to match the diagram's main content height.
 
     Finds the legend-outer group and the AWS Cloud / Region group,
