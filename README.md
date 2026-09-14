@@ -164,6 +164,24 @@ COMPOUND_PLUGIN_GITHUB_SOURCE=https://github.com/awslabs/agent-plugins \
 
 Replace `deploy-on-aws` with any plugin name from the table above (e.g., `aws-serverless`, `amazon-location-service`, `migration-to-aws`, `aws-amplify`).
 
+#### Install scripts for aws-architecture-diagram (required)
+
+The `compound-plugin` converter only copies `skills/<name>/` — it does not install the plugin-level `scripts/` folder that the `aws-architecture-diagram` skill depends on. Without this step, diagram validation, badge fixing, and preview URL generation will not work.
+
+Run after the install step above (global scope):
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/awslabs/agent-plugins/main/plugins/deploy-on-aws/scripts/install-kiro-scripts.sh)
+```
+
+Or for a project-scoped install:
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/awslabs/agent-plugins/main/plugins/deploy-on-aws/scripts/install-kiro-scripts.sh) --project
+```
+
+This downloads the scripts into `~/.kiro/skills/aws-architecture-diagram/scripts/`, installs their Python dependency (`defusedxml`), and patches the `${PLUGIN_ROOT}` path references in `SKILL.md` to the actual install location.
+
 > [!TIP]
 > If a skill isn't activated automatically, you can explicitly invoke it by saying "Use the deploy skill to ..." in your prompt. Kiro's intent matching may not always auto-trigger skills.
 >
