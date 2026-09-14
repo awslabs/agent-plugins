@@ -74,19 +74,19 @@ Requires .NET 8.0+, EF Core 9.0.7+, and `Amazon.AuroraDsql.Npgsql` 1.1.0+.
 | Dialect        | Provided by `aurora-dsql-hibernate-dialect` (auto-registered)                                                                                                                                                                                                                               |
 | ID generation  | `@GeneratedValue(strategy = GenerationType.UUID)`                                                                                                                                                                                                                                           |
 | OCC retry      | Prefer the [aurora-dsql-jdbc-connector](https://github.com/awslabs/aurora-dsql-connectors/tree/main/java/jdbc) — built-in retry for SQLSTATE 40001. For manual `@Retryable`, match on `SQLException` and check `getSQLState() == "40001"` (Hibernate's class-40 mapping varies by version). |
-| Locking        | `PESSIMISTIC_WRITE` supports non-key predicates and inner-joined queries; it adds commit-time OCC checks rather than blocking row locks                                                                                                                                                           |
+| Locking        | `PESSIMISTIC_WRITE` supports non-key predicates and inner-joined queries; it adds commit-time OCC checks rather than blocking row locks                                                                                                                                                     |
 | FK constraints | Keep normal relationship mappings; the DSQL dialect exports foreign key constraints                                                                                                                                                                                                         |
 | DDL generation | `hibernate.hbm2ddl.auto = none` — manage DDL manually                                                                                                                                                                                                                                       |
 
 ### Rails
 
-| Issue      | Fix                                                                                                                                                     |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| adapter    | `postgresql` (standard pg gem)                                                                                                                          |
-| Auth       | Custom connection handler generating IAM tokens via `aws-sdk-dsql`                                                                                      |
-| Migrations | `disable_ddl_transaction!` in each migration                                                                                                            |
-| PKs        | `id: :uuid` in `create_table`                                                                                                                           |
-| FKs        | Use `add_foreign_key ..., validate: false`, then run `ALTER TABLE ASYNC ... VALIDATE CONSTRAINT` and verify the job                                     |
+| Issue      | Fix                                                                                                                                                                                  |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| adapter    | `postgresql` (standard pg gem)                                                                                                                                                       |
+| Auth       | Custom connection handler generating IAM tokens via `aws-sdk-dsql`                                                                                                                   |
+| Migrations | `disable_ddl_transaction!` in each migration                                                                                                                                         |
+| PKs        | `id: :uuid` in `create_table`                                                                                                                                                        |
+| FKs        | Use `add_foreign_key ..., validate: false`, then run `ALTER TABLE ASYNC ... VALIDATE CONSTRAINT` and verify the job                                                                  |
 | Locking    | Use `Relation#lock` for non-key filters and joins inside a transaction; use `lock!` or `with_lock` for individual persisted records; retry the whole transaction on SQLSTATE `40001` |
 
 ### SQLAlchemy
