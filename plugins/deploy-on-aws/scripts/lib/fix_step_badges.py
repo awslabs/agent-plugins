@@ -21,6 +21,7 @@ import argparse
 import math
 import re
 import defusedxml.ElementTree as ET
+from xml.etree.ElementTree import Element, ElementTree
 from dataclasses import dataclass
 
 
@@ -88,7 +89,7 @@ def get_style_dict(style_str: str) -> dict[str, str]:
     return result
 
 
-def get_geometry(cell: ET.Element) -> Rect | None:
+def get_geometry(cell: Element) -> Rect | None:
     for geom in cell:
         if geom.tag == "mxGeometry" and geom.get("as") == "geometry":
             if geom.get("relative") == "1":
@@ -102,8 +103,8 @@ def get_geometry(cell: ET.Element) -> Rect | None:
 
 
 def resolve_edge_label_position(
-    cell: ET.Element,
-    cells: dict[str, ET.Element],
+    cell: Element,
+    cells: dict[str, Element],
     geom_cache: dict[str, Rect],
 ) -> Rect | None:
     """Resolve an edge label's absolute position by finding the midpoint
@@ -158,7 +159,7 @@ def resolve_edge_label_position(
 
 def resolve_absolute(
     cell_id: str,
-    cells: dict[str, ET.Element],
+    cells: dict[str, Element],
     geom_cache: dict[str, Rect],
 ) -> Rect | None:
     if cell_id in geom_cache:
@@ -199,7 +200,7 @@ def resolve_absolute(
     return abs_rect
 
 
-def is_on_diagram_badge(cell: ET.Element) -> bool:
+def is_on_diagram_badge(cell: Element) -> bool:
     """On-diagram step badge: fillColor=#007CBD, numeric value, not in legend."""
     style = get_style_dict(cell.get("style", ""))
     fill = style.get("fillColor", "").upper()
@@ -219,7 +220,7 @@ def is_on_diagram_badge(cell: ET.Element) -> bool:
     return bool(re.match(r"^\d{1,2}$", stripped))
 
 
-def classify_cell(cell: ET.Element) -> str:
+def classify_cell(cell: Element) -> str:
     """Classify a cell as 'badge', 'obstacle', or 'skip'."""
     cell_id = cell.get("id", "")
     if cell_id in ("0", "1"):
@@ -309,14 +310,14 @@ def compute_min_clearance(
 
 
 def fix_badges(
-    tree: ET.ElementTree,
+    tree: ElementTree,
     clearance: float = 10.0,
     verbose: bool = False,
 ) -> int:
     """Fix badge overlaps in-place. Returns number of badges moved."""
     root_elem = tree.getroot()
 
-    cells: dict[str, ET.Element] = {}
+    cells: dict[str, Element] = {}
     for cell in root_elem.iter("mxCell"):
         cid = cell.get("id")
         if cid:

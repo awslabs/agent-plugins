@@ -10,6 +10,7 @@ Fixes three types of issues:
 
 import argparse
 import defusedxml.ElementTree as ET
+from xml.etree.ElementTree import Element, ElementTree
 
 # Broken shape names → correct shape names
 SHAPE_RENAMES: dict[str, str] = {
@@ -195,7 +196,7 @@ def _extract_color(value: str) -> str | None:
     return None
 
 
-def fix_icon_colors(tree: ET.ElementTree, verbose: bool = False) -> int:
+def fix_icon_colors(tree: ElementTree, verbose: bool = False) -> int:
     """Fix icon fillColor, container tint/stroke, and broken shape names.
 
     1. Rename broken resIcon shapes (e.g., iam → identity_and_access_management)
@@ -208,7 +209,7 @@ def fix_icon_colors(tree: ET.ElementTree, verbose: bool = False) -> int:
     fixed = 0
 
     # Build a map of cell ID → cell element
-    cells: dict[str, ET.Element] = {}
+    cells: dict[str, Element] = {}
     for cell in root_elem.iter("mxCell"):
         cid = cell.get("id")
         if cid:
