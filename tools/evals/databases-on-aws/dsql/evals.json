@@ -5,15 +5,17 @@
     {
       "id": 1,
       "prompt": "How many rows can I modify in a single DSQL transaction? I'm planning a data migration of about 10k rows and need to know how to batch it.",
-      "expected_output": "Explains the 3,000 row limit, recommends batching strategy with 500-1000 row batches, and verifies the limit via awsknowledge MCP",
+      "expected_output": "Explains the 3,000 row-modification limit, recommends batching strategy with 500-1000 row batches, and verifies the limit via awsknowledge MCP",
       "expectations": [
         "Calls awsknowledge search_documentation with a transaction-related query",
-        "Mentions the 3,000 row per transaction limit",
+        "Mentions the 3,000 row-modification per transaction limit",
         "Recommends a batching strategy for the 10k row migration",
         "Mentions the 10 MiB data size limit per transaction"
       ],
       "grader": "regex",
-      "required_mcp_servers": ["awsknowledge"]
+      "required_mcp_servers": [
+        "awsknowledge"
+      ]
     },
     {
       "id": 2,
@@ -39,7 +41,9 @@
         "Suggests alternatives such as composite indexes or reducing index count"
       ],
       "grader": "regex",
-      "required_mcp_servers": ["awsknowledge"]
+      "required_mcp_servers": [
+        "awsknowledge"
+      ]
     },
     {
       "id": 4,
@@ -254,6 +258,22 @@
         "States that the default applies to future inserts and does not backfill existing rows",
         "Uses one DDL statement per transaction",
         "Does NOT recommend the Table Recreation Pattern"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 22,
+      "prompt": "My Django transaction uses a non-nullable customer relationship and Order.objects.select_related(\"customer\").filter(tenant_id=tenant_id, status=\"pending\").select_for_update() before updating an order. Can Aurora DSQL run this joined SELECT FOR UPDATE even though the filter is not an equality predicate on the primary key? Include supported and unsupported lock clauses, transaction-size accounting, concurrency behavior, and retry guidance.",
+      "expected_output": "Keeps the joined non-key select_for_update query, states that equality on every primary-key column is not required, explains that rows targeted by the locking clause participate in optimistic commit-time conflict checks instead of blocking locks, states that each targeted row's primary key counts toward the 10 MiB transaction-size limit, identifies the supported and unsupported lock clauses, and retries the whole transaction on SQLSTATE 40001",
+      "expectations": [
+        "States that SELECT FOR UPDATE supports non-primary-key predicates and does not require equality on every primary-key column",
+        "States that SELECT FOR UPDATE supports queries that join multiple tables",
+        "Keeps Django select_for_update() instead of replacing it solely because the query uses a joined non-key predicate",
+        "Explains that rows targeted by the locking clause participate in optimistic commit-time conflict checks rather than taking blocking row locks",
+        "States that the primary key of each row targeted by the locking clause counts toward the 10 MiB transaction-size limit",
+        "States that FOR UPDATE and FOR KEY SHARE are supported",
+        "States that FOR NO KEY UPDATE and FOR SHARE are unsupported",
+        "Recommends retrying the whole transaction with backoff when a conflict returns SQLSTATE 40001"
       ],
       "grader": "llm_judge"
     }

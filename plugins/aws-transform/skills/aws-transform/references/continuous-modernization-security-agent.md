@@ -115,7 +115,7 @@ Do NOT proceed until status is `configured`.
 Once setup is verified, proceed with the normal analysis flow using `--type security`. The CLI discovers the security agent configuration from CloudFormation at runtime — no manual config steps are needed.
 
 ```bash
-atx ct analysis run --type security --sources <source-name>
+atx ct analysis run --type security --source <source-name>
 ```
 
 The executor IAM policy required for runtime is documented in `AWSTransformSecurityAgentExecutorAccess.json` (included with this skill).
