@@ -118,7 +118,7 @@ transact([
 **Important Notes:**
 
 - Each ALTER TABLE must be in its own transaction (DSQL limitation)
-- Keep transactions under 3,000 rows and 10 MiB
+- Keep transactions under 3,000 row modifications and 10 MiB
 - For large batch operations, split into multiple transact calls
 - **MUST** build every statement with [`safe_query.build()`](safe_query.py).
   Write mode disables all server-side injection filters

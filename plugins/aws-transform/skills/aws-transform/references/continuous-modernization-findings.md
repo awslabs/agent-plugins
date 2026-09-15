@@ -88,7 +88,7 @@ Filtering at the CLI is materially faster than pulling everything and filtering 
 - Per-repo loops when a single `--source` filter would cover the whole batch.
 - Omitting `--status open` when the user only cares about live findings — `dismissed` and `obsolete` pile up over time.
 - Passing `--type` and `--analysis-id` together when `--analysis-id` alone already pins the result set to one run.
-- "Auto-fixable" without a transform name → narrow with `--type tech-debt-quick` first. `tech-debt-quick` findings carry an ATX-transform fix; `security` findings carry a security-agent fix (see the [remediation](continuous-modernization-remediation.md) skill). Findings without a `fix` field may still be remediable — see the [remediation](continuous-modernization-remediation.md) skill's decision tree.
+- "Auto-fixable" without a transform name → narrow with `--type rapid-techdebt-analysis` first. `rapid-techdebt-analysis` findings carry an ATX-transform fix; `security` findings carry a security-agent fix (see the [remediation](continuous-modernization-remediation.md) skill). Findings without a `fix` field may still be remediable — see the [remediation](continuous-modernization-remediation.md) skill's decision tree.
 - `--type` alone or `--type --severity`/`--type --min-severity` (no status, no repo) → add `--status open` to anchor on the live-triage shape.
 - Passing both `--severity` and `--min-severity` in the same call → the CLI rejects this. Pick one.
 - Treating the first page of `atx ct findings list` as the complete set when the response carries a non-empty `nextToken`. Page through with `--next-token <token>` until no `nextToken` remains — otherwise you silently drop findings.

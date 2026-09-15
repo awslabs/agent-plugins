@@ -258,7 +258,7 @@ Fields (raw → normalized): `id`, `analysis_type` → `analysisType`, `status`,
 Two charts side-by-side:
 
 1. Bar — severity counts. Use `status === 'open'` only. **Only include severity buckets that have at least one finding** — don't render zero-count columns. Iterate `['high','medium','low']` in that order, filter to non-zero, then plot.
-2. Doughnut — analysis-type split (`quick-scan`, `tech-debt`, `security`, `agentic-readiness`, `custom`, `manual`). Same rule: only include types with at least one finding.
+2. Doughnut — analysis-type split (`rapid-techdebt-analysis`, `tech-debt-comprehensive`, `security`, `agentic-readiness`, `modernization-readiness`, `custom`, `manual`). Same rule: only include types with at least one finding.
 
 **Severity enum is `high | medium | low`. There is no `critical`.**
 

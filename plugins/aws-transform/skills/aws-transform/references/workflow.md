@@ -89,28 +89,29 @@ What do you want to do?
 
 ### By Tech Stack
 
-| Stack                    | Approach       | Agent                                                                        |
-| ------------------------ | -------------- | ---------------------------------------------------------------------------- |
-| .NET Framework 4.x       | Managed Agents | `dotnet-chatty-agent` (hardcoded)                                            |
-| .NET Core 3.1 / .NET 5/6 | Managed Agents | Same .NET agent (simpler upgrade)                                            |
-| Java 8/11/17             | CLI            | Find Java transformation definitions via `atx custom def list --json`        |
-| Spring Boot 2.x → 3.x    | CLI            | Find Spring Boot transformation definitions via `atx custom def list --json` |
-| COBOL / JCL              | Managed Agents | Discover via `list_resources resource="agents"`                              |
-| VMware VMs               | Managed Agents | Discover via `list_resources resource="agents"`                              |
-| SQL Server / Oracle      | Managed Agents | Discover via `list_resources resource="agents"`                              |
-| Already modern           | CLI            | Run analysis or standards transformation definitions                         |
+| Stack                         | Approach       | Agent                                                                                                                                                                                    |
+| ----------------------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| .NET — single local solution  | Managed Agents | `dotnet-chatty-agent` (single-job flow) → [dotnet](dotnet.md)                                                                                                                            |
+| .NET — multi-repo / portfolio | Managed Agents | Bulk orchestrator, **discover** via `list_resources resource="agents" agentType="ORCHESTRATOR_AGENT"` (select by `name=dotnet-bulk-modernization-agent`) → [dotnet-bulk](dotnet-bulk.md) |
+| .NET Core 3.1 / .NET 5/6      | Managed Agents | Same as above — route by scope (single solution vs. portfolio)                                                                                                                           |
+| Java 8/11/17                  | CLI            | Find Java transformation definitions via `atx custom def list --json`                                                                                                                    |
+| Spring Boot 2.x → 3.x         | CLI            | Find Spring Boot transformation definitions via `atx custom def list --json`                                                                                                             |
+| COBOL / JCL                   | Managed Agents | Discover via `list_resources resource="agents"`                                                                                                                                          |
+| VMware VMs                    | Managed Agents | Discover via `list_resources resource="agents"`                                                                                                                                          |
+| SQL Server / Oracle           | Managed Agents | Discover via `list_resources resource="agents"`                                                                                                                                          |
+| Already modern                | CLI            | Run analysis or standards transformation definitions                                                                                                                                     |
 
-**.NET agent is the only hardcoded name. All others: discover dynamically.**
+**.NET routing is by scope:** a single local solution uses the `dotnet-chatty-agent` single-job flow ([dotnet](dotnet.md)); a multi-repo / portfolio uses the bulk orchestrator, discovered dynamically via `list_resources` ([dotnet-bulk](dotnet-bulk.md)). All other workloads: discover dynamically.
 
 ### By Goal
 
-| Goal                   | Approach                                                        |
-| ---------------------- | --------------------------------------------------------------- |
-| Understand a codebase  | CLI: run analysis transformation definition                     |
-| Modernize legacy app   | Identify stack → CLI assessment → Managed Agents transformation |
-| Upgrade a version      | CLI for Java/Python; Managed Agents for .NET                    |
-| Apply coding standards | CLI: find standards transformation definition                   |
-| Migrate to AWS         | Managed Agents (.NET → dotnet-chatty-agent, mainframe, VMware)  |
+| Goal                   | Approach                                                                                                           |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Understand a codebase  | CLI: run analysis transformation definition                                                                        |
+| Modernize legacy app   | Identify stack → CLI assessment → Managed Agents transformation                                                    |
+| Upgrade a version      | CLI for Java/Python; Managed Agents for .NET                                                                       |
+| Apply coding standards | CLI: find standards transformation definition                                                                      |
+| Migrate to AWS         | Managed Agents (.NET single-solution → dotnet-chatty-agent; .NET portfolio → bulk orchestrator; mainframe; VMware) |
 
 ---
 

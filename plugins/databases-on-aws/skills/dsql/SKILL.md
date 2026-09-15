@@ -65,9 +65,9 @@ Load these files as needed for detailed guidance:
 
 ### ORM Guides:
 
-| Reference                                                   | When to Load              | Contains                                                                 |
-| ----------------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------ |
-| [orm-guides/overview.md](references/orm-guides/overview.md) | Migrating any ORM to DSQL | Adapter names, key gotchas for Django/EF Core/Hibernate/Rails/SQLAlchemy |
+| Reference                                                   | When to Load                                    | Contains                                                                              |
+| ----------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------- |
+| [orm-guides/overview.md](references/orm-guides/overview.md) | Migrating an ORM or using ORM locking with DSQL | Adapter names, locking, and key gotchas for Django/EF Core/Hibernate/Rails/SQLAlchemy |
 
 ### Data Loading:
 
@@ -145,18 +145,18 @@ See [mcp-tools.md](mcp/mcp-tools.md) for detailed usage and examples.
 Consult for verifying DSQL service limits before advising users. The numeric limits below are
 defaults that may change — when a user's decision depends on an exact limit, verify it first:
 
-| Limit                          | Default       | Verify query                       |
-| ------------------------------ | ------------- | ---------------------------------- |
-| Max rows per transaction       | 3,000         | `aurora dsql transaction limits`   |
-| Max data size per transaction  | 10 MiB        | `aurora dsql transaction limits`   |
-| Max transaction duration       | 5 minutes     | `aurora dsql transaction limits`   |
-| Max connections per cluster    | 10,000        | `aurora dsql connection limits`    |
-| Auth token expiry              | 15 minutes    | `aurora dsql authentication token` |
-| Max connection duration        | 60 minutes    | `aurora dsql connection limits`    |
-| Max indexes per table          | 24            | `aurora dsql index limits`         |
-| Max columns per index          | 8             | `aurora dsql index limits`         |
-| IDENTITY/SEQUENCE CACHE values | 1 or >= 65536 | `aurora dsql sequence cache`       |
-| Supported column data types    | See docs      | `aurora dsql supported data types` |
+| Limit                                 | Default       | Verify query                       |
+| ------------------------------------- | ------------- | ---------------------------------- |
+| Max row modifications per transaction | 3,000         | `aurora dsql transaction limits`   |
+| Max data size per transaction         | 10 MiB        | `aurora dsql transaction limits`   |
+| Max transaction duration              | 5 minutes     | `aurora dsql transaction limits`   |
+| Max connections per cluster           | 10,000        | `aurora dsql connection limits`    |
+| Auth token expiry                     | 15 minutes    | `aurora dsql authentication token` |
+| Max connection duration               | 60 minutes    | `aurora dsql connection limits`    |
+| Max indexes per table                 | 24            | `aurora dsql index limits`         |
+| Max columns per index                 | 8             | `aurora dsql index limits`         |
+| IDENTITY/SEQUENCE CACHE values        | 1 or >= 65536 | `aurora dsql sequence cache`       |
+| Supported column data types           | See docs      | `aurora dsql supported data types` |
 
 **When to verify:** Before recommending batch sizes, connection pool settings, or schema designs where hitting a limit would cause failures; any time the exact number can affect user decision.
 
@@ -271,9 +271,9 @@ MUST load [query-plan/workflow.md](references/query-plan/workflow.md) at entry �
 
 MUST load [pg-migrations/type-mapping.md](references/pg-migrations/type-mapping.md), [pg-migrations/schema-objects.md](references/pg-migrations/schema-objects.md), and [foreign-keys.md](references/foreign-keys.md). Run `dsql_lint(fix=true)` first for mechanical fixes, preserve foreign-key relationships, translate unsupported source syntax or options, then apply semantic conversions from the pg-migrations references for unfixable diagnostics and patterns the linter cannot handle. Re-lint the final output before deploying.
 
-### Workflow 11: ORM Migration (Django/EF Core/Hibernate/Rails/SQLAlchemy)
+### Workflow 11: ORM Migration and Locking (Django/EF Core/Hibernate/Rails/SQLAlchemy)
 
-Load [orm-guides/overview.md](references/orm-guides/overview.md) for adapter names and framework-specific gotchas.
+Load [orm-guides/overview.md](references/orm-guides/overview.md) for adapter names, locking guidance, and framework-specific gotchas.
 
 ### Workflow 12: System Diagnostics (CloudWatch AAS)
 
@@ -290,7 +290,7 @@ MUST load [system-diagnostics/workflow.md](references/system-diagnostics/workflo
 - **OCC serialization error:** Retry the transaction. If persistent, check for hot-key contention — see [troubleshooting.md](references/troubleshooting.md).
 - **Foreign key violation (`23503`):** Correct the relationship or referential action; **MUST NOT**
   send it through the `40001` retry loop — see [troubleshooting.md](references/troubleshooting.md).
-- **Transaction exceeds limits:** Split into batches under 3,000 rows — see [batched-migration.md](references/ddl-migrations/batched-migration.md).
+- **Transaction exceeds limits:** Split write batches to stay under 3,000 row modifications and 10 MiB; locked-row primary keys count toward the size limit — see [batched-migration.md](references/ddl-migrations/batched-migration.md).
 - **Token expiration mid-operation:** Generate a fresh IAM token — see [authentication-guide.md](references/auth/authentication-guide.md). See [troubleshooting.md](references/troubleshooting.md) for other issues.
 
 ## Additional Resources
