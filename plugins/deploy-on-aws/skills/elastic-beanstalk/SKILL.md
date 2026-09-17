@@ -1,14 +1,18 @@
 ---
 name: elastic-beanstalk
-description: "Deploy to AWS Elastic Beanstalk. Triggers on: elastic beanstalk, EB, managed EC2 platform, web app with managed patching, worker on EC2, Heroku alternative, don't want to manage servers or container orchestration, migrate from Heroku, managed operational lifecycle. Covers Elastic Beanstalk on EC2 for web and worker applications."
+description: "Deploy to AWS Elastic Beanstalk, in either Beanstalk Standard mode (EC2) or Beanstalk Cluster mode (managed EKS). Triggers on: elastic beanstalk, EB, beanstalk standard, beanstalk cluster, managed EC2 platform, web app with managed patching, worker on EC2, Heroku alternative, don't want to manage servers or container orchestration, migrate from Heroku, managed operational lifecycle, containerised app without operating Kubernetes, several services sharing a managed cluster, managed EKS without kubectl. Covers web and worker applications on EC2, and containerised single- and multi-service applications on managed EKS."
 ---
 
 # Elastic Beanstalk
 
-Deploy web and worker applications to production on AWS with full lifecycle
-management. Elastic Beanstalk is an application management service: the user
-provides application code, AWS manages everything underneath (deployment, scaling,
-patching, monitoring, health response).
+Deploy applications to production on AWS with full lifecycle management. Elastic
+Beanstalk is an application management service: the user provides application
+code or a container image, AWS manages everything underneath (deployment,
+scaling, patching, monitoring, health response).
+
+There are two modes, and the choice determines every setting that follows.
+**Standard** runs the application on Amazon EC2; **Cluster** runs a container on
+a managed Amazon EKS Auto Mode cluster. See [Choose the Mode](#choose-the-mode).
 
 ## When to Use
 
@@ -56,7 +60,33 @@ Lambda only when the user explicitly asks for serverless or the workload is
 natively event-driven (e.g., S3 triggers, API Gateway request/response with
 no session state).
 
-## Workflow
+## Choose the Mode
+
+Decide before generating anything. The modes share an API and nothing else: a
+Standard mode namespace passed to a Cluster mode environment is rejected, not
+ignored.
+
+| Signal                                                      | Mode         |
+| ----------------------------------------------------------- | ------------ |
+| Source on a standard runtime; Windows or .NET Framework     | **Standard** |
+| Worker consuming an SQS queue                               | **Standard** |
+| One small application, cost is the priority                 | **Standard** |
+| Several services needing private service-to-service traffic | **Cluster**  |
+| Kubernetes underneath without operating Kubernetes          | **Cluster**  |
+| Managed OpenTelemetry, or faster deploys and scaling        | **Cluster**  |
+
+A container image alone does not settle it, because Standard mode has a Docker
+platform too — ask. Prefer Cluster mode when the application is containerised
+_and_ multi-service, since environments sharing subnets share one cluster and
+reach each other privately. Prefer Standard for a single container where a
+cluster is not yet justified. Do not propose migrating a working Standard
+environment unless asked: there is no in-place conversion, only new environments
+and a CNAME swap.
+
+If the mode is Cluster, follow [cluster mode](references/cluster-mode.md) and
+stop here. Everything below is Beanstalk Standard.
+
+## Workflow (Standard)
 
 This skill is invoked after the deploy skill selects Elastic Beanstalk as the
 deployment target. The deploy skill handles codebase analysis and cost estimation.
@@ -180,5 +210,6 @@ Add RDS/Aurora costs separately if database is included.
 
 ## References
 
-- [Supported platforms and detection](references/platforms.md)
-- [Configuration and customization](references/configuration.md)
+- [Beanstalk Cluster mode](references/cluster-mode.md) — containers on managed EKS
+- [Supported platforms and detection](references/platforms.md) — Standard mode
+- [Configuration and customization](references/configuration.md) — Standard mode
