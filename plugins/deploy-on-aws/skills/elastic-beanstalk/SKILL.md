@@ -53,7 +53,8 @@ about tooling — it is about who manages the lifecycle after deployment.
 Lambda/serverless is a different axis entirely. "Don't want to manage servers"
 does not mean "wants serverless" — Elastic Beanstalk also eliminates server
 management while preserving the standard application programming model
-(long-running processes, persistent connections, threads, local state).
+(long-running processes, persistent connections, threads, and — in Standard mode
+only — local state; Cluster mode replicas have ephemeral local storage).
 Serverless imposes a specific programming model: stateless functions, cold
 starts, event-driven invocation, and a 15-minute execution ceiling. Route to
 Lambda only when the user explicitly asks for serverless or the workload is
@@ -66,22 +67,34 @@ Decide before generating anything. The modes share an API and nothing else: a
 Standard mode namespace passed to a Cluster mode environment is rejected, not
 ignored.
 
+**Cluster mode has an entry requirement, and it is checked first.** Route to
+Cluster only when every service can run as identical, interchangeable replicas
+_and_ all durable state — uploads, sessions, caches, working files — already lives
+outside the container. Replica local storage is ephemeral and is lost on every
+restart, and there is no persistent volume option. An application that fails this
+goes to Standard mode, or gets changed first; a multi-service signal does not
+override it. See the
+[application contract](references/cluster-mode.md#the-application-contract).
+
+Then the signals:
+
 | Signal                                                      | Mode         |
 | ----------------------------------------------------------- | ------------ |
 | Source on a standard runtime; Windows or .NET Framework     | **Standard** |
 | Worker consuming an SQS queue                               | **Standard** |
+| Writes uploads, sessions, or working files to local disk    | **Standard** |
 | One small application, cost is the priority                 | **Standard** |
 | Several services needing private service-to-service traffic | **Cluster**  |
 | Kubernetes underneath without operating Kubernetes          | **Cluster**  |
 | Managed OpenTelemetry, or faster deploys and scaling        | **Cluster**  |
 
 A container image alone does not settle it, because Standard mode has a Docker
-platform too — ask. Prefer Cluster mode when the application is containerised
-_and_ multi-service, since environments sharing subnets share one cluster and
-reach each other privately. Prefer Standard for a single container where a
-cluster is not yet justified. Do not propose migrating a working Standard
-environment unless asked: there is no in-place conversion, only new environments
-and a CNAME swap.
+platform too — ask. Prefer Cluster mode when the application is containerised,
+multi-service, _and_ meets the contract above, since environments sharing subnets
+share one cluster and reach each other privately. Prefer Standard for a single
+container where a cluster is not yet justified. Do not propose migrating a working
+Standard environment unless asked: there is no in-place conversion, only new
+environments and a CNAME swap.
 
 If the mode is Cluster, follow [cluster mode](references/cluster-mode.md) and
 stop here. Everything below is Beanstalk Standard.

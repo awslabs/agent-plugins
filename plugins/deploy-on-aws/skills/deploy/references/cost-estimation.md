@@ -26,6 +26,10 @@ Use the **awspricing** MCP server to get accurate cost estimates before generati
 | DynamoDB          | `AmazonDynamoDB`    | On-demand or provisioned                         |
 | Secrets Manager   | `AWSSecretsManager` | Per secret per month                             |
 | Elastic Beanstalk | N/A (free service)  | No EB charge; query EC2, AWSELB for actual costs |
+| EKS               | `AmazonEKS`         | Cluster hour + Auto Mode per-instance management |
+| CloudWatch        | `AmazonCloudWatch`  | Custom metrics per metric; log ingestion/storage |
+| NAT Gateway       | `AmazonVPC`         | Per hour + per GB processed                      |
+| CodeBuild         | `CodeBuild`         | Per build minute, by compute type                |
 
 ## Fargate Pricing
 
@@ -83,6 +87,36 @@ us-east-1 pricing:
 **Production web (4x t3.medium + ALB, Multi-AZ):** ~$150-200/month
 
 Include EBS volume costs (8GB gp3 default: ~$1/month per instance).
+
+### Beanstalk Cluster mode (managed EKS)
+
+Cluster mode has a different and higher cost floor than Standard mode, so a
+Standard-vs-Cluster comparison that prices only the EKS cluster, the nodes, and
+the ALB understates it. Price all of these:
+
+| Line item                       | Applies                                                                       |
+| ------------------------------- | ----------------------------------------------------------------------------- |
+| EKS cluster hour                | Once per cluster, shared by every environment on the same subnets             |
+| EC2 instances for the replicas  | Per workload                                                                  |
+| EKS Auto Mode management charge | Per instance, on top of the instance price, varying by instance type          |
+| ALB                             | Per environment, unless `load-balancer-type` is `None`                        |
+| CloudWatch custom metrics       | Three custom namespaces, on by default, **scaling with replica count**        |
+| CloudWatch logs                 | Four shared log groups created **with no retention policy** — nothing expires |
+| NAT gateway or VPC endpoints    | Private-subnet environments, which need egress to pull the image              |
+| CodeBuild + ECR                 | Only when Elastic Beanstalk builds the image from source                      |
+
+Two of these are the ones that get missed. The custom metrics are a new line item
+rather than a bigger one — Standard mode publishes to `AWS/ElasticBeanstalk`,
+which CloudWatch provides free, while Cluster mode publishes per replica to paid
+custom namespaces. And the log groups accumulate indefinitely, gaining a new set
+of streams on every deployment, until someone sets retention.
+
+Only the cluster hour is shared across environments. Everything else is per
+workload, so a second service on an existing cluster is cheaper than the first but
+not close to free. A single small service usually costs **more** in Cluster mode
+than the same service on one EC2 instance in Standard mode; the economics improve
+with the number of services sharing the cluster. Say so when presenting the
+comparison.
 
 ## Quick Reference Estimates
 

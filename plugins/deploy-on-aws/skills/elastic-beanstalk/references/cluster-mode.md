@@ -12,6 +12,32 @@ Deployment and Service, an Application Load Balancer with an HTTPS listener,
 autoscaling, and log and metric delivery. The user writes no Kubernetes
 manifests and runs no `kubectl`.
 
+## The Application Contract
+
+Cluster mode runs the application as one or more **identical, interchangeable
+replicas**, and each replica's local storage is **ephemeral** — it is lost when
+the replica restarts, and replicas restart on every deployment, every scaling
+event, and every configuration change of severity `RestartRequired`.
+
+Confirm all of the following before recommending Cluster mode. If any of them
+fails, the application needs changing first, or it belongs in Standard mode:
+
+- Every service runs as interchangeable replicas. No replica is special, and no
+  request needs to reach a particular one.
+- All durable state lives outside the container — uploads in Amazon S3, sessions
+  and caches in a shared store, data in a database. An application that writes
+  uploads, caches, or working files to local disk and needs them after a restart
+  is incompatible.
+- Requests are distributed across replicas, so in-process session state, local
+  file locks, and singleton background schedulers do not survive.
+
+There is no persistent volume or PVC surface in Cluster mode. The configuration
+options include nothing for attaching storage, and EKS Auto Mode block storage
+being available to the cluster does not give an environment a managed volume.
+Durable state is an external service the user provisions and manages separately.
+Do not imply that an EBS volume or an EFS mount can be attached through Cluster
+mode configuration.
+
 ## The Namespace Boundary
 
 A Cluster mode environment accepts twelve `aws:elasticbeanstalk:eks*`
@@ -84,10 +110,14 @@ done
 
 The principal creating the environment also needs `iam:GetRole` and
 `iam:PassRole` on each role, and `iam:CreateServiceLinkedRole` for the first
-Cluster environment in the account. Two more roles apply in narrower cases: an
-image build role (`codebuild.amazonaws.com`) when Elastic Beanstalk builds the
-image from source, and an optional application role (`pods.eks.amazonaws.com`)
-when the application itself calls AWS services.
+Cluster environment in the account. Two more roles apply in narrower cases:
+
+- **Image build role**, `aws-elasticbeanstalk-eks-image-build-role`, trusted by
+  `codebuild.amazonaws.com`. Required when Elastic Beanstalk builds the image
+  from source — see [Application Versions](#application-versions).
+- **Application role**, trusted by `pods.eks.amazonaws.com`, with a name the user
+  chooses. Optional in principle, but required in practice by more than its
+  description suggests — see [Secrets and the Application Role](#secrets-and-the-application-role).
 
 For the managed policies on each role, the trust policies, and a ready-made
 `PassRole` policy, see [Permissions for Beanstalk Cluster](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/beanstalk-cluster-permissions.html).
@@ -131,7 +161,7 @@ aws elasticbeanstalk create-application --application-name my-app
 
 aws elasticbeanstalk create-application-version \
   --application-name my-app --version-label v1 \
-  --image-source Uri=public.ecr.aws/my-org/my-service:1.0.0
+  --image-configuration Source={Uri=public.ecr.aws/my-org/my-service:1.0.0}
 
 aws elasticbeanstalk create-environment \
   --application-name my-app --environment-name my-app-env \
@@ -149,10 +179,72 @@ aws elasticbeanstalk describe-configuration-settings \
 ```
 
 An image-based application version reports `Status: UNPROCESSED` and is
-immediately deployable. Only source bundles are processed, because only they
-need building. To deploy source instead of an image, supply a source bundle and
-Elastic Beanstalk builds the image with AWS CodeBuild, from a Dockerfile if
-there is one or from a buildpack if there is not.
+immediately deployable — `UNPROCESSED` is not a failure here, because an image
+that is already built needs no processing.
+
+## Application Versions
+
+A Cluster mode application version carries an `ImageConfiguration` with exactly
+one of two members. `Source` names an image that is already built;
+`Build` tells Elastic Beanstalk to build one from a source bundle. Supplying
+both, neither, `Source` together with a `--source-bundle`, or
+`ImageConfiguration` together with the Standard mode `--build-configuration` is
+rejected.
+
+**A source build is never automatic.** Nothing is inferred from the contents of
+the bundle — there is no Dockerfile-or-buildpack detection. A source build needs
+all four of these, and omitting `--process` leaves the version `UNPROCESSED`
+with no build started, which reads as a hang:
+
+| Piece                        | Requirement                                                                 |
+| ---------------------------- | --------------------------------------------------------------------------- |
+| `--source-bundle`            | `S3Bucket=` and `S3Key=` for an archive already uploaded to Amazon S3       |
+| `--process`                  | Starts the build. Without it, nothing happens                               |
+| `Build.Type`                 | `docker` or `buildpack`. Required — not detected                            |
+| `Build.CodeBuildServiceRole` | Required. The image build role, `aws-elasticbeanstalk-eks-image-build-role` |
+
+A `docker` build takes `DockerfileLocation`, defaulting to `Dockerfile` at the
+root. A `buildpack` build must name its builder in `Buildpack` (for example
+`paketobuildpacks/builder-jammy-base`); Elastic Beanstalk does not pick one, and
+a buildpack build with no builder set fails.
+
+```bash
+aws elasticbeanstalk create-application-version \
+  --application-name my-app --version-label v1-build --process \
+  --source-bundle S3Bucket=my-source-bucket,S3Key=my-app/v1.zip \
+  --image-configuration '{
+    "Build": {
+      "Type": "docker",
+      "DockerfileLocation": "Dockerfile",
+      "CodeBuildServiceRole": "arn:aws:iam::111122223333:role/service-role/aws-elasticbeanstalk-eks-image-build-role"
+    }
+  }'
+```
+
+`Architecture` sets the image's target CPU architecture, `amd64` or `arm64`, and
+must match the environment's `arch` option — an image built for one does not run
+on the other. Both default to `amd64`.
+
+**Poll to a terminal status before deploying.** A source build reports
+`BUILDING`, then `PROCESSED` on success or `FAILED` on failure. Deploy only
+`PROCESSED`. `describe-events --version-label <label> --severity ERROR` names the
+stage that failed; the version's `BuildArn` identifies the CodeBuild execution,
+and `aws codebuild batch-get-builds --ids <arn>` gives its log location. A failed
+version cannot be repaired — create a new one with a new label.
+
+**Do not reuse the Standard mode source workflow.** `create-storage-location`,
+an S3 source bundle deployed directly, solution stacks, and
+`--build-configuration` all belong to Standard mode. In Cluster mode the bundle
+is only ever build input, and the thing that gets deployed is the image.
+
+Version lifecycle policies do not delete Cluster mode application versions, and
+`DeleteApplicationVersion` removes only the Elastic Beanstalk record — not the
+image, the Amazon ECR repository, or the source bundle in S3.
+
+See [Building container images for Beanstalk Cluster environments](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/beanstalk-cluster-app-versions.html)
+for the full procedure and both build types.
+
+## Creation Timing
 
 The first environment on a given set of subnets builds the EKS cluster first and
 takes around 15 minutes. Later environments on those subnets join the existing
@@ -179,6 +271,46 @@ JSON object of every variable, not one option per variable — the same is true 
 
 Cluster mode does not inject `AWS_REGION`. An application that reads it from the
 environment needs it set in `env-variables`.
+
+## Secrets and the Application Role
+
+The parent skill's rule still holds: never put a secret value in
+`env-variables`. In Cluster mode the `secrets` option is how a secret reaches the
+container — a single JSON object mapping each name to the ARN of a Secrets
+Manager secret or a Parameter Store parameter, which Elastic Beanstalk mounts
+into the container.
+
+**`secrets` does not work on its own.** Elastic Beanstalk reads each value
+through the pod's identity, which exists only when `application-role` is set. Set
+`secrets` without it and the volume mount fails and the replicas never start — so
+the environment does not come up at all, rather than coming up without its
+secrets. Set up all three of these together:
+
+1. **The role**, created before the environment. Its trust policy must allow
+   `sts:AssumeRole` and `sts:TagSession` for the `pods.eks.amazonaws.com` service
+   principal — that is what makes it usable as an EKS Pod Identity, and an
+   otherwise-correct role with the wrong trust policy fails the same way.
+2. **Read permission on every referenced value.** For a Secrets Manager secret,
+   grant both `secretsmanager:GetSecretValue` and
+   `secretsmanager:DescribeSecret`. With only the first, the environment starts
+   normally and then fails on a later credential refresh — a failure that arrives
+   hours after the deployment that caused it.
+3. **`application-role`** set on the environment, in
+   `aws:elasticbeanstalk:eks:environment`.
+
+The same prerequisite applies wherever else Cluster mode reads a secret, and the
+failure mode is the same in each case:
+
+| Option                                                        | Reads a secret for                                             |
+| ------------------------------------------------------------- | -------------------------------------------------------------- |
+| `aws:elasticbeanstalk:eks:environment` `secrets`              | The application's own secrets and parameters                   |
+| `...:autoscaling:trigger` `scaler-auth-secret`                | Credentials for a `metrics-api` scaling endpoint               |
+| `aws:elasticbeanstalk:eks:observability` `custom-credentials` | Credentials for a third-party logs, metrics, or traces backend |
+
+The application role is also what the application uses to call AWS services at
+all, so scope it per environment rather than sharing one role across a set of
+services. See [Permissions for Beanstalk Cluster](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/beanstalk-cluster-permissions.html)
+for the trust policy and a worked example.
 
 ## Subnets
 
@@ -208,15 +340,36 @@ field separator, so pass subnets in a JSON file rather than on the command line.
 
 ## HTTPS Only
 
-Elastic Beanstalk configures an HTTPS listener on port 443 and leaves port 80
-closed. Always verify over `https://`. An `http://` request hangs until it times
-out and reads as a broken deployment.
+**This section describes a load balancer that Elastic Beanstalk creates.** Check
+first — HTTPS is only configured for you in that case:
 
-Elastic Beanstalk creates and attaches a certificate for the environment's own
-domain, so HTTPS works without configuration. Set `certificate-arn` only to add
-a certificate for a custom domain. Setting `ssl-redirect` alone does nothing,
-because it needs an HTTP listener that the environment does not have by default;
-add one through `listen-ports` if the user wants the redirect.
+| Load balancer                                               | Who owns the listeners and TLS          |
+| ----------------------------------------------------------- | --------------------------------------- |
+| Default — Elastic Beanstalk creates it                      | Elastic Beanstalk. This section applies |
+| `aws:elasticbeanstalk:eks:alb` `arn` set to an existing ALB | The user. This section does not apply   |
+| `load-balancer-type` set to `None`                          | No load balancer, so no listeners       |
+
+With an Elastic Beanstalk-managed load balancer, it configures an HTTPS listener
+on port 443 and leaves port 80 closed. Always verify over `https://`. An
+`http://` request hangs until it times out and reads as a broken deployment.
+
+Elastic Beanstalk creates and attaches an ACM certificate for the environment's
+own domain and renews it, so HTTPS works without configuration. Set
+`certificate-arn` only to add a certificate for a custom domain. `ssl-redirect`
+alone does nothing, because it needs an HTTP listener that the environment does
+not have by default; add one through `listen-ports` if the user wants the
+redirect. `listen-ports` is a JSON array mapping protocol to port, such as
+`[{"HTTPS":443},{"HTTP":80}]`, and an HTTP listener never serves application
+traffic directly.
+
+**With a load balancer the user supplies through `arn`, assume nothing.** Elastic
+Beanstalk does not add a listener or a certificate to it; it registers the
+application as a target and reports that load balancer as the environment's. The
+listeners, the TLS configuration, and the scheme are the user's, so check what
+the load balancer actually has before telling them a URL to test, and do not set
+`certificate-arn`, `listen-ports`, `ssl-redirect`, `scheme`, or the `:alb`
+`subnets` options expecting them to take effect. The value must be an Application
+Load Balancer — a Network Load Balancer ARN is rejected.
 
 ## Multiple Services
 
@@ -227,6 +380,49 @@ Elastic Beanstalk application so it keeps its own version history.
 Environments that share subnets land on the same EKS cluster, which is what lets
 them reach each other privately and means the user pays for one cluster however
 many services run on it.
+
+**Decide the isolation boundary before recommending that, because the subnets
+cannot be changed afterwards.** A shared cluster is soft multi-tenancy: the
+environments share the EKS control plane, and by default they share worker nodes.
+Elastic Beanstalk separates them logically — each environment runs in its own
+partition and inbound traffic between environments is blocked by default, with no
+option to turn that off — but logical separation is not infrastructure
+separation, and the cluster is the boundary that Amazon EKS treats as a security
+boundary.
+
+| Requirement                                                                   | Boundary                                      |
+| ----------------------------------------------------------------------------- | --------------------------------------------- |
+| Services one team owns and operates together, as one application              | Shared cluster — same subnets                 |
+| Environments belonging to different end customers                             | Separate clusters — **different subnet sets** |
+| Environments running code the user does not control                           | Separate clusters — **different subnet sets** |
+| A compliance regime requiring infrastructure separation                       | Separate clusters — **different subnet sets** |
+| Production separated from development (common, even when nothing requires it) | Separate clusters — **different subnet sets** |
+
+So propose a shared cluster for the services of a single application, and propose
+different subnet sets otherwise. Separate clusters cost more and use capacity
+less efficiently, and that is the trade being made — do not resolve it silently in
+favour of the cheaper option.
+
+Three things a shared cluster does not separate, each removed only by using
+different subnets:
+
+- **Outbound traffic is not restricted at all.** The default separation blocks
+  traffic arriving at an environment, not traffic it sends. No option restricts
+  egress; that has to come from the application or from the subnets' own network
+  configuration.
+- **The control plane is shared**, including its Kubernetes version, which is
+  fixed for the life of the cluster.
+- **A cluster-wide failure affects every environment on it.** If the cluster
+  drifts from the configuration Elastic Beanstalk expects, updates fail for every
+  environment on that cluster until the drift is reverted.
+
+`node-pool` gives an environment dedicated nodes and is the right answer to a
+node-capacity or noisy-neighbour requirement. It is not a security boundary: the
+control plane is still shared, the failure domain is still shared, and
+environments that share a `node-pool` value share nodes with each other — so a
+value another environment already uses is not dedicated at all. If the goal is
+separating environments from one another, different subnets are simpler and
+separate the cluster too. See [Multi-tenancy for Beanstalk Cluster environments](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/beanstalk-cluster-multi-tenancy.html).
 
 **Service discovery.** Environments address each other at a fixed pattern —
 note the `eb-` prefix on the namespace but not on the service name:
@@ -275,12 +471,9 @@ setting `scaler-type` replaces the default CPU scaling, so set the CPU trigger
 explicitly to keep both, and when several triggers apply the highest replica
 count wins.
 
-A `metrics-api` endpoint that needs credentials also needs `application-role`
-set on the environment — the credentials are mounted through Pod Identity, which
-does not exist without it, and the replicas fail to start. Grant that role both
-`secretsmanager:GetSecretValue` and `secretsmanager:DescribeSecret`; with only
-the first, the environment starts normally and then fails on every later
-credential refresh.
+A `metrics-api` endpoint whose credentials come from `scaler-auth-secret` also
+needs `application-role`, and the replicas fail to start without it. See
+[Secrets and the Application Role](#secrets-and-the-application-role).
 
 See [Scaling Beanstalk Cluster environments](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/configuring-cluster-scaling.html)
 for the full model.
@@ -331,15 +524,31 @@ the next.
    running, so the application is alive and unreachable rather than crashing.
 5. **Application logs** — the only place the application itself speaks.
 
-Logs go to three account-wide log groups, shared across every environment rather
-than one per environment. The container's output is in
-`/aws/elasticbeanstalk/application/logs`, with one stream per pod named
-`eb-<environment>.deployment-<environment>-<replicaset>-<pod>`:
+Logs go to four log groups with fixed names, shared across every Cluster mode
+environment in the account and Region — every cluster, not one group per
+environment. Environments are separated by stream name, not by group:
+
+| Log group                                      | Contents                                | Stream name                        |
+| ---------------------------------------------- | --------------------------------------- | ---------------------------------- |
+| `/aws/elasticbeanstalk/application/logs`       | The container's own output              | `eb-<environment-name>.<pod-name>` |
+| `/aws/elasticbeanstalk/application/metrics`    | Metrics the application emits           | `<environment-name>/<pod-name>`    |
+| `/aws/elasticbeanstalk/infrastructure/logs`    | The components Elastic Beanstalk runs   | `<k8s-namespace>.<pod-name>`       |
+| `/aws/elasticbeanstalk/infrastructure/metrics` | Elastic Beanstalk's own metrics, in EMF | `<k8s-namespace>.<pod-name>`       |
+
+Note the two different prefixes: application log streams carry the `eb-` prefix
+and a period, application metric streams carry the environment name and a slash
+with no prefix. The application's output is the first group:
 
 ```bash
 aws logs tail /aws/elasticbeanstalk/application/logs \
   --log-stream-name-prefix eb-<environment-name> --since 30m
 ```
+
+These groups are created **without a retention policy**, so nothing expires. The
+stream name contains the pod name, so every deployment and every scaling event
+creates new streams and the old ones stay. Suggest setting retention on all four
+after the first environment is created — it is an account-level cost that grows on
+its own and nothing in the environment surfaces it.
 
 Distrust one event message: the launch event may report `logs-backend=s3
 (default)` and link an S3 bucket. The default is CloudWatch, and that is where
@@ -400,11 +609,27 @@ Elastic Beanstalk adds no service fee. A Cluster mode environment costs:
   instance on top of the instance price and varies by instance type.
 - An Application Load Balancer per environment, unless `load-balancer-type` is
   `None`.
-- EBS volumes for any persistent storage, plus data transfer.
+- Data transfer.
+
+Four more that are easy to miss, because they are on by default and none of them
+appear in the environment's own configuration:
+
+- **CloudWatch custom metrics.** Elastic Beanstalk publishes to three custom
+  namespaces — `ElasticBeanstalk/Infrastructure`, `ElasticBeanstalk/System`, and
+  `ElasticBeanstalk/Application` — and custom metrics are charged per metric. The
+  container metrics are published per replica, so this grows with replica count.
+  Standard mode publishes to `AWS/ElasticBeanstalk`, which CloudWatch provides at
+  no charge, so this line item is new in Cluster mode rather than larger.
+- **CloudWatch logs with no retention.** The four shared log groups never expire
+  and accumulate a new set of streams on every deployment.
+- **NAT gateway or VPC endpoints** for a private-subnet environment, which needs
+  outbound access to pull its image.
+- **CodeBuild and Amazon ECR** when Elastic Beanstalk builds the image from
+  source, per build and then for image storage.
 
 Only the cluster charge is shared. Everything else scales per workload: each
 environment brings its own replicas, its share of node capacity, its own load
-balancer, its own storage and its own traffic. So the _second_ service on a
+balancer, its own custom metrics and its own traffic. So the _second_ service on a
 cluster is cheaper than the first because it does not pay for another cluster —
 but it is not close to free, and a multi-service application is not cheap simply
 because one cluster is shared. Do not present it that way.
@@ -416,3 +641,6 @@ economics improve with the number of services sharing the cluster.
 Query the `awspricing` MCP server for region-accurate figures rather than quoting
 rates, and remember that `cpu` and `memory` are reservations — they decide how
 many replicas fit on a node, and so how much node capacity the environment draws.
+See the deploy skill's
+[cost estimation patterns](../../deploy/references/cost-estimation.md#beanstalk-cluster-mode-managed-eks)
+for the service codes and for the Standard-versus-Cluster comparison.
