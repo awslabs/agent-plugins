@@ -196,6 +196,16 @@ def validate(file_path):
             if not geometries:
                 warnings.append(f'Vertex cell id="{_sanitize_attr(cell_id)}" is missing <mxGeometry>.')
 
+    # Mermaid-backed Draw.io cells can store the edge-facing ID on a
+    # <UserObject> wrapper while the nested <mxCell> has a different ID.
+    # Include wrapper IDs for edge-reference checks without treating wrappers
+    # as cells for the other validation rules.
+    cell_ids.update(
+        user_object.get("id")
+        for user_object in root.iter("UserObject")
+        if user_object.get("id")
+    )
+
     if not has_root_cell:
         errors.append('Missing root cell (mxCell id="0").')
     if not has_default_layer:

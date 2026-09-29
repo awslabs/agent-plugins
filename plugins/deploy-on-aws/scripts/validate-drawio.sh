@@ -35,51 +35,23 @@ if [[ ! -f "$FILE_PATH" ]]; then
     exit 0
 fi
 
-# Ensure defusedxml is available (required for safe XML parsing)
-# See scripts/requirements.txt or plugin README for installation instructions
-python3 -c "import defusedxml" 2>/dev/null || {
-  echo '{"systemMessage": "Missing required dependency: defusedxml. Install it with: pip3 install defusedxml>=0.7.1"}'
-  exit 0
-}
-
-# Step 0: Run post-processing fixers BEFORE validation
-# This fixes badge overlaps, external actor placement, and legend sizing
-# timeout prevents runaway processes from blocking the hook indefinitely
-POST_RESULT=$(timeout 10 python3 "$SCRIPT_DIR/lib/post_process_drawio.py" "$FILE_PATH" 2>&1) || true
-
-# Step 1: Run the Python validator on the post-processed file
-VALIDATE_RESULT=$(timeout 10 python3 "$SCRIPT_DIR/lib/validate_drawio.py" "$FILE_PATH" 2>&1) || true
-VALIDATION_PASSED=false
-if echo "$VALIDATE_RESULT" | grep -q "VALIDATION PASSED"; then
-    VALIDATION_PASSED=true
+if [[ -z "${HOME:-}" ]]; then
+    echo '{"systemMessage": "HOME is not set, so the isolated draw.io hook runtime cannot be located."}'
+    exit 0
 fi
 
-# Step 2: Only generate draw.io preview URL AFTER validation passes
-URL_RESULT=""
-if [[ "$VALIDATION_PASSED" == "true" ]]; then
-    URL_RESULT=$(timeout 5 python3 "$SCRIPT_DIR/lib/drawio_url.py" "$FILE_PATH" 2>/dev/null) || true
-fi
-
-# Build the response message
-FULL_RESULT=""
-if [[ -n "$POST_RESULT" ]] && [[ "$POST_RESULT" != *"no changes needed"* ]]; then
-    FULL_RESULT="POST-PROCESSING: ${POST_RESULT}
-"
-fi
-FULL_RESULT="${FULL_RESULT}${VALIDATE_RESULT}"
-if [[ -n "$URL_RESULT" ]]; then
-    FULL_RESULT="${FULL_RESULT}
-PREVIEW URL: ${URL_RESULT}"
-fi
-
-if [[ -n "$FULL_RESULT" ]]; then
-    ESCAPED=$(echo "$FULL_RESULT" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read().strip()))" 2>/dev/null)
-    if [[ -z "$ESCAPED" ]]; then
-        ESCAPED='"draw.io validation completed but output encoding failed. Run validator manually for details."'
-    fi
-    echo "{\"systemMessage\": $ESCAPED}"
+# The hook runtime is installed explicitly into a private virtual environment;
+# never install plugin dependencies into the user's ambient Python.
+if [[ "${OSTYPE:-}" == darwin* ]]; then
+    CACHE_ROOT="${XDG_CACHE_HOME:-${HOME}/Library/Caches}"
 else
-    echo '{"systemMessage": "draw.io XML validation passed. All AWS shapes are valid."}'
+    CACHE_ROOT="${XDG_CACHE_HOME:-${HOME}/.cache}"
+fi
+HOOK_PYTHON="${CACHE_ROOT}/awslabs/agent-plugins-for-aws/deploy-on-aws/drawio-hook/venv/bin/python"
+
+if [[ ! -x "$HOOK_PYTHON" ]]; then
+  echo '{"systemMessage": "The isolated draw.io hook runtime is not installed. Run scripts/setup-drawio-hook-runtime.sh from the deploy-on-aws plugin, as described in its README."}'
+  exit 0
 fi
 
-exit 0
+exec "$HOOK_PYTHON" "$SCRIPT_DIR/lib/run_drawio_hook.py" "$FILE_PATH"

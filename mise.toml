@@ -111,11 +111,11 @@ run = "uv run tools/init-skill.py"
 
 [tasks."test:python"]
 description = "Run Python unit tests with pytest (ephemeral, no repo dependency)"
-# `uv run --with pytest` installs pytest into a cached, throwaway env for this
-# run only — nothing is added to the repo's declared deps. pytest handles
-# discovery/parametrize/fixtures natively. Exit code 5 = "no tests collected",
+# `uv run --with pytest --with-requirements ...` installs pytest and the plugin's
+# declared test-time requirements into a cached, throwaway env for this run only.
+# Nothing is added to the repo's declared deps. Exit code 5 = "no tests collected",
 # which we treat as success so the build never breaks when tests are absent.
-run = "uv run --with pytest pytest tools plugins || [ $? -eq 5 ]"
+run = "uv run --with pytest --with-requirements plugins/deploy-on-aws/scripts/requirements.txt pytest tools plugins || [ $? -eq 5 ]"
 
 [tasks."test:node"]
 description = "Run Node (JS/TS) unit tests when a package.json defines them"

@@ -12,4 +12,8 @@ All scripts are in `scripts/lib/`. The pipeline is orchestrated by `scripts/lib/
 
 The PostToolUse hook fires on all Edit/Write operations but exits immediately (<10ms) for non-.drawio files.
 
-**Dependency**: The pipeline requires `defusedxml` (`pip3 install defusedxml>=0.7.1`). If missing, the hook skips validation and shows an install prompt.
+**Setup**: The pipeline uses the plugin's declared Python requirements from an isolated virtual
+environment. Run `bash /absolute/path/to/deploy-on-aws/scripts/setup-drawio-hook-runtime.sh` once
+after installing the plugin, replacing the path with its installed location. If the environment
+is missing, the hook skips processing and asks you to run the setup script. The hook never
+installs dependencies automatically or modifies global Python packages or `PATH`.

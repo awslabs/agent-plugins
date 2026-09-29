@@ -31,7 +31,15 @@ This plugin provides two skills: infrastructure deployment with cost estimation,
 ## Prerequisites
 
 - Python 3.9+
-- `defusedxml` — required for diagram XML validation: `pip3 install defusedxml>=0.7.1`
+- For automatic diagram post-processing and validation, run this once after installing the plugin,
+  replacing the path with its installed location:
+
+  ```bash
+  bash /absolute/path/to/deploy-on-aws/scripts/setup-drawio-hook-runtime.sh
+  ```
+
+  This installs the declared Python requirements into a private virtual environment under the
+  user's cache directory. It does not modify global Python packages or `PATH`.
 - AWS CLI with configured credentials (for deployment skills)
 - [draw.io desktop](https://www.drawio.com/) (optional, for PNG/SVG/PDF export)
 
