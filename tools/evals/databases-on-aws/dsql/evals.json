@@ -33,10 +33,10 @@
     {
       "id": 3,
       "prompt": "I need to add 30 indexes to my DSQL table for different query patterns. Is that possible?",
-      "expected_output": "Explains the 24 index per table limit, verifies via awsknowledge, suggests alternatives like composite indexes or query redesign",
+      "expected_output": "Explains the 24 index per table limit, counting the primary key, so 23 secondary indexes; verifies via awsknowledge, suggests alternatives like composite indexes or query redesign",
       "expectations": [
         "Calls awsknowledge search_documentation with an index-related query",
-        "Mentions the 24 indexes per table limit",
+        "Mentions the 24 indexes per table limit, including the primary key",
         "Mentions the 8 columns per index limit",
         "Suggests alternatives such as composite indexes or reducing index count"
       ],
@@ -274,6 +274,71 @@
         "States that FOR UPDATE and FOR KEY SHARE are supported",
         "States that FOR NO KEY UPDATE and FOR SHARE are unsupported",
         "Recommends retrying the whole transaction with backoff when a conflict returns SQLSTATE 40001"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 23,
+      "prompt": "I'm porting this index to Aurora DSQL: CREATE INDEX idx_logs ON logs (tenant_id, created_at DESC); It fails. What do I do, and do I lose the descending ordering?",
+      "expected_output": "Identifies that DSQL rejects sort direction on index keys, strips ASC/DESC, and explains that a uniformly-descending ORDER BY is still served by a backward scan while a mixed-direction one is not",
+      "expectations": [
+        "States that DSQL rejects ASC/DESC on index keys and that the direction must be removed, keeping CREATE INDEX ASYNC",
+        "Explains that a uniformly-ordered ORDER BY is still served because the planner can scan the index backwards, so the descending ordering is not lost",
+        "States that a mixed-direction ORDER BY still requires a sort step that no DSQL index can remove",
+        "Does not claim that dsql_lint reports the stripped direction as a warning in every case, or advise gating a pipeline solely on the error or warning count",
+        "Does not advise removing NULLS FIRST or NULLS LAST, which DSQL accepts and dsql_lint retains"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 24,
+      "prompt": "My DSQL batch insert fails with: ERROR: transaction size limit 10mb exceeded, DETAIL: Current transaction size 11mb > 10mb. I'm only inserting 2,000 rows. How do I fix it?",
+      "expected_output": "Identifies the 10 MiB per-transaction limit, explains the check happens at COMMIT and is not a raw byte count, and recommends splitting the batch",
+      "expectations": [
+        "Identifies the 10 MiB per-transaction size limit as the cause and recommends splitting the write into smaller committed batches",
+        "States that the limit is checked at COMMIT rather than per statement",
+        "Notes that the size the limit applies to is not the raw byte count of the data, so the raw size does not reliably predict whether a batch commits",
+        "Also mentions the separate 3,000 row-modification limit per transaction",
+        "Does not advise raising the limit, since it is not configurable"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 25,
+      "prompt": "My Python app sent a COMMIT to DSQL and got 'SSL SYSCALL error: EOF detected' instead of a reply. The transaction debits an account balance. Should I just retry it?",
+      "expected_output": "States that the commit outcome is unknown, that a bare retry can double-apply the write, and that the agent must confirm the outcome or report it rather than blindly retrying",
+      "expectations": [
+        "States that an EOF at or after COMMIT leaves the commit outcome unknown because the connection closed before the server replied",
+        "Explicitly warns that a bare retry can apply the debit twice",
+        "Advises reconnecting and confirming whether the write committed before resending",
+        "Addresses what to do when the outcome cannot be determined, rather than only prescribing confirmation",
+        "Does not classify the EOF as an ordinary transient error to be fed into the 40001 retry loop"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 26,
+      "prompt": "My DSQL migration only runs GRANT SELECT statements, no DDL. A long-running job that reads a large table and writes summary rows back keeps failing at COMMIT with 'schema has been updated by another transaction (OC001)' and SQLSTATE 40001. There's no DDL anywhere, so why?",
+      "expected_output": "Explains that GRANT and REVOKE are catalog changes that raise OC001 just as DDL does, that the trigger is a snapshot predating the change rather than concurrency, and that a retry clears a one-shot change",
+      "expectations": [
+        "States that GRANT and REVOKE modify the schema catalog and raise OC001 just as DDL statements do, so the absence of DDL does not rule it out",
+        "Explains that the condition is the transaction's snapshot predating a catalog change, not two statements overlapping in time",
+        "States that the reporting transaction should retry, because a retry takes a fresh snapshot and a one-shot catalog change clears",
+        "Advises serializing the catalog changes if the error persists across retries",
+        "Does not advise excluding OC001 from the 40001 retry loop or treating it as non-retryable"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 27,
+      "prompt": "In DSQL I get 'key size too large' when inserting into a table whose primary key is (tenant_name text, region text, bucket text). What's the actual budget, and does adding a secondary index on a long text column get its own budget?",
+      "expected_output": "Explains the combined key-size budget across all key columns, that a single column reaches roughly 1,981 bytes, and that a secondary index shares the budget with the table's primary key columns rather than getting a separate one",
+      "expectations": [
+        "States that the key-size budget is combined in bytes across every key column, not per column",
+        "Gives the single-column ceiling as roughly 1,981 bytes and notes that each additional key column reduces the budget",
+        "States that a secondary index shares the budget with the table's primary key columns rather than getting a separate allowance",
+        "Notes that the budget is in bytes rather than characters, so multi-byte UTF-8 values fit fewer characters",
+        "Recommends shortening or hashing the key columns rather than attempting to raise the limit"
       ],
       "grader": "llm_judge"
     }

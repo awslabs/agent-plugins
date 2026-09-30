@@ -14,7 +14,7 @@ their recorded results, and runner files:
 tools/evals/databases-on-aws/
 ├── README.md                        # This file — top-level index
 └── dsql/                            # Aurora DSQL skill evals
-    ├── evals.json                   # Tier 2: functional evals (22 prompts, 93 assertions)
+    ├── evals.json                   # Tier 2: functional evals (27 prompts, 118 assertions)
     ├── dsql_lint_evals.json         # dsql_lint workflow (4 prompts, 20 assertions)
     ├── pg_migration_evals.json      # PostgreSQL migrations (17 prompts, 90 assertions)
     ├── pg_migration_hallucination_evals.json # Migration hallucinations (3 prompts, 14 assertions)
@@ -96,13 +96,13 @@ mise exec -- python tools/evals/databases-on-aws/dsql/scripts/run_functional_eva
   --verbose
 ```
 
-**What it checks** (22 eval prompts, 93 assertions total):
+**What it checks** (27 eval prompts, 118 assertions total):
 
 | Eval                           | Focus                 | Grader    | Key assertions                                                                                                                                                                                      |
 | ------------------------------ | --------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1. Transaction limits          | MCP delegation        | regex     | Calls `awsknowledge`, cites 3,000 row-modification limit, recommends batching                                                                                                                       |
 | 2. Multi-tenant schema         | Correctness           | LLM judge | Uses non-null tenant keys, tenant-scoped foreign keys, `CREATE INDEX ASYNC`, separate DDL txns                                                                                                      |
-| 3. Index limits                | MCP delegation        | regex     | Calls `awsknowledge`, cites 24 index limit, suggests alternatives                                                                                                                                   |
+| 3. Index limits                | MCP delegation        | regex     | Calls `awsknowledge`, states the 24-index limit without framing it as excluding the PK, suggests alternatives                                                                                       |
 | 4. Python connection           | Language routing      | regex     | Recommends DSQL Python Connector, IAM auth, 15-min token expiry, SSL                                                                                                                                |
 | 5. Column type change          | DDL migration routing | LLM judge | Table Recreation Pattern, dependency gate, batching, user confirmation                                                                                                                              |
 | 6. JSON column storage         | Type guidance         | LLM judge | Recommends `JSONB` (or `JSON`) as the column type for queryable structured data                                                                                                                     |
@@ -122,6 +122,11 @@ mise exec -- python tools/evals/databases-on-aws/dsql/scripts/run_functional_eva
 | 20. Direct constraint changes  | Constraint migration  | LLM judge | Direct `DROP CONSTRAINT`, CHECK `NOT VALID`, async validation, no table recreation                                                                                                                  |
 | 21. Direct column options      | Column migration      | LLM judge | Direct `DROP NOT NULL` and default changes, no table recreation                                                                                                                                     |
 | 22. Joined SELECT FOR UPDATE   | ORM routing (Django)  | LLM judge | Keeps joined/non-key locking query, explains commit-time OCC checks, uses targeted-row primary-key accounting toward the 10 MiB transaction-size limit, covers lock clauses, retries SQLSTATE 40001 |
+| 23. Index key sort order       | Index conversion      | LLM judge | Strips `ASC`/`DESC`, keeps `ASYNC`, explains the backward scan serves a uniform `ORDER BY` but not a mixed one, no counter-based lint gating, retains `NULLS` placement                             |
+| 24. Transaction size exceeded  | Troubleshooting       | LLM judge | Identifies the 10 MiB limit, checked at `COMMIT` and not against raw bytes, splits the batch, also cites the 3,000-row limit, does not suggest raising it                                           |
+| 25. EOF at COMMIT              | Troubleshooting       | LLM judge | Commit outcome unknown, bare retry can double-debit, reconnect and confirm, addresses the unconfirmable case, not an ordinary `40001` retry                                                         |
+| 26. Catalog change (OC001)     | OCC retry             | LLM judge | `GRANT`/`REVOKE` raise `OC001` like DDL, snapshot predates the change rather than overlapping it, retry clears a one-shot, serialize if persistent, stays in the `40001` loop                       |
+| 27. Key size too large         | Limits                | LLM judge | Budget combined across key columns, ~1,981 bytes for one column, secondary index shares the primary key's budget, bytes not characters, shorten or hash                                             |
 
 ### Grader modes
 
@@ -130,7 +135,7 @@ Every eval consumed by `run_functional_evals.py` **MUST** declare one of two gra
 `"schema_version": 2`; result artifacts report schema and grading-protocol version `2` because
 the stricter grading and incomplete-run semantics are not directly comparable with older runs.
 
-- **Regex / tool-call**: fast, cheap, deterministic. Each accepted assertion maps to a registered rule; the schema rejects assertions without one. Dedicated rules validate exact tool behavior and safety constraints. Compatibility rules retained for legacy corpora use polarity-aware keyword scoring. Limit rules bind values to their subject, such as 3,000 rows per transaction, 24 indexes per table, and 8 columns per index.
+- **Regex / tool-call**: fast, cheap, deterministic. Each accepted assertion maps to a registered rule; the schema rejects assertions without one. Dedicated rules validate exact tool behavior and safety constraints. Compatibility rules retained for legacy corpora use polarity-aware keyword scoring. Limit rules bind values to their subject, such as 3,000 rows per transaction, 24 indexes per table (counting the primary key), and 8 columns per index. The index rule additionally vetoes the common off-by-one — stating the 24 as excluding the primary key — rather than only checking the number is present.
 - **LLM judge**: runs a tool-free `claude -p` once per expectation with the complete redacted final answer, bounded call and result metadata, a complete tool-name inventory, the user prompt, and the assertion. Answers longer than 18,000 redacted characters are ungraded instead of being truncated. Tool-result bodies are explicitly untrusted and cannot independently satisfy assertions about what the agent presents or explains. The judge returns `{passed, evidence}`. Use it for semantic assertions where paraphrasing, negation, or synonym coverage makes regex brittle, such as "Does NOT recommend X." Each assertion incurs model-dependent cost and latency.
 
 Select the judge independently of the subject via `--judge-model` (defaults to the CLI default)

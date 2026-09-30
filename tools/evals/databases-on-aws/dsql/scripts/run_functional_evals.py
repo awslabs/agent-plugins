@@ -3194,6 +3194,8 @@ ASSERTION_RULES = {
         AssertionRule.TRANSACTION_SIZE_LIMIT,
     "mentions the 24 indexes per table limit":
         AssertionRule.INDEXES_PER_TABLE,
+    "mentions the 24 indexes per table limit, including the primary key":
+        AssertionRule.INDEXES_PER_TABLE,
     "mentions the 8 columns per index limit":
         AssertionRule.COLUMNS_PER_INDEX,
     "suggests alternatives such as composite indexes or reducing index count":
@@ -3332,6 +3334,11 @@ POSITIVE_UPPER_BOUND = re.compile(
     r"no\s+(?:\w+\s+){0,4}(?:may|can|should|must)\s+exceed)\s*$",
     re.IGNORECASE,
 )
+POSITIVE_UPPER_BOUND_SUFFIX = re.compile(
+    r"^\s*(?:cannot|can't|may\s+not|must\s+not|should\s+not)\s+"
+    r"(?:\w+\s+){0,4}exceed\b",
+    re.IGNORECASE,
+)
 POST_MATCH_NEGATION = re.compile(
     r"^\s*(?:"
     r"(?:is|are|was|were|does|do|did|should|must|can)\s+"
@@ -3396,6 +3403,10 @@ def _match_is_positive(value: str, match: re.Match) -> bool:
     suffix = value[match.end():match.end() + 80]
     if POSITIVE_UPPER_BOUND.search(prefix):
         prefix = ""
+    # Symmetric with the prefix case: "a table can't exceed 24 indexes" states an
+    # upper bound, so the trailing "can't" must not negate the preceding match.
+    if POSITIVE_UPPER_BOUND_SUFFIX.search(suffix):
+        suffix = ""
     return (
         NEGATED_MENTION.search(prefix) is None
         and POST_MATCH_NEGATION.search(suffix) is None
@@ -4935,18 +4946,163 @@ def grade_eval(
                 evidence = "No mention of 10 MiB data size limit found"
 
         # --- Assertion: 24 indexes ---
+        # The 24 includes the primary key, so a table with a PK accepts 23
+        # secondary indexes. Stating the cap as 24 *secondary* is the off-by-one
+        # this rule exists to catch, so the veto below rejects it both ways round:
+        # additively ("24 indexes in addition to / plus / besides / beyond /
+        # on top of the primary key") and subtractively ("24 indexes excluding /
+        # not counting / apart from / aside from / other than / separate from the
+        # primary key"). "24 including the primary key" is correct and must still
+        # pass, which is why the veto lists the excluding phrases rather than
+        # matching on "primary key" alone.
+        #
+        # The veto is a closed list of phrases and is matched per statement, so it
+        # is best-effort, not exhaustive: a synonym outside the list, or the wrong
+        # claim split into a separate sentence from the cap, still passes. Extend
+        # the alternation when a new phrasing is observed, and add a case to
+        # test_run_functional_evals.py alongside it -- an untested alternative is
+        # an untested claim.
         elif rule is AssertionRule.INDEXES_PER_TABLE:
-            if _has_positive_statement(
+            subject = r"\btables?\b"
+            # "cap"/"capped at" is as common as "limit" in answers about this and
+            # was previously graded as no mention at all. "can have"/"supports"
+            # and a bare "per table" carry the same force in the table and bullet
+            # shapes a doc-quoting answer uses, where no bound word appears at all.
+            bound = (
+                r"\b(?:limit|maximum|max|at\s+most|up\s+to|cap(?:ped|s)?|"
+                r"cannot\s+exceed|can't\s+exceed|no\s+more\s+than|"
+                r"can\s+have|supports?|allows?|accepts?|permits?|holds?|"
+                r"per\s+tables?)"
+            )
+            # Singular included: "the 24-index limit" and "max 24 index per
+            # table" are both ordinary phrasings, and graded as no mention at
+            # all while this matched only the plural.
+            index_noun = r"(?:indexes|indices|index)"
+            # The number and the index noun are often NOT adjacent: a markdown
+            # table puts a cell boundary between them, a bolded number puts
+            # asterisks, and many correct answers put the noun first ("the maximum
+            # number of indexes per table is 24"). Allow either order across a
+            # short run that contains no other digit -- excluding digits stops
+            # "24 columns and 8 indexes" from counting as a statement of this cap.
+            gap = r"[^.!?\n\d]{0,40}?"
+            secondary_adj = (
+                r"(?:secondary|non-?primary(?:[- ]key)?|non-?PK|additional|extra)"
+            )
+            states_cap = _has_positive_statement(
                 text,
-                r"\b24\s+(?:secondary\s+)?(?:indexes|indices)\b",
-                r"\btables?\b",
-                r"\b(?:limit|maximum|max|at\s+most|up\s+to|"
-                r"cannot\s+exceed|can't\s+exceed|no\s+more\s+than)",
-            ):
+                r"(?:"
+                rf"\b24\b{gap}\b{index_noun}\b"
+                rf"|\b{index_noun}\b{gap}\b24\b"
+                rf"|\b23\s+{secondary_adj}\s+{index_noun}\b"
+                # Noun-first for 23 must keep the "secondary" qualifier: a bare
+                # "23 indexes per table" is itself wrong, since 23 is the
+                # secondary count and 24 is the total.
+                rf"|\b{secondary_adj}\s+{index_noun}\b{gap}\b23\b"
+                r")",
+                subject,
+                bound,
+            )
+            # Phrases that place the primary key OUTSIDE the 24. Matched anywhere
+            # in the statement rather than adjacent to the number, so a fronted
+            # clause ("Besides the primary key, a table supports 24 indexes") and
+            # an em-dashed trailer ("24 indexes per table - plus the primary key")
+            # are caught alongside the unpunctuated form.
+            primary_key = r"\b(?:primary\s+keys?|PKs?)\b"
+            _exclusion_phrase = (
+                r"(?:in\s+addition\s+to|plus|besides|beyond|on\s+top\s+of"
+                r"|excluding|not\s+counting|apart\s+from|aside\s+from"
+                r"|other\s+than|separate\s+from|exclusive\s+of"
+                r"|not\s+includ(?:e|es|ing)"
+                r"|do(?:es)?\s+not\s+(?:include|count)"
+                r"|do(?:es)?n['’]t\s+(?:include|count))"
+                r"\s+(?:the\s+|your\s+|its\s+|a\s+|that\s+)?"
+            )
+            # "the primary key does not count toward the limit" states the same
+            # error with the subject first, and lands in its own sentence often
+            # enough that requiring the number alongside it would miss it.
+            _pk_discounted = (
+                r"\s+(?:does\s+not|do\s+not|does\s?n['’]t|do\s?n['’]t"
+                r"|is\s+not|isn['’]t)\s+"
+                r"(?:\w+\s+){0,3}(?:count|counted|include[ds]?|included)"
+            )
+            excludes_pk = (
+                _exclusion_phrase + primary_key
+                + r"|" + primary_key + _pk_discounted
+            )
+            # The inclusive framing is correct, so it cancels the veto -- but only
+            # within the statement that triggered it. Cancelling document-wide let
+            # one correct sentence license a wrong claim anywhere else in the
+            # answer. The lookbehinds keep "not including the primary key" from
+            # reading as the inclusive phrasing.
+            includes_pk = (
+                r"(?<!not\s)(?<!n't\s)(?:includ(?:es|ing)|counting|inclusive\s+of)"
+                r"\s+(?:the\s+|your\s+|its\s+|a\s+)?" + primary_key
+            )
+            # An unqualified "24 secondary indexes" is the error itself, so it is
+            # not cancelled by the inclusive phrasing in the same breath. It is
+            # cancelled only by a positive statement of the 23 consequence, which
+            # is what a genuine PostgreSQL contrast or pre-emption carries.
+            claims_24_secondary_outright = re.search(
+                rf"\b24\s+{secondary_adj}\s+{index_noun}\b", text, re.IGNORECASE
+            ) is not None
+            states_23 = _has_positive_statement(
+                text,
+                rf"\b23\s+(?:{secondary_adj}\s+)?{index_noun}\b",
+                subject,
+            )
+            # A "the primary key does not count" sentence about some *other*
+            # limit -- the 1,600 lifetime column ceiling, say -- is true, and
+            # must not be read as a claim about the index cap. A statement that
+            # names indexes is always in scope; one that names another limit's
+            # unit without naming indexes is not. Anything else stays in scope,
+            # which keeps the bare "The primary key does not count toward that
+            # limit." vetoing as before.
+            other_limit_unit = (
+                r"\b(?:columns?|rows?|bytes?|KiB|MiB|schemas?|sequences?|"
+                r"views?|statistics|connections?|storage)\b"
+            )
+
+            def _concerns_the_index_cap(statement: str) -> bool:
+                if re.search(rf"\b{index_noun}\b", statement, re.IGNORECASE):
+                    return True
+                return re.search(
+                    other_limit_unit, statement, re.IGNORECASE
+                ) is None
+
+            claims_24_secondary = (
+                claims_24_secondary_outright and not states_23
+            ) or any(
+                _concerns_the_index_cap(statement)
+                and re.search(excludes_pk, statement, re.IGNORECASE)
+                and not re.search(includes_pk, statement, re.IGNORECASE)
+                for statement in re.split(r"(?<=[.!?;])\s+|\n+", text)
+            )
+            if states_cap and not claims_24_secondary:
                 passed = True
-                evidence = "Found a positive 24-index limit in response"
+                evidence = "Found a positive 24-index (or 23 secondary) limit"
+            elif claims_24_secondary:
+                evidence = (
+                    "Response states the 24-index cap as excluding the primary "
+                    "key; the 24 includes it, so a table with a PK accepts 23"
+                )
+            elif _has_positive_statement(
+                text,
+                rf"\b(?:23|24)\s+(?:\w+(?:[- ]\w+)?\s+)?{index_noun}\b",
+                subject,
+                bound,
+            ):
+                # Distinguishes "stated a cap in a shape this rule does not
+                # recognise" from "never mentioned the limit". Collapsing the two
+                # sends whoever triages a red eval after a missing-doc problem
+                # when the real defect is a wrong number.
+                evidence = (
+                    "Stated an index cap in an unrecognised form; could not "
+                    "confirm whether it counts the primary key"
+                )
             else:
-                evidence = "No mention of 24 indexes per table limit found"
+                evidence = (
+                    "No mention of 24 indexes per table (or 23 secondary) found"
+                )
 
         # --- Assertion: 8 columns per index ---
         elif rule is AssertionRule.COLUMNS_PER_INDEX:

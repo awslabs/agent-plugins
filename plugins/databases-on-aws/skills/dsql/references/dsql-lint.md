@@ -43,13 +43,18 @@ Concrete example (from `dsql_lint(sql="CREATE INDEX idx ON t (c);", fix=true)`):
 
 **Schema notes:**
 
-- `rule` is a snake_case string identifying the rule (e.g., `index_async`, `truncate`, `json_type`, `set_transaction`); `line` is 1-indexed.
+- `rule` is a snake_case string identifying the rule (e.g., `index_async`, `index_sort_direction`, `truncate`, `json_type`, `set_transaction`); `line` is 1-indexed.
 - `fix_result.status` is one of three values: `fixed`, `fixed_with_warning`, or `unfixable`. Always check this field — `fix_result` is present for every diagnostic when `fix=true`.
 - `fix_result.detail` is present for `fixed` and `fixed_with_warning`; absent for `unfixable`.
 - `fixed_sql` contains rewritten SQL when the linter produces a rewrite. Do not assume it is present
   when no rewrite is needed. Presence of `fixed_sql` does NOT mean the SQL is safe to execute —
   check every diagnostic first.
 - `summary.errors` counts `unfixable` diagnostics; `summary.warnings` counts `fixed_with_warning`; `summary.fixed` counts `fixed`.
+- **Do not gate a pipeline on any one counter.** Severity is derived from `fix_result.status`, so the
+  same rule can land in different counters depending on the input: `index_sort_direction` reports
+  `fixed_with_warning` for `DESC` but a silent `fixed` for `ASC`, even though DSQL rejects both. A
+  check on `errors == 0` or `warnings == 0` passes SQL that was rewritten underneath it. Gate on
+  `len(diagnostics) == 0`, or compare `fixed_sql` against the input.
 - `statement_preview` is the linter's pointer to the offending statement — useful when presenting diagnostics to the user.
 
 ---

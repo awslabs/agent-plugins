@@ -4,6 +4,10 @@ DSQL uses Optimistic Concurrency Control (OCC). Write transactions are validated
 COMMIT time — if another transaction modified the same rows, COMMIT fails with
 `SQLSTATE 40001` (serialization failure). Every application MUST implement retry logic.
 
+A **catalog change** raises the same `40001`, so the code is not on its own enough to tell which
+happened. The trailing marker in the message is the discriminator — see
+[Retry Strategy](#retry-strategy).
+
 ## Table of Contents
 
 1. [Retry Strategy](#retry-strategy)
@@ -22,9 +26,43 @@ Base delay: 50ms (allows concurrent transaction to commit)
 Backoff: exponential with jitter
 Formula: delay = min(base * 2^attempt + random(0, base), max_delay)
 Max delay: 5000ms (stays under DSQL's 5-minute transaction timeout)
-Retryable: SQLSTATE 40001 only
+Retryable: SQLSTATE 40001 only (both markers — see below)
 Non-retryable: all other errors, including foreign key violation 23503 (raise immediately)
 ```
+
+`40001` carries two causes, distinguished by the trailing marker in the message. `(OC000)` is a
+write conflict and backoff clears it. `(OC001)` means the transaction's snapshot predates a change
+to the schema catalog.
+
+**The trigger is any catalog change, not only `CREATE`/`ALTER`/`DROP`, and not only a concurrent
+one.** `GRANT` and `REVOKE` raise `OC001` just as `ALTER TABLE` and `CREATE INDEX ASYNC` do — DSQL
+groups them with DDL itself, rejecting a pair with `multiple ddl statements not supported in a
+transaction` — and it fires whether the change is still in flight or already finished. What matters
+is that the session pinned its snapshot before the change, not that anything overlapped in time. A
+migration that only adjusts privileges will raise it, so do not go looking for a `CREATE` or
+`ALTER` that is not there.
+
+The
+[DDL and distributed transactions](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-ddl.html)
+guide states the completed-change case directly: "An OC001 response can also occur when the schema
+change has already completed before the affected transaction starts… On retry, the session refreshes
+its catalog cache and the transaction typically succeeds."
+
+**Only transactions that write are affected.** A transaction that reads and commits without writing
+is never hit, whether the read is in an implicit transaction or an explicit `BEGIN READ ONLY`, so a
+read-only reporting workload needs no `OC001` handling at all.
+
+Because a retry takes a fresh snapshot, a one-shot catalog change clears on the first retry. It
+keeps recurring only while another session keeps issuing changes — serialize those rather than
+relying on retries. Both markers **MUST** stay in the retry loop: excluding `OC001` turns a
+one-shot collision that the first retry would have cleared into a hard application error. Capture
+the marker before each sleep so an exhausted loop records which cause it was retrying. See
+[troubleshooting.md](troubleshooting.md#error-schema-has-been-updated-by-another-transaction-oc001).
+
+An error that arrives as a dropped connection rather than a SQLSTATE — `SSL SYSCALL error: EOF
+detected` — leaves the commit outcome **unknown**, because the connection closed without a reply.
+Do not feed it to this loop. Reconnect and confirm whether the write landed, or make the write
+idempotent by design first; see [Idempotent Transaction Design](#idempotent-transaction-design).
 
 ---
 
@@ -51,8 +89,10 @@ When using a DSQL Connector, OCC retry is built in — no manual retry wrapper n
 Use when a DSQL Connector is not available or when custom retry behavior is required:
 
 ```python
-import time, random, psycopg2
+import logging, time, random, psycopg2
 from psycopg2 import errors
+
+log = logging.getLogger(__name__)
 
 def execute_with_retry(conn_params, operation, max_retries=5):
     """Execute a database operation with OCC retry."""
@@ -64,12 +104,27 @@ def execute_with_retry(conn_params, operation, max_retries=5):
                 operation(cur)
             conn.commit()
             return
-        except errors.SerializationFailure:
+        except errors.SerializationFailure as error:
             conn.rollback()
+            # Both markers are 40001 and both belong in this loop, but they mean
+            # different things operationally. Logging the marker is what lets an
+            # exhausted loop be diagnosed: a one-shot catalog change clears on the
+            # first retry, so an OC001 that survives the loop means something keeps
+            # changing the catalog, and tuning row contention will never fix it.
+            marker = "OC001" if "OC001" in str(error) else "OC000"
             if attempt < max_retries - 1:
                 delay = min(0.05 * (2 ** attempt) + random.uniform(0, 0.05), 5.0)
+                log.warning(
+                    "40001 (%s) on attempt %d/%d, retrying in %.3fs",
+                    marker, attempt + 1, max_retries, delay,
+                )
                 time.sleep(delay)
             else:
+                log.error(
+                    "40001 (%s) exhausted %d attempts%s",
+                    marker, max_retries,
+                    "; serialize the catalog changes" if marker == "OC001" else "",
+                )
                 raise
         except Exception:
             conn.rollback()
@@ -79,7 +134,8 @@ def execute_with_retry(conn_params, operation, max_retries=5):
 ```
 
 The same pattern applies in any language — catch SQLSTATE 40001, apply exponential backoff
-with jitter, retry up to the max. See the [DSQL code samples](https://github.com/aws-samples/aurora-dsql-samples)
+with jitter, retry up to the max, and record the `(OC000)`/`(OC001)` marker so an exhausted loop
+can be told apart from row contention. See the [DSQL code samples](https://github.com/aws-samples/aurora-dsql-samples)
 for Java, Go, Node.js, and Rust implementations.
 
 ---
