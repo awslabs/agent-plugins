@@ -25,7 +25,8 @@ Sources:
 11. [CREATE DOMAIN → Preserved](#create-domain--preserved)
 12. [GENERATED ALWAYS AS STORED → Preserved](#generated-always-as-stored--preserved)
 13. [WITH (storage parameters) → Removed](#with-storage-parameters--removed)
-14. [Conversion Checklist](#conversion-checklist)
+14. [CREATE FUNCTION → LANGUAGE sql Only](#create-function--language-sql-only)
+15. [Conversion Checklist](#conversion-checklist)
 
 ---
 
@@ -347,7 +348,9 @@ CREATE DOMAIN email_address AS varchar(255)
 
 ## GENERATED ALWAYS AS STORED → Preserved
 
-DSQL supports computed columns:
+DSQL supports computed columns in `CREATE TABLE` only —
+`ALTER TABLE ... ADD COLUMN ... GENERATED` is rejected with
+`ERROR: 0A000: ALTER TABLE ADD COLUMN with constraint not supported`:
 
 ```sql
 -- PostgreSQL
@@ -381,6 +384,38 @@ CREATE TABLE hot_data (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), data jsonb
 
 ---
 
+## CREATE FUNCTION → LANGUAGE sql Only
+
+DSQL supports SQL-language functions. `LANGUAGE plpgsql` and other procedural languages are
+rejected, as is `CREATE PROCEDURE`.
+
+```sql
+-- DSQL: supported — all three body forms
+CREATE FUNCTION add_quoted(a integer, b integer) RETURNS integer
+  AS 'SELECT a + b;' LANGUAGE sql IMMUTABLE;
+CREATE FUNCTION add_return(a integer, b integer) RETURNS integer
+  LANGUAGE sql IMMUTABLE RETURN a + b;
+CREATE FUNCTION employees_in_dept(dept_id integer) RETURNS TABLE (id integer, name text)
+  LANGUAGE sql STABLE
+  BEGIN ATOMIC
+    SELECT id, name FROM employees WHERE department_id = dept_id;
+  END;
+
+-- DSQL: rejected — move the logic to the application layer
+CREATE FUNCTION bump() RETURNS trigger AS $$ BEGIN RETURN NEW; END; $$ LANGUAGE plpgsql;
+-- ERROR: 0A000: CREATE FUNCTION with language plpgsql not supported
+CREATE PROCEDURE do_work() LANGUAGE sql AS $$ SELECT 1; $$;
+-- ERROR: PROCEDURE is not supported
+```
+
+`dsql_lint` cannot parse `BEGIN ATOMIC` bodies — it returns `parse_error` and a `fixed_sql` split at
+the `;` inside the body, so discard `fixed_sql` and execute the definition as written.
+
+Mark functions used in index expressions IMMUTABLE — see
+[index-conversion.md](index-conversion.md#expression-indexes).
+
+---
+
 ## Conversion Checklist
 
 - [ ] Find all `CREATE TYPE ... AS ENUM` → convert to CHECK constraints
@@ -392,6 +427,7 @@ CREATE TABLE hot_data (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), data jsonb
 - [ ] Find all `CREATE EXTENSION` → remove and use alternatives
 - [ ] Find all `UNLOGGED` → remove keyword
 - [ ] Find all `WITH (fillfactor=...)` → remove storage parameters
+- [ ] Find all `CREATE FUNCTION` → keep SQL-language bodies (`AS`, `RETURN`, `BEGIN ATOMIC`), else move to application layer
 - [ ] Audit roles/grants → remove passwords, map to IAM
 - [ ] Count schemas → consolidate if >10
 - [ ] Run `dsql_lint(fix=true)` — auto-strips COLLATE clauses from all string columns

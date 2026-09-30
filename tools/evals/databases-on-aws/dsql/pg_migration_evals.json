@@ -35,12 +35,12 @@
       "id": 203,
       "name": "gin-index-conversion",
       "prompt": "How do I convert this PostgreSQL GIN index to work in DSQL?\n\nCREATE INDEX idx_users_prefs ON users USING gin (preferences jsonb_path_ops);\n\nThe index is used for queries like: SELECT * FROM users WHERE preferences @> '{\"theme\":\"dark\"}'",
-      "expected_output": "Explains GIN is not supported, suggests extracting the queried JSON key to a computed column with a btree index, or accepting unindexed runtime jsonb queries",
+      "expected_output": "Explains GIN is not supported, recommends an expression index on the queried JSON key, or accepting unindexed runtime jsonb queries",
       "expectations": [
         "States that GIN indexes are not supported in DSQL",
         "Does NOT just say 'use btree' without explaining the semantic difference",
-        "Suggests extracting frequently-queried JSON keys to a separate column (computed or regular)",
-        "Shows CREATE INDEX ASYNC with btree on the extracted column",
+        "Recommends an expression index on the queried JSON key, e.g. CREATE INDEX ASYNC ... ON users ((preferences->>'theme'))",
+        "Shows the query rewritten to use the same expression (WHERE preferences->>'theme' = 'dark')",
         "Mentions that jsonb containment (@>) still works at runtime without an index"
       ],
       "grader": "llm_judge"
@@ -75,15 +75,15 @@
     },
     {
       "id": 208,
-      "name": "expression-index-to-computed-column",
-      "prompt": "I have this PostgreSQL expression index:\n\nCREATE INDEX idx_users_email_lower ON users (lower(email));\n\nIt's used for case-insensitive email lookups: SELECT * FROM users WHERE lower(email) = lower('User@Example.com');\n\nHow do I convert this for DSQL?",
-      "expected_output": "Creates a GENERATED ALWAYS AS STORED computed column with lower(email), then creates a btree ASYNC index on that column",
+      "name": "expression-index-preserved",
+      "prompt": "I have these two PostgreSQL expression indexes. created_at is TIMESTAMPTZ.\n\nCREATE INDEX idx_users_email_lower ON users (lower(email));\nCREATE INDEX idx_orders_year ON orders (extract(year FROM created_at));\n\nThe first is used for case-insensitive email lookups: SELECT * FROM users WHERE lower(email) = lower('User@Example.com');\n\nHow do I convert these for DSQL?",
+      "expected_output": "Keeps the lower(email) index, adding only ASYNC. Flags extract(year FROM created_at) as not IMMUTABLE on timestamptz and makes it immutable with AT TIME ZONE.",
       "expectations": [
-        "States that expression indexes are not supported in DSQL",
-        "Suggests creating a computed column using GENERATED ALWAYS AS (lower(email)) STORED",
-        "Creates a btree index with CREATE INDEX ASYNC on the computed column",
-        "Shows how to rewrite the query to use the new computed column",
-        "Does NOT suggest just removing the index without a replacement"
+        "States that expression indexes are supported in DSQL",
+        "Preserves the lower(email) expression, adding only the ASYNC keyword",
+        "Identifies extract(year FROM created_at) as not IMMUTABLE because created_at is timestamptz",
+        "Makes it immutable with AT TIME ZONE (or another explicit time zone) rather than dropping the index",
+        "Does NOT propose ALTER TABLE ADD COLUMN ... GENERATED ALWAYS AS ... STORED, which DSQL rejects"
       ],
       "grader": "llm_judge"
     },
@@ -133,7 +133,7 @@
       "id": 207,
       "name": "full-schema-conversion",
       "prompt": "Convert this complete PostgreSQL schema to DSQL-compatible DDL:\n\nCREATE TYPE status AS ENUM ('active','inactive','suspended');\n\nCREATE TABLE organizations (\n  id SERIAL PRIMARY KEY,\n  name VARCHAR(200) UNIQUE\n);\n\nCREATE TABLE users (\n  id SERIAL PRIMARY KEY,\n  org_id INT REFERENCES organizations(id) ON DELETE CASCADE,\n  email VARCHAR(255) NOT NULL,\n  status status DEFAULT 'active',\n  preferences JSONB,\n  search_tokens TSVECTOR\n);\n\nCREATE INDEX idx_users_search ON users USING gin(search_tokens);\nCREATE INDEX idx_users_active ON users (email) WHERE status = 'active';\n\nCREATE FUNCTION update_search() RETURNS TRIGGER AS $$\nBEGIN\n  NEW.search_tokens = to_tsvector(NEW.email);\n  RETURN NEW;\nEND;\n$$ LANGUAGE plpgsql;",
-      "expected_output": "Comprehensive conversion: SERIAL\u2192IDENTITY, ENUM\u2192CHECK, foreign key preserved with cascade, JSONB kept as JSONB, TSVECTOR\u2192text, GIN\u2192removed, partial index\u2192full or composite, PL/pgSQL\u2192removed with guidance",
+      "expected_output": "Comprehensive conversion: SERIAL\u2192IDENTITY, ENUM\u2192CHECK, foreign key preserved with cascade, JSONB kept as JSONB, TSVECTOR\u2192text, GIN\u2192removed, partial index preserved with its WHERE clause, PL/pgSQL\u2192removed with guidance",
       "expectations": [
         "Converts SERIAL to IDENTITY or sequence-based approach",
         "Converts ENUM to CHECK constraint",
@@ -141,7 +141,7 @@
         "Keeps JSONB as a stored column type (does NOT convert it to json or text)",
         "Converts TSVECTOR to text and notes FTS must move to external service",
         "Removes or converts the GIN index (not supported)",
-        "Handles the partial index (WHERE status = 'active') \u2014 removes WHERE or adds status to composite index",
+        "Preserves the partial index including the WHERE status = 'active' predicate",
         "Omits per-column COLLATE \"C\" (DSQL uses C collation database-wide; per-column clause is not supported)",
         "Uses CREATE INDEX ASYNC for all indexes"
       ],

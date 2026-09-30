@@ -56,12 +56,12 @@ Load these files as needed for detailed guidance:
 
 ### PostgreSQL Migrations:
 
-| Reference                                                                         | When to Load                                                     | Contains                                           |
-| --------------------------------------------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------- |
-| [pg-migrations/type-mapping.md](references/pg-migrations/type-mapping.md)         | MUST load for DSQL NUMERIC or PG type questions                  | C collation rules, NUMERIC(p,s), JSON/JSONB        |
-| [pg-migrations/index-conversion.md](references/pg-migrations/index-conversion.md) | MUST load for unfixable index diagnostics                        | GIN/GiST/BRIN → btree, partial, expression indexes |
-| [pg-migrations/schema-objects.md](references/pg-migrations/schema-objects.md)     | MUST load for ENUM, materialized views, extensions, multi-schema | ENUM → CHECK, views, role/IAM mapping              |
-| [pg-migrations/multi-region.md](references/pg-migrations/multi-region.md)         | Multi-region, active-active, or HA questions                     | Architecture, geographic partitioning              |
+| Reference                                                                         | When to Load                                                                      | Contains                                                                    |
+| --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| [pg-migrations/type-mapping.md](references/pg-migrations/type-mapping.md)         | MUST load for DSQL NUMERIC or PG type questions                                   | C collation rules, NUMERIC(p,s), JSON/JSONB                                 |
+| [pg-migrations/index-conversion.md](references/pg-migrations/index-conversion.md) | MUST load for any index conversion or index support question                      | GIN/GiST/BRIN → btree, operator class removal, partial + expression indexes |
+| [pg-migrations/schema-objects.md](references/pg-migrations/schema-objects.md)     | MUST load for ENUM, materialized views, extensions, multi-schema, CREATE FUNCTION | ENUM → CHECK, views, role/IAM mapping, LANGUAGE sql functions               |
+| [pg-migrations/multi-region.md](references/pg-migrations/multi-region.md)         | Multi-region, active-active, or HA questions                                      | Architecture, geographic partitioning                                       |
 
 ### ORM Guides:
 
@@ -269,7 +269,7 @@ MUST load [query-plan/workflow.md](references/query-plan/workflow.md) at entry �
 
 ### Workflow 10: Full PostgreSQL → DSQL Schema Migration
 
-MUST load [pg-migrations/type-mapping.md](references/pg-migrations/type-mapping.md), [pg-migrations/schema-objects.md](references/pg-migrations/schema-objects.md), and [foreign-keys.md](references/foreign-keys.md). Run `dsql_lint(fix=true)` first for mechanical fixes, preserve foreign-key relationships, translate unsupported source syntax or options, then apply semantic conversions from the pg-migrations references for unfixable diagnostics and patterns the linter cannot handle. Re-lint the final output before deploying.
+MUST load [pg-migrations/type-mapping.md](references/pg-migrations/type-mapping.md), [pg-migrations/index-conversion.md](references/pg-migrations/index-conversion.md), [pg-migrations/schema-objects.md](references/pg-migrations/schema-objects.md), and [foreign-keys.md](references/foreign-keys.md). Run `dsql_lint(fix=true)` first for mechanical fixes, preserve foreign-key relationships, translate unsupported source syntax or options, then apply semantic conversions from the pg-migrations references for unfixable diagnostics and patterns the linter cannot handle. Re-lint the final output before deploying.
 
 ### Workflow 11: ORM Migration and Locking (Django/EF Core/Hibernate/Rails/SQLAlchemy)
 

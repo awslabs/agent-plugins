@@ -165,14 +165,15 @@ validation.
 
 MUST implement these MySQL operations at the application layer:
 
-| MySQL DDL                              | DSQL Approach                                       |
-| -------------------------------------- | --------------------------------------------------- |
-| `ALTER TABLE ... ADD FULLTEXT INDEX`   | MUST implement text search in application layer     |
-| `ALTER TABLE ... ADD SPATIAL INDEX`    | MUST implement spatial queries in application layer |
-| `ALTER TABLE ... ENGINE=...`           | MUST omit                                           |
-| `ALTER TABLE ... AUTO_INCREMENT=...`   | Use SEQUENCE with setval() or IDENTITY column       |
-| `CREATE TRIGGER`                       | MUST implement in application-layer logic           |
-| `CREATE PROCEDURE` / `CREATE FUNCTION` | MUST implement in application-layer logic           |
+| MySQL DDL                            | DSQL Approach                                                                                |
+| ------------------------------------ | -------------------------------------------------------------------------------------------- |
+| `ALTER TABLE ... ADD FULLTEXT INDEX` | MUST implement text search in application layer                                              |
+| `ALTER TABLE ... ADD SPATIAL INDEX`  | MUST implement spatial queries in application layer                                          |
+| `ALTER TABLE ... ENGINE=...`         | MUST omit                                                                                    |
+| `ALTER TABLE ... AUTO_INCREMENT=...` | Use SEQUENCE with setval() or IDENTITY column                                                |
+| `CREATE TRIGGER`                     | MUST implement in application-layer logic                                                    |
+| `CREATE PROCEDURE`                   | MUST implement in application-layer logic                                                    |
+| `CREATE FUNCTION`                    | Convert if the body is plain SQL; procedural control flow must move to the application layer |
 
 ---
 
