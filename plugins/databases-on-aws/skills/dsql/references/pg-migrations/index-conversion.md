@@ -1,17 +1,23 @@
 # Index Conversion for DSQL
 
 Run `dsql_lint(fix=true)` first — it handles most index conversions automatically (ASYNC,
-USING gin/gist/brin/hash → btree, CONCURRENTLY removal, INCLUDE preservation, sort order).
+USING gin/gist/brin/hash → btree, CONCURRENTLY removal, INCLUDE preservation, and **stripping**
+`ASC`/`DESC` from index keys — DSQL rejects sort direction outright, see
+[Index Key Sort Order](#index-key-sort-order)).
 
-This file covers only the patterns `dsql_lint` flags as **unfixable** and cannot auto-convert:
+This file covers the index patterns that need a human decision — those `dsql_lint` flags as
+**unfixable**, plus the fixable ones whose fix silently changes query behaviour:
 
 - Partial indexes (WHERE clause) — `index_partial`
 - Expression indexes — `index_expression`
 - Operator class removal — `text_pattern_ops`
+- Sort direction and NULLS placement — `index_sort_direction`; auto-fixed, but only as a
+  **warning**, and the fix changes which `ORDER BY` the index serves. See
+  [Index Key Sort Order](#index-key-sort-order).
 
 Sources:
 
-- [Asynchronous Indexes](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-indexes.html)
+- [CREATE INDEX syntax support](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/create-index-syntax-support.html)
 - [DSQL SQL Dialect Blog](https://aws.amazon.com/blogs/database/dsql-sql-dialect-how-amazon-aurora-dsql-differs-from-single-instance-postgresql/)
 
 ## Table of Contents
@@ -22,8 +28,9 @@ Sources:
 4. [Partial Index Conversion](#partial-index-conversion)
 5. [Expression Index Conversion](#expression-index-conversion)
 6. [Index Limits](#index-limits)
-7. [Monitoring Async Index Status](#monitoring-async-index-status)
-8. [Conversion Decision Flowchart](#conversion-decision-flowchart)
+7. [Index Key Sort Order](#index-key-sort-order)
+8. [Monitoring Async Index Status](#monitoring-async-index-status)
+9. [Conversion Decision Flowchart](#conversion-decision-flowchart)
 
 ---
 
@@ -154,8 +161,9 @@ CREATE INDEX idx_logs_created ON logs USING brin (created_at);
 CREATE INDEX ASYNC idx_logs_created ON logs (created_at);
 
 -- If the table is very large and you need to limit index size,
--- use a composite index with the most selective column first:
-CREATE INDEX ASYNC idx_logs_tenant_created ON logs (tenant_id, created_at DESC);
+-- use a composite index with the most selective column first.
+-- No ASC/DESC on index keys — see "Index Key Sort Order" below.
+CREATE INDEX ASYNC idx_logs_tenant_created ON logs (tenant_id, created_at);
 ```
 
 ---
@@ -232,11 +240,17 @@ for expression indexes. The computed column is automatically maintained by the d
 
 ## Index Limits
 
-| Limit                 | Value |
-| --------------------- | ----- |
-| Max indexes per table | 24    |
-| Max columns per index | 8     |
-| Max PK/index key size | 1 KiB |
+| Limit                 | Value                | SQLSTATE | Message when exceeded                                   |
+| --------------------- | -------------------- | -------- | ------------------------------------------------------- |
+| Max indexes per table | 24, **incl. the PK** | `54000`  | `more than 24 indexes per table are not allowed`        |
+| Max columns per index | 8                    | `54011`  | `more than 8 column keys in an index are not supported` |
+| Max PK/index key size | ~1,981 bytes         | `54000`  | `key size too large`                                    |
+
+Indexes still building (`indisvalid = f`) occupy a slot, so a table with a PK accepts 23 secondary
+indexes whether or not they have finished. For the key-size derivation, the multi-column budget and
+the rest of the limit set, see
+[troubleshooting.md](../troubleshooting.md#limits-and-error-codes) — the numbers live there so
+they only need correcting in one place.
 
 **Strategy when approaching 24 index limit:**
 
@@ -244,6 +258,57 @@ for expression indexes. The computed column is automatically maintained by the d
 - Use INCLUDE columns for covering indexes (avoids storage round-trips)
 - Remove indexes for rarely-used query patterns
 - Consider if the query can use an existing composite index with a prefix match
+
+---
+
+## Index Key Sort Order
+
+**DSQL rejects `ASC`/`DESC` on index keys.** `dsql_lint` reports this as rule
+`index_sort_direction` and `fix=true` strips the direction, but it counts as a **warning**, not an
+error — so a pipeline that gates on `errors == 0`, or that consumes only `fixed_sql`, proceeds
+without ever surfacing that the statement changed.
+
+```sql
+-- PostgreSQL
+CREATE INDEX idx_logs_tenant_created ON logs (tenant_id, created_at DESC);
+
+-- DSQL: ERROR: 0A000: specifying sort order not supported for index keys
+-- Drop the direction:
+CREATE INDEX ASYNC idx_logs_tenant_created ON logs (tenant_id, created_at);
+```
+
+**This costs no capability for a uniformly-ordered `ORDER BY`.** The planner reads an index
+backwards, so a single direction-free index serves both directions:
+
+| `ORDER BY`                        | Plan                                                          |
+| --------------------------------- | ------------------------------------------------------------- |
+| `tenant_id, created_at`           | `Index Only Scan`                                             |
+| `tenant_id DESC, created_at DESC` | `Index Only Scan Backward`                                    |
+| `tenant_id, created_at DESC`      | `Incremental Sort` above the scan, `Presorted Key: tenant_id` |
+| `tenant_id DESC, created_at`      | `Incremental Sort` above a backward scan                      |
+
+The rule is **direction uniformity, not direction**: any `ORDER BY` whose keys all point the same
+way is satisfied by a scan alone. Only a _mixed_-direction `ORDER BY` adds a sort step, and no
+DSQL index can remove it, because index keys carry no direction to match against. If a mixed
+ordering is on a hot path, either sort in the application or store an inverted column
+(for example a negated numeric, or a computed descending rank) and order on it uniformly.
+
+### NULLS placement is not stripped
+
+`NULLS FIRST` / `NULLS LAST` **is** accepted on an index key, and `dsql_lint` keeps it — only
+`ASC`/`DESC` are removed. A backward scan flips the NULLS placement along with the direction, so
+an index serves exactly two orderings: its own placement ascending, and the opposite placement
+descending. A default index (`NULLS LAST`) therefore covers the two default forms:
+
+| Index             | Served by forward scan   | Served by backward scan      |
+| ----------------- | ------------------------ | ---------------------------- |
+| `(a)`             | `ORDER BY a`             | `ORDER BY a DESC`            |
+| `(a NULLS FIRST)` | `ORDER BY a NULLS FIRST` | `ORDER BY a DESC NULLS LAST` |
+
+**Only add `NULLS FIRST` to serve a query that explicitly asks for it.** An index declared
+`NULLS FIRST` no longer satisfies the plain `ORDER BY a` or `ORDER BY a DESC` — both fall back to
+a `Sort` — so adding one to fix a single query can cost the default ordering on every other.
+Nullable columns need no special handling otherwise: the default index covers both directions.
 
 ---
 
@@ -269,7 +334,8 @@ WHERE NOT indisvalid;
 
 ```
 Is it a btree index?
-├── Yes → CREATE INDEX ASYNC (preserve columns, INCLUDE, sort order)
+├── Yes → CREATE INDEX ASYNC (preserve columns and INCLUDE; drop ASC/DESC —
+│         a backward scan serves uniformly-descending ORDER BY)
 │
 ├── Is it GIN?
 │   ├── For JSONB containment → extract key to column + btree

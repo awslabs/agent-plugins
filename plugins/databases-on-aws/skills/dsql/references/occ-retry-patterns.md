@@ -4,6 +4,10 @@ DSQL uses Optimistic Concurrency Control (OCC). Write transactions are validated
 COMMIT time — if another transaction modified the same rows, COMMIT fails with
 `SQLSTATE 40001` (serialization failure). Every application MUST implement retry logic.
 
+Concurrent DDL raises the same `40001`, so the code is not on its own enough to tell which
+happened. The trailing marker in the message is the discriminator — see
+[Retry Strategy](#retry-strategy).
+
 ## Table of Contents
 
 1. [Retry Strategy](#retry-strategy)
@@ -22,9 +26,23 @@ Base delay: 50ms (allows concurrent transaction to commit)
 Backoff: exponential with jitter
 Formula: delay = min(base * 2^attempt + random(0, base), max_delay)
 Max delay: 5000ms (stays under DSQL's 5-minute transaction timeout)
-Retryable: SQLSTATE 40001 only
+Retryable: SQLSTATE 40001 only (both markers — see below)
 Non-retryable: all other errors, including foreign key violation 23503 (raise immediately)
 ```
+
+`40001` carries two causes, distinguished by the trailing marker in the message. `(OC000)` is a
+write conflict and backoff clears it. `(OC001)` is concurrent DDL; backoff clears it only if the
+DDL has stopped, so it will keep recurring while another session keeps issuing DDL — serialize the
+DDL rather than relying on retries. Both markers **MUST** stay in the retry loop: excluding `OC001`
+turns a one-shot DDL collision that the first retry would have cleared into a hard application
+error. Capture the marker before each sleep so an exhausted loop records which cause it was
+retrying. See
+[troubleshooting.md](troubleshooting.md#error-schema-has-been-updated-by-another-transaction-oc001).
+
+An error that arrives as a dropped connection rather than a SQLSTATE — `SSL SYSCALL error: EOF
+detected` — leaves the commit outcome **unknown**, because the connection closed without a reply.
+Do not feed it to this loop. Reconnect and confirm whether the write landed, or make the write
+idempotent by design first; see [Idempotent Transaction Design](#idempotent-transaction-design).
 
 ---
 
@@ -51,8 +69,10 @@ When using a DSQL Connector, OCC retry is built in — no manual retry wrapper n
 Use when a DSQL Connector is not available or when custom retry behavior is required:
 
 ```python
-import time, random, psycopg2
+import logging, time, random, psycopg2
 from psycopg2 import errors
+
+log = logging.getLogger(__name__)
 
 def execute_with_retry(conn_params, operation, max_retries=5):
     """Execute a database operation with OCC retry."""
@@ -64,12 +84,26 @@ def execute_with_retry(conn_params, operation, max_retries=5):
                 operation(cur)
             conn.commit()
             return
-        except errors.SerializationFailure:
+        except errors.SerializationFailure as error:
             conn.rollback()
+            # Both markers are 40001 and both belong in this loop, but they mean
+            # different things operationally. Logging the marker is what lets an
+            # exhausted loop be diagnosed: OC001 points at concurrent DDL, so
+            # tuning row contention will never fix it.
+            marker = "OC001" if "OC001" in str(error) else "OC000"
             if attempt < max_retries - 1:
                 delay = min(0.05 * (2 ** attempt) + random.uniform(0, 0.05), 5.0)
+                log.warning(
+                    "40001 (%s) on attempt %d/%d, retrying in %.3fs",
+                    marker, attempt + 1, max_retries, delay,
+                )
                 time.sleep(delay)
             else:
+                log.error(
+                    "40001 (%s) exhausted %d attempts%s",
+                    marker, max_retries,
+                    "; serialize the concurrent DDL" if marker == "OC001" else "",
+                )
                 raise
         except Exception:
             conn.rollback()
@@ -79,7 +113,8 @@ def execute_with_retry(conn_params, operation, max_retries=5):
 ```
 
 The same pattern applies in any language — catch SQLSTATE 40001, apply exponential backoff
-with jitter, retry up to the max. See the [DSQL code samples](https://github.com/aws-samples/aurora-dsql-samples)
+with jitter, retry up to the max, and record the `(OC000)`/`(OC001)` marker so an exhausted loop
+can be told apart from row contention. See the [DSQL code samples](https://github.com/aws-samples/aurora-dsql-samples)
 for Java, Go, Node.js, and Rust implementations.
 
 ---

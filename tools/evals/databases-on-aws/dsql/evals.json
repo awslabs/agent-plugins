@@ -33,10 +33,10 @@
     {
       "id": 3,
       "prompt": "I need to add 30 indexes to my DSQL table for different query patterns. Is that possible?",
-      "expected_output": "Explains the 24 index per table limit, verifies via awsknowledge, suggests alternatives like composite indexes or query redesign",
+      "expected_output": "Explains the 24 index per table limit, counting the primary key, so 23 secondary indexes; verifies via awsknowledge, suggests alternatives like composite indexes or query redesign",
       "expectations": [
         "Calls awsknowledge search_documentation with an index-related query",
-        "Mentions the 24 indexes per table limit",
+        "Mentions the 24 indexes per table limit, including the primary key",
         "Mentions the 8 columns per index limit",
         "Suggests alternatives such as composite indexes or reducing index count"
       ],

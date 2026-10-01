@@ -69,8 +69,11 @@ contention across regions — partition data by geography where possible.
 
 ## Quotas
 
-| Quota                             | Value                                                                                     |
-| --------------------------------- | ----------------------------------------------------------------------------------------- |
-| Multi-region clusters per account | 5 (increasable)                                                                           |
-| Cluster topology                  | Two peered clusters in two endpoint Regions, plus one shared witness Region (no endpoint) |
-| Storage per cluster               | 10 TiB (up to 256 TiB)                                                                    |
+Full limit set, with the SQLSTATE and exact message for each database limit:
+[troubleshooting.md](../troubleshooting.md#limits-and-error-codes).
+
+| Quota                                         | Value                                                                                     |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Multi-region clusters per account, per Region | 5 (increasable)                                                                           |
+| Cluster topology                              | Two peered clusters in two endpoint Regions, plus one shared witness Region (no endpoint) |
+| Storage per cluster                           | 10 TiB (up to 256 TiB)                                                                    |

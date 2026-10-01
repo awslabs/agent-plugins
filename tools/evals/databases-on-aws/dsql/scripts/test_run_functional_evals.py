@@ -177,6 +177,69 @@ def test_safe_query_grading_rejects_explicit_f_string_injection() -> None:
     assert safe["summary"]["passed"] == 1  # nosec B101
 
 
+def test_indexes_per_table_evidence_distinguishes_wrong_from_absent() -> None:
+    """The three failure paths must each say *why* they failed.
+
+    Collapsing "stated the cap as excluding the PK" into "never mentioned the
+    limit" sends whoever triages a red eval after a missing-doc or routing
+    problem when the real defect is a wrong number. Nothing else in the suite
+    asserts these strings, so a refactor that merged the branches would stay
+    green.
+    """
+    eval_item = {
+        "prompt": "How many indexes can a DSQL table have?",
+        "expectations": ["Mentions the 24 indexes per table limit"],
+        "grader": "regex",
+    }
+
+    wrong = RUNNER.grade_eval(
+        eval_item,
+        _regex_run_result(
+            "A table supports at most 24 indexes excluding the primary key."
+        ),
+    )
+    unrecognised = RUNNER.grade_eval(
+        eval_item,
+        _regex_run_result(
+            "A table supports at most 24 additional indexes beyond the "
+            "primary key."
+        ),
+    )
+    absent = RUNNER.grade_eval(
+        eval_item,
+        _regex_run_result("DSQL requires CREATE INDEX ASYNC."),
+    )
+
+    assert wrong["summary"]["failed"] == 1  # nosec B101
+    assert (  # nosec B101
+        "excluding the primary key" in wrong["expectations"][0]["evidence"]
+    )
+    assert unrecognised["summary"]["failed"] == 1  # nosec B101
+    assert (  # nosec B101
+        "unrecognised form" in unrecognised["expectations"][0]["evidence"]
+    )
+    assert absent["summary"]["failed"] == 1  # nosec B101
+    assert "No mention" in absent["expectations"][0]["evidence"]  # nosec B101
+
+
+def test_indexes_per_table_alias_shares_the_rule() -> None:
+    """Both expectation strings must dispatch to the same rule.
+
+    `evals.json` uses the PK-inclusive string; the short one is kept for
+    out-of-tree corpora. If either stops resolving, `validate_evals_data`
+    rejects the corpus at load rather than silently skipping the assertion.
+    """
+    short = "Mentions the 24 indexes per table limit"
+    long = "Mentions the 24 indexes per table limit, including the primary key"
+
+    rules = {
+        RUNNER.ASSERTION_RULES[RUNNER._normalize_assertion(text)]
+        for text in (short, long)
+    }
+
+    assert rules == {RUNNER.AssertionRule.INDEXES_PER_TABLE}  # nosec B101
+
+
 def test_separate_ddl_grading_rejects_combined_transaction() -> None:
     eval_item = {
         "prompt": "Create a DSQL schema.",
@@ -1995,7 +2058,164 @@ def test_grading_correlates_tools_redacts_evidence_and_fails_closed(
         ),
         (
             "Mentions the 24 indexes per table limit",
+            "A table supports at most 23 secondary indexes.",
+            1,
+        ),
+        (
+            # The 24 counts the primary key, so this phrasing is wrong.
+            "Mentions the 24 indexes per table limit",
             "A table supports at most 24 secondary indexes.",
+            0,
+        ),
+        (
+            # Same error stated alongside the correct cap: a presence-only check
+            # passes this, which is why the rule vetoes the wrong claim.
+            "Mentions the 24 indexes per table limit",
+            "A table has a maximum of 24 indexes, so 24 secondary indexes.",
+            0,
+        ),
+        (
+            # The off-by-one without the word "secondary".
+            "Mentions the 24 indexes per table limit",
+            "A table supports at most 24 indexes in addition to the primary key.",
+            0,
+        ),
+        (
+            # "including" is the correct framing and must not trip the veto.
+            "Mentions the 24 indexes per table limit",
+            "The limit is 24 indexes per table including the primary key.",
+            1,
+        ),
+        (
+            "Mentions the 24 indexes per table limit",
+            "A table has at most 24 total indexes.",
+            1,
+        ),
+        (
+            # The PK-inclusive expectation string is an alias of the same rule;
+            # evals.json uses it, so it has to keep dispatching.
+            "Mentions the 24 indexes per table limit, including the primary key",
+            "The limit is 24 indexes per table including the primary key.",
+            1,
+        ),
+        (
+            "Mentions the 24 indexes per table limit, including the primary key",
+            "A table supports at most 24 secondary indexes.",
+            0,
+        ),
+        # One case per excluding phrase the veto enumerates. Each of these states
+        # the off-by-one and must fail; an untested alternative is an untested
+        # claim, and a later edit that drops one of them would otherwise stay
+        # green.
+        (
+            "Mentions the 24 indexes per table limit",
+            "A table supports at most 24 indexes plus the primary key.",
+            0,
+        ),
+        (
+            "Mentions the 24 indexes per table limit",
+            "A table supports at most 24 indices besides the primary key.",
+            0,
+        ),
+        (
+            "Mentions the 24 indexes per table limit",
+            "A table supports at most 24 indexes beyond the primary key.",
+            0,
+        ),
+        (
+            "Mentions the 24 indexes per table limit",
+            "A table supports at most 24 indexes on top of the primary key.",
+            0,
+        ),
+        (
+            # The subtractive family. "excluding" is the most natural English
+            # phrasing of this error, so its absence was the widest hole.
+            "Mentions the 24 indexes per table limit",
+            "A table supports at most 24 indexes excluding the primary key.",
+            0,
+        ),
+        (
+            "Mentions the 24 indexes per table limit",
+            "A table supports at most 24 indexes not counting the primary key.",
+            0,
+        ),
+        (
+            "Mentions the 24 indexes per table limit",
+            "A table supports at most 24 indexes apart from the primary key.",
+            0,
+        ),
+        (
+            "Mentions the 24 indexes per table limit",
+            "A table supports at most 24 indexes other than the primary key.",
+            0,
+        ),
+        (
+            # A comma between the noun and the phrase must not rescue the wrong
+            # claim -- whether the veto fires cannot depend on punctuation.
+            "Mentions the 24 indexes per table limit",
+            "A table supports at most 24 indexes, plus the primary key.",
+            0,
+        ),
+        (
+            "Mentions the 24 indexes per table limit",
+            "A table supports at most 24 indexes (in addition to the primary key).",
+            0,
+        ),
+        (
+            # "per table" intervening is the phrasing the rule's own subject
+            # pattern expects, so it has to be reachable.
+            "Mentions the 24 indexes per table limit",
+            "The maximum is 24 indexes per table plus the PK.",
+            0,
+        ),
+        (
+            # A possessive determiner instead of "the".
+            "Mentions the 24 indexes per table limit",
+            "A table supports at most 24 indexes in addition to your primary key.",
+            0,
+        ),
+        (
+            "Mentions the 24 indexes per table limit",
+            "The max is 24 indexes per table, which does not include the "
+            "primary key.",
+            0,
+        ),
+        # Correct phrasings that must survive the widened veto.
+        (
+            # Quoting the wrong framing to contrast with PostgreSQL, or to
+            # pre-empt the misconception, is the most useful answer a reader can
+            # get. The veto must not punish it.
+            "Mentions the 24 indexes per table limit",
+            "In PostgreSQL you can have 24 indexes plus the primary key, but a "
+            "DSQL table limits you to 24 total indexes including the PK.",
+            1,
+        ),
+        (
+            "Mentions the 24 indexes per table limit",
+            "The cap is 24 indexes per table including the primary key, so you "
+            "get 23 secondary indexes.",
+            1,
+        ),
+        (
+            # "cap"/"capped at" is as common as "limit" and used to grade as no
+            # mention at all.
+            "Mentions the 24 indexes per table limit",
+            "Each table is capped at 24 indexes including the primary key.",
+            1,
+        ),
+        (
+            "Mentions the 24 indexes per table limit",
+            "A table may have at most 23 non-PK indexes.",
+            1,
+        ),
+        (
+            "Mentions the 24 indexes per table limit",
+            "A table supports at most 23 non-primary-key indexes.",
+            1,
+        ),
+        (
+            "Mentions the 24 indexes per table limit",
+            "A table supports at most 24 combined indices.",
             1,
         ),
         (
