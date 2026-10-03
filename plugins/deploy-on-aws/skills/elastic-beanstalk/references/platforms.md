@@ -1,7 +1,10 @@
 # Supported Platforms
 
 These rules apply after Elastic Beanstalk has been selected as the deployment
-target by the deploy skill.
+target by the deploy skill, and after Beanstalk **Standard** mode has been
+selected. Beanstalk Cluster mode has no platform — you supply a container image,
+or source that Elastic Beanstalk builds into one. See
+[cluster mode](cluster-mode.md).
 
 Detect the application's language and framework, then map to an EB platform branch.
 

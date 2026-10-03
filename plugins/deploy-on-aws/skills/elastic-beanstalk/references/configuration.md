@@ -1,5 +1,10 @@
 # Configuration and Customization
 
+Beanstalk **Standard** mode only. A Beanstalk Cluster environment accepts none of
+these namespaces, has no `.ebextensions`, `Procfile`, platform hooks, or nginx
+reverse proxy, and rejects a classic namespace with
+`InvalidParameterValueException`. See [cluster mode](cluster-mode.md).
+
 ## Configuration Hierarchy
 
 Option settings are applied in this order (later overrides earlier):
