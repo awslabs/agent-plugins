@@ -69,9 +69,6 @@ contention across regions — partition data by geography where possible.
 
 ## Quotas
 
-Full limit set, with the SQLSTATE and exact message for each database limit:
-[troubleshooting.md](../troubleshooting.md#limits-and-error-codes).
-
 | Quota                                         | Value                                                                                     |
 | --------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | Multi-region clusters per account, per Region | 5 (increasable)                                                                           |

@@ -24,10 +24,12 @@ is a lookup rule for these tables, not a retry rule — classification elsewhere
 SQLSTATE-based, and `40001` remains the only retryable code (see
 [occ-retry-patterns.md](occ-retry-patterns.md)).
 
-**MUST** match a stable prefix, not the whole string. `<n>`, `<type>` and `...` in the Message
-column are values DSQL interpolates at run time, so an equality test against the cell never
-matches. If no message matches, **SHOULD** fall back to the SQLSTATE class and verify the current
-limit via `awsknowledge` — message text is not a stable contract.
+**MUST** match a stable prefix, not the whole string, and match it case-insensitively — case varies
+even within one family (`Datatype limit …` for `char`/`varchar`, `datatype limit …` for `text`).
+`<n>`, `<type>` and `...` in the Message column are values DSQL interpolates at run time, so an
+equality test against the cell never matches. If no message matches, **SHOULD** fall back to the
+SQLSTATE class and verify the current limit via `awsknowledge` — message text is not a stable
+contract.
 
 Values marked **observed** were reproduced against a single-Region cluster on 2026-10-01
 (PostgreSQL 16 compatibility). Where an observed value contradicts the
@@ -47,8 +49,9 @@ _limits_, which are only observable at run time.
 | Query temp space                    | 128 MiB; docs give `53200` and other text                         | `54000`  | `query requires more than allowed temp space of 131072 KB to execute`                                                |
 | Extended statistics per table       | 5                                                                 | `54000`  | `more than 5 extended statistics per table are not allowed`                                                          |
 | Schemas per database                | 10, excluding `public` and `sys`                                  | `54000`  | `more than 10 schemas not allowed`                                                                                   |
-| Indexes per table                   | 24 **including the primary key**                                  | `54000`  | `more than 24 indexes per table are not allowed`                                                                     |
+| Indexes per table                   | 24, counting every index — see below                              | `54000`  | `more than 24 indexes per table are not allowed`                                                                     |
 | Primary key or index key size       | ~1,981 bytes observed; docs say 1 KiB                             | `54000`  | `key size too large`                                                                                                 |
+| Declared key size                   | 2,000 bytes, rejected at DDL time                                 | `54000`  | `key size greater than 2000 bytes not supported`                                                                     |
 | Row size                            | 2 MiB                                                             | `54000`  | `maximum row size exceeded`                                                                                          |
 | Non-index column size               | 1 MiB; docs give the message below, a per-datatype one was seen   | `54000`  | docs: `maximum column size exceeded`; observed: `datatype limit greater than 1048576 bytes not supported for <type>` |
 | View definition size                | 131–524 KiB of SQL text observed, varies by shape; docs say 2 MiB | `54000`  | `view definition too large`                                                                                          |
@@ -71,32 +74,24 @@ Several of these behave in ways the limit alone does not convey:
   rejected — nothing fails early. Compressible values go much further: a single `text` column
   accepted 214 MiB of one repeated character. Size against raw byte count; compression only ever
   buys headroom.
-- **The 10 MiB transaction limit counts more than the payload bytes.** The check runs at `COMMIT`
-  against an accounted size that adds a fixed cost per row, plus a further cost for every
-  secondary index entry the write produces:
-
-  ```text
-  accounted ~= raw + rows x (~150 bytes + ~430 bytes per secondary index)
-  ```
-
-  Observed with 500 rows and the payload in an unindexed column: 9.93 MiB of payload committed
-  with no secondary index, 9.73 MiB with one, 9.52 MiB with two, and 9.11 MiB with four — a
-  straight line at ~429 bytes per index entry. The formula predicted the ceiling at 200, 1,500
-  and 2,900 rows to within 1%. **Indexes dominate at scale:** a 3,000-row batch on a table with
-  four secondary indexes loses ~5 MiB of its budget to index writes before any payload is
-  counted, so the same statement that commits against a bare table fails against an indexed one.
-  Note the contrast with the row limit, which the documentation says applies "regardless of the
-  number of secondary indexes" — that independence does **not** hold for the size limit, and
-  neither the per-row nor the per-index cost is documented. Budget from the formula rather than
-  the raw byte count; the accounted size is always above raw, never below, so headroom computed
-  this way is safe.
-- **The key-size budget is combined, in bytes, across every key column.** One column reaches
-  ~1,981 bytes; each additional key column costs ~8 more, so an 8-column key gets ~241 bytes
-  each. Bytes, not characters — a 4-byte UTF-8 character key holds only ~495 characters. For a
-  secondary index the table's primary key columns count against the same budget: the combined
-  ceiling measures ~1,955 bytes once a second key column exists, so a 500-byte primary key leaves
-  ~1,455 bytes for the index columns. The quotas page lists the primary key and secondary index as
-  two separate 1 KiB budgets; the observed behaviour is a single shared budget.
+- **The 10 MiB transaction limit also counts index writes.** The check runs at `COMMIT` against an
+  accounted size that adds a cost per row and per secondary index entry written. The per-entry
+  cost grows with the index key plus the primary key: small for `int`, `uuid` or `timestamptz`
+  keys, several times the key width for wide `text` keys. A 500-row batch committed at most
+  9.93 MiB of raw data with no secondary index, and 9.11 MiB with four on 100-byte `text` keys.
+  The row limit is documented as independent of secondary indexes; the size limit is not, and its
+  accounting is undocumented. Large compressible values, such as JSON over a few KB, can count
+  below their raw size. To size a batch, read the error: `DETAIL: Current transaction size <n>mb >
+  10mb` is the exact accounted size, so one over-limit trial on the real schema gives the ratio to
+  scale by.
+- **The key-size budget is shared, in bytes, by every key column.** One column holds ~1,981 bytes
+  and each additional key column costs ~7 more, so an 8-column key gets ~241 bytes each. Bytes,
+  not characters — a 4-byte UTF-8 character key holds ~495 characters. A secondary index key also
+  carries the table's primary key columns, so a 500-byte primary key leaves ~1,474 bytes for the
+  index columns. Separately, DDL rejects a key whose _declared_ sizes sum past 2,000 bytes, leaving
+  the primary key out of that sum for a secondary index; a `varchar(2000)` key therefore passes
+  `CREATE` and still fails on write above ~1,981 bytes. The quotas page lists the primary key and
+  secondary index as two separate 1 KiB budgets; the observed behaviour is a single shared budget.
 - **The view-definition limit is a 512 KiB internal budget, not a text length.** How much SQL
   fits depends on structure: a target list of literals reached ~524 KiB of definition text, an
   `IN` list ~229 KiB, a `CASE` chain ~166 KiB, and a chain of OR-ed comparisons only ~131 KiB. The
@@ -104,14 +99,17 @@ Several of these behave in ways the limit alone does not convey:
   OR-chain was rejected at ~127 KiB. Treat **~120 KiB** as a working ceiling, but size by trial
   rather than by character count when a view approaches it. Deeply nested expressions hit
   `54001` first.
-- **Indexes still building count.** An index with `indisvalid = f` occupies one of the 24 slots,
-  so the budget is spent at submission and waiting does not recover it. `DROP INDEX` frees a slot.
+- **Every index counts toward the 24**: the primary key, the index behind each `UNIQUE`
+  constraint, and every `CREATE [UNIQUE] INDEX ASYNC`, including one still building
+  (`indisvalid = f`). A table with a primary key and one `UNIQUE` constraint has 22 slots left;
+  a table with no primary key has no hidden index and holds 24. Count with
+  `SELECT count(*) FROM pg_index WHERE indrelid = 'tbl'::regclass`. `DROP INDEX` frees a slot.
 - **`char` and `varchar` limits are enforced on the _declared_ size at DDL time**, so an
   oversized declaration fails at `CREATE TABLE`, not on first write.
 - **Dropped columns keep counting.** The documented ceiling is 1,600 _cumulative_ columns including
   dropped ones, so a table churned by repeated `ADD COLUMN`/`DROP COLUMN` during a migration can
   hit `54011` while holding far fewer live columns. Recreate the table rather than continuing to
-  churn it.
+  churn it — see [ddl-migrations/overview.md](ddl-migrations/overview.md).
 
 ### Rejections and Constraint Violations
 
@@ -155,7 +153,8 @@ These mislead in practice:
   observed here. If you _do_ see `08P01: invalid message length`, that is this case and the
   behaviour has changed — trust the error.
 
-**Any EOF at or after `COMMIT` leaves the commit outcome unknown**, whatever the cause, because the
+**Any EOF on a statement that could have committed — `COMMIT`, or any write in autocommit mode —
+leaves the commit outcome unknown**, whatever the cause, because the
 connection closed before the server replied. This applies to the oversized-message case above and
 equally to an EOF the agent classifies as a network fault — the size discriminator tells you why the
 connection dropped, not whether the write landed. Before resending, an agent **MUST** reconnect and
@@ -173,7 +172,8 @@ correlation id the transaction itself records, so the question becomes answerabl
 
 The threshold is the _protocol message_ size, which a client does not see directly: a batched or
 parameterised multi-row insert can exceed it well below 10 MiB of visible data. If you cannot
-measure it, reduce the batch size until the EOF stops.
+measure it, reduce the batch size until the EOF stops — after confirming, as above, that the
+previous attempt did not commit.
 
 ### Cluster Quotas
 
@@ -195,10 +195,7 @@ exercise, so treat the values as documented rather than observed.
 | CDC streams per cluster                        | 5                              | API      | `You have reached the stream limit.`                      |
 
 The cluster-count and CDC rows surface as the control-plane API error
-`ServiceQuotaExceededException: 402`, not a SQLSTATE, so they never reach a SQL client. The three
-`creating more than ...` messages are documented but were not exercised here; note they are the only
-rows in this section whose capitalisation differs from the observed ones, which matters if you are
-matching case-sensitively.
+`ServiceQuotaExceededException: 402`, not a SQLSTATE, so they never reach a SQL client.
 
 ## Connection and Authorization
 
@@ -359,17 +356,16 @@ CREATE INDEX ASYNC idx_logs_created ON logs (created_at);
 3. Add WHERE clause to limit scope
 
 Treat that chunk size as a starting point, not a guarantee. The same transaction is also bounded by
-size and age — see [Exceeded Limits](#exceeded-limits) — and the size limit is checked at `COMMIT`
-against an accounted size that runs above the raw byte count by roughly 150 bytes per row, plus
-~430 bytes for every secondary index entry written. On a table carrying several secondary indexes
-that overhead decides the chunk size, so compute the budget from the row width and the index count
-rather than from the payload alone.
+size and age, and every secondary index entry written counts toward the size. On a table carrying
+several secondary indexes that overhead decides the chunk size; see
+[Exceeded Limits](#exceeded-limits) for how to size it.
 
 ### Error: "schema has been updated by another transaction (OC001)"
 
-**Cause:** The transaction's snapshot predates a change to the schema catalog. **One** change is
-enough, and it does **not** have to be concurrent — a change that committed before the transaction
-reached its next statement still raises it.
+**Cause:** The session's cached copy of the schema catalog is older than a catalog change another
+session committed. **One** change is enough, and it does **not** have to be concurrent — a change
+that committed before the transaction began still raises it, on the session's next statement
+against the changed table.
 
 **`OC001` is SQLSTATE `40001`** — the same code as an OCC write conflict, and the same code
 `SKILL.md` routes into the retry loop. The two causes are distinguished only by the trailing
@@ -386,19 +382,17 @@ it out — though note DSQL itself counts `GRANT` and `REVOKE` as DDL when holdi
 single DDL statement, rejecting a pair with
 `0A000: multiple ddl statements not supported in a transaction`.
 
-**Only transactions that write are affected.** A transaction that reads and commits without writing
-is never hit, whether the read is in an implicit transaction or an explicit `BEGIN READ ONLY`, so a
-read-only reporting workload needs no `OC001` handling at all.
+Reads are hit as well as writes, including inside `BEGIN READ ONLY`, so read paths need the same
+retry loop. The error arrives on the statement when the change committed before it, and at `COMMIT`
+when the change lands mid-transaction.
 
 Both markers are retryable. A one-shot catalog change clears on the **first** retry, because the
-retry takes a fresh snapshot; it keeps recurring only while another session keeps changing the
-catalog, and then serializing those changes is the fix rather than more backoff. Note the conflict
-is reported at `COMMIT`, and to the transaction that committed **second**, so the failing session
-is not necessarily the one that started later.
+retry refreshes the session's catalog cache; it keeps recurring only while another session keeps
+changing the catalog, and then serializing those changes is the fix rather than more backoff.
 
 **Solution:**
 
-1. Retry the transaction — a fresh snapshot is usually all it needs
+1. Retry the transaction — refreshing the catalog cache is usually all it needs
 2. Apply the same exponential backoff as any other `40001`
 3. If it recurs across retries, serialize the catalog changes rather than widening the backoff
 

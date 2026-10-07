@@ -45,10 +45,7 @@ Part of [DSQL Development Guide](../development-guide.md).
 **Best practices:**
 
 - Keep authentication tokens in memory only; discard after use
-- Regenerate the token only when the error indicates a stale one — `unable to accept connection,
-  access denied` carrying a `Signature expired` hint. The same message without that hint means wrong
-  credentials, region, or IAM permissions, and a fresh token will not help. See
-  [troubleshooting.md](../troubleshooting.md#connection-and-authorization)
+- Regenerate the token only on a `Signature expired` hint; otherwise a fresh token will not help — see [troubleshooting.md](../troubleshooting.md#connection-and-authorization)
 - Monitor token generation failures
 - Set connection timeouts appropriately
 

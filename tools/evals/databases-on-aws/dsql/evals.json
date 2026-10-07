@@ -319,11 +319,11 @@
     {
       "id": 26,
       "prompt": "My DSQL migration only runs GRANT SELECT statements, no DDL. A long-running job that reads a large table and writes summary rows back keeps failing at COMMIT with 'schema has been updated by another transaction (OC001)' and SQLSTATE 40001. There's no DDL anywhere, so why?",
-      "expected_output": "Explains that GRANT and REVOKE are catalog changes that raise OC001 just as DDL does, that the trigger is a snapshot predating the change rather than concurrency, and that a retry clears a one-shot change",
+      "expected_output": "Explains that GRANT and REVOKE are catalog changes that raise OC001 just as DDL does, that the trigger is the session's stale cached catalog rather than concurrency, and that a retry clears a one-shot change",
       "expectations": [
         "States that GRANT and REVOKE modify the schema catalog and raise OC001 just as DDL statements do, so the absence of DDL does not rule it out",
-        "Explains that the condition is the transaction's snapshot predating a catalog change, not two statements overlapping in time",
-        "States that the reporting transaction should retry, because a retry takes a fresh snapshot and a one-shot catalog change clears",
+        "Explains that the cause is the session's cached schema catalog being older than a committed catalog change, which raises OC001 even when the change completed before the transaction started, not two statements overlapping in time",
+        "States that the reporting transaction should retry, because a retry refreshes the session's catalog cache and a one-shot catalog change clears",
         "Advises serializing the catalog changes if the error persists across retries",
         "Does not advise excluding OC001 from the 40001 retry loop or treating it as non-retryable"
       ],

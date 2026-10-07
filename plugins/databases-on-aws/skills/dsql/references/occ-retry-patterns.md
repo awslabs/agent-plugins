@@ -31,28 +31,25 @@ Non-retryable: all other errors, including foreign key violation 23503 (raise im
 ```
 
 `40001` carries two causes, distinguished by the trailing marker in the message. `(OC000)` is a
-write conflict and backoff clears it. `(OC001)` means the transaction's snapshot predates a change
-to the schema catalog.
+write conflict and backoff clears it. `(OC001)` means the session's cached schema catalog is older
+than a catalog change another session committed.
 
 **The trigger is any catalog change, not only `CREATE`/`ALTER`/`DROP`, and not only a concurrent
 one.** `GRANT` and `REVOKE` raise `OC001` just as `ALTER TABLE` and `CREATE INDEX ASYNC` do — DSQL
 groups them with DDL itself, rejecting a pair with `multiple ddl statements not supported in a
-transaction` — and it fires whether the change is still in flight or already finished. What matters
-is that the session pinned its snapshot before the change, not that anything overlapped in time. A
-migration that only adjusts privileges will raise it, so do not go looking for a `CREATE` or
-`ALTER` that is not there.
+transaction` — and it fires whether the change is still in flight or already finished. A migration
+that only adjusts privileges will raise it, so do not go looking for a `CREATE` or `ALTER` that is
+not there. Reads are hit as well as writes, so read paths need the retry loop too.
 
 The
 [DDL and distributed transactions](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-ddl.html)
-guide states the completed-change case directly: "An OC001 response can also occur when the schema
-change has already completed before the affected transaction starts… On retry, the session refreshes
-its catalog cache and the transaction typically succeeds."
+guide states the mechanism directly: "An OC001 response can also occur when the schema change has
+already completed before the affected transaction starts. Aurora DSQL query processors discover
+catalog changes reactively during query execution, so a session that has been idle might still be
+operating with a stale catalog version. On retry, the session refreshes its catalog cache and the
+transaction typically succeeds."
 
-**Only transactions that write are affected.** A transaction that reads and commits without writing
-is never hit, whether the read is in an implicit transaction or an explicit `BEGIN READ ONLY`, so a
-read-only reporting workload needs no `OC001` handling at all.
-
-Because a retry takes a fresh snapshot, a one-shot catalog change clears on the first retry. It
+Because a retry refreshes the catalog cache, a one-shot catalog change clears on the first retry. It
 keeps recurring only while another session keeps issuing changes — serialize those rather than
 relying on retries. Both markers **MUST** stay in the retry loop: excluding `OC001` turns a
 one-shot collision that the first retry would have cleared into a hard application error. Capture

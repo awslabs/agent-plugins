@@ -53,8 +53,12 @@ Concrete example (from `dsql_lint(sql="CREATE INDEX idx ON t (c);", fix=true)`):
 - **Do not gate a pipeline on any one counter.** Severity is derived from `fix_result.status`, so the
   same rule can land in different counters depending on the input: `index_sort_direction` reports
   `fixed_with_warning` for `DESC` but a silent `fixed` for `ASC`, even though DSQL rejects both. A
-  check on `errors == 0` or `warnings == 0` passes SQL that was rewritten underneath it. Gate on
-  `len(diagnostics) == 0`, or compare `fixed_sql` against the input.
+  check on `errors == 0` or `warnings == 0` passes SQL that was rewritten underneath it. Check
+  `len(diagnostics)` instead — but zero means no lint rule fired, not that DSQL accepts the SQL:
+  operator classes pass with no diagnostic and are rejected
+  ([index-conversion.md](pg-migrations/index-conversion.md)), while valid `BEGIN ATOMIC` bodies
+  raise a `parse_error` (see [Error Handling](#error-handling)). Do not compare `fixed_sql` to
+  the input; it can match while an `unfixable` diagnostic is present.
 - `statement_preview` is the linter's pointer to the offending statement — useful when presenting diagnostics to the user.
 
 ---

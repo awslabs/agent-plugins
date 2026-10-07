@@ -251,10 +251,10 @@ to be IMMUTABLE anyway.
 | Max columns per index | 8                                     | `54011`  | `more than 8 column keys in an index are not supported` |
 | Max PK/index key size | ~1,981 bytes observed; docs say 1 KiB | `54000`  | `key size too large`                                    |
 
-The primary key occupies one of the 24 slots, so a table with a PK accepts 23 secondary indexes.
-Indexes still building (`indisvalid = f`) occupy a slot too, so that budget is spent at submission
-and waiting does not recover it. For the key-size derivation, the multi-column budget and the rest
-of the limit set, see [troubleshooting.md](../troubleshooting.md#limits-and-error-codes).
+Every index takes one of the 24 slots: the primary key, each `UNIQUE` constraint, and indexes
+still building (`indisvalid = f`), so a table with only a PK accepts 23 secondary indexes. For the
+key-size budget and the rest of the limit set, see
+[troubleshooting.md](../troubleshooting.md#limits-and-error-codes).
 
 **Strategy when approaching 24 index limit:**
 
@@ -279,8 +279,9 @@ direction you wrote**:
 
 So a pipeline that gates on `errors == 0`, or that consumes only `fixed_sql`, proceeds without
 surfacing that the statement changed — and for `ASC` even a stricter pipeline gating on
-`warnings == 0` proceeds, because `ASC` raises no warning at all. Gate on
-`len(diagnostics) == 0`, or compare `fixed_sql` against the input, rather than on either counter.
+`warnings == 0` proceeds, because `ASC` raises no warning at all. Review every diagnostic rather
+than either counter, and see [dsql-lint.md](../dsql-lint.md) for what zero diagnostics does and
+does not mean.
 
 ```sql
 -- PostgreSQL

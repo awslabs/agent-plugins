@@ -158,10 +158,6 @@ defaults that may change — when a user's decision depends on an exact limit, v
 | IDENTITY/SEQUENCE CACHE values        | 1 or >= 65536 | `aurora dsql sequence cache`       |
 | Supported column data types           | See docs      | `aurora dsql supported data types` |
 
-That the 24 index limit counts the primary key — leaving 23 secondary indexes — is observed
-behaviour; the quotas page states only the 24, so `awsknowledge` will not confirm the inclusive
-framing.
-
 **When to verify:** Before recommending batch sizes, connection pool settings, or schema designs where hitting a limit would cause failures; any time the exact number can affect user decision. For the full limit set with each SQLSTATE and its exact error message, see [troubleshooting.md](references/troubleshooting.md#limits-and-error-codes).
 
 **Fallback:** If `awsknowledge` is unavailable, use the defaults above and flag that limits should be verified against [DSQL documentation](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/).
@@ -291,10 +287,10 @@ MUST load [system-diagnostics/workflow.md](references/system-diagnostics/workflo
 
 - **`awsknowledge` returns no results:** Use the default limits in the table above and note that limits should be verified against [DSQL documentation](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/).
 - **`dsql_lint` unavailable or timing out:** See the Error Handling section of [dsql-lint.md](references/dsql-lint.md). Do not silently skip validation — inform the user and require explicit confirmation before proceeding with manual rules from [development-guide.md](references/development-guide.md).
-- **OCC serialization error:** Retry the transaction. If persistent, check for hot-key contention. If the message contains `(OC001)` the cause is a schema catalog change — any DDL, and also `GRANT`/`REVOKE` — not row contention. A one-shot change clears on the first retry; if it persists, another session is still changing the catalog and you **MUST** serialize those changes. Match `(OC001)` as a substring, not as a suffix: some drivers append their own text such as `(SQLSTATE 40001)`. See [troubleshooting.md](references/troubleshooting.md).
+- **OCC serialization error:** Retry the transaction. If persistent, check for hot-key contention. If the message contains `(OC001)` the session's cached schema catalog is older than a committed catalog change — any DDL, and also `GRANT`/`REVOKE`, even one that committed before the transaction began — not row contention or overlapping timing. Reads are hit too. A retry refreshes the cache, so a one-shot change clears on the first retry; if it persists, another session is still changing the catalog and you **MUST** serialize those changes. Match `(OC001)` as a substring, not as a suffix: some drivers append their own text such as `(SQLSTATE 40001)`. See [troubleshooting.md](references/troubleshooting.md).
 - **Foreign key violation (`23503`):** Correct the relationship or referential action; **MUST NOT**
   send it through the `40001` retry loop — see [troubleshooting.md](references/troubleshooting.md).
-- **Transaction exceeds limits:** Split write batches to stay under 3,000 row modifications and 10 MiB; locked-row primary keys count toward the size limit. The 10 MiB check runs at `COMMIT` against a size that exceeds the raw bytes by ~150 bytes per row plus ~430 bytes per secondary index entry, so an indexed table has a much smaller usable budget — see [troubleshooting.md](references/troubleshooting.md#limits-and-error-codes) for the formula, and [batched-migration.md](references/ddl-migrations/batched-migration.md) for the batching pattern.
+- **Transaction exceeds limits:** Split write batches to stay under 3,000 row modifications and 10 MiB; locked-row primary keys count toward the size limit. The 10 MiB check runs at `COMMIT`, and secondary index entries count toward it, so an indexed table has a smaller usable budget — see [troubleshooting.md](references/troubleshooting.md#limits-and-error-codes) for how to size it, and [batched-migration.md](references/ddl-migrations/batched-migration.md) for the batching pattern.
 - **Token expiration mid-operation:** Generate a fresh IAM token — see [authentication-guide.md](references/auth/authentication-guide.md). See [troubleshooting.md](references/troubleshooting.md) for other issues.
 
 ## Additional Resources
