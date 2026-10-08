@@ -3194,8 +3194,6 @@ ASSERTION_RULES = {
         AssertionRule.TRANSACTION_SIZE_LIMIT,
     "mentions the 24 indexes per table limit":
         AssertionRule.INDEXES_PER_TABLE,
-    "mentions the 24 indexes per table limit, including the primary key":
-        AssertionRule.INDEXES_PER_TABLE,
     "mentions the 8 columns per index limit":
         AssertionRule.COLUMNS_PER_INDEX,
     "suggests alternatives such as composite indexes or reducing index count":
@@ -4948,29 +4946,21 @@ def grade_eval(
                 evidence = "No mention of 10 MiB data size limit found"
 
         # --- Assertion: 24 indexes ---
-        # The 24 counts every index, the primary key's included, so a table with
-        # a PK takes 23 secondary indexes. The veto below fails the off-by-one:
-        # 24 stated as secondary, or the PK placed outside the 24 ("plus",
-        # "excluding", "does not count"). It is a closed list matched per
-        # statement, so extend it when a new phrasing turns up, and add a case
-        # to test_run_functional_evals.py alongside it.
+        # Checks only that the cap is stated, as 24 per table or 23 secondary.
+        # Whether the answer counts the primary key inside the 24 turns on
+        # paraphrase and negation, so eval 28 leaves that to the LLM judge.
         elif rule is AssertionRule.INDEXES_PER_TABLE:
             # "DSQL allows 23 secondary indexes" names no table but states the
             # same per-table cap.
             subject = r"\b(?:tables?|DSQL)\b"
-            # "cap"/"capped at" is as common as "limit" in answers about this and
-            # was previously graded as no mention at all. "can have"/"supports"
-            # and a bare "per table" carry the same force in the table and bullet
-            # shapes a doc-quoting answer uses, where no bound word appears at all.
             bound = (
                 r"\b(?:limit|maximum|max|at\s+most|up\s+to|cap(?:ped|s)?|"
                 r"no\s+more\s+than|"
                 r"can\s+have|supports?|allows?|accepts?|permits?|holds?|"
                 r"per\s+tables?)"
             )
-            # "cannot have more than 24" and "doesn't allow more than 24" are
-            # upper bounds, but the shared negation check reads them as denials.
-            # Rewrite them, with either apostrophe, to "at most" before matching.
+            # "cannot have more than 24" is an upper bound, but the shared
+            # negation check reads it as a denial, so rewrite it to "at most".
             capped_text = re.sub(
                 r"\b(?:cannot|can\s+not|(?:do|does|may|must|will)\s+not"
                 r"|(?:ca|do|does|must|wo)n['’]t)\s+"
@@ -4979,29 +4969,20 @@ def grade_eval(
                 text,
                 flags=re.IGNORECASE,
             )
-            # A table with no PK really does take 24 secondary indexes, so the
-            # caveat is true. "without the primary key" is left out: it reads
-            # as "excluding" as often as "on a table that has none".
-            primary_key = r"\b(?:primary\s+keys?|PKs?)\b"
-            no_pk_caveat = (
-                r"\b(?:no|without\s+(?:a|any)|skip(?:s|ping)?\s+(?:the|a))"
-                r"[\s-]+(?:declared\s+|explicit\s+)?" + primary_key
-            )
-            # The "no" in that caveat reads as a negation of the cap beside it.
+            # The "no" in "a table with no primary key accepts 24" is not a
+            # negation of the cap beside it.
             capped_text = re.sub(
-                no_pk_caveat, "PK-less table", capped_text, flags=re.IGNORECASE
+                r"\b(?:no|without\s+(?:a|any))[\s-]+(?:primary\s+keys?|PKs?)\b",
+                "PK-less table",
+                capped_text,
+                flags=re.IGNORECASE,
             )
-            # Singular included: "the 24-index limit" and "max 24 index per
-            # table" are both ordinary phrasings, and graded as no mention at
-            # all while this matched only the plural.
             index_noun = r"(?:indexes|indices|index)"
-            # A number counts the noun right after it, so number-first allows
-            # only markup and one modifier ("**24** indexes", "24-index",
-            # "24 secondary indexes"), which keeps "24 columns per index" out.
-            # Noun-first ("indexes per table: 24") crosses a short run with no
-            # other digit, which keeps "24 columns and 8 indexes" out.
+            # Number-first allows one modifier ("24 secondary indexes", "24-index")
+            # so "24 columns per index" stays out. Noun-first crosses a short run
+            # with no other digit, and rejects another unit after the number
+            # ("index builds take up to 24 hours").
             gap = r"[^.!?\n\d]{0,40}?"
-            # "up to 24 hours" and "24 columns" put another unit on the number.
             not_other_unit = (
                 r"(?![\s-]+(?:hours?|hrs?|minutes?|mins?|seconds?|secs?|days?"
                 r"|columns?|rows?|bytes?|characters?|connections?)\b)"
@@ -5010,154 +4991,30 @@ def grade_eval(
                 r"(?:secondary|non-?primary(?:[- ]key)?|non-?PK|additional|extra"
                 r"|user(?:-defined)?)"
             )
-            # Each shape is matched on its own: in one alternation a negated
-            # noun-first match ("no fixed index limit, ... 24") consumes the
-            # positive number-first one after it.
+            # 23 counts only with the qualifier: a bare "23 indexes per table"
+            # is wrong, since 23 is the secondary count and 24 the total.
             cap_shapes = (
                 rf"\b24\b[^\w.!?\n]{{0,4}}(?:[\w-]+\s+)?{index_noun}\b",
                 rf"\b{index_noun}\b{gap}\b24\b{not_other_unit}",
                 rf"\b23\s+{secondary_adj}\s+{index_noun}\b",
-                # Noun-first for 23 must keep the "secondary" qualifier: a bare
-                # "23 indexes per table" is itself wrong, since 23 is the
-                # secondary count and 24 is the total.
                 rf"\b{secondary_adj}\s+{index_noun}\b{gap}\b23\b",
             )
-            states_cap = any(
+            if any(
                 _has_positive_statement(capped_text, shape, subject, bound)
                 for shape in cap_shapes
-            )
-            # Phrases that place the primary key OUTSIDE the 24. Matched anywhere
-            # in the statement rather than adjacent to the number, so a fronted
-            # clause ("Besides the primary key, a table supports 24 indexes") and
-            # an em-dashed trailer ("24 indexes per table - plus the primary key")
-            # are caught alongside the unpunctuated form.
-            _exclusion_phrase = (
-                r"(?:in\s+addition\s+to|plus|besides|beyond|on\s+top\s+of"
-                r"|excluding|not\s+counting|apart\s+from|aside\s+from"
-                r"|other\s+than|separate\s+from|exclusive\s+of"
-                r"|not\s+includ(?:e|es|ing)"
-                r"|do(?:es)?\s+not\s+(?:include|count)"
-                r"|do(?:es)?n['’]t\s+(?:include|count))"
-                r"\s+(?:the\s+|your\s+|its\s+|a\s+|that\s+)?"
-            )
-            # "the primary key does not count toward the limit" states the same
-            # error with the subject first, and lands in its own sentence often
-            # enough that requiring the number alongside it would miss it.
-            _pk_discounted = (
-                r"(?:\s+index)?\s+(?:"
-                r"(?:does\s+not|do\s+not|does\s?n['’]t|do\s?n['’]t"
-                r"|is\s+not|isn['’]t)\s+"
-                r"(?:\w+\s+){0,3}(?:count|counted|include[ds]?|included)"
-                r"|(?:is|are)\s+(?:excluded|separate)\b)"
-            )
-            excludes_pk = (
-                _exclusion_phrase + primary_key
-                + r"|" + primary_key + _pk_discounted
-            )
-            # The inclusive framing is correct, so it cancels the veto -- but only
-            # within the statement that triggered it, or the one before it when
-            # that statement carries no number of its own. Cancelling
-            # document-wide let one correct sentence license a wrong claim
-            # anywhere else in the answer. The lookbehinds keep "not including
-            # the primary key" from reading as the inclusive phrasing.
-            includes_pk = (
-                r"(?<!not\s)(?<!n't\s)(?:includ(?:es|ing)|counting|inclusive\s+of)"
-                r"\s+(?:the\s+|your\s+|its\s+|a\s+)?" + primary_key
-            )
-            # "24 secondary indexes", "all 24 can be secondary indexes" and
-            # "with your primary key you could have 25 in total" are the error
-            # itself. Only a no-PK caveat or a correcting contrast excuses them.
-            claims_24_secondary_outright = (
-                rf"\b24\b(?:\s+(?!(?:{index_noun}|includ\w*|primary|PKs?)\b)"
-                rf"[\w-]+){{0,5}}\s+(?:{secondary_adj}|own)\s+{index_noun}\b"
-                rf"|\b25\s+(?:{index_noun}\s+)?(?:in\s+)?total\b"
-                r"|\btotal\s+of\s+25\b"
-            )
-            # A genuine PostgreSQL contrast or pre-emption quotes "24 secondary"
-            # to correct it, and carries both the inclusive framing and the 23
-            # consequence. A bare "23 indexes" on its own does not cancel.
-            states_23 = _has_positive_statement(
-                text,
-                rf"\b23\s+(?:{secondary_adj}\s+)?{index_noun}\b",
-                subject,
-            )
-            corrects_24_secondary = states_23 and re.search(
-                includes_pk, text, re.IGNORECASE
-            ) is not None
-            # A "the primary key does not count" sentence about some *other*
-            # limit -- the 1,600 lifetime column ceiling, say -- is true, and
-            # must not be read as a claim about the index cap. A statement that
-            # names indexes is always in scope; one that names another limit's
-            # unit without naming indexes is not. Anything else stays in scope,
-            # which keeps the bare "The primary key does not count toward that
-            # limit." vetoing as before.
-            other_limit_unit = (
-                r"\b(?:columns?|rows?|bytes?|KiB|MiB|schemas?|sequences?|"
-                r"views?|statistics|connections?|storage)\b"
-            )
-
-            def _concerns_the_index_cap(statement: str) -> bool:
-                if re.search(rf"\b{index_noun}\b", statement, re.IGNORECASE):
-                    return True
-                return re.search(
-                    other_limit_unit, statement, re.IGNORECASE
-                ) is None
-
-            def _misplaces_pk(statement: str, previous: str) -> bool:
-                if not _concerns_the_index_cap(statement):
-                    return False
-                if (
-                    re.search(
-                        claims_24_secondary_outright, statement, re.IGNORECASE
-                    )
-                    and not re.search(no_pk_caveat, statement, re.IGNORECASE)
-                    and not corrects_24_secondary
-                ):
-                    return True
-                if not re.search(excludes_pk, statement, re.IGNORECASE):
-                    return False
-                # "23 secondary indexes plus the primary key" is the right sum,
-                # with or without the "24 in total" that follows from it.
-                if re.search(r"\b23\b", statement) and not re.search(
-                    rf"\b24\b(?!\s+(?:{index_noun}\s+)?(?:in\s+)?total\b)",
-                    statement,
-                    re.IGNORECASE,
-                ):
-                    return False
-                # A statement with no number refers back to the cap stated
-                # just before it, so it inherits that statement's framing.
-                context = statement
-                if not re.search(r"\b2[34]\b", statement):
-                    context = previous + " " + statement
-                return re.search(includes_pk, context, re.IGNORECASE) is None
-
-            statements = re.split(r"(?<=[.!?;])\s+|\n+", text)
-            claims_24_secondary = any(
-                _misplaces_pk(statement, statements[index - 1] if index else "")
-                for index, statement in enumerate(statements)
-            )
-            if states_cap and not claims_24_secondary:
+            ):
                 passed = True
                 evidence = "Found a positive 24-index (or 23 secondary) limit"
-            elif claims_24_secondary:
-                evidence = (
-                    "Response states the 24-index cap as excluding the primary "
-                    "key; the 24 includes it, so a table with a PK accepts 23"
-                )
             elif _has_positive_statement(
                 capped_text,
                 rf"\b(?:23|24)\s+(?:\w+(?:[- ]\w+)?\s+)?{index_noun}\b",
                 subject,
                 bound,
             ):
-                # Distinguishes "stated a cap in a shape this rule does not
-                # recognise" from "never mentioned the limit". Collapsing the two
-                # sends whoever triages a red eval after a missing-doc problem
-                # when the real defect is a wrong number.
-                evidence = (
-                    "Stated an index cap in an unrecognised form; could not "
-                    "confirm whether it counts the primary key"
-                )
+                # Separates "stated a cap in a shape this rule does not
+                # recognise" from "never mentioned the limit", so a red eval
+                # is triaged as a wrong number rather than a missing doc.
+                evidence = "Stated an index cap in an unrecognised form"
             else:
                 evidence = (
                     "No mention of 24 indexes per table (or 23 secondary) found"

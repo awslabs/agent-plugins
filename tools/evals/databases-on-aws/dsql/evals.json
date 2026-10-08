@@ -36,7 +36,7 @@
       "expected_output": "Explains the 24 index per table limit, counting the primary key, so 23 secondary indexes; verifies via awsknowledge, suggests alternatives like composite indexes or query redesign",
       "expectations": [
         "Calls awsknowledge search_documentation with an index-related query",
-        "Mentions the 24 indexes per table limit, including the primary key",
+        "Mentions the 24 indexes per table limit",
         "Mentions the 8 columns per index limit",
         "Suggests alternatives such as composite indexes or reducing index count"
       ],
@@ -339,6 +339,18 @@
         "States that a secondary index shares the budget with the table's primary key columns rather than getting a separate allowance",
         "Notes that the budget is in bytes rather than characters, so multi-byte UTF-8 values fit fewer characters",
         "Recommends shortening or hashing the key columns rather than attempting to raise the limit"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 28,
+      "prompt": "I'm migrating a PostgreSQL orders table to Aurora DSQL. It has a primary key, a UNIQUE constraint on order_number, and 23 other indexes for reporting queries. Will it fit, and if not, what should I change?",
+      "expected_output": "Explains that the 24-index limit counts every index on the table, including the primary key and the index behind the UNIQUE constraint, so the table needs 25 slots and does not fit; suggests consolidating indexes",
+      "expectations": [
+        "States that the 24-index limit counts every index on the table, including the primary key and the index behind the UNIQUE constraint",
+        "Concludes that the table needs 25 indexes, so it does not fit and at least one index must be dropped or merged",
+        "Does NOT state that 24 secondary indexes are allowed in addition to the primary key",
+        "Suggests consolidating indexes, for example into composite indexes, rather than trying to raise the limit"
       ],
       "grader": "llm_judge"
     }
