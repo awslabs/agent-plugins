@@ -543,7 +543,10 @@
         "iot_expresslink",
         "iot_fleetwise",
         "iot_roborunner",
-        "iot_twinmaker"
+        "iot_twinmaker",
+        "greengrass",
+        "internet_of_things",
+        "iot_edukit"
       ]
     },
     "media_services": {
@@ -569,28 +572,6 @@
         "thinkbox_sequoia",
         "thinkbox_stoke",
         "thinkbox_xmesh"
-      ]
-    },
-    "iot": {
-      "fillColor": "#3F8624",
-      "shapes": [
-        "freertos",
-        "greengrass",
-        "internet_of_things",
-        "iot_1click",
-        "iot_analytics",
-        "iot_button",
-        "iot_core",
-        "iot_device_defender",
-        "iot_device_management",
-        "iot_edukit",
-        "iot_events",
-        "iot_expresslink",
-        "iot_fleetwise",
-        "iot_roborunner",
-        "iot_sitewise",
-        "iot_things_graph",
-        "iot_twinmaker"
       ]
     },
     "games": {
