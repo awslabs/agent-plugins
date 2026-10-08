@@ -20,7 +20,9 @@ contract.
 Values marked **observed** were measured on a single-Region cluster (PostgreSQL 16
 compatibility) rather than taken from the documentation. Where an observed value contradicts the
 [quotas documentation](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/CHAP_quotas.html),
-the row says so. Re-verify before a design decision depends on an exact number.
+the row says so. **SHOULD** size against the observed value, which is what DSQL enforced when
+measured, and tell the user the documented value differs. To re-check one before a design decision
+depends on it, test it on a cluster; the quotas page is what it already contradicts.
 
 Run `dsql_lint` to catch unsupported _features_ before execution; use this section for the
 _limits_, which are only observable at run time.
@@ -75,7 +77,8 @@ Several of these behave in ways the limit alone does not convey:
   index columns. Separately, DDL rejects a key whose _declared_ sizes sum past 2,000 bytes, leaving
   the primary key out of that sum for a secondary index; a `varchar(2000)` key therefore passes
   `CREATE` and still fails on write above ~1,981 bytes. The quotas page lists the primary key and
-  secondary index as two separate 1 KiB budgets; the observed behaviour is a single shared budget.
+  secondary index as two separate 1 KiB budgets, but DSQL enforces the single shared budget above:
+  give the user these figures, and note that the documentation says 1 KiB.
 - **The view-definition limit is a 512 KiB internal budget, not a text length.** How much SQL
   fits depends on the query's structure, so treat **~120 KiB** of definition text as a working
   ceiling and size by trial when a view approaches it.
