@@ -89,7 +89,7 @@ Several of these behave in ways the limit alone does not convey:
 - **Dropped columns keep counting.** The documented ceiling is 1,600 _cumulative_ columns including
   dropped ones, so a table churned by repeated `ADD COLUMN`/`DROP COLUMN` during a migration can
   hit `54011` while holding far fewer live columns. Recreate the table rather than continuing to
-  churn it — see [ddl-migrations/overview.md](ddl-migrations/overview.md).
+  churn it, with user approval, following [ddl-migrations/overview.md](ddl-migrations/overview.md).
 
 ## Rejections and Constraint Violations
 
