@@ -58,8 +58,8 @@ the marker before each sleep so an exhausted loop records which cause it was ret
 
 An error that arrives as a dropped connection rather than a SQLSTATE — `SSL SYSCALL error: EOF
 detected` — leaves the commit outcome **unknown**, because the connection closed without a reply.
-Do not feed it to this loop. Reconnect and confirm whether the write landed, or make the write
-idempotent by design first; see [Idempotent Transaction Design](#idempotent-transaction-design).
+Do not feed it to this loop; follow the confirm-or-stop rule in
+[troubleshooting.md](troubleshooting.md#rejections-and-constraint-violations).
 
 ---
 

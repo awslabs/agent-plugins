@@ -450,6 +450,9 @@ def test_indexes_per_table_accepts_correct_pk_framings() -> None:
     }
     correct = (
         "A table can have 23 secondary indexes plus the primary key.",
+        # names DSQL rather than the table, and adds the total
+        "DSQL allows 23 secondary indexes plus the primary key.",
+        "DSQL allows 23 secondary indexes plus the primary key, 24 in total.",
         "A table can have at most 24 indexes including the primary key. In "
         "addition to the primary key, create only the secondary indexes you "
         "need.",
@@ -515,6 +518,8 @@ def test_indexes_per_table_accepts_the_no_pk_caveat() -> None:
         "No - DSQL supports up to 24 indexes per table, including the primary "
         "key (so 23 secondary indexes for a table with a PK, 24 for one "
         "without).",
+        # the caveat on its own, with no inclusive rule beside it
+        "A table with no primary key accepts 24 secondary indexes.",
     )
 
     for text in correct:
@@ -540,6 +545,8 @@ def test_indexes_per_table_ignores_unrelated_counts() -> None:
         # the number counts the noun right after it, not a later "index"
         "You can have up to 24 columns per index on a table.",
         "A DSQL migration can take up to 24 hours per table index build.",
+        "A large table's index build can take up to 24 hours to finish.",
+        "Building an index on a big table can take up to 24 hours.",
     )
 
     for text in unrelated:

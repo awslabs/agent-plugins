@@ -4955,7 +4955,9 @@ def grade_eval(
         # statement, so extend it when a new phrasing turns up, and add a case
         # to test_run_functional_evals.py alongside it.
         elif rule is AssertionRule.INDEXES_PER_TABLE:
-            subject = r"\btables?\b"
+            # "DSQL allows 23 secondary indexes" names no table but states the
+            # same per-table cap.
+            subject = r"\b(?:tables?|DSQL)\b"
             # "cap"/"capped at" is as common as "limit" in answers about this and
             # was previously graded as no mention at all. "can have"/"supports"
             # and a bare "per table" carry the same force in the table and bullet
@@ -4977,6 +4979,18 @@ def grade_eval(
                 text,
                 flags=re.IGNORECASE,
             )
+            # A table with no PK really does take 24 secondary indexes, so the
+            # caveat is true. "without the primary key" is left out: it reads
+            # as "excluding" as often as "on a table that has none".
+            primary_key = r"\b(?:primary\s+keys?|PKs?)\b"
+            no_pk_caveat = (
+                r"\b(?:no|without\s+(?:a|any)|skip(?:s|ping)?\s+(?:the|a))"
+                r"[\s-]+(?:declared\s+|explicit\s+)?" + primary_key
+            )
+            # The "no" in that caveat reads as a negation of the cap beside it.
+            capped_text = re.sub(
+                no_pk_caveat, "PK-less table", capped_text, flags=re.IGNORECASE
+            )
             # Singular included: "the 24-index limit" and "max 24 index per
             # table" are both ordinary phrasings, and graded as no mention at
             # all while this matched only the plural.
@@ -4987,6 +5001,11 @@ def grade_eval(
             # Noun-first ("indexes per table: 24") crosses a short run with no
             # other digit, which keeps "24 columns and 8 indexes" out.
             gap = r"[^.!?\n\d]{0,40}?"
+            # "up to 24 hours" and "24 columns" put another unit on the number.
+            not_other_unit = (
+                r"(?![\s-]+(?:hours?|hrs?|minutes?|mins?|seconds?|secs?|days?"
+                r"|columns?|rows?|bytes?|characters?|connections?)\b)"
+            )
             secondary_adj = (
                 r"(?:secondary|non-?primary(?:[- ]key)?|non-?PK|additional|extra"
                 r"|user(?:-defined)?)"
@@ -4996,7 +5015,7 @@ def grade_eval(
             # positive number-first one after it.
             cap_shapes = (
                 rf"\b24\b[^\w.!?\n]{{0,4}}(?:[\w-]+\s+)?{index_noun}\b",
-                rf"\b{index_noun}\b{gap}\b24\b",
+                rf"\b{index_noun}\b{gap}\b24\b{not_other_unit}",
                 rf"\b23\s+{secondary_adj}\s+{index_noun}\b",
                 # Noun-first for 23 must keep the "secondary" qualifier: a bare
                 # "23 indexes per table" is itself wrong, since 23 is the
@@ -5012,7 +5031,6 @@ def grade_eval(
             # clause ("Besides the primary key, a table supports 24 indexes") and
             # an em-dashed trailer ("24 indexes per table - plus the primary key")
             # are caught alongside the unpunctuated form.
-            primary_key = r"\b(?:primary\s+keys?|PKs?)\b"
             _exclusion_phrase = (
                 r"(?:in\s+addition\s+to|plus|besides|beyond|on\s+top\s+of"
                 r"|excluding|not\s+counting|apart\s+from|aside\s+from"
@@ -5054,13 +5072,6 @@ def grade_eval(
                 rf"[\w-]+){{0,5}}\s+(?:{secondary_adj}|own)\s+{index_noun}\b"
                 rf"|\b25\s+(?:{index_noun}\s+)?(?:in\s+)?total\b"
                 r"|\btotal\s+of\s+25\b"
-            )
-            # A table with no PK really does take 24 secondary indexes, so the
-            # caveat is true. "without the primary key" is left out: it reads
-            # as "excluding" as often as "on a table that has none".
-            no_pk_caveat = (
-                r"\b(?:no|without\s+(?:a|any)|skip(?:s|ping)?\s+(?:the|a))"
-                r"[\s-]+(?:declared\s+|explicit\s+)?" + primary_key
             )
             # A genuine PostgreSQL contrast or pre-emption quotes "24 secondary"
             # to correct it, and carries both the inclusive framing and the 23
@@ -5105,9 +5116,12 @@ def grade_eval(
                     return True
                 if not re.search(excludes_pk, statement, re.IGNORECASE):
                     return False
-                # "23 secondary indexes plus the primary key" is the right sum.
+                # "23 secondary indexes plus the primary key" is the right sum,
+                # with or without the "24 in total" that follows from it.
                 if re.search(r"\b23\b", statement) and not re.search(
-                    r"\b24\b", statement
+                    rf"\b24\b(?!\s+(?:{index_noun}\s+)?(?:in\s+)?total\b)",
+                    statement,
+                    re.IGNORECASE,
                 ):
                     return False
                 # A statement with no number refers back to the cap stated
