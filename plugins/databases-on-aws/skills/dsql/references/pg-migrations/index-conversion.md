@@ -251,10 +251,8 @@ to be IMMUTABLE anyway.
 | Max columns per index | 8                                     | `54011`  | `more than 8 column keys in an index are not supported` |
 | Max PK/index key size | ~1,981 bytes observed; docs say 1 KiB | `54000`  | `key size too large`                                    |
 
-Every index takes one of the 24 slots: the primary key, each `UNIQUE` constraint, and indexes
-still building (`indisvalid = f`), so a table with only a PK accepts 23 secondary indexes. For the
-key-size budget and the rest of the limit set, see
-[troubleshooting.md](../troubleshooting.md#limits-and-error-codes).
+For what takes one of the 24 slots, the key-size budget and the rest of the limit set, see
+[limits-and-error-codes.md](../limits-and-error-codes.md#exceeded-limits).
 
 **Strategy when approaching 24 index limit:**
 

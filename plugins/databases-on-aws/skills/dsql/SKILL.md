@@ -18,16 +18,17 @@ Load these files as needed for detailed guidance:
 
 ### Core:
 
-| Reference                                                 | When to Load                                        | Contains                                                                               |
-| --------------------------------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| [development-guide.md](references/development-guide.md)   | ALWAYS before schema changes or DB operations       | Best practices, DDL rules, transaction limits, foreign key constraints                 |
-| [foreign-keys.md](references/foreign-keys.md)             | MUST load for foreign key operations or migrations  | FK syntax, actions, validation, tenant keys                                            |
-| [language.md](references/language.md)                     | MUST load for language-specific choices             | Driver selection, DSQL Connectors, connection code                                     |
-| [access-control.md](references/access-control.md)         | MUST load for roles, grants, or sensitive data      | Scoped role setup, IAM-to-database role mapping                                        |
-| [troubleshooting.md](references/troubleshooting.md)       | SHOULD load for errors or unexpected behavior       | Limits/SQLSTATEs with exact messages, OCC and `23503`, FK, connections, cluster state  |
-| [dsql-examples.md](references/dsql-examples.md)           | Load for implementation examples                    | Multi-tenant access, batch operations, identity and sequences, connection pooling      |
-| [onboarding.md](references/onboarding.md)                 | User requests "Get started with DSQL"               | Interactive step-by-step guide                                                         |
-| [occ-retry-patterns.md](references/occ-retry-patterns.md) | MUST load for OCC retry code or conflict mitigation | Connectors, `40001` retry, non-retryable `23503`, FK read conflicts, idempotent design |
+| Reference                                                         | When to Load                                                                      | Contains                                                                               |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| [development-guide.md](references/development-guide.md)           | ALWAYS before schema changes or DB operations                                     | Best practices, DDL rules, transaction limits, foreign key constraints                 |
+| [foreign-keys.md](references/foreign-keys.md)                     | MUST load for foreign key operations or migrations                                | FK syntax, actions, validation, tenant keys                                            |
+| [language.md](references/language.md)                             | MUST load for language-specific choices                                           | Driver selection, DSQL Connectors, connection code                                     |
+| [access-control.md](references/access-control.md)                 | MUST load for roles, grants, or sensitive data                                    | Scoped role setup, IAM-to-database role mapping                                        |
+| [troubleshooting.md](references/troubleshooting.md)               | SHOULD load for errors or unexpected behavior                                     | OCC and `23503`, FK, connections, cluster state                                        |
+| [limits-and-error-codes.md](references/limits-and-error-codes.md) | SHOULD load before sizing batches, keys or indexes, or on `54000`/`0A000`/`54011` | Every limit, rejection and quota with SQLSTATE and exact message                       |
+| [dsql-examples.md](references/dsql-examples.md)                   | Load for implementation examples                                                  | Multi-tenant access, batch operations, identity and sequences, connection pooling      |
+| [onboarding.md](references/onboarding.md)                         | User requests "Get started with DSQL"                                             | Interactive step-by-step guide                                                         |
+| [occ-retry-patterns.md](references/occ-retry-patterns.md)         | MUST load for OCC retry code or conflict mitigation                               | Connectors, `40001` retry, non-retryable `23503`, FK read conflicts, idempotent design |
 
 ### MCP:
 
@@ -158,7 +159,7 @@ defaults that may change — when a user's decision depends on an exact limit, v
 | IDENTITY/SEQUENCE CACHE values        | 1 or >= 65536 | `aurora dsql sequence cache`       |
 | Supported column data types           | See docs      | `aurora dsql supported data types` |
 
-**When to verify:** Before recommending batch sizes, connection pool settings, or schema designs where hitting a limit would cause failures; any time the exact number can affect user decision. For the full limit set with each SQLSTATE and its exact error message, see [troubleshooting.md](references/troubleshooting.md#limits-and-error-codes).
+**When to verify:** Before recommending batch sizes, connection pool settings, or schema designs where hitting a limit would cause failures; any time the exact number can affect user decision. For the full limit set with each SQLSTATE and its exact error message, see [limits-and-error-codes.md](references/limits-and-error-codes.md).
 
 **Fallback:** If `awsknowledge` is unavailable, use the defaults above and flag that limits should be verified against [DSQL documentation](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/).
 
@@ -287,10 +288,9 @@ MUST load [system-diagnostics/workflow.md](references/system-diagnostics/workflo
 
 - **`awsknowledge` returns no results:** Use the default limits in the table above and note that limits should be verified against [DSQL documentation](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/).
 - **`dsql_lint` unavailable or timing out:** See the Error Handling section of [dsql-lint.md](references/dsql-lint.md). Do not silently skip validation — inform the user and require explicit confirmation before proceeding with manual rules from [development-guide.md](references/development-guide.md).
-- **OCC serialization error:** Retry the transaction. If persistent, check for hot-key contention. If the message contains `(OC001)` the session's cached schema catalog is older than a committed catalog change — any DDL, and also `GRANT`/`REVOKE`, even one that committed before the transaction began — not row contention or overlapping timing. Reads are hit too. A retry refreshes the cache, so a one-shot change clears on the first retry; if it persists, another session is still changing the catalog and you **MUST** serialize those changes. Match `(OC001)` as a substring, not as a suffix: some drivers append their own text such as `(SQLSTATE 40001)`. See [troubleshooting.md](references/troubleshooting.md).
-- **Foreign key violation (`23503`):** Correct the relationship or referential action; **MUST NOT**
-  send it through the `40001` retry loop — see [troubleshooting.md](references/troubleshooting.md).
-- **Transaction exceeds limits:** Split write batches to stay under 3,000 row modifications and 10 MiB; locked-row primary keys count toward the size limit. The 10 MiB check runs at `COMMIT`, and secondary index entries count toward it, so an indexed table has a smaller usable budget — see [troubleshooting.md](references/troubleshooting.md#limits-and-error-codes) for how to size it, and [batched-migration.md](references/ddl-migrations/batched-migration.md) for the batching pattern.
+- **OCC serialization error:** Retry the transaction; if persistent, check for hot-key contention. `(OC001)` in the message means the session's cached schema catalog is older than a committed catalog change — any DDL or `GRANT`/`REVOKE`, even one finished before the transaction began — not row contention or overlapping timing, and reads are hit too. Keep it in the retry loop: a retry refreshes the cache, so a one-shot change clears on the first retry; if it persists, you **MUST** serialize the catalog changes. Match `(OC001)` as a substring — see [occ-retry-patterns.md](references/occ-retry-patterns.md).
+- **Foreign key violation (`23503`):** Correct the relationship or referential action; **MUST NOT** send it through the `40001` retry loop — see [troubleshooting.md](references/troubleshooting.md).
+- **Transaction exceeds limits:** Split write batches to stay under 3,000 row modifications and 10 MiB. The 10 MiB is checked at `COMMIT`, and secondary index entries and locked-row primary keys count toward it, so raw data size does not predict it — size from the `54000` DETAIL (see [limits-and-error-codes.md](references/limits-and-error-codes.md#exceeded-limits)), batching pattern in [batched-migration.md](references/ddl-migrations/batched-migration.md).
 - **Token expiration mid-operation:** Generate a fresh IAM token — see [authentication-guide.md](references/auth/authentication-guide.md). See [troubleshooting.md](references/troubleshooting.md) for other issues.
 
 ## Additional Resources

@@ -72,7 +72,7 @@ effortless scaling, multi-region viability, among other advantages.
 - REQUIRED: **at most one DDL statement** per operation
 - ALWAYS separate schema (DDL) and data (DML) changes
 - MUST use **`CREATE INDEX ASYNC`:** No synchronous creation (verify limits via `awsknowledge`: `aurora dsql index limits`)
-  - MAXIMUM: **24 indexes per table**, including the primary key ([details](troubleshooting.md#exceeded-limits))
+  - MAXIMUM: **24 indexes per table**, including the primary key ([details](limits-and-error-codes.md#exceeded-limits))
   - MAXIMUM: **8 columns per index**
   - **MUST** verify index is ready before relying on it: `SELECT indisvalid FROM pg_index WHERE indexrelid = 'index_name'::regclass` — queries work but skip the index until `indisvalid = true`
 - MUST use **`ALTER TABLE ASYNC ... VALIDATE CONSTRAINT`** for constraint validation: No synchronous validation

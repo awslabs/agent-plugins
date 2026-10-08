@@ -39,7 +39,9 @@ one.** `GRANT` and `REVOKE` raise `OC001` just as `ALTER TABLE` and `CREATE INDE
 groups them with DDL itself, rejecting a pair with `multiple ddl statements not supported in a
 transaction` — and it fires whether the change is still in flight or already finished. A migration
 that only adjusts privileges will raise it, so do not go looking for a `CREATE` or `ALTER` that is
-not there. Reads are hit as well as writes, so read paths need the retry loop too.
+not there. Reads are hit as well as writes, so read paths need the retry loop too. It arrives on
+the statement when the change committed before it, and at `COMMIT` when the change lands
+mid-transaction.
 
 The
 [DDL and distributed transactions](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-ddl.html)
@@ -59,7 +61,7 @@ the marker before each sleep so an exhausted loop records which cause it was ret
 An error that arrives as a dropped connection rather than a SQLSTATE — `SSL SYSCALL error: EOF
 detected` — leaves the commit outcome **unknown**, because the connection closed without a reply.
 Do not feed it to this loop; follow the confirm-or-stop rule in
-[troubleshooting.md](troubleshooting.md#rejections-and-constraint-violations).
+[limits-and-error-codes.md](limits-and-error-codes.md#rejections-and-constraint-violations).
 
 ---
 
