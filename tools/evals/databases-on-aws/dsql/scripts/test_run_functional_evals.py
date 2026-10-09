@@ -177,6 +177,256 @@ def test_safe_query_grading_rejects_explicit_f_string_injection() -> None:
     assert safe["summary"]["passed"] == 1  # nosec B101
 
 
+def test_indexes_per_table_evidence_distinguishes_unrecognised_from_absent() -> None:
+    """The two failure paths must each say *why* they failed.
+
+    Collapsing "stated a cap in an unrecognised form" into "never mentioned the
+    limit" sends whoever triages a red eval after a missing-doc or routing
+    problem when the real defect is a wrong number. Nothing else in the suite
+    asserts these strings, so a refactor that merged the branches would stay
+    green.
+    """
+    eval_item = {
+        "prompt": "How many indexes can a DSQL table have?",
+        "expectations": ["Mentions the 24 indexes per table limit"],
+        "grader": "regex",
+    }
+
+    unrecognised = RUNNER.grade_eval(
+        eval_item,
+        _regex_run_result("A table supports at most 23 unique indexes."),
+    )
+    absent = RUNNER.grade_eval(
+        eval_item,
+        _regex_run_result("DSQL requires CREATE INDEX ASYNC."),
+    )
+
+    assert unrecognised["summary"]["failed"] == 1  # nosec B101
+    assert (  # nosec B101
+        "unrecognised form" in unrecognised["expectations"][0]["evidence"]
+    )
+    assert absent["summary"]["failed"] == 1  # nosec B101
+    assert "No mention" in absent["expectations"][0]["evidence"]  # nosec B101
+
+
+def test_indexes_per_table_accepts_doc_quoting_shapes() -> None:
+    """A correct answer must pass however it is laid out.
+
+    Eval 3 requires an `awsknowledge` documentation call, so the answer tends to
+    arrive as a quoted limits table or bullet list rather than prose. Requiring
+    the number and the index noun to be adjacent, in that order, in one sentence
+    failed exactly the shapes the eval induces -- a markdown row puts a cell
+    boundary between them, a bullet puts the noun first, and a bolded number puts
+    asterisks. Each entry below was observed to fail before.
+    """
+    eval_item = {
+        "prompt": "How many indexes can a DSQL table have?",
+        "expectations": ["Mentions the 24 indexes per table limit"],
+        "grader": "regex",
+    }
+    correct = (
+        "| Indexes per table | 24 (includes the primary key) |",
+        "The maximum number of indexes per table is 24, including the "
+        "primary key.",
+        "A table can't exceed 24 indexes, including the primary key.",
+        "The limit is **24** indexes per table, including the primary key.",
+        "A table can have 24 indexes, including the primary key.",
+        "Limits:\n- Indexes per table: 24, including the primary key",
+        "A DSQL table accepts 23 secondary indexes.",
+    )
+
+    for text in correct:
+        graded = RUNNER.grade_eval(eval_item, _regex_run_result(text))
+        assert graded["summary"]["passed"] == 1, text  # nosec B101
+
+
+def test_indexes_per_table_accepts_the_singular_noun() -> None:
+    """"24-index limit" is a correct answer, not a missing one.
+
+    Matching only the plural graded both forms below as "No mention of 24
+    indexes per table found", which is the same defect -- failing a correct
+    answer over its shape -- that the doc-quoting cases above cover.
+    """
+    eval_item = {
+        "prompt": "How many indexes can a DSQL table have?",
+        "expectations": ["Mentions the 24 indexes per table limit"],
+        "grader": "regex",
+    }
+    correct = (
+        "A DSQL table respects the 24-index limit per table, including the "
+        "primary key.",
+        "Max 24 index per table, including the primary key.",
+    )
+
+    for text in correct:
+        graded = RUNNER.grade_eval(eval_item, _regex_run_result(text))
+        assert graded["summary"]["passed"] == 1, text  # nosec B101
+
+
+
+
+
+
+
+
+def test_indexes_per_table_accepts_upper_bound_wording() -> None:
+    """A negated bound states the cap; it does not deny it.
+
+    "cannot have more than 24" and "doesn't allow more than 24" read as
+    negations to the shared check, and a curly apostrophe in "can’t exceed"
+    matched no bound at all, so each was graded as no mention.
+    """
+    eval_item = {
+        "prompt": "How many indexes can a DSQL table have?",
+        "expectations": ["Mentions the 24 indexes per table limit"],
+        "grader": "regex",
+    }
+    correct = (
+        "A table cannot have more than 24 indexes, including the primary key.",
+        "A table can’t exceed 24 indexes, including the primary key.",
+        "Aurora DSQL doesn't allow more than 24 indexes on a single table, and "
+        "the primary key counts toward that limit, which leaves you 23 "
+        "secondary indexes.",
+        "A table cannot have more than 24 indexes — the primary key counts as "
+        "one of them.",
+        # a negated index mention earlier must not hide the cap after it
+        "Unlike standard PostgreSQL, which has no fixed index limit, Aurora "
+        "DSQL allows **at most 24 indexes per table**, counting the primary "
+        "key. That leaves 23 for secondary indexes.",
+    )
+
+    for text in correct:
+        graded = RUNNER.grade_eval(eval_item, _regex_run_result(text))
+        assert graded["summary"]["passed"] == 1, text  # nosec B101
+
+
+def test_indexes_per_table_accepts_correct_pk_framings() -> None:
+    """Answers that place the PK beside 23, or name DSQL, state the cap."""
+    eval_item = {
+        "prompt": "How many indexes can a DSQL table have?",
+        "expectations": ["Mentions the 24 indexes per table limit"],
+        "grader": "regex",
+    }
+    correct = (
+        "A table can have 23 secondary indexes plus the primary key.",
+        # names DSQL rather than the table, and adds the total
+        "DSQL allows 23 secondary indexes plus the primary key.",
+        "DSQL allows 23 secondary indexes plus the primary key, 24 in total.",
+        "A table can have at most 24 indexes including the primary key. In "
+        "addition to the primary key, create only the secondary indexes you "
+        "need.",
+        "A table supports at most 24 indexes, including the primary key. In "
+        "addition to the primary key, you can create 23 secondary indexes.",
+    )
+
+    for text in correct:
+        graded = RUNNER.grade_eval(eval_item, _regex_run_result(text))
+        assert graded["summary"]["passed"] == 1, text  # nosec B101
+
+
+def test_indexes_per_table_accepts_the_no_pk_caveat() -> None:
+    """The "no" in "a table with no primary key" does not negate the cap.
+
+    A table with no PK really does take 24 secondary indexes, and answers add
+    it as a caveat to the rule.
+    """
+    eval_item = {
+        "prompt": "How many indexes can a DSQL table have?",
+        "expectations": ["Mentions the 24 indexes per table limit"],
+        "grader": "regex",
+    }
+    correct = (
+        "No. Aurora DSQL allows at most 24 indexes per table, including the "
+        "primary key, so a table with a primary key gets 23 secondary "
+        "indexes. A table with no primary key can use all 24 for secondary "
+        "indexes.",
+        "No, 30 is over the cap. The limit is 24 indexes per table. If the "
+        "table has a primary key, it uses one of those slots, leaving 23 "
+        "secondary indexes; without a primary key you could create 24 "
+        "secondary indexes.",
+        "Not possible: the maximum is 24 indexes per table, counting the "
+        "primary key. That leaves 23 secondary indexes (24 if the table has "
+        "no primary key).",
+        "DSQL caps each table at 24 indexes including the primary key, i.e. "
+        "23 secondary indexes. Note: a table created without a primary key "
+        "can have 24 secondary indexes, since there is no PK index taking a "
+        "slot.",
+        "No. The maximum is 24 indexes per table, including the primary key. "
+        "In practice that means 23 secondary indexes on a table with a "
+        "primary key, or 24 on a table without one.",
+        "24 indexes per table is the hard cap, including the primary key (23 "
+        "secondary indexes). Edge case: a no-PK table accepts 24 secondary "
+        "indexes.",
+        "The limit is 24 indexes per table, including the primary key, so 23 "
+        "secondary indexes with a PK. Tables without a declared primary key "
+        "use a hidden row ID that does not count toward the limit, so they "
+        "accept 24 secondary indexes.",
+        "No: max 24 indexes per table including the primary key -> 23 "
+        "secondary indexes. (Without a primary key the full 24 are available "
+        "for secondary indexes, but every DSQL table should have a primary "
+        "key.)",
+        "No. A table can have at most 24 indexes, including the primary key. "
+        "A table without a primary key can have 24 secondary indexes.",
+        "Not quite: the cap is 24 indexes per table, including the primary "
+        "key, so with a PK you can add 23 more. A table with no primary key "
+        "can hold 24 secondary indexes.",
+        "**No.** Aurora DSQL limits a table to **24 indexes**, and the "
+        "primary key counts as one of them, leaving 23 for secondary indexes. "
+        "If you skip the primary key, you can create 24 secondary indexes.",
+        # the leading "No -" answers the question; it does not negate the cap
+        "No - DSQL supports up to 24 indexes per table, including the primary "
+        "key (so 23 secondary indexes for a table with a PK, 24 for one "
+        "without).",
+        # the caveat on its own, with no inclusive rule beside it
+        "A table with no primary key accepts 24 secondary indexes.",
+    )
+
+    for text in correct:
+        graded = RUNNER.grade_eval(eval_item, _regex_run_result(text))
+        assert graded["summary"]["passed"] == 1, text  # nosec B101
+
+
+def test_indexes_per_table_ignores_unrelated_counts() -> None:
+    """Relaxing adjacency must not make any nearby 24 count as the cap.
+
+    The gap between the number and the index noun admits no other digit, so a
+    sentence that happens to mention 24 of something else alongside indexes is
+    still "no mention" rather than a stated limit.
+    """
+    eval_item = {
+        "prompt": "How many indexes can a DSQL table have?",
+        "expectations": ["Mentions the 24 indexes per table limit"],
+        "grader": "regex",
+    }
+
+    unrelated = (
+        "A table supports 24 columns and 8 indexes per index key.",
+        # the number counts the noun right after it, not a later "index"
+        "You can have up to 24 columns per index on a table.",
+        "A DSQL migration can take up to 24 hours per table index build.",
+        "A large table's index build can take up to 24 hours to finish.",
+        "Building an index on a big table can take up to 24 hours.",
+    )
+
+    for text in unrelated:
+        graded = RUNNER.grade_eval(eval_item, _regex_run_result(text))
+        assert graded["summary"]["failed"] == 1, text  # nosec B101
+
+    # 23 is the secondary count, not the total, so a bare "23 indexes per
+    # table" is wrong and must not satisfy the cap just because the relaxed
+    # ordering lets the noun precede the number.
+    bare_23 = RUNNER.grade_eval(
+        eval_item,
+        _regex_run_result(
+            "The maximum number of indexes per table is 23."
+        ),
+    )
+
+    assert bare_23["summary"]["failed"] == 1  # nosec B101
+
+
+
+
 def test_separate_ddl_grading_rejects_combined_transaction() -> None:
     eval_item = {
         "prompt": "Create a DSQL schema.",
@@ -1995,7 +2245,47 @@ def test_grading_correlates_tools_redacts_evidence_and_fails_closed(
         ),
         (
             "Mentions the 24 indexes per table limit",
+            "A table supports at most 23 secondary indexes.",
+            1,
+        ),
+        (
+            # Whether the 24 counts the PK is eval 28's judge's call, not this
+            # rule's.
+            "Mentions the 24 indexes per table limit",
             "A table supports at most 24 secondary indexes.",
+            1,
+        ),
+        (
+            "Mentions the 24 indexes per table limit",
+            "A table has at most 24 total indexes.",
+            1,
+        ),
+        (
+            "Mentions the 24 indexes per table limit",
+            "The cap is 24 indexes per table including the primary key, so you "
+            "get 23 secondary indexes.",
+            1,
+        ),
+        (
+            # "cap"/"capped at" is as common as "limit" and used to grade as no
+            # mention at all.
+            "Mentions the 24 indexes per table limit",
+            "Each table is capped at 24 indexes including the primary key.",
+            1,
+        ),
+        (
+            "Mentions the 24 indexes per table limit",
+            "A table may have at most 23 non-PK indexes.",
+            1,
+        ),
+        (
+            "Mentions the 24 indexes per table limit",
+            "A table supports at most 23 non-primary-key indexes.",
+            1,
+        ),
+        (
+            "Mentions the 24 indexes per table limit",
+            "A table supports at most 24 combined indices.",
             1,
         ),
         (

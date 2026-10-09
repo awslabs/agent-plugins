@@ -3323,13 +3323,20 @@ NEGATED_MENTION = re.compile(
     r"\b(?:do|does|did|is|are|was|were|should|must|can)\s+not|"
     r"\b(?:don't|doesn't|didn't|isn't|aren't|wasn't|weren't|"
     r"shouldn't|mustn't)\b"
-    r")\s+(?:[a-z0-9_-]+\s+){0,12}$",
+    # Chained words must start alphanumeric, so the dash in "No - DSQL
+    # supports 24" ends the chain like a comma or an em dash does.
+    r")\s+(?:[a-z0-9][a-z0-9_-]*\s+){0,12}$",
     re.IGNORECASE,
 )
 POSITIVE_UPPER_BOUND = re.compile(
     r"\b(?:at\s+most|(?:no|not)\s+more\s+than|(?:cannot|can't|must\s+not|"
     r"should\s+not)\s+exceed|does\s+not\s+allow\s+more\s+than|"
     r"no\s+(?:\w+\s+){0,4}(?:may|can|should|must)\s+exceed)\s*$",
+    re.IGNORECASE,
+)
+POSITIVE_UPPER_BOUND_SUFFIX = re.compile(
+    r"^\s*(?:cannot|can't|may\s+not|must\s+not|should\s+not)\s+"
+    r"(?:\w+\s+){0,4}exceed\b",
     re.IGNORECASE,
 )
 POST_MATCH_NEGATION = re.compile(
@@ -3396,6 +3403,10 @@ def _match_is_positive(value: str, match: re.Match) -> bool:
     suffix = value[match.end():match.end() + 80]
     if POSITIVE_UPPER_BOUND.search(prefix):
         prefix = ""
+    # Symmetric with the prefix case: "a table can't exceed 24 indexes" states an
+    # upper bound, so the trailing "can't" must not negate the preceding match.
+    if POSITIVE_UPPER_BOUND_SUFFIX.search(suffix):
+        suffix = ""
     return (
         NEGATED_MENTION.search(prefix) is None
         and POST_MATCH_NEGATION.search(suffix) is None
@@ -4935,18 +4946,79 @@ def grade_eval(
                 evidence = "No mention of 10 MiB data size limit found"
 
         # --- Assertion: 24 indexes ---
+        # Checks only that the cap is stated, as 24 per table or 23 secondary.
+        # Whether the answer counts the primary key inside the 24 turns on
+        # paraphrase and negation, so eval 28 leaves that to the LLM judge.
         elif rule is AssertionRule.INDEXES_PER_TABLE:
-            if _has_positive_statement(
+            # "DSQL allows 23 secondary indexes" names no table but states the
+            # same per-table cap.
+            subject = r"\b(?:tables?|DSQL)\b"
+            bound = (
+                r"\b(?:limit|maximum|max|at\s+most|up\s+to|cap(?:ped|s)?|"
+                r"no\s+more\s+than|"
+                r"can\s+have|supports?|allows?|accepts?|permits?|holds?|"
+                r"per\s+tables?)"
+            )
+            # "cannot have more than 24" is an upper bound, but the shared
+            # negation check reads it as a denial, so rewrite it to "at most".
+            capped_text = re.sub(
+                r"\b(?:cannot|can\s+not|(?:do|does|may|must|will)\s+not"
+                r"|(?:ca|do|does|must|wo)n['’]t)\s+"
+                r"(?:exceed|(?:\w+\s+)?more\s+than)\b",
+                "at most",
                 text,
-                r"\b24\s+(?:secondary\s+)?(?:indexes|indices)\b",
-                r"\btables?\b",
-                r"\b(?:limit|maximum|max|at\s+most|up\s+to|"
-                r"cannot\s+exceed|can't\s+exceed|no\s+more\s+than)",
+                flags=re.IGNORECASE,
+            )
+            # The "no" in "a table with no primary key accepts 24" is not a
+            # negation of the cap beside it.
+            capped_text = re.sub(
+                r"\b(?:no|without\s+(?:a|any))[\s-]+(?:primary\s+keys?|PKs?)\b",
+                "PK-less table",
+                capped_text,
+                flags=re.IGNORECASE,
+            )
+            index_noun = r"(?:indexes|indices|index)"
+            # Number-first allows one modifier ("24 secondary indexes", "24-index")
+            # so "24 columns per index" stays out. Noun-first crosses a short run
+            # with no other digit, and rejects another unit after the number
+            # ("index builds take up to 24 hours").
+            gap = r"[^.!?\n\d]{0,40}?"
+            not_other_unit = (
+                r"(?![\s-]+(?:hours?|hrs?|minutes?|mins?|seconds?|secs?|days?"
+                r"|columns?|rows?|bytes?|characters?|connections?)\b)"
+            )
+            secondary_adj = (
+                r"(?:secondary|non-?primary(?:[- ]key)?|non-?PK|additional|extra"
+                r"|user(?:-defined)?)"
+            )
+            # 23 counts only with the qualifier: a bare "23 indexes per table"
+            # is wrong, since 23 is the secondary count and 24 the total.
+            cap_shapes = (
+                rf"\b24\b[^\w.!?\n]{{0,4}}(?:[\w-]+\s+)?{index_noun}\b",
+                rf"\b{index_noun}\b{gap}\b24\b{not_other_unit}",
+                rf"\b23\s+{secondary_adj}\s+{index_noun}\b",
+                rf"\b{secondary_adj}\s+{index_noun}\b{gap}\b23\b",
+            )
+            if any(
+                _has_positive_statement(capped_text, shape, subject, bound)
+                for shape in cap_shapes
             ):
                 passed = True
-                evidence = "Found a positive 24-index limit in response"
+                evidence = "Found a positive 24-index (or 23 secondary) limit"
+            elif _has_positive_statement(
+                capped_text,
+                rf"\b(?:23|24)\s+(?:\w+(?:[- ]\w+)?\s+)?{index_noun}\b",
+                subject,
+                bound,
+            ):
+                # Separates "stated a cap in a shape this rule does not
+                # recognise" from "never mentioned the limit", so a red eval
+                # is triaged as a wrong number rather than a missing doc.
+                evidence = "Stated an index cap in an unrecognised form"
             else:
-                evidence = "No mention of 24 indexes per table limit found"
+                evidence = (
+                    "No mention of 24 indexes per table (or 23 secondary) found"
+                )
 
         # --- Assertion: 8 columns per index ---
         elif rule is AssertionRule.COLUMNS_PER_INDEX:
