@@ -135,6 +135,195 @@ You can install the **deploy-on-aws** plugin from the [Cursor Marketplace](https
 - Select the scope for the installed plugin
 - The plugin should appear under `Plugins -> Installed`
 
+### OpenCode
+
+OpenCode does not yet consume Claude-style plugin manifests or the Codex marketplace format, so each MCP server from these plugins has to be added to OpenCode's [MCP config](https://opencode.ai/docs/mcp-servers/) by hand, and each skill folder has to be copied into an OpenCode [skill discovery path](https://opencode.ai/docs/skills/). Both files are plain `SKILL.md` documents with the standard Agent Skills frontmatter (`name` and `description` are required), so OpenCode will discover them as soon as they live in one of the supported locations:
+
+- Project-scoped: `.opencode/skills/<name>/SKILL.md`, `.claude/skills/<name>/SKILL.md`, or `.agents/skills/<name>/SKILL.md` in the workspace
+- Global: `~/.config/opencode/skills/<name>/SKILL.md`, `~/.claude/skills/<name>/SKILL.md`, or `~/.agents/skills/<name>/SKILL.md`
+
+OpenCode walks the project tree upward to the worktree root for `.opencode/skills/`, `.claude/skills/`, and `.agents/skills/`, and also loads the three global locations. Pick the scope that matches how broadly you want the plugin's skills available.
+
+> [!NOTE]
+> A few skills in this repo declare Claude-specific frontmatter keys such as `allowed-tools` or `user-invocable`. OpenCode ignores those keys, so OpenCode users may need to grant the equivalent tool permissions through OpenCode's own permission settings — see the [permissions docs](https://opencode.ai/docs/permissions/) if a skill appears to be unable to perform a step.
+
+The MCP server entries below are translated from each plugin's `.mcp.json` into OpenCode's schema. Two mechanical changes apply across all of them:
+
+- Claude's `"command"` / `"args"` pair becomes OpenCode's `command` array on a `type: "local"` entry. `uvx` must be on the `PATH`.
+- Claude's `"type": "http"` entry (used for `awsknowledge`) becomes OpenCode's `type: "remote"` entry against the same `url`. OpenCode only accepts `local` or `remote` as the `type` value.
+- Entries that ship with `"disabled": true` in the plugin's `.mcp.json` (for example the `aurora-dsql` and `cloudwatch` servers in `databases-on-aws`) are omitted by default. Re-add them by setting `enabled: true` in your local `opencode.json` when you actually want to use them.
+
+Add these blocks under `mcp` in your `opencode.json` (project or `~/.config/opencode/opencode.json`). Anything you leave out is just not enabled; nothing here is required.
+
+#### amazon-location-service
+
+Skills to copy: `plugins/amazon-location-service/skills/amazon-location-service/SKILL.md`.
+
+```jsonc
+{
+  "mcp": {
+    "aws-mcp": {
+      "type": "local",
+      "command": ["uvx", "mcp-proxy-for-aws@latest", "https://aws-mcp.us-east-1.api.aws/mcp"],
+      "enabled": true
+    }
+  }
+}
+```
+
+#### aws-amplify
+
+Skills to copy: `plugins/aws-amplify/skills/amplify-workflow/SKILL.md`.
+
+```jsonc
+{
+  "mcp": {
+    "aws-mcp": {
+      "type": "local",
+      "command": ["uvx", "mcp-proxy-for-aws@latest", "https://aws-mcp.us-east-1.api.aws/mcp"],
+      "enabled": true
+    }
+  }
+}
+```
+
+#### aws-serverless
+
+Skills to copy: every `SKILL.md` under `plugins/aws-serverless/skills/` — `api-gateway`, `aws-lambda`, `aws-lambda-durable-functions`, `aws-lambda-managed-instances`, `aws-lambda-microvms`, `aws-serverless-deployment`, `aws-step-functions`.
+
+```jsonc
+{
+  "mcp": {
+    "aws-serverless-mcp": {
+      "type": "local",
+      "command": ["uvx", "awslabs.aws-serverless-mcp-server@latest", "--allow-write"],
+      "environment": {
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      },
+      "timeout": 120000,
+      "enabled": true
+    }
+  }
+}
+```
+
+#### aws-transform
+
+Skills to copy: `plugins/aws-transform/skills/aws-transform/SKILL.md`.
+
+```jsonc
+{
+  "mcp": {
+    "aws-transform-mcp": {
+      "type": "local",
+      "command": ["uvx", "awslabs.aws-transform-mcp-server@latest"],
+      "enabled": true
+    }
+  }
+}
+```
+
+#### codebase-documentor-for-aws
+
+Skills to copy: `plugins/codebase-documentor-for-aws/skills/document-service/SKILL.md`.
+
+```jsonc
+{
+  "mcp": {
+    "awsknowledge": {
+      "type": "remote",
+      "url": "https://knowledge-mcp.global.api.aws",
+      "enabled": true
+    },
+    "awsiac": {
+      "type": "local",
+      "command": ["uvx", "awslabs.aws-iac-mcp-server@latest"],
+      "enabled": true
+    }
+  }
+}
+```
+
+#### databases-on-aws
+
+Skills to copy: `plugins/databases-on-aws/skills/dsql/SKILL.md`.
+
+By default only `awsknowledge` is enabled. The `aurora-dsql` and `cloudwatch` MCP servers ship disabled in the plugin's `.mcp.json`; enable them locally only after reviewing the AWS credentials and region placeholders documented in `plugins/databases-on-aws/.mcp.json`.
+
+```jsonc
+{
+  "mcp": {
+    "awsknowledge": {
+      "type": "remote",
+      "url": "https://knowledge-mcp.global.api.aws",
+      "enabled": true
+    }
+  }
+}
+```
+
+#### deploy-on-aws
+
+Skills to copy: every `SKILL.md` under `plugins/deploy-on-aws/skills/` — `aws-architecture-diagram`, `deploy`, `elastic-beanstalk`.
+
+The `aws-architecture-diagram` skill produces [draw.io](https://www.drawio.com/) `.drawio` XML files using the official AWS4 icon set. It can either scan a codebase for CloudFormation/CDK/Terraform and generate a diagram, or brainstorm one interactively. Export to PNG/SVG/PDF requires the draw.io desktop CLI on the host. This skill has no equivalent yet in the successor [Agent Toolkit for AWS](https://aws.amazon.com/about-aws/whats-new/2026/05/agent-toolkit/) repo, so users on OpenCode who need architecture diagrams should install it from here.
+
+```jsonc
+{
+  "mcp": {
+    "awsiac": {
+      "type": "local",
+      "command": ["uvx", "awslabs.aws-iac-mcp-server@latest"],
+      "enabled": true
+    },
+    "awsknowledge": {
+      "type": "remote",
+      "url": "https://knowledge-mcp.global.api.aws",
+      "enabled": true
+    },
+    "awspricing": {
+      "type": "local",
+      "command": ["uvx", "awslabs.aws-pricing-mcp-server@latest"],
+      "environment": {
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      },
+      "timeout": 120000,
+      "enabled": true
+    }
+  }
+}
+```
+
+#### migration-to-aws
+
+Skills to copy: none. The plugin's `.codex-plugin/plugin.json` is the only file currently shipped under `plugins/migration-to-aws/` on `main`; there is no `.mcp.json` and no `skills/` directory yet, so OpenCode users cannot install this plugin until those assets land. Track progress on the [plugin's issue tracker](https://github.com/awslabs/agent-plugins/issues?q=is%3Aissue+migration-to-aws) or open a new issue if you would like to help restore it.
+
+#### sagemaker-ai
+
+Skills to copy: every `SKILL.md` under `plugins/sagemaker-ai/skills/` — `dataset-evaluation`, `dataset-transformation`, `directory-management`, `finetuning`, `finetuning-technique`, `hyperpod-cluster-debugger`, `hyperpod-issue-report`, `hyperpod-nccl`, `hyperpod-node-debugger`, `hyperpod-performance-debugger`, `hyperpod-slurm-debugger`, `hyperpod-ssm`, `hyperpod-version-checker`, `model-deployment`, `model-evaluation`, `model-selection`, `planning`, `sdk-getting-started`, `use-case-specification`. The `planning` skill is designed to be loaded alongside any other sagemaker-ai skill, so copy the whole folder rather than picking one.
+
+```jsonc
+{
+  "mcp": {
+    "aws-mcp": {
+      "type": "local",
+      "command": ["uvx", "mcp-proxy-for-aws@latest", "https://aws-mcp.us-east-1.api.aws/mcp"],
+      "enabled": true
+    }
+  }
+}
+```
+
+#### Verifying it works
+
+After saving `opencode.json`, run:
+
+```bash
+opencode mcp list
+```
+
+to confirm OpenCode can connect to each MCP server. If a server fails, `opencode mcp debug <server-name>` prints the connection attempt and (for remote servers) the OAuth handshake.
+
 ### Kiro (experimental)
 
 You can convert Claude Code plugins into Kiro format using the third-party [`@every-env/compound-plugin`](https://www.npmjs.com/package/@every-env/compound-plugin) CLI. This converts skills (SKILL.md workflow instructions and reference documents) and MCP server configs into Kiro's `.kiro/` format.
