@@ -37,4 +37,4 @@ Lambda Durable Functions enable resilient multi-step applications that execute f
 
 ## AWS Step Functions
 
-For comprehensive Step Functions guidance — Standard vs Express workflows, ASL definitions, JSONata, SDK integrations, Distributed Map, testing, and best practices — see [step-functions.md](step-functions.md).
+For comprehensive Step Functions guidance — Standard vs Express workflows, ASL definitions, JSONata, SDK integrations, Distributed Map, testing, and best practices — see the [aws-step-functions skill](../../aws-step-functions/).

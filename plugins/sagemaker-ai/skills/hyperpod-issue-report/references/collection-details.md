@@ -63,10 +63,6 @@ Packaged as `kubectl_resources.tar.gz`, collected from the local machine (not fr
 - `dmesg_T.txt` — Kernel ring buffer with timestamps
 - `var_log_slurm/` — Slurm logs from `/var/log/slurm/`
 
-### Custom Commands
-
-User-specified commands are saved as `command_01_<sanitized_name>.txt`, `command_02_...`, etc.
-
 ## Report Output Structure
 
 ```

@@ -20,17 +20,19 @@ CREATE TABLE IF NOT EXISTS orders (
   order_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id VARCHAR(255) NOT NULL,
   status VARCHAR(50) NOT NULL,
-  tags TEXT,
-  metadata TEXT,
+  tags JSONB,
+  metadata JSON,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
+
+Both `JSONB` and `JSON` are valid; pick by access pattern (see Schema Design Rules in `development-guide.md`).
 
 ---
 
 ## Schema Design: Index Creation
 
-MUST use `CREATE INDEX ASYNC` (max 24 indexes/table, 8 columns/index — verify via `awsknowledge`: `aurora dsql index limits`). Source: [aurora-dsql-samples/java/liquibase](https://github.com/aws-samples/aurora-dsql-samples/tree/main/java/liquibase)
+MUST use `CREATE INDEX ASYNC` (max 24 indexes/table including the primary key, 8 columns/index — verify via `awsknowledge`: `aurora dsql index limits`). Source: [aurora-dsql-samples/java/liquibase](https://github.com/aws-samples/aurora-dsql-samples/tree/main/java/liquibase)
 
 ```sql
 CREATE INDEX ASYNC idx_owner_city ON owner(city);

@@ -32,7 +32,7 @@ jobs:
       patch_created: ${{ steps.create_patch.outputs.patch_created }}
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: main
 
@@ -57,7 +57,7 @@ jobs:
 
       - name: Upload patch
         if: steps.create_patch.outputs.patch_created
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v4.4.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.4.0
         with:
           name: repo.patch
           path: repo.patch
@@ -73,7 +73,7 @@ jobs:
     if: ${{ needs.upgrade.outputs.patch_created }}
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: main
 
@@ -93,7 +93,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v6
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v6
         with:
           token: ${{ secrets.UPGRADE_MAIN_TOKEN }}
           commit-message: |-

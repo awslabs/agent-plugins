@@ -33,7 +33,7 @@ DELETE FROM owner WHERE city = 'Portland';
 
 **Transaction Limits** (verify current limits via `awsknowledge`: `aurora dsql transaction limits`)**:**
 
-- Maximum 3,000 rows per transaction
+- Maximum 3,000 row modifications per transaction
 - Maximum 10 MiB data size per transaction
 - Maximum 5 minutes per transaction
 
@@ -54,7 +54,7 @@ async function batchInsert(pool, tenantId, items) {
         await client.query(
           `INSERT INTO entities (tenant_id, name, metadata)
           VALUES ($1, $2, $3)`,
-          [tenantId, item.name, JSON.stringify(item.metadata)]
+          [tenantId, item.name, item.metadata]
         );
       }
 
@@ -105,7 +105,7 @@ async function processBatches(pool, tenantId, batches, startIdx, step) {
       for (const item of batch) {
         await client.query(
           'INSERT INTO entities (tenant_id, name, metadata) VALUES ($1, $2, $3)',
-          [tenantId, item.name, JSON.stringify(item.metadata)]
+          [tenantId, item.name, item.metadata]
         );
       }
 

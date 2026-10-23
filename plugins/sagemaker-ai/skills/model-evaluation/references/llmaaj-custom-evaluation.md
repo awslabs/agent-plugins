@@ -1,6 +1,6 @@
 # LLM-as-Judge Custom Metrics Guide
 
-This file guides you through collecting and validating custom metric definitions from the user.
+This file describes the process for collecting and validating custom metric definitions.
 
 ## Step 1: Collect Custom Metrics
 
@@ -60,4 +60,4 @@ If validation fails, show the errors to the user and iterate until it passes.
 
 ## After Collection
 
-Once custom metrics are validated, return to the main workflow (Step 6) to check if the user also wants built-in metrics.
+Once custom metrics are validated, return to the main workflow (Step 7) to check if the user also wants built-in metrics.

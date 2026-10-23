@@ -1,22 +1,14 @@
 ---
 name: dsql
-description: "Build with Aurora DSQL — manage schemas, execute queries, handle migrations, and develop applications with a serverless, distributed SQL database. Covers IAM auth, multi-tenant patterns, MySQL-to-DSQL migration, and DDL operations. Triggers on phrases like: DSQL, Aurora DSQL, create DSQL table, DSQL schema, migrate to DSQL, distributed SQL database, serverless PostgreSQL-compatible database."
+description: "Build with Aurora DSQL — manage schemas, execute queries, handle migrations, diagnose query plans, diagnose cluster performance, load data, and develop applications with a serverless, distributed SQL database. Covers IAM auth, multi-tenant patterns, MySQL-to-DSQL and PostgreSQL-to-DSQL schema conversion, foreign key constraints, OCC retry patterns, ORM migration (Django/EF Core/Hibernate/Rails/SQLAlchemy), DDL operations, query plan explainability, system diagnostics via CloudWatch AAS, SQL compatibility validation, and bulk data loading. Load before answering DSQL limit or error-code questions; it has limits docs omit. Triggers on phrases like: DSQL, Aurora DSQL, distributed SQL database, serverless PostgreSQL-compatible database, migrate to DSQL, DSQL query plan, DSQL EXPLAIN ANALYZE, DSQL ENUM, DSQL foreign key, DSQL OCC retry, DSQL multi-region, DSQL JSONB, DSQL GIN index, load into DSQL, load CSV into DSQL, bulk load DSQL, aurora-dsql-loader, DSQL slow, DSQL performance, DSQL wait events, DSQL AAS."
 license: Apache-2.0
 metadata:
-  tags: aws, aurora, dsql, distributed-sql, distributed, distributed-database, database, serverless, serverless-database, postgresql, postgres, sql, schema, migration, multi-tenant, iam-auth, aurora-dsql, mcp
+  tags: aws, aurora, dsql, distributed-sql, distributed, distributed-database, database, serverless, serverless-database, postgresql, postgres, sql, schema, migration, multi-tenant, iam-auth, aurora-dsql, mcp, orm, enum, foreign-key, occ-retry, django, ef-core, dotnet, csharp, hibernate, rails, multi-region, schema-conversion, type-mapping, data-loading, system-diagnostics, wait-events, aas, performance, cloudwatch
 ---
 
 # Amazon Aurora DSQL Skill
 
-Aurora DSQL is a serverless, PostgreSQL-compatible distributed SQL database. This skill provides direct database interaction via MCP tools, schema management, migration support, and multi-tenant patterns.
-
-**Key capabilities:**
-
-- Direct query execution via MCP tools
-- Schema management with DSQL constraints
-- Migration support and safe schema evolution
-- Multi-tenant isolation patterns
-- IAM-based authentication
+Aurora DSQL is a serverless, PostgreSQL-compatible distributed SQL database. This skill covers direct query execution via MCP tools, schema management, migrations, multi-tenant isolation, IAM auth, and bulk data loading via `aurora-dsql-loader`.
 
 ---
 
@@ -24,92 +16,105 @@ Aurora DSQL is a serverless, PostgreSQL-compatible distributed SQL database. Thi
 
 Load these files as needed for detailed guidance:
 
-### [development-guide.md](references/development-guide.md)
+### Core:
 
-**When:** ALWAYS load before implementing schema changes or database operations
-**Contains:** [Best Practices](references/development-guide.md#best-practices), DDL rules, connection patterns, transaction limits, data type serialization patterns, application-layer referential integrity instructions, security best practices
+| Reference                                                         | When to Load                                                                      | Contains                                                                               |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| [development-guide.md](references/development-guide.md)           | ALWAYS before schema changes or DB operations                                     | Best practices, DDL rules, transaction limits, foreign key constraints                 |
+| [foreign-keys.md](references/foreign-keys.md)                     | MUST load for foreign key operations or migrations                                | FK syntax, actions, validation, tenant keys                                            |
+| [language.md](references/language.md)                             | MUST load for language-specific choices                                           | Driver selection, DSQL Connectors, connection code                                     |
+| [access-control.md](references/access-control.md)                 | MUST load for roles, grants, or sensitive data                                    | Scoped role setup, IAM-to-database role mapping                                        |
+| [troubleshooting.md](references/troubleshooting.md)               | SHOULD load for errors or unexpected behavior                                     | OCC and `23503`, FK, connections, cluster state                                        |
+| [limits-and-error-codes.md](references/limits-and-error-codes.md) | SHOULD load before sizing batches, keys or indexes, or on `54000`/`0A000`/`54011` | Every limit, rejection and quota with SQLSTATE and exact message                       |
+| [dsql-examples.md](references/dsql-examples.md)                   | Load for implementation examples                                                  | Multi-tenant access, batch operations, identity and sequences, connection pooling      |
+| [onboarding.md](references/onboarding.md)                         | User requests "Get started with DSQL"                                             | Interactive step-by-step guide                                                         |
+| [occ-retry-patterns.md](references/occ-retry-patterns.md)         | MUST load for OCC retry code or conflict mitigation                               | Connectors, `40001` retry, non-retryable `23503`, FK read conflicts, idempotent design |
 
 ### MCP:
 
-#### [mcp-setup.md](mcp/mcp-setup.md)
+| Reference                               | When to Load                                                    | Contains                                                           |
+| --------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------ |
+| [mcp-setup.md](mcp/mcp-setup.md)        | Always for MCP server guidance                                  | Setup instructions, 2 configuration options                        |
+| [mcp-tools.md](mcp/mcp-tools.md)        | For MCP tool syntax and examples                                | Tool parameters, [input validation](mcp/tools/input-validation.md) |
+| [dsql-lint.md](references/dsql-lint.md) | MUST load before running `dsql_lint` or processing external SQL | Tool reference, fix statuses, unfixable error resolution           |
 
-**When:** Always load for guidance using or updating the DSQL MCP server
-**Contains:** Instructions for setting up the DSQL MCP server with 2 configuration options as
-sampled in [.mcp.json](../../.mcp.json)
+### DDL Migrations:
 
-1. Documentation-Tools Only
-2. Database Operations (requires a cluster endpoint)
+| Reference                                                                                     | When to Load                                                 | Contains                                               |
+| --------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------ |
+| [ddl-migrations/overview.md](references/ddl-migrations/overview.md)                           | MUST load for ALTER TYPE, SET NOT NULL, MODIFY PRIMARY KEY   | Direct ALTER coverage and last-resort table recreation |
+| [ddl-migrations/column-operations.md](references/ddl-migrations/column-operations.md)         | DROP COLUMN, ALTER TYPE, SET/DROP NOT NULL/DEFAULT           | Column-level migration patterns                        |
+| [ddl-migrations/constraint-operations.md](references/ddl-migrations/constraint-operations.md) | ADD/DROP CONSTRAINT, VALIDATE CONSTRAINT, MODIFY PRIMARY KEY | Constraint and structural changes                      |
+| [ddl-migrations/batched-migration.md](references/ddl-migrations/batched-migration.md)         | Tables exceeding 3,000 rows                                  | Batching patterns, progress tracking                   |
 
-#### [mcp-tools.md](mcp/mcp-tools.md)
+### MySQL Migrations:
 
-**When:** Load when you need detailed MCP tool syntax and examples. PREFER MCP tools for ad-hoc queries — execute directly rather than writing scripts.
-**Contains:** Tool parameters, detailed examples, usage patterns, [input validation](mcp/tools/input-validation.md)
+| Reference                                                                           | When to Load                         | Contains                                 |
+| ----------------------------------------------------------------------------------- | ------------------------------------ | ---------------------------------------- |
+| [mysql-migrations/type-mapping.md](references/mysql-migrations/type-mapping.md)     | MUST load for MySQL → DSQL migration | Data type mappings, feature alternatives |
+| [mysql-migrations/ddl-operations.md](references/mysql-migrations/ddl-operations.md) | Translating MySQL DDL to DSQL        | AUTO_INCREMENT, ENUM, SET, FK patterns   |
+| [mysql-migrations/full-example.md](references/mysql-migrations/full-example.md)     | Complete MySQL table migration       | End-to-end example with decision summary |
 
-### [language.md](references/language.md)
+### PostgreSQL Migrations:
 
-**When:** MUST load when making language-specific implementation choices. ALWAYS prefer DSQL Connector when available.
-**Contains:** Driver selection, framework patterns, connection code for Python/JS/Go/Java/Rust
+| Reference                                                                         | When to Load                                                                      | Contains                                                                                |
+| --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| [pg-migrations/type-mapping.md](references/pg-migrations/type-mapping.md)         | MUST load for DSQL NUMERIC or PG type questions                                   | C collation rules, NUMERIC(p,s), JSON/JSONB                                             |
+| [pg-migrations/index-conversion.md](references/pg-migrations/index-conversion.md) | MUST load for any index conversion or index support question                      | GIN/GiST/BRIN → btree, operator class removal, partial + expression indexes, sort order |
+| [pg-migrations/schema-objects.md](references/pg-migrations/schema-objects.md)     | MUST load for ENUM, materialized views, extensions, multi-schema, CREATE FUNCTION | ENUM → CHECK, views, role/IAM mapping, LANGUAGE sql functions                           |
+| [pg-migrations/multi-region.md](references/pg-migrations/multi-region.md)         | Multi-region, active-active, or HA questions                                      | Architecture, geographic partitioning                                                   |
 
-### [dsql-examples.md](references/dsql-examples.md)
+### ORM Guides:
 
-**When:** Load when looking for specific implementation examples
-**Contains:** Code examples, repository patterns, multi-tenant implementations
+| Reference                                                   | When to Load                                    | Contains                                                                              |
+| ----------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------- |
+| [orm-guides/overview.md](references/orm-guides/overview.md) | Migrating an ORM or using ORM locking with DSQL | Adapter names, locking, and key gotchas for Django/EF Core/Hibernate/Rails/SQLAlchemy |
 
-### [troubleshooting.md](references/troubleshooting.md)
+### Data Loading:
 
-**When:** Load when debugging errors or unexpected behavior. SHOULD always consult for OCC errors, connection failures, or unexpected query results.
-**Contains:** Common pitfalls, error messages, solutions
+| Reference                                     | When to Load                                             | Contains                                                                                  |
+| --------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| [data-loading.md](references/data-loading.md) | Planning or running bulk loads with `aurora-dsql-loader` | Fresh-vs-warm partitions, resume/retry, `--on-conflict` semantics, throughput diagnostics |
 
-### [onboarding.md](references/onboarding.md)
+### System Diagnostics:
 
-**When:** User explicitly requests to "Get started with DSQL" or similar phrase
-**Contains:** Interactive step-by-step guide for new users
+| Reference                                                                                 | When to Load                                                     | Contains                                                              |
+| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------- |
+| [system-diagnostics/workflow.md](references/system-diagnostics/workflow.md)               | MUST load at Workflow 12 entry — cluster performance diagnostics | Prerequisites, 5 diagnostic phases, temporal comparison, handoff      |
+| [system-diagnostics/wait-events.md](references/system-diagnostics/wait-events.md)         | ALWAYS load when interpreting AAS results                        | Canonical DSQL wait event descriptions and investigation guidance     |
+| [system-diagnostics/promql-patterns.md](references/system-diagnostics/promql-patterns.md) | Load when constructing PromQL queries                            | Reusable query templates for AAS breakdown, top-SQL, temporal compare |
 
-### [access-control.md](references/access-control.md)
+### Query Plan Explainability:
 
-**When:** MUST load when creating database roles, granting permissions, setting up schemas for applications, or handling sensitive data. ALWAYS use scoped roles for applications — create database roles with `dsql:DbConnect`.
-**Contains:** Scoped role setup, IAM-to-database role mapping, schema separation for sensitive data, role design patterns
-
-### DDL Migrations (modular):
-
-#### [ddl-migrations/overview.md](references/ddl-migrations/overview.md)
-
-**When:** MUST load when performing DROP COLUMN, RENAME COLUMN, ALTER COLUMN TYPE, or DROP CONSTRAINT
-**Contains:** Table recreation pattern overview, transaction rules, common verify & swap pattern
-
-#### [ddl-migrations/column-operations.md](references/ddl-migrations/column-operations.md)
-
-**When:** Load for DROP COLUMN, ALTER COLUMN TYPE, SET/DROP NOT NULL, SET/DROP DEFAULT migrations
-**Contains:** Step-by-step migration patterns for column-level changes
-
-#### [ddl-migrations/constraint-operations.md](references/ddl-migrations/constraint-operations.md)
-
-**When:** Load for ADD/DROP CONSTRAINT, MODIFY PRIMARY KEY, column split/merge migrations
-**Contains:** Step-by-step migration patterns for constraint and structural changes
-
-#### [ddl-migrations/batched-migration.md](references/ddl-migrations/batched-migration.md)
-
-**When:** Load when migrating tables exceeding 3,000 rows
-**Contains:** OFFSET-based and cursor-based batching patterns, progress tracking, error handling
-
-### MySQL Migrations (modular):
-
-#### [mysql-migrations/type-mapping.md](references/mysql-migrations/type-mapping.md)
-
-**When:** MUST load when migrating MySQL schemas to DSQL
-**Contains:** MySQL data type mappings, feature alternatives, DDL operation mapping
-
-#### [mysql-migrations/ddl-operations.md](references/mysql-migrations/ddl-operations.md)
-
-**When:** Load when translating MySQL DDL operations to DSQL equivalents
-**Contains:** ALTER COLUMN, DROP COLUMN, AUTO_INCREMENT, ENUM, SET, FOREIGN KEY migration patterns
-
-#### [mysql-migrations/full-example.md](references/mysql-migrations/full-example.md)
-
-**When:** Load when migrating a complete MySQL table to DSQL
-**Contains:** End-to-end MySQL CREATE TABLE migration example with decision summary
+| Reference                                                                                           | When to Load                                          | Contains                                                                  |
+| --------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------- |
+| [query-plan/workflow.md](references/query-plan/workflow.md)                                         | MUST load at Workflow 9 entry — gates all other files | Trigger criteria, context disambiguation, routing, phased workflow        |
+| [query-plan/plan-interpretation.md](references/query-plan/plan-interpretation.md)                   | MUST load at Workflow 9 Phase 0                       | DSQL node types, Node Duration math, estimation-error bands               |
+| [query-plan/catalog-queries.md](references/query-plan/catalog-queries.md)                           | MUST load at Workflow 9 Phase 0                       | `pg_class`/`pg_stats`/`pg_indexes` SQL, correlated-predicate verification |
+| [query-plan/guc-experiments.md](references/query-plan/guc-experiments.md)                           | MUST load at Workflow 9 Phase 0                       | GUC experiment procedures, 30-second skip protocol                        |
+| [query-plan/report-format.md](references/query-plan/report-format.md)                               | MUST load at Workflow 9 Phase 0                       | Required report structure, element checklist, support request template    |
+| [query-plan/query-rewrites-generic.md](references/query-plan/query-rewrites-generic.md)             | SHOULD load at Phase 0; sub-files on-demand           | Index of 10 generic rewrite patterns                                      |
+| [query-plan/query-rewrites-dsql-specific.md](references/query-plan/query-rewrites-dsql-specific.md) | SHOULD load at Phase 0; sub-files on-demand           | Index of DSQL-specific rewrite patterns                                   |
 
 ---
+
+## Choosing How to Connect: MCP vs CLI/psql
+
+The `aurora-dsql` MCP server binds a **single cluster at startup** (`--cluster_endpoint`), so
+using it for another cluster means editing `.mcp.json` and restarting the session.
+
+- **Use the `aurora-dsql` MCP tools (`readonly_query`, `transact`, `get_schema`) ONLY when the
+  server already targets the cluster you need.**
+- **Otherwise — unconfigured, disabled, or bound to a different cluster — do NOT reconfigure it.**
+  Use the CLI + `psql` path instead: [`scripts/psql-connect.sh`](../../scripts/psql-connect.sh)
+  `<cluster-id> --region <region> --command "SELECT ..."` (mints an IAM token and runs via `psql`).
+- **If you cannot confirm which cluster the MCP targets, confirm first or use the CLI/psql path** —
+  running against the wrong cluster is worse than the check.
+
+The doc-only MCP tools (`dsql_lint`, `dsql_*_documentation`, `dsql_recommend`) need no cluster.
+The CloudWatch MCP (Workflow 12) takes `region`/`cluster_id` per call, so one running server can
+query clusters in any PromQL-enabled region (pass each cluster's region on the call). Details:
+[connectivity-tools.md](references/auth/connectivity-tools.md).
 
 ## MCP Tools Available
 
@@ -120,6 +125,10 @@ The `aurora-dsql` MCP server provides these tools:
 1. **readonly_query** - Execute SELECT queries (returns list of dicts)
 2. **transact** - Execute DDL/DML statements in transaction (takes list of SQL statements)
 3. **get_schema** - Get table structure for a specific table
+
+**SQL Validation:**
+
+1. **dsql_lint** - Validate SQL for DSQL compatibility and optionally auto-fix issues. Use before executing externally-sourced SQL.
 
 **Documentation & Knowledge:**
 
@@ -137,26 +146,22 @@ See [mcp-tools.md](mcp/mcp-tools.md) for detailed usage and examples.
 Consult for verifying DSQL service limits before advising users. The numeric limits below are
 defaults that may change — when a user's decision depends on an exact limit, verify it first:
 
-| Limit                          | Default       | Verify query                       |
-| ------------------------------ | ------------- | ---------------------------------- |
-| Max rows per transaction       | 3,000         | `aurora dsql transaction limits`   |
-| Max data size per transaction  | 10 MiB        | `aurora dsql transaction limits`   |
-| Max transaction duration       | 5 minutes     | `aurora dsql transaction limits`   |
-| Max connections per cluster    | 10,000        | `aurora dsql connection limits`    |
-| Auth token expiry              | 15 minutes    | `aurora dsql authentication token` |
-| Max connection duration        | 60 minutes    | `aurora dsql connection limits`    |
-| Max indexes per table          | 24            | `aurora dsql index limits`         |
-| Max columns per index          | 8             | `aurora dsql index limits`         |
-| IDENTITY/SEQUENCE CACHE values | 1 or >= 65536 | `aurora dsql sequence cache`       |
+| Limit                                 | Default       | Verify query                       |
+| ------------------------------------- | ------------- | ---------------------------------- |
+| Max row modifications per transaction | 3,000         | `aurora dsql transaction limits`   |
+| Max data size per transaction         | 10 MiB        | `aurora dsql transaction limits`   |
+| Max transaction duration              | 5 minutes     | `aurora dsql transaction limits`   |
+| Max connections per cluster           | 10,000        | `aurora dsql connection limits`    |
+| Auth token expiry                     | 15 minutes    | `aurora dsql authentication token` |
+| Max connection duration               | 60 minutes    | `aurora dsql connection limits`    |
+| Max indexes per table                 | 24 incl. PK   | `aurora dsql index limits`         |
+| Max columns per index                 | 8             | `aurora dsql index limits`         |
+| IDENTITY/SEQUENCE CACHE values        | 1 or >= 65536 | `aurora dsql sequence cache`       |
+| Supported column data types           | See docs      | `aurora dsql supported data types` |
 
-**When to verify:** Before recommending batch sizes, connection pool settings, or schema designs
-where hitting a limit would cause failures. No need to verify for general guidance or when
-the exact number doesn't affect the user's decision.
+**When to verify:** Before recommending batch sizes, connection pool settings, or schema designs where hitting a limit would cause failures; any time the exact number can affect user decision. For the full limit set with each SQLSTATE and its exact error message, see [limits-and-error-codes.md](references/limits-and-error-codes.md); where it marks a value observed and the docs differ, use the observed value.
 
-**Fallback:** If `awsknowledge` is unavailable, use the defaults above and note to the user
-that limits should be verified against [DSQL documentation](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/).
-
----
+**Fallback:** If `awsknowledge` is unavailable, use the defaults above and flag that limits should be verified against [DSQL documentation](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/).
 
 ## CLI Scripts Available
 
@@ -167,30 +172,26 @@ See [scripts/README.md](../../scripts/README.md) for usage and hook configuratio
 
 ## Quick Start
 
-### 1. List tables and explore schema
+0. **Pick a connection path:** confirm the `aurora-dsql` MCP targets your cluster; if not, use the CLI/`psql` path instead — see [Choosing How to Connect](#choosing-how-to-connect-mcp-vs-clipsql). The steps below name MCP tools; the equivalent SQL runs the same way through `psql-connect.sh --command "..."`.
+1. **Explore:** Use `readonly_query` with `information_schema` to list tables. Use `get_schema` for table structure.
+2. **Query:** Use `readonly_query` for SELECT queries. **MUST** include `tenant_id` in WHERE for multi-tenant apps. **MUST** build SQL with `safe_query.build()`.
+3. **Schema changes:** Use `transact` with one DDL per transaction. **MUST** batch DML under 3,000 rows. **MUST** use `CREATE INDEX ASYNC` in a separate call. Use `dsql_lint` to validate first.
+4. **Bulk load data:** Use `aurora-dsql-loader` for CSV/TSV/Parquet. Load [data-loading.md](references/data-loading.md) for details. Use `--dry-run` first.
 
-```
-Use readonly_query with information_schema to list tables
-Use get_schema to understand table structure
-```
+---
 
-### 2. Query data
+## Performance Routing
 
-```
-Use readonly_query for SELECT queries
-Always include tenant_id in WHERE clause for multi-tenant apps
-Validate inputs carefully (no parameterized queries available)
-```
+When the user reports a performance problem, use this table to select the correct workflow:
 
-### 3. Execute schema changes
+| User signal                                                                                                             | Route to                                                                           |
+| ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| General performance complaint, "cluster is slow", "something changed", latency regression, no specific query identified | **Workflow 12** (System Diagnostics) — observe via CloudWatch first                |
+| Specific query or query_id to investigate, "explain this plan", "why is this query slow"                                | **Workflow 9** (Query Plan Explainability) — direct EXPLAIN analysis               |
+| OCC conflicts, commit errors, retry storms                                                                              | **Workflow 12** (System Diagnostics) — confirm via CW metrics before investigating |
+| Cost optimization, "where is compute time spent"                                                                        | **Workflow 12** (System Diagnostics) — identify top contributors first             |
 
-```
-Use transact tool with list of SQL statements
-Follow one-DDL-per-transaction rule
-Always use CREATE INDEX ASYNC in separate transaction
-ALTER COLUMN TYPE, DROP COLUMN, DROP CONSTRAINT are NOT supported directly
-  → These require the Table Recreation Pattern (see Workflow 6)
-```
+**Rule:** When in doubt, start with Workflow 12. It identifies specific queries to investigate and routes to Workflow 9 with context.
 
 ---
 
@@ -198,75 +199,101 @@ ALTER COLUMN TYPE, DROP COLUMN, DROP CONSTRAINT are NOT supported directly
 
 ### Workflow 1: Create Multi-Tenant Schema
 
-1. Create main table with tenant_id column using transact
-2. Create async index on tenant_id in separate transact call
-3. Create composite indexes for common query patterns (separate transact calls)
-4. Verify schema with get_schema
+1. Create tenant-owned tables with `tenant_id` using separate `transact` calls
+2. Use composite tenant FKs for tenant-owned parents and ordinary FKs for shared parents
+3. Create tenant and query-pattern indexes with separate `CREATE INDEX ASYNC` calls
+4. Verify with `get_schema`
 
-- MUST include tenant_id in all tables
-- MUST use `CREATE INDEX ASYNC` exclusively
 - MUST issue each DDL in its own transact call: `transact(["CREATE TABLE ..."])`
-- MUST store arrays/JSON as TEXT
+- MUST serialize arrays into a single-column representation — DSQL has no array column type; PREFER `JSONB` (operators work directly); MAY use `TEXT` when the column is opaque to the database; ASK the user. For `JSONB` arrays, expand at query time with `jsonb_array_elements_text(data)`
 
 ### Workflow 2: Safe Data Migration
 
-1. Add column using transact: `transact(["ALTER TABLE ... ADD COLUMN ..."])`
-2. Populate existing rows with UPDATE in separate transact calls (batched under 3,000 rows)
-3. Verify migration with readonly_query using COUNT
-4. Create async index for new column using transact if needed
+MUST validate every DDL with `dsql_lint(fix=true)` before executing. DML does not require linting.
 
-- MUST add column first, populate later
-- MUST issue ADD COLUMN with only name and type; apply DEFAULT via separate UPDATE
+1. Validate DDL with `dsql_lint(sql=..., fix=true)` — handle diagnostics per [dsql-lint.md](references/dsql-lint.md)
+2. Execute the reviewed `fixed_sql` when present, otherwise the reviewed source statement
+3. Add column in its own `transact` call
+4. Populate existing rows with UPDATE (batched under 3,000 rows)
+5. Verify with readonly_query COUNT
+6. Create an index if needed: validate then execute the reviewed DDL in its own `transact` call
+
+- MUST issue each `ALTER TABLE` in its own `transact` call — DSQL rejects multi-DDL transactions with `multiple ddl statements not supported in a transaction`
+- MUST add column with only name and type; apply DEFAULT via separate UPDATE
 - MUST batch updates under 3,000 rows in separate transact calls
-- MUST issue each ALTER TABLE in its own transaction
 
-### Workflow 3: Application-Layer Referential Integrity
+**Recovery:** Resume failed batches by filtering `WHERE new_column IS NULL`.
 
-**INSERT:** MUST validate parent exists with readonly_query → throw error if not found → insert child with transact.
+### Workflow 3: Bulk Data Loading
 
-**DELETE:** MUST check dependents with readonly_query COUNT → return error if dependents exist → delete with transact if safe.
+Use `aurora-dsql-loader` for CSV, TSV, or Parquet loads. MUST load [data-loading.md](references/data-loading.md) before advising on throughput or diagnosing slow loads.
 
-### Workflow 4: Query with Tenant Isolation
+1. Validate with `--dry-run` first
+2. Run with `--manifest-dir` on persistent storage (not `/tmp` — tmpfs on AL2023, lost on crash) and `--header` if file has a header row
+3. On failure: resume with `--resume-job-id`; for duplicates use `--on-conflict do-nothing`
+4. For large tables: create secondary indexes after load using `CREATE INDEX ASYNC`
 
-1. ALWAYS include tenant_id in WHERE clause
-2. MUST validate and sanitize tenant_id input (no parameterized queries!)
-3. MUST use readonly_query with validated tenant_id
+### Workflow 4: Foreign Key Constraints
 
-- MUST validate ALL inputs before building SQL (SQL injection risk!)
-- MUST reject cross-tenant access at application layer
-- SHOULD use allowlists or regex validation for tenant IDs
+**MUST** load and follow [foreign-keys.md](references/foreign-keys.md)
+before creating, altering, dropping, or migrating foreign keys.
 
-### Workflow 5: Set Up Scoped Database Roles
+### Workflow 5: Query with Tenant Isolation
+
+1. **MUST** authorize the caller against the tenant — format validation does not establish authorization
+2. **MUST** build SQL with [`safe_query.build()`](mcp/tools/safe_query.py) — use `allow()`/`regex()` for
+   values (emits `'v'`), `ident()` for table/column names (emits `"v"`).
+   See [input-validation.md](mcp/tools/input-validation.md)
+3. **MUST** include `tenant_id` in the WHERE clause; reject cross-tenant access at the application layer
+
+### Workflow 6: Set Up Scoped Database Roles
 
 MUST load [access-control.md](references/access-control.md) for role setup, IAM mapping, and schema permissions.
 
-### Workflow 6: Table Recreation DDL Migration
+### Workflow 7: Table Recreation DDL Migration
 
-DSQL does NOT support direct `ALTER COLUMN TYPE`, `DROP COLUMN`, `DROP CONSTRAINT`, or `MODIFY PRIMARY KEY`. These operations require the **Table Recreation Pattern** — creating a new table, copying data, dropping the original, and renaming. This is a destructive workflow that requires user confirmation at each step.
+For `ALTER COLUMN TYPE`, `SET NOT NULL`, or `MODIFY PRIMARY KEY`, **MUST**
+load [ddl-migrations/overview.md](references/ddl-migrations/overview.md). Use a direct ALTER form
+when supported; otherwise, present a user-approved table-recreation plan.
 
-MUST load [ddl-migrations/overview.md](references/ddl-migrations/overview.md) before attempting any of these operations.
+### Workflow 8: Validate and Migrate to DSQL
 
-### Workflow 7: MySQL to DSQL Schema Migration
+MUST load [dsql-lint.md](references/dsql-lint.md) before running `dsql_lint`. Run `dsql_lint(sql=source_sql, fix=true)` to validate and auto-convert. For MySQL-origin SQL, MUST cross-check against [mysql-migrations/type-mapping.md](references/mysql-migrations/type-mapping.md) even when lint returns clean. On `parse_error`, fall back to manual conversion then re-lint.
 
-MUST load [mysql-migrations/type-mapping.md](references/mysql-migrations/type-mapping.md) for type mappings, feature alternatives, and migration steps.
+### Workflow 9: Query Plan Explainability
 
----
+Explains why the DSQL optimizer chose a particular plan. Triggered by slow queries, high DPU, unexpected Full Scans, or plans the user doesn't understand. **REQUIRES a structured Markdown diagnostic report as the deliverable.**
+
+MUST load [query-plan/workflow.md](references/query-plan/workflow.md) at entry — it defines trigger criteria, context disambiguation, routing, and the full phased workflow (Phase 0–4). Workflow.md specifies which reference files to load at each phase.
+
+**Safety.** Plan capture uses `readonly_query` exclusively. Rewrite DML to SELECT for plan capture. **MUST NOT** use `transact --allow-writes` for plan capture.
+
+### Workflow 10: Full PostgreSQL → DSQL Schema Migration
+
+MUST load [pg-migrations/type-mapping.md](references/pg-migrations/type-mapping.md), [pg-migrations/index-conversion.md](references/pg-migrations/index-conversion.md), [pg-migrations/schema-objects.md](references/pg-migrations/schema-objects.md), and [foreign-keys.md](references/foreign-keys.md). Run `dsql_lint(fix=true)` first for mechanical fixes, preserve foreign-key relationships, translate unsupported source syntax or options, then apply semantic conversions from the pg-migrations references for unfixable diagnostics and patterns the linter cannot handle. Re-lint the final output before deploying.
+
+### Workflow 11: ORM Migration and Locking (Django/EF Core/Hibernate/Rails/SQLAlchemy)
+
+Load [orm-guides/overview.md](references/orm-guides/overview.md) for adapter names, locking guidance, and framework-specific gotchas.
+
+### Workflow 12: System Diagnostics (CloudWatch AAS)
+
+Diagnose cluster performance by querying `db.active_sessions.avg` via PromQL. Detects temporal anomalies in wait event distribution, identifies regressed queries, and routes to Workflow 9 for per-query investigation.
+
+**Requires:** CloudWatch MCP server (`awslabs.cloudwatch-mcp-server`) enabled and configured with PromQL access in the same region as the cluster — see [mcp/mcp-setup.md](mcp/mcp-setup.md#cloudwatch-mcp-server-system-diagnostics--workflow-12) for enabling it, region requirements, and the session restart needed for its tools to register.
+
+MUST load [system-diagnostics/workflow.md](references/system-diagnostics/workflow.md) at entry — it defines prerequisites, 5 diagnostic phases, temporal baselines, and the routing to Workflow 9 for identified queries.
 
 ## Error Scenarios
 
-- **MCP server unavailable:** Fall back to CLI scripts ([scripts/](../../scripts/)) or direct psql. Note the limitation to the user.
 - **`awsknowledge` returns no results:** Use the default limits in the table above and note that limits should be verified against [DSQL documentation](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/).
-- **OCC serialization error:** Retry the transaction. If persistent, check for hot-key contention — see [troubleshooting.md](references/troubleshooting.md).
-- **Transaction exceeds limits:** Split into batches under 3,000 rows — see [batched-migration.md](references/ddl-migrations/batched-migration.md).
-- **Token expiration mid-operation:** Generate a fresh IAM token and reconnect — see [authentication-guide.md](references/auth/authentication-guide.md).
-- See [troubleshooting.md](references/troubleshooting.md) for other issues.
-
----
+- **`dsql_lint` unavailable or timing out:** See the Error Handling section of [dsql-lint.md](references/dsql-lint.md). Do not silently skip validation — inform the user and require explicit confirmation before proceeding with manual rules from [development-guide.md](references/development-guide.md).
+- **OCC serialization error (`40001`):** Retry with backoff, and keep `(OC001)` in the loop too — see [occ-retry-patterns.md](references/occ-retry-patterns.md).
+- **Foreign key violation (`23503`):** Correct the relationship or referential action; **MUST NOT** send it through the `40001` retry loop — see [troubleshooting.md](references/troubleshooting.md).
+- **Transaction exceeds limits:** Split batches under 3,000 rows and 10 MiB; size is checked at `COMMIT` — see [limits-and-error-codes.md](references/limits-and-error-codes.md#exceeded-limits) to size them and [batched-migration.md](references/ddl-migrations/batched-migration.md) for the pattern.
+- **Token expiration mid-operation:** Generate a fresh IAM token — see [authentication-guide.md](references/auth/authentication-guide.md). See [troubleshooting.md](references/troubleshooting.md) for other issues.
 
 ## Additional Resources
 
 - [Aurora DSQL Documentation](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/)
 - [Code Samples Repository](https://github.com/aws-samples/aurora-dsql-samples)
-- [PostgreSQL Compatibility](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/working-with-postgresql-compatibility.html)
-- [IAM Authentication Guide](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/using-database-and-iam-roles.html)
-- [CloudFormation Resource](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-dsql-cluster.html)

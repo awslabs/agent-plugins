@@ -27,7 +27,6 @@ Collect from the user:
 - **S3 path** for report storage (required, e.g. `s3://bucket/prefix`). If the user doesn't have a bucket, create one (e.g., `s3://hyperpod-diagnostics-<account-id>-<region>`)
 - **Issue description** (optional)
 - **Target scope**: all nodes, specific instance groups, or specific node IDs (optional)
-- **Additional commands** to run on nodes (optional)
 
 ### 2. Verify Environment
 
@@ -60,7 +59,7 @@ uv run scripts/hyperpod_issue_report.py \
   --s3-path s3://<bucket>[/prefix]
 ```
 
-Use `--help` for all options including `--instance-groups`, `--nodes`, `--command`, `--max-workers`, and `--debug`. Note: `--instance-groups` and `--nodes` are mutually exclusive. Node identifiers accept instance IDs (`i-*`), EKS names (`hyperpod-i-*`), or Slurm names (`ip-*`).
+Use `--help` for all options including `--instance-groups`, `--nodes`, `--max-workers`, and `--debug`. Note: `--instance-groups` and `--nodes` are mutually exclusive. Node identifiers accept instance IDs (`i-*`), EKS names (`hyperpod-i-*`), or Slurm names (`ip-*`).
 
 ### 4. Present Results
 

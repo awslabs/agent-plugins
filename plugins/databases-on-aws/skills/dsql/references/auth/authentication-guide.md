@@ -45,7 +45,7 @@ Part of [DSQL Development Guide](../development-guide.md).
 **Best practices:**
 
 - Keep authentication tokens in memory only; discard after use
-- Regenerate token on connection errors
+- Regenerate the token only on a `Signature expired` hint; otherwise a fresh token will not help — see [troubleshooting.md](../troubleshooting.md#connection-and-authorization)
 - Monitor token generation failures
 - Set connection timeouts appropriately
 
@@ -147,3 +147,7 @@ For production applications:
 
 For complete role setup instructions, schema separation patterns, and IAM configuration,
 see [access-control.md](../access-control.md).
+
+## Additional Resources
+
+- [IAM Authentication Guide (AWS documentation)](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/using-database-and-iam-roles.html)

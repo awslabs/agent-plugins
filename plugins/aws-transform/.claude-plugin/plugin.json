@@ -1,0 +1,35 @@
+{
+  "author": {
+    "name": "Amazon Web Services"
+  },
+  "description": "Migrate, modernize, and upgrade codebases to AWS. Transforms .NET Framework to .NET 8/10, mainframe COBOL to Java, VMware VMs to EC2, SQL Server to Aurora, and upgrades Java/Python/Node.js versions and AWS SDKs. AWS Transform - continuous modernization analyzes codebases for tech debt, security issues, and upgrade opportunities, then remediates them.",
+  "homepage": "https://github.com/awslabs/agent-plugins",
+  "keywords": [
+    "aws",
+    "aws-transform",
+    "migration",
+    "modernization",
+    "dotnet",
+    "mainframe",
+    "cobol",
+    "vmware",
+    "ec2",
+    "sql-server",
+    "aurora",
+    "java",
+    "python",
+    "sdk",
+    "continuous modernization",
+    "AWS Transform - continuous modernization",
+    "tech debt",
+    "security vulnerabilities",
+    "analyze repos",
+    "security analysis",
+    "modernization analysis",
+    "agentic readiness"
+  ],
+  "license": "Apache-2.0",
+  "name": "aws-transform",
+  "repository": "https://github.com/awslabs/agent-plugins",
+  "version": "1.9.0"
+}

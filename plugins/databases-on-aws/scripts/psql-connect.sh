@@ -133,15 +133,26 @@ if [[ -n "$AI_MODEL" ]]; then
 fi
 export PGAPPNAME
 
-# Sanitize --command input: reject multiple statements and comment injection.
+# Sanitize --command input: reject psql meta-commands, multiple statements,
+# and comment injection.
 # psql -c runs a single command; semicolons would allow statement chaining.
+# psql dispatches meta-commands (\!, \copy, \i, \o, \set, ...) on a backslash,
+# and \! runs a local shell command — so a backslash reaching psql -c is a
+# local command-execution vector, not SQL. Reject it before the SQL checks.
 # This is a defense-in-depth measure — callers should also validate inputs.
 # Limitations: does not handle escaped quotes (\' or ''), dollar-quoted strings
 # ($$...$$), or all edge cases. Use MCP tools for complex queries instead.
 if [[ -n "$COMMAND" ]]; then
-  # Reject multiple statements (semicolons outside single-quoted string literals)
-  # Strip single-quoted strings first, then check for semicolons in the remainder
+  # Reject psql meta-commands. Strip single-quoted string literals first (a
+  # backslash inside a literal is data, not a meta-command), then reject any
+  # remaining backslash — meta-commands are backslash-dispatched and none of
+  # SELECT/INSERT/UPDATE/DDL/EXPLAIN require a backslash outside a literal.
   stripped=$(echo "$COMMAND" | sed "s/'[^']*'//g")
+  if echo "$stripped" | grep -q '\\'; then
+    echo "Error: psql meta-commands (backslash-prefixed, such as \\!, \\copy, \\i, \\o) are not allowed." >&2
+    exit 1
+  fi
+  # Reject multiple statements (semicolons outside single-quoted string literals)
   if echo "$stripped" | grep -q ';'; then
     echo "Error: Multiple SQL statements are not allowed. Remove semicolons from the command." >&2
     exit 1

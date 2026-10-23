@@ -1,6 +1,6 @@
 {
   "name": "aws-serverless",
-  "version": "1.0.0",
+  "version": "1.3.0",
   "description": "Design, build, deploy, test, and debug serverless applications with AWS Serverless services.",
   "author": {
     "name": "Amazon Web Services",
@@ -14,12 +14,17 @@
     "aws",
     "lambda",
     "durable functions",
+    "managed-instances",
+    "lmi",
+    "capacity-provider",
     "serverless",
     "development",
     "sam",
     "api-gateway",
     "eventbridge",
-    "step-functions"
+    "step-functions",
+    "microvms",
+    "firecracker"
   ],
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",

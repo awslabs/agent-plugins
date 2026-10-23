@@ -4,6 +4,7 @@ node_modules/
 # Build outputs
 dist/
 build/
+__pycache__/
 
 # Tool caches
 .dprint/

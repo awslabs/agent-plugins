@@ -151,12 +151,16 @@ searchNear("tacos", [-97.7431, 30.2747]);
 
 ### Search with Category Filter
 
+**Important:** Amazon Location uses specific Category IDs for filtering. Common examples include `restaurant`, `coffee_shop`, `grocery`, `hotel`, `bank`, `fueling_station`, `pharmacy`, and `hospital`. See the complete list in the [Place Categories Documentation](https://docs.aws.amazon.com/location/latest/developerguide/places-filtering.html#place-categories).
+
+**Note:** Category filtering (`IncludeCategories`) is only supported by `SearchNearby`, not `SearchText` — `SearchText` silently ignores it. To filter by category, use `SearchNearbyCommand` with a `QueryPosition`.
+
 ```javascript
-async function searchByCategory(query, categories) {
-  const command = new amazonLocationClient.places.SearchTextCommand({
-    QueryText: query,
+async function searchByCategory(position, categories) {
+  const command = new amazonLocationClient.places.SearchNearbyCommand({
+    QueryPosition: position, // [lon, lat]
     Filter: {
-      Categories: categories, // Filter by category codes
+      IncludeCategories: categories, // Filter by valid category IDs
     },
     MaxResults: 20,
   });
@@ -165,8 +169,8 @@ async function searchByCategory(query, categories) {
   return response.ResultItems;
 }
 
-// Usage - find only restaurants
-searchByCategory("food near downtown", ["Restaurant"]);
+// Usage - find only restaurants and coffee shops near a location
+searchByCategory([-97.7431, 30.2747], ["restaurant", "coffee_shop"]);
 ```
 
 ### Search with Bounding Box
@@ -206,12 +210,12 @@ async function searchNearby(position, radius, categories = null) {
 
   // Optional: filter by categories
   if (categories) {
-    params.Filter = { Categories: categories };
+    params.Filter = { IncludeCategories: categories };
   }
 
   // Optional: specify radius (default is context-dependent)
   if (radius) {
-    params.MaxDistance = radius; // in meters
+    params.QueryRadius = radius; // in meters
   }
 
   const command = new amazonLocationClient.places.SearchNearbyCommand(params);
@@ -235,7 +239,7 @@ async function searchNearby(position, radius, categories = null) {
 
 // Usage - find restaurants within 5km
 const userLocation = [-97.7431, 30.2747];
-searchNearby(userLocation, 5000, ["Restaurant"]);
+searchNearby(userLocation, 5000, ["restaurant"]);
 ```
 
 ### Find Nearest of Type
@@ -245,7 +249,7 @@ searchNearby(userLocation, 5000, ["Restaurant"]);
 async function findNearest(position, category) {
   const command = new amazonLocationClient.places.SearchNearbyCommand({
     QueryPosition: position,
-    Filter: { Categories: [category] },
+    Filter: { IncludeCategories: [category] },
     MaxResults: 1, // Just the nearest
   });
 
@@ -258,8 +262,8 @@ async function findNearest(position, category) {
   return response.ResultItems[0];
 }
 
-// Usage - find nearest gas station
-const nearest = await findNearest([-97.7431, 30.2747], "Gas Station");
+// Usage - find nearest fueling station
+const nearest = await findNearest([-97.7431, 30.2747], "fueling_station");
 if (nearest) {
   console.log(`Nearest: ${nearest.Title}, ${nearest.Distance}m away`);
 }

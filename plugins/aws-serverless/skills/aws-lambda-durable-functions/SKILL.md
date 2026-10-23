@@ -104,7 +104,7 @@ Load the appropriate reference file based on what the user is working on:
 - **Testing**, **local testing**, **cloud testing**, **test runner**, or **flaky tests** -> see [testing-patterns.md](references/testing-patterns.md)
 - **Deployment**, **CloudFormation**, **CDK**, **SAM**, **log groups**, **deploy**, or **infrastructure** -> see [deployment-iac.md](references/deployment-iac.md)
 - **Advanced patterns**, **GenAI agents**, **completion policies**, **step semantics**, or **custom serialization** -> see [advanced-patterns.md](references/advanced-patterns.md)
-- **troubleshooting**, **stuck execution**, **failed execution**, **debug execution ID**, or **execution history** -> see [troubleshooting-executions.md](references/troubleshooting-executions.md)
+- **troubleshooting**, **stuck execution**, **failed execution**, **debug execution ID**, **execution history**, **execution error**, **why did my execution fail**, **execution timed out**, **callback not received**, **diagnose execution**, or **root cause execution** -> see [troubleshooting-executions.md](references/troubleshooting-executions.md)
 
 ## Quick Reference
 

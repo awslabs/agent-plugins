@@ -294,7 +294,7 @@ For a typical 10km urban route with 400 coordinate points:
 - **Simple**: ~18-25 KB (raw JSON coordinate arrays)
 - **FlexiblePolyline**: ~2-4 KB (compressed encoded string)
 
-Bandwidth savings: 5-10x smaller with FlexiblePolyline.
+##### Bandwidth savings: 5-10x smaller with FlexiblePolyline
 
 The size difference becomes more significant with longer routes or multiple route calculations.
 
@@ -302,7 +302,7 @@ The size difference becomes more significant with longer routes or multiple rout
 
 Use `Simple` format when convenience and development speed matter more than bandwidth optimization:
 
-##### 1. Web applications with good connectivity
+1. **Web applications with good connectivity**
 
 ```javascript
 // Desktop users on broadband/WiFi - bandwidth isn't a concern
@@ -316,14 +316,14 @@ const params = {
 
 Desktop and laptop users typically have reliable high-speed connections where a few extra KB don't impact user experience.
 
-##### 2. Prototyping and development
+1. **Prototyping and development**
 
 - Faster iteration without setting up decoder libraries
 - Easier debugging (inspect coordinates directly in response)
 - Quick POCs and demos where optimization isn't critical
 - During development before production optimization
 
-##### 3. Single route calculations
+1. **Single route calculations**
 
 ```javascript
 // Calculating one route per session - minimal data transfer
@@ -335,7 +335,7 @@ async function showDirections(origin, destination) {
 
 When users request only occasional routes (e.g., "Get directions" button), the one-time bandwidth cost is negligible.
 
-##### 4. Server-side processing
+1. **Server-side processing**
 
 ```javascript
 // Backend service calculating routes for internal use
@@ -354,7 +354,7 @@ app.post("/api/calculate-route", async (req, res) => {
 
 Server-to-server communication within AWS benefits from fast regional networks, and coordinate processing is easier with the Simple format.
 
-##### 5. When manipulating route coordinates
+1. **When manipulating route coordinates**
 
 ```javascript
 // Need to modify coordinates programmatically
@@ -386,7 +386,7 @@ Use `FlexiblePolyline` format when bandwidth efficiency matters for user experie
 
 **Note:** Decoding FlexiblePolyline requires the [`@aws/polyline`](https://github.com/aws-geospatial/polyline) library. See [Using FlexiblePolyline with @aws/polyline](#using-flexiblepolyline-with-awspolyline) below for installation instructions.
 
-##### 1. Mobile applications
+1. **Mobile applications**
 
 ```javascript
 // Mobile users on cellular networks - minimize data usage
@@ -405,7 +405,7 @@ const params = {
 - Battery conservation (less data transfer = less radio usage)
 - Better experience in areas with poor connectivity
 
-##### 2. Real-time navigation with frequent rerouting
+1. **Real-time navigation with frequent rerouting**
 
 ```javascript
 // Recalculating routes every 2 minutes based on traffic
@@ -429,7 +429,7 @@ setInterval(async () => {
 
 Frequent route updates multiply bandwidth costs - FlexiblePolyline keeps data transfer manageable.
 
-##### 3. Multiple route calculations
+1. **Multiple route calculations**
 
 ```javascript
 // Comparing 5 alternative routes - bandwidth adds up quickly
@@ -450,7 +450,7 @@ const decodedRoutes = alternativeRoutes.map((route) =>
 );
 ```
 
-##### 4. Caching routes for offline use
+1. **Caching routes for offline use**
 
 ```javascript
 // Store routes in IndexedDB or localStorage
@@ -484,7 +484,7 @@ async function loadCachedRoute(routeId) {
 }
 ```
 
-##### 5. Progressive Web Apps (PWAs)
+1. **Progressive Web Apps (PWAs)**
 
 ```javascript
 // Offline-capable apps that sync route data
@@ -513,7 +513,7 @@ async function syncRoutes() {
 }
 ```
 
-##### 6. Batch operations and analytics
+1. **Batch operations and analytics**
 
 ```javascript
 // Calculating hundreds of routes for analysis
@@ -852,36 +852,48 @@ The API returns an array of route options (typically one route):
   Routes: [
     {
       Summary: {
-        Distance: 7845, // Total distance in meters
-        Duration: 1023, // Total duration in seconds
-        RouteBBox: [
-          // Bounding box [minLng, minLat, maxLng, maxLat]
-          -97.7723, 30.2672, -97.7431, 30.2672,
-        ],
+        Distance: 7845, // Total route distance in meters
+        Duration: 1023, // Total route duration in seconds
       },
       Legs: [
-        // Array of route segments
+        // Array of route segments between waypoints
         {
           Geometry: {
-            LineString: [
-              // Array of [lng, lat] coordinates
-              [-97.7431, 30.2672],
-              [-97.7445, 30.2678],
-              // ... more coordinates
+            LineString: [[-97.7431, 30.2672], [-97.7445, 30.2678], ...], // Simple format
+            // OR
+            Polyline: "BFoz5xJ67i1B...", // FlexiblePolyline format (requires decoding)
+          },
+          VehicleLegDetails: {
+            Summary: {
+              // Only present when LegAdditionalFeatures: ["Summary"] is requested
+              Overview: {
+                Distance: 7845, // Leg distance in meters
+                Duration: 1023, // Leg duration in seconds
+              },
+            },
+            TravelSteps: [
+              // Only present when LegAdditionalFeatures: ["TravelStepInstructions"] is requested
+              {
+                Type: "Turn",
+                Instruction: "Turn right onto Pine St",
+                Distance: 150, // Meters to next instruction
+                Duration: 30, // Seconds to next instruction
+                GeometryOffset: 0,
+              },
             ],
           },
-          Summary: {
-            /* leg-specific summary */
-          },
-          TravelSteps: [
-            /* navigation instructions */
-          ],
         },
       ],
     },
   ];
 }
 ```
+
+**Accessing distance and duration:**
+
+- **Route total**: `route.Summary.Distance` and `route.Summary.Duration` (always available)
+- **Per leg**: `leg.VehicleLegDetails.Summary.Overview.Distance` and `Duration` (requires `LegAdditionalFeatures: ["Summary"]`)
+- **Per step**: `step.Distance` and `step.Duration` (requires `LegAdditionalFeatures: ["TravelStepInstructions"]`)
 
 ### Understanding Legs
 
@@ -890,7 +902,7 @@ Routes are divided into **legs** - segments between waypoints:
 - **No waypoints**: 1 leg (origin to destination)
 - **N waypoints**: N+1 legs (origin → waypoint₁ → waypoint₂ → ... → destination)
 
-Each leg contains its own geometry, distance, duration, and travel steps.
+Each leg contains geometry, and optionally distance/duration and travel steps depending on `LegAdditionalFeatures`.
 
 ### Travel Steps (Turn-by-Turn Instructions)
 
@@ -1137,7 +1149,7 @@ const response = await client.send(new CalculateRoutesCommand(params));
 const leg = response.Routes[0].Legs[0];
 
 // Display turn-by-turn instructions
-leg.TravelSteps.forEach((step, i) => {
+leg.VehicleLegDetails.TravelSteps.forEach((step, i) => {
   const distanceMiles = (step.Distance * 0.000621371).toFixed(1);
   console.log(`${i + 1}. ${step.Instruction} (${distanceMiles} mi)`);
 });

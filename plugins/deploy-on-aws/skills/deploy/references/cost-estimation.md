@@ -11,20 +11,25 @@ Use the **awspricing** MCP server to get accurate cost estimates before generati
 
 ## Service Codes
 
-| Service           | Code                | Notes                                          |
-| ----------------- | ------------------- | ---------------------------------------------- |
-| Fargate           | `AmazonECS`         | Filter by `usagetype` containing "Fargate"     |
-| Aurora PostgreSQL | `AmazonRDS`         | Filter: `databaseEngine` = "Aurora PostgreSQL" |
-| Aurora MySQL      | `AmazonRDS`         | Filter: `databaseEngine` = "Aurora MySQL"      |
-| RDS PostgreSQL    | `AmazonRDS`         | Filter: `databaseEngine` = "PostgreSQL"        |
-| Amazon DocumentDB | `AmazonDocDB`       | MongoDB-compatible managed database            |
-| ALB               | `AWSELB`            | Application Load Balancer                      |
-| S3                | `AmazonS3`          | Storage and requests                           |
-| CloudFront        | `AmazonCloudFront`  | CDN distribution                               |
-| Amplify           | `AWSAmplify`        | Hosting, build minutes                         |
-| Lambda            | `AWSLambda`         | Requests and duration                          |
-| DynamoDB          | `AmazonDynamoDB`    | On-demand or provisioned                       |
-| Secrets Manager   | `AWSSecretsManager` | Per secret per month                           |
+| Service           | Code                | Notes                                            |
+| ----------------- | ------------------- | ------------------------------------------------ |
+| Fargate           | `AmazonECS`         | Filter by `usagetype` containing "Fargate"       |
+| Aurora PostgreSQL | `AmazonRDS`         | Filter: `databaseEngine` = "Aurora PostgreSQL"   |
+| Aurora MySQL      | `AmazonRDS`         | Filter: `databaseEngine` = "Aurora MySQL"        |
+| RDS PostgreSQL    | `AmazonRDS`         | Filter: `databaseEngine` = "PostgreSQL"          |
+| Amazon DocumentDB | `AmazonDocDB`       | MongoDB-compatible managed database              |
+| ALB               | `AWSELB`            | Application Load Balancer                        |
+| S3                | `AmazonS3`          | Storage and requests                             |
+| CloudFront        | `AmazonCloudFront`  | CDN distribution                                 |
+| Amplify           | `AWSAmplify`        | Hosting, build minutes                           |
+| Lambda            | `AWSLambda`         | Requests and duration                            |
+| DynamoDB          | `AmazonDynamoDB`    | On-demand or provisioned                         |
+| Secrets Manager   | `AWSSecretsManager` | Per secret per month                             |
+| Elastic Beanstalk | N/A (free service)  | No EB charge; query EC2, AWSELB for actual costs |
+| EKS               | `AmazonEKS`         | Cluster hour + Auto Mode per-instance management |
+| CloudWatch        | `AmazonCloudWatch`  | Custom metrics per metric; log ingestion/storage |
+| NAT Gateway       | `AmazonVPC`         | Per hour + per GB processed                      |
+| CodeBuild         | `CodeBuild`         | Per build minute, by compute type                |
 
 ## Fargate Pricing
 
@@ -70,6 +75,49 @@ storage (GB-month), and I/O (standard config only).
 
 - ~$130-400/month depending on load
 
+## Elastic Beanstalk Pricing
+
+Elastic Beanstalk itself has no service fee. Cost equals the underlying AWS
+resources provisioned for the environment (EC2, ELB, EBS, CloudWatch).
+Query awspricing MCP server for region-accurate estimates. Approximate
+us-east-1 pricing:
+
+**Dev web (1x t3.small + ALB):** ~$35-40/month
+**Dev worker (1x t3.small, no ALB):** ~$15-20/month
+**Production web (4x t3.medium + ALB, Multi-AZ):** ~$150-200/month
+
+Include EBS volume costs (8GB gp3 default: ~$1/month per instance).
+
+### Beanstalk Cluster mode (managed EKS)
+
+Cluster mode has a different and higher cost floor than Standard mode, so a
+Standard-vs-Cluster comparison that prices only the EKS cluster, the nodes, and
+the ALB understates it. Price all of these:
+
+| Line item                       | Applies                                                                       |
+| ------------------------------- | ----------------------------------------------------------------------------- |
+| EKS cluster hour                | Once per cluster, shared by every environment on the same subnets             |
+| EC2 instances for the replicas  | Per workload                                                                  |
+| EKS Auto Mode management charge | Per instance, on top of the instance price, varying by instance type          |
+| ALB                             | Per environment, unless `load-balancer-type` is `None`                        |
+| CloudWatch custom metrics       | Three custom namespaces, on by default, **scaling with replica count**        |
+| CloudWatch logs                 | Four shared log groups created **with no retention policy** — nothing expires |
+| NAT gateway or VPC endpoints    | Private-subnet environments, which need egress to pull the image              |
+| CodeBuild + ECR                 | Only when Elastic Beanstalk builds the image from source                      |
+
+Two of these are the ones that get missed. The custom metrics are a new line item
+rather than a bigger one — Standard mode publishes to `AWS/ElasticBeanstalk`,
+which CloudWatch provides free, while Cluster mode publishes per replica to paid
+custom namespaces. And the log groups accumulate indefinitely, gaining a new set
+of streams on every deployment, until someone sets retention.
+
+Only the cluster hour is shared across environments. Everything else is per
+workload, so a second service on an existing cluster is cheaper than the first but
+not close to free. A single small service usually costs **more** in Cluster mode
+than the same service on one EC2 instance in Standard mode; the economics improve
+with the number of services sharing the cluster. Say so when presenting the
+comparison.
+
 ## Quick Reference Estimates
 
 **Small web app (Fargate + Aurora Serverless v2 + ALB):**
@@ -96,6 +144,16 @@ storage (GB-month), and I/O (standard config only).
 
 - Low traffic: ~$5-20/month
 - High traffic: scales with requests
+
+**Web app on Elastic Beanstalk:**
+
+- Dev (1x t3.small + ALB): ~$35-40/month
+- Production (load-balanced, Multi-AZ): ~$80-200/month
+
+**Web app on EB + Aurora Serverless v2:**
+
+- Dev: ~$80-130/month
+- Production: ~$200-400/month
 
 ## Presenting Estimates
 

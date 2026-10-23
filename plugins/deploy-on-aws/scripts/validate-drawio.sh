@@ -8,13 +8,6 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Ensure defusedxml is available (required for safe XML parsing)
-# See scripts/requirements.txt or plugin README for installation instructions
-python3 -c "import defusedxml" 2>/dev/null || {
-  echo '{"systemMessage": "Missing required dependency: defusedxml. Install it with: pip3 install defusedxml>=0.7.1"}'
-  exit 0
-}
-
 # Read stdin (hook input JSON)
 INPUT=$(cat)
 
@@ -29,7 +22,7 @@ except (json.JSONDecodeError, KeyError, TypeError, ValueError):
     print('')
 " 2>/dev/null || echo "")
 
-# Only validate .drawio or .drawio.xml files
+# Only validate .drawio or .drawio.xml files -- exit early for all other files
 if [[ -z "$FILE_PATH" ]]; then
     exit 0
 fi
@@ -41,6 +34,13 @@ fi
 if [[ ! -f "$FILE_PATH" ]]; then
     exit 0
 fi
+
+# Ensure defusedxml is available (required for safe XML parsing)
+# See scripts/requirements.txt or plugin README for installation instructions
+python3 -c "import defusedxml" 2>/dev/null || {
+  echo '{"systemMessage": "Missing required dependency: defusedxml. Install it with: pip3 install defusedxml>=0.7.1"}'
+  exit 0
+}
 
 # Step 0: Run post-processing fixers BEFORE validation
 # This fixes badge overlaps, external actor placement, and legend sizing

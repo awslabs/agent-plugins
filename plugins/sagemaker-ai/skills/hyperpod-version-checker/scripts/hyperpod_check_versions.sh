@@ -31,10 +31,11 @@ while [[ $# -gt 0 ]]; do
 done
 
 # --- Color setup ---
+
 if [[ "$USE_COLOR" == "true" ]] && [ -t 1 ] && [[ "$JSON_OUTPUT" != "true" ]]; then
-    RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
+    GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
 else
-    RED=''; GREEN=''; YELLOW=''; BLUE=''; NC=''
+    GREEN=''; YELLOW=''; BLUE=''; NC=''
 fi
 
 # --- Output file ---
@@ -74,9 +75,10 @@ else
     fi
 fi
 IS_NEURON=false
-IS_GPU=false
 [[ "$INSTANCE_TYPE" =~ (^|\.)(trn|inf) ]] && IS_NEURON=true
-[[ "$INSTANCE_TYPE" =~ (^|\.)(p[0-9]|g[0-9]) ]] && IS_GPU=true
+# GPU detection is driven by `cmd_exists nvidia-smi` at each GPU section below —
+# no explicit IS_GPU flag needed. Keeps GPU checks working on instances where
+# the driver is present but the regex would miss (e.g. new p-family SKUs).
 
 # JSON-safe string escape via jq (handles all special/unicode characters correctly)
 json_escape() { jq -rn --arg v "$1" '$v | @json | .[1:-1]'; }

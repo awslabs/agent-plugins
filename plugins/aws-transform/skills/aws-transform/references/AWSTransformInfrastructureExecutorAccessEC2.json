@@ -1,0 +1,180 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "CFNRead",
+      "Effect": "Allow",
+      "Action": [
+        "cloudformation:DescribeStacks",
+        "cloudformation:DescribeStackEvents",
+        "cloudformation:DescribeStackResources",
+        "cloudformation:DescribeStackDriftDetectionStatus"
+      ],
+      "Resource": "arn:aws:cloudformation:*:*:stack/atx-*/*"
+    },
+    {
+      "Sid": "CFNValidateTemplate",
+      "Effect": "Allow",
+      "Action": "cloudformation:ValidateTemplate",
+      "Resource": "*"
+    },
+    {
+      "Sid": "EC2Desc",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:DescribeInstances",
+        "ec2:DescribeImages",
+        "ec2:DescribeVpcs",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeKeyPairs",
+        "ec2:DescribeRouteTables",
+        "ec2:DescribeNatGateways",
+        "ec2:DescribeInternetGateways"
+      ],
+      "Resource": "*",
+      "Condition": { "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" } }
+    },
+    {
+      "Sid": "EC2PowerState",
+      "Effect": "Allow",
+      "Action": ["ec2:StartInstances", "ec2:StopInstances"],
+      "Resource": "arn:aws:ec2:*:*:instance/*",
+      "Condition": { "StringEquals": { "ec2:ResourceTag/atx-remote-infra": "true" } }
+    },
+    {
+      "Sid": "SSMRead",
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetCommandInvocation",
+        "ssm:ListCommands",
+        "ssm:ListCommandInvocations",
+        "ssm:DescribeInstanceInformation",
+        "ssm:DescribeSessions"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" }
+      }
+    },
+    {
+      "Sid": "SSMTgt",
+      "Effect": "Allow",
+      "Action": ["ssm:SendCommand", "ssm:StartSession"],
+      "Resource": "arn:aws:ec2:*:*:instance/*",
+      "Condition": { "StringEquals": { "ssm:resourceTag/atx-remote-infra": "true" } }
+    },
+    {
+      "Sid": "SSMDocs",
+      "Effect": "Allow",
+      "Action": "ssm:SendCommand",
+      "Resource": "arn:aws:ssm:*::document/AWS-RunShellScript"
+    },
+    {
+      "Sid": "S3Data",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket"],
+      "Resource": [
+        "arn:aws:s3:::atx-source-code-*",
+        "arn:aws:s3:::atx-source-code-*/*",
+        "arn:aws:s3:::atx-ct-output-*",
+        "arn:aws:s3:::atx-ct-output-*/*"
+      ],
+      "Condition": { "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" } }
+    },
+    {
+      "Sid": "KMSEncryptDecrypt",
+      "Effect": "Allow",
+      "Action": ["kms:Encrypt", "kms:Decrypt", "kms:GenerateDataKey"],
+      "Resource": "arn:aws:kms:*:*:key/*",
+      "Condition": {
+        "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" },
+        "ForAnyValue:StringEquals": { "kms:ResourceAliases": "alias/atx-encryption-key" }
+      }
+    },
+    {
+      "Sid": "SM",
+      "Effect": "Allow",
+      "Action": ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"],
+      "Resource": "arn:aws:secretsmanager:*:*:secret:atx/*",
+      "Condition": { "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" } }
+    },
+    {
+      "Sid": "SMList",
+      "Effect": "Allow",
+      "Action": "secretsmanager:ListSecrets",
+      "Resource": "*",
+      "Condition": { "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" } }
+    },
+    {
+      "Sid": "SchedLifecycle",
+      "Effect": "Allow",
+      "Action": [
+        "scheduler:CreateSchedule",
+        "scheduler:DeleteSchedule",
+        "scheduler:GetSchedule",
+        "scheduler:UpdateSchedule"
+      ],
+      "Resource": "arn:aws:scheduler:*:*:schedule/atx-control-tower/*",
+      "Condition": { "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" } }
+    },
+    {
+      "Sid": "SchedGroupRead",
+      "Effect": "Allow",
+      "Action": "scheduler:GetScheduleGroup",
+      "Resource": "arn:aws:scheduler:*:*:schedule-group/atx-control-tower",
+      "Condition": { "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" } }
+    },
+    {
+      "Sid": "SchedList",
+      "Effect": "Allow",
+      "Action": ["scheduler:ListSchedules", "scheduler:ListScheduleGroups"],
+      "Resource": "*",
+      "Condition": { "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" } }
+    },
+    {
+      "Sid": "IAMPassEC2InstanceRole",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::*:role/atx-transform-role*",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "ec2.amazonaws.com",
+          "aws:ResourceAccount": "${aws:PrincipalAccount}"
+        }
+      }
+    },
+    {
+      "Sid": "IAMPassSchedulerRole",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": "arn:aws:iam::*:role/AtxSchedulerInvocationRole",
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "scheduler.amazonaws.com",
+          "aws:ResourceAccount": "${aws:PrincipalAccount}"
+        }
+      }
+    },
+    {
+      "Sid": "IAMReadRoles",
+      "Effect": "Allow",
+      "Action": ["iam:GetRole", "iam:ListAttachedRolePolicies", "iam:ListRolePolicies", "iam:GetRolePolicy"],
+      "Resource": "arn:aws:iam::*:role/*",
+      "Condition": { "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" } }
+    },
+    {
+      "Sid": "IAMReadInstanceProfile",
+      "Effect": "Allow",
+      "Action": "iam:GetInstanceProfile",
+      "Resource": "arn:aws:iam::*:instance-profile/*",
+      "Condition": { "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" } }
+    },
+    {
+      "Sid": "STS",
+      "Effect": "Allow",
+      "Action": "sts:GetCallerIdentity",
+      "Resource": "*"
+    }
+  ]
+}

@@ -53,6 +53,16 @@ INTERFACE_METADATA = {
             "Review this repo for AWS serverless best practices.",
         ],
     },
+    "aws-transform": {
+        "displayName": "AWS Transform",
+        "shortDescription": "Migrate and modernize codebases to AWS with assessment, planning, and execution.",
+        "longDescription": "AWS Transform brings AI-powered code and workload modernization into your coding agent. Supports .NET Framework to .NET 8/10, mainframe COBOL to Java, VMware to EC2, SQL Server/Oracle/MySQL to Aurora, and Java/Python/Node.js language and AWS SDK upgrades. Guides users through assessment, requirements, approval, tasks, and execution with just-in-time authentication.",
+        "defaultPrompt": [
+            "Migrate this .NET Framework app to .NET 8 on AWS.",
+            "Assess this codebase for modernization with AWS Transform.",
+            "Plan a VMware-to-EC2 migration for my workload.",
+        ],
+    },
     "databases-on-aws": {
         "displayName": "Databases on AWS",
         "shortDescription": "Design schemas, query data, and choose the right AWS database path.",

@@ -53,7 +53,7 @@ jobs:
 
       - name: Run CodeBuild
         id: codebuild
-        uses: aws-actions/aws-codebuild-run-build@d8279f349f3b1b84e834c30e47c20dcb8888b7e5 # v1.0.18
+        uses: aws-actions/aws-codebuild-run-build@85cb4d9a6537e8456d6845d7cdf031a005181c3b # v1.0.18
         with:
           project-name: ${{ vars.CODEBUILD_PROJECT_NAME }}
           source-version-override: ${{ github.sha }}

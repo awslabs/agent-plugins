@@ -1,6 +1,6 @@
 ---
 name: model-deployment
-description: Generates a Jupyter notebook that deploys fine-tuned models from SageMaker Serverless Model Customization to SageMaker endpoints or Bedrock. Use when the user says "deploy my model", "create an endpoint", "make it available", or asks about deployment options. Identifies the correct deployment pathway (Nova vs OSS), generates deployment code, and handles endpoint configuration.
+description: Generates code that deploys fine-tuned models from SageMaker Serverless Model Customization to SageMaker endpoints or Bedrock. Use when the user says "deploy my model", "create an endpoint", "make it available", or asks about deployment options. Identifies the correct deployment pathway (Nova vs OSS), generates deployment code, and handles endpoint configuration.
 metadata:
   version: "1.0.0"
 ---
@@ -18,6 +18,12 @@ This skill supports deploying Nova and OSS models that were fine-tuned through *
 - Base models (not fine-tuned)
 - Models fine-tuned through other processes
 - Full Fine-Tuning (FFT) — only LoRA fine-tuned models are supported
+
+## Prerequisites
+
+- The SDK environment has been verified (SDK version, region, execution role). If not done, activate the `sdk-getting-started` skill first.
+
+---
 
 ## Principles
 

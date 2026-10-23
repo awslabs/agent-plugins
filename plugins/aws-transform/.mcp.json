@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "aws-transform-mcp": {
+      "command": "uvx",
+      "args": [
+        "awslabs.aws-transform-mcp-server@latest"
+      ]
+    }
+  }
+}

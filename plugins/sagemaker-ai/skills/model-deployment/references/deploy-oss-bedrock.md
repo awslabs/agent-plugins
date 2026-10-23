@@ -68,13 +68,15 @@ The region was identified in Step 1. Confirm it's in the supported list. If not,
 
 ⏸ Wait for user approval.
 
-### Step 6: Generate Notebook
+### Step 6: Generate Code
 
-Ask the user if they have an existing notebook to add the deployment cells to, or if they want a new one. If new, suggest a name like `deploy-[model]-[target].ipynb` and ask where to save it.
+Read `../references/code_output_guide.md` for output format rules.
+
+If a project directory already exists (from earlier in the workflow), use it. Otherwise, activate the **directory-management** skill to set one up.
 
 ⏸ Wait for user.
 
-## Notebook Structure
+## Code Structure
 
 ### Markdown Header
 
@@ -90,7 +92,7 @@ Ask the user if they have an existing notebook to add the deployment cells to, o
 
 ### Cells
 
-Each cell's content comes from `../scripts/deploy-oss-bedrock.py`, split on the `# Cell N:` comments.
+Each cell's content comes from `../code_templates/deploy-oss-bedrock.py`, split on the `# Cell N:` comments. Each marker starts a new notebook cell — everything between one marker and the next becomes that cell's content.
 
 - **Cell 1**: Setup (pip install)
 - **Cell 2**: Configuration
@@ -123,7 +125,7 @@ To run:
 ## Common Issues
 
 - **"Model weights are larger than 200GB"**: Cannot use this pathway.
-- **"No module named 'sagemaker.serve.bedrock_model_builder'"**: Upgrade SDK: `pip install --upgrade sagemaker>=3.7.0`
+- **"No module named 'sagemaker.serve.bedrock_model_builder'"**: Upgrade SDK: `pip install --upgrade sagemaker>=3.7.1`
 - **Import starts but uses wrong region**: Known issue — `BedrockModelBuilder` defaults to us-east-1. The notebook code overrides this.
 - **"Access denied to S3"**: Add S3 read permissions to the IAM role for the model bucket.
 - **"Provided IAM role could not be assumed"**: Ensure role has trust policy for `bedrock.amazonaws.com`.

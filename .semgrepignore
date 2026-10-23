@@ -19,3 +19,7 @@ uv.lock
 .gitleaks-baseline.json
 .bandit-baseline.json
 .semgrepignore
+
+# Vendored Semgrep ruleset (RFC #211) — Semgrep must not scan its own rule
+# files (they contain detection regexes that would self-match).
+tools/semgrep/*.yaml

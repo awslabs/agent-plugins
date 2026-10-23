@@ -47,7 +47,7 @@ Add additional hooks to `.claude/settings.json` or override the defaults:
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/cluster-info.sh $CLUSTER --region $REGION 2>/dev/null || true"
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/scripts/cluster-info.sh\" \"$CLUSTER\" --region \"$REGION\" 2>/dev/null || true"
           }
         ]
       }

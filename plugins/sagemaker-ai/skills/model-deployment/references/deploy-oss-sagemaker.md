@@ -18,6 +18,7 @@ Uses the SageMaker PySdk `JumpStartModel` to resolve the base model S3 URI and c
 - Instance type
 - IAM execution role ARN
 - AWS region
+- EULA acceptance (from Step 4 of the main workflow)
 
 ## Prerequisites
 
@@ -76,13 +77,15 @@ The region was identified in Step 1 of the main workflow. Confirm it with the us
 
 ⏸ Wait for user approval.
 
-### Step 6: Generate Notebook
+### Step 6: Generate Code
 
-Ask the user if they have an existing notebook to add the deployment cells to, or if they want a new one. If new, suggest a name like `deploy-[model]-[target].ipynb` and ask where to save it.
+Read `../references/code_output_guide.md` for output format rules.
+
+If a project directory already exists (from earlier in the workflow), use it. Otherwise, activate the **directory-management** skill to set one up.
 
 ⏸ Wait for user.
 
-## Notebook Structure
+## Code Structure
 
 ### Markdown Header
 
@@ -98,7 +101,7 @@ Ask the user if they have an existing notebook to add the deployment cells to, o
 
 ### Cells
 
-Each cell's content comes from `../scripts/deploy-oss-sagemaker.py`, split on the `# Cell N:` comments.
+Each cell's content comes from `../code_templates/deploy-oss-sagemaker.py`, split on the `# Cell N:` comments. Each marker starts a new notebook cell — everything between one marker and the next becomes that cell's content.
 
 - **Cell 1**: Setup (pip install)
 - **Cell 2**: Configuration
@@ -115,8 +118,13 @@ Cell 2:
 - `[TRAINING_JOB_NAME]` → Training job name (used to look up JumpStart model ID from tags)
 - `[ROLE_ARN]` → IAM execution role ARN
 - `[ENDPOINT_NAME]` → Name for the endpoint (agent should generate a reasonable default)
+- `[ACCEPT_EULA]` → `True` if the user accepted the license in Step 4 of the main workflow, `False` otherwise
 
-### Step 7: Provide Run Instructions
+### Step 7: Explicitly State EULA Acceptance
+
+Before running the notebook (either via `run_cell` or by the user), confirm the EULA acceptance from Step 4 of the main workflow. Tell the user: "Since you accepted the license agreement, I've set EULA acceptance to `True` in the deployment code." If the user did not accept the license, tell them deployment cannot continue without license acceptance.
+
+### Step 8: Provide Run Instructions
 
 ```
 To run:
@@ -129,7 +137,7 @@ To run:
 
 ## Common Issues
 
-- **"No module named 'sagemaker.jumpstart'"**: Upgrade SDK: `pip install --upgrade sagemaker>=3.7.0`
+- **"No module named 'sagemaker.jumpstart'"**: Upgrade SDK: `pip install --upgrade sagemaker>=3.7.1`
 - **"ModuleNotFoundError" for vllm_async_service**: Using LMI 0.31.0 container. Use `OPTION_ROLLING_BATCH=lmi-dist` instead of `OPTION_ENTRYPOINT`.
 - **Base IC fails health check**: Check `MinMemoryRequiredInMb` fits within instance memory. Reduce if needed.
 - **"Inference Component Name header is required"**: Must pass `InferenceComponentName` when invoking the endpoint.

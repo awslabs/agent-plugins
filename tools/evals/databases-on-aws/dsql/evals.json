@@ -1,0 +1,358 @@
+{
+  "schema_version": 2,
+  "skill_name": "dsql",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "How many rows can I modify in a single DSQL transaction? I'm planning a data migration of about 10k rows and need to know how to batch it.",
+      "expected_output": "Explains the 3,000 row-modification limit, recommends batching strategy with 500-1000 row batches, and verifies the limit via awsknowledge MCP",
+      "expectations": [
+        "Calls awsknowledge search_documentation with a transaction-related query",
+        "Mentions the 3,000 row-modification per transaction limit",
+        "Recommends a batching strategy for the 10k row migration",
+        "Mentions the 10 MiB data size limit per transaction"
+      ],
+      "grader": "regex",
+      "required_mcp_servers": [
+        "awsknowledge"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Create a multi-tenant e-commerce schema in DSQL with customers, orders, and products tables. Include proper indexes.",
+      "expected_output": "Creates tables with tenant_id in composite keys, uses tenant-scoped foreign key constraints and CREATE INDEX ASYNC, and issues each DDL in its own transaction",
+      "expectations": [
+        "Creates each table with tenant_id defined as NOT NULL and included in a composite PRIMARY KEY or UNIQUE constraint",
+        "Uses CREATE INDEX ASYNC (not synchronous CREATE INDEX)",
+        "Uses FOREIGN KEY constraints that include tenant_id in both the referenced and referencing key",
+        "Defines tenant_id as NOT NULL on both sides of every tenant-scoped foreign key; under MATCH SIMPLE, optional relationship columns may remain nullable and NULL means no relationship",
+        "Issues each DDL statement in its own separate transaction"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 3,
+      "prompt": "I need to add 30 indexes to my DSQL table for different query patterns. Is that possible?",
+      "expected_output": "Explains the 24 index per table limit, counting the primary key, so 23 secondary indexes; verifies via awsknowledge, suggests alternatives like composite indexes or query redesign",
+      "expectations": [
+        "Calls awsknowledge search_documentation with an index-related query",
+        "Mentions the 24 indexes per table limit",
+        "Mentions the 8 columns per index limit",
+        "Suggests alternatives such as composite indexes or reducing index count"
+      ],
+      "grader": "regex",
+      "required_mcp_servers": [
+        "awsknowledge"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Help me set up a Python app to connect to Aurora DSQL with proper authentication",
+      "expected_output": "Recommends the DSQL Python Connector (aurora_dsql_psycopg/psycopg2/asyncpg), explains IAM token generation, mentions 15-min token expiry, mentions SSL requirement",
+      "expectations": [
+        "Recommends the DSQL Python Connector (aurora_dsql_psycopg, aurora_dsql_psycopg2, or aurora_dsql_asyncpg)",
+        "Mentions IAM-based token generation for authentication",
+        "Mentions the 15-minute token expiry default",
+        "Mentions SSL/TLS is required for connections"
+      ],
+      "grader": "regex"
+    },
+    {
+      "id": 5,
+      "prompt": "I need to change a column from INTEGER to BIGINT in my DSQL users table that has 50k rows",
+      "expected_output": "Describes the Table Recreation Pattern, warns about destructive DROP TABLE, requires user confirmation at checkpoints, recommends batching for >3000 rows",
+      "expectations": [
+        "Describes the Table Recreation Pattern (create new table, copy data, drop old, rename)",
+        "Warns that this involves a destructive DROP TABLE operation",
+        "Inspects inbound foreign keys and dependent views before starting, and requires a separate approved plan when they exist",
+        "Mentions batching the data copy for tables exceeding 3,000 rows",
+        "Requires or recommends user confirmation before destructive steps"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 6,
+      "prompt": "I need to store a JSON preferences blob per user in my DSQL users table. How should I model that column, and how do I query fields inside it?",
+      "expected_output": "Recommends JSONB (preferred for queryable structured data) or JSON as the column type. Shows JSONB operator usage (preferences->>'key', preferences @> '{...}'::jsonb) for querying.",
+      "expectations": [
+        "Recommends JSONB (or JSON) as the column type",
+        "Demonstrates JSONB operator usage for querying fields inside the column"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 7,
+      "prompt": "I want to store a tags array per project in DSQL (e.g. ['backend','database','api']). Can I use TEXT[] for that?",
+      "expected_output": "Indicates TEXT[] / array column type is not supported in DSQL. Recommends storing the array as a JSONB column, with jsonb_array_elements_text() to expand it at query time.",
+      "expectations": [
+        "Indicates TEXT[] or array column type is not supported in DSQL",
+        "Recommends storing arrays as JSONB (and ideally mentions jsonb_array_elements_text for query-time expansion)"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 8,
+      "prompt": "My DSQL connection just failed with: FATAL: unable to accept connection, waking up cluster, please retry later. What's happening and what should I do?",
+      "expected_output": "Identifies the cluster as INACTIVE, explains that the first connection triggers the wake. Recommends polling cluster status via aws dsql get-cluster until ACTIVE, then retrying the connection.",
+      "expectations": [
+        "Identifies the cluster is in INACTIVE state and waking up",
+        "Mentions aws dsql get-cluster for checking cluster status",
+        "Recommends polling until the cluster reaches ACTIVE state",
+        "Recommends retrying the connection after cluster becomes ACTIVE"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 9,
+      "prompt": "I ran `aws backup start-backup-job` on my DSQL cluster and got FailedPrecondition: Cluster is in state 'IDLE' and can't be backed up. How do I fix this?",
+      "expected_output": "Identifies that backups require an ACTIVE cluster. Recommends connecting to the cluster to transition it to ACTIVE, then retrying the backup.",
+      "expectations": [
+        "Identifies that backups require the cluster to be in ACTIVE state",
+        "Recommends connecting to the cluster to wake it to ACTIVE",
+        "Recommends retrying the backup after cluster is ACTIVE"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 10,
+      "prompt": "My aurora-dsql-loader run is stuck at about 3000 records per second and won't go faster. I'm loading 50 million rows into a fresh table. Host CPU is only at 20%. What's wrong?",
+      "expected_output": "Identifies this as partition-constrained behavior on a fresh table. Explains that DSQL starts with a single partition at ~3-4K rec/s and splits under sustained pressure. Advises to keep the load running.",
+      "expectations": [
+        "Identifies the cause as partition-constrained (fresh table, single partition)",
+        "Explains that throughput will accelerate as DSQL splits partitions",
+        "Does NOT recommend increasing loader concurrency or workers as a fix",
+        "Mentions that sustained write pressure drives splits (10-20 minutes)"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 11,
+      "prompt": "My DSQL loader crashed halfway through a 200M row load and now I can't resume — the manifest is gone. I was using the default settings. How do I recover and prevent this next time?",
+      "expected_output": "Identifies that the default manifest directory is /tmp (tmpfs on AL2023), explains why the manifest was lost, recommends --on-conflict do-nothing for recovery and --manifest-dir for prevention.",
+      "expectations": [
+        "Identifies that the default manifest directory /tmp is tmpfs and lost on crash",
+        "Recommends --on-conflict do-nothing to skip already-loaded rows on re-run",
+        "Recommends setting --manifest-dir to a persistent path for future loads",
+        "Does NOT tell the user they need to truncate the table and start over"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 12,
+      "prompt": "I'm loading a CSV with a header row into DSQL and getting 'invalid input syntax for type integer: \"user_id\"' on the first batch. The rest of the data loads fine. What's happening?",
+      "expected_output": "Identifies the missing --header flag as the cause. Explains the loader treats every row as data by default and is trying to insert the header row's column names as data values.",
+      "expectations": [
+        "Identifies the missing --header flag as the root cause",
+        "Explains the loader defaults to treating every row as data (no header skip)",
+        "Recommends adding --header to the loader invocation"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 13,
+      "prompt": "I'm building a new .NET web API with Entity Framework Core and want to use Aurora DSQL as the database. Help me get the data layer set up correctly.",
+      "expected_output": "Recommends the Amazon.AuroraDsql.EntityFrameworkCore adapter with AddDsqlDataSource/UseDsql, and guides toward DSQL-friendly patterns: Guid keys with gen_random_uuid(), foreign key constraints, and DsqlExecutionStrategy for OCC retry.",
+      "expectations": [
+        "Recommends the Amazon.AuroraDsql.EntityFrameworkCore adapter and AddDsqlDataSource/UseDsql setup",
+        "Recommends Guid primary keys with a gen_random_uuid() default (or EnableIdentityColumns for long keys)",
+        "Recommends foreign key constraints and notes that cascades count toward transaction limits",
+        "Recommends DsqlExecutionStrategy for OCC retry to handle concurrency conflicts"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 14,
+      "prompt": "Can I use Aurora DSQL with a C# / .NET application? What's the recommended setup?",
+      "expected_output": "Confirms .NET support, recommends the Amazon.AuroraDsql.Npgsql connector for IAM auth and the Amazon.AuroraDsql.EntityFrameworkCore adapter for EF Core, and notes the .NET 8.0+/EF Core 9.0.7+ requirements.",
+      "expectations": [
+        "Confirms Aurora DSQL works with .NET / C#",
+        "Recommends the Amazon.AuroraDsql.Npgsql connector for automatic IAM authentication",
+        "Recommends the Amazon.AuroraDsql.EntityFrameworkCore adapter for EF Core users"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 15,
+      "prompt": "My Aurora DSQL cluster is performing differently than last week and I can't point to one bad query. I pulled the Active Average Sessions (db.active_sessions.avg) broken down by wait event for the same hour, this week vs last week. Last week: OnCpu 226, SequentialScanRead 89, UniqueConstraintCheck 89, Commit 74, everything else flat. This week: OnCpu 213, SequentialScanRead 336, UniqueConstraintCheck 87, Commit 73, everything else flat. What does this tell you and what should I do next?",
+      "expected_output": "Interprets the data as a wait-event distribution shift: SequentialScanRead grew ~3.7x (from ~19% to ~47% of the listed events' total AAS — 89/478 vs 336/709) while every other wait event, including OnCpu and Commit, stayed flat. Concludes this is NOT overall load growth (which would raise all events together) but a shift concentrated in SequentialScanRead. Treats the concentrated shift as an OBSERVATION to investigate — does NOT diagnose a scan type, missing index, or plan regression from the CloudWatch metric alone (a wait event is not a query plan). Does NOT treat any absolute AAS number as inherently bad — reasons from the change vs the temporal baseline. Recommends identifying the top SQL on SequentialScanRead and handing those queries off to per-query EXPLAIN analysis (Workflow 9). Does not recommend schema or index changes from CloudWatch data alone.",
+      "expectations": [
+        "Identifies SequentialScanRead as the shifted wait event and quantifies the change relative to the baseline (roughly 3.7x — 336/89 — or, as a share of the listed events, a jump from ~19% to ~47%). Accept any correct quantification of the ~3.7x growth; do NOT require a specific percentage, since exact shares depend on unlisted 'flat' events the prompt does not enumerate",
+        "Concludes the shift is concentrated in SequentialScanRead rather than proportional load growth, citing that OnCpu / Commit / other events stayed flat — and frames this as an observation to investigate, NOT as a diagnosed scan type / missing index / plan regression from the metric alone",
+        "Does NOT claim any absolute AAS value is inherently problematic — reasons from change over time against the temporal baseline",
+        "Recommends identifying the top SQL statements attributed to SequentialScanRead as the next step",
+        "Defers per-query root cause to EXPLAIN / query plan analysis (Workflow 9) and does NOT recommend specific index or schema changes from the CloudWatch metrics alone"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 16,
+      "prompt": "I ran Workflow 12 on my DSQL cluster. The top query by AAS is `SELECT NO_O_ID FROM new_order WHERE NO_D_ID = $1 AND NO_W_ID = $2 ORDER BY NO_O_ID ASC LIMIT $0` and its dominant wait event is SequentialScanRead. What is wrong with this query and what should I do?",
+      "expected_output": "Explains that a high SequentialScanRead share most likely reflects high concurrency or call frequency of the query, not a slow or defective query, and that SequentialScanRead is a storage-layer range read, NOT proof of a Seq Scan / Full Scan plan node. Explicitly declines to state a scan type or index state from the wait-event metric alone. Does NOT claim the query is doing a full table scan, and does NOT assert that an index is missing, still building, or unused. Routes the query to Workflow 9 (EXPLAIN ANALYZE) as the only way to establish the actual plan, scan type, and root cause. Treats the wait event as an observation to investigate, not a diagnosis.",
+      "expectations": [
+        "Explains high SequentialScanRead AAS as likely high concurrency / call frequency, not inherently a problem, and notes there is no upper bound to AAS",
+        "States that a wait-event label is not an EXPLAIN node type — SequentialScanRead does not establish a Seq Scan / Full Scan",
+        "Does NOT claim the query is performing a full or sequential table scan",
+        "Does NOT assert that an index is missing, still building, or unused based on the CloudWatch metric",
+        "Routes the query to Workflow 9 (EXPLAIN ANALYZE / query plan explainability) to establish the actual plan and root cause, and does not recommend index or schema changes from AAS data alone"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 17,
+      "prompt": "Create a multi-tenant orders table that references a shared countries lookup table. Country codes are globally unique and the countries table has no tenant_id.",
+      "expected_output": "Uses an ordinary single-column foreign key from orders.country_code to countries.code and keeps tenant authorization separate",
+      "expectations": [
+        "Creates an ordinary foreign key from orders.country_code to countries.code",
+        "Does NOT add tenant_id to the shared countries table or the country foreign key",
+        "Keeps tenant_id on the tenant-owned orders table",
+        "States that caller tenant authorization remains an application responsibility"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 18,
+      "prompt": "Add a UNIQUE constraint to the email column of my existing Aurora DSQL users table without recreating the table. Show the supported sequence and readiness checks.",
+      "expected_output": "Builds a unique index asynchronously, waits for it to become valid, then promotes it to a UNIQUE constraint with USING INDEX",
+      "expectations": [
+        "Checks for duplicate email values before building the unique index",
+        "Uses CREATE UNIQUE INDEX ASYNC on users(email)",
+        "Waits for the async job and verifies pg_index.indisvalid = true",
+        "Uses ALTER TABLE users ADD CONSTRAINT ... UNIQUE USING INDEX ...",
+        "Does NOT use the Table Recreation Pattern for this UNIQUE constraint"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 19,
+      "prompt": "Change the primary key of an existing Aurora DSQL parent table from old_id to new_id. Several child tables may reference old_id. Plan the migration safely.",
+      "expected_output": "Inventories inbound foreign keys before creating the replacement and preserves a unique target for every retained relationship",
+      "expectations": [
+        "Queries pg_constraint for inbound foreign keys that reference the current primary key before creating the replacement table",
+        "Identifies which referenced columns would lose PRIMARY KEY or UNIQUE coverage",
+        "Retains a UNIQUE constraint on demoted referenced columns when those relationships must remain",
+        "Requires explicit approval before intentionally dropping any inbound relationship",
+        "Aborts the migration when a retained inbound foreign key cannot be restored"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 20,
+      "prompt": "On an existing Aurora DSQL table, remove a UNIQUE constraint and add a CHECK constraint that requires status IN ('open', 'closed') without scanning existing rows during the add. Show the safe direct DDL path.",
+      "expected_output": "Drops the UNIQUE constraint directly and adds the CHECK constraint with NOT VALID before asynchronous validation",
+      "expectations": [
+        "Confirms the named UNIQUE constraint before dropping it and explains the lost invariant",
+        "Uses ALTER TABLE ... DROP CONSTRAINT directly instead of table recreation",
+        "Adds the CHECK constraint with ALTER TABLE ... ADD CONSTRAINT ... CHECK (...) NOT VALID",
+        "Uses ALTER TABLE ASYNC ... VALIDATE CONSTRAINT for existing rows and verifies the validation job",
+        "Does NOT suggest adding the CHECK constraint through table recreation"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 21,
+      "prompt": "On an existing Aurora DSQL table, remove NOT NULL from optional_note and change status to default to 'pending'. Show the direct DDL path without recreating the table.",
+      "expected_output": "Uses direct ALTER COLUMN DROP NOT NULL and SET DEFAULT statements",
+      "expectations": [
+        "Uses ALTER TABLE ... ALTER COLUMN optional_note DROP NOT NULL",
+        "Uses ALTER TABLE ... ALTER COLUMN status SET DEFAULT 'pending'",
+        "States that the default applies to future inserts and does not backfill existing rows",
+        "Uses one DDL statement per transaction",
+        "Does NOT recommend the Table Recreation Pattern"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 22,
+      "prompt": "My Django transaction uses a non-nullable customer relationship and Order.objects.select_related(\"customer\").filter(tenant_id=tenant_id, status=\"pending\").select_for_update() before updating an order. Can Aurora DSQL run this joined SELECT FOR UPDATE even though the filter is not an equality predicate on the primary key? Include supported and unsupported lock clauses, transaction-size accounting, concurrency behavior, and retry guidance.",
+      "expected_output": "Keeps the joined non-key select_for_update query, states that equality on every primary-key column is not required, explains that rows targeted by the locking clause participate in optimistic commit-time conflict checks instead of blocking locks, states that each targeted row's primary key counts toward the 10 MiB transaction-size limit, identifies the supported and unsupported lock clauses, and retries the whole transaction on SQLSTATE 40001",
+      "expectations": [
+        "States that SELECT FOR UPDATE supports non-primary-key predicates and does not require equality on every primary-key column",
+        "States that SELECT FOR UPDATE supports queries that join multiple tables",
+        "Keeps Django select_for_update() instead of replacing it solely because the query uses a joined non-key predicate",
+        "Explains that rows targeted by the locking clause participate in optimistic commit-time conflict checks rather than taking blocking row locks",
+        "States that the primary key of each row targeted by the locking clause counts toward the 10 MiB transaction-size limit",
+        "States that FOR UPDATE and FOR KEY SHARE are supported",
+        "States that FOR NO KEY UPDATE and FOR SHARE are unsupported",
+        "Recommends retrying the whole transaction with backoff when a conflict returns SQLSTATE 40001"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 23,
+      "prompt": "I'm porting this index to Aurora DSQL: CREATE INDEX idx_logs ON logs (tenant_id, created_at DESC); It fails. What do I do, and do I lose the descending ordering?",
+      "expected_output": "Identifies that DSQL rejects sort direction on index keys, strips ASC/DESC, and explains that a uniformly-descending ORDER BY is still served by a backward scan while a mixed-direction one is not",
+      "expectations": [
+        "States that DSQL rejects ASC/DESC on index keys and that the direction must be removed, keeping CREATE INDEX ASYNC",
+        "Explains that a uniformly-ordered ORDER BY is still served because the planner can scan the index backwards, so the descending ordering is not lost",
+        "States that a mixed-direction ORDER BY still requires a sort step that no DSQL index can remove",
+        "Does not claim that dsql_lint reports the stripped direction as a warning in every case, or advise gating a pipeline solely on the error or warning count",
+        "Does not advise removing NULLS FIRST or NULLS LAST, which DSQL accepts and dsql_lint retains"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 24,
+      "prompt": "My DSQL batch insert fails with: ERROR: transaction size limit 10mb exceeded, DETAIL: Current transaction size 11mb > 10mb. I'm only inserting 2,000 rows. How do I fix it?",
+      "expected_output": "Identifies the 10 MiB per-transaction limit, explains the check happens at COMMIT and is not a raw byte count, and recommends splitting the batch",
+      "expectations": [
+        "Identifies the 10 MiB per-transaction size limit as the cause and recommends splitting the write into smaller committed batches",
+        "States that the limit is checked at COMMIT rather than per statement",
+        "Notes that the size the limit applies to is not the raw byte count of the data, so the raw size does not reliably predict whether a batch commits",
+        "Also mentions the separate 3,000 row-modification limit per transaction",
+        "Does not advise raising the limit, since it is not configurable"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 25,
+      "prompt": "My Python app sent a COMMIT to DSQL and got 'SSL SYSCALL error: EOF detected' instead of a reply. The transaction debits an account balance. Should I just retry it?",
+      "expected_output": "States that the commit outcome is unknown, that a bare retry can double-apply the write, and that the agent must confirm the outcome or report it rather than blindly retrying",
+      "expectations": [
+        "States that an EOF at or after COMMIT leaves the commit outcome unknown because the connection closed before the server replied",
+        "Explicitly warns that a bare retry can apply the debit twice",
+        "Advises reconnecting and confirming whether the write committed before resending",
+        "Addresses what to do when the outcome cannot be determined, rather than only prescribing confirmation",
+        "Does not classify the EOF as an ordinary transient error to be fed into the 40001 retry loop"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 26,
+      "prompt": "My DSQL migration only runs GRANT SELECT statements, no DDL. A long-running job that reads a large table and writes summary rows back keeps failing at COMMIT with 'schema has been updated by another transaction (OC001)' and SQLSTATE 40001. There's no DDL anywhere, so why?",
+      "expected_output": "Explains that GRANT and REVOKE are catalog changes that raise OC001 just as DDL does, that the trigger is the session's stale cached catalog rather than row contention, and that a retry clears a one-shot change",
+      "expectations": [
+        "States that GRANT and REVOKE modify the schema catalog and raise OC001 just as DDL statements do, so the absence of DDL does not rule it out",
+        "Explains that the cause is the session's cached schema catalog being older than a committed catalog change, and accepts either case as correct: a GRANT that completed before the transaction started, or one that committed during it",
+        "States that the reporting transaction should retry, because a retry refreshes the session's catalog cache and a one-shot catalog change clears",
+        "Advises serializing the catalog changes if the error persists across retries",
+        "Does not advise excluding OC001 from the 40001 retry loop or treating it as non-retryable"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 27,
+      "prompt": "In DSQL I get 'key size too large' when inserting into a table whose primary key is (tenant_name text, region text, bucket text). What's the actual budget, and does adding a secondary index on a long text column get its own budget?",
+      "expected_output": "Explains the combined key-size budget across all key columns, that a single column reaches roughly 1,981 bytes, and that a secondary index shares the budget with the table's primary key columns rather than getting a separate one",
+      "expectations": [
+        "States that the key-size budget is combined in bytes across every key column, not per column",
+        "Gives the single-column ceiling as roughly 1,981 bytes and notes that each additional key column reduces the budget",
+        "States that a secondary index shares the budget with the table's primary key columns rather than getting a separate allowance",
+        "Notes that the budget is in bytes rather than characters, so multi-byte UTF-8 values fit fewer characters",
+        "Recommends shortening or hashing the key columns rather than attempting to raise the limit"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 28,
+      "prompt": "I'm migrating a PostgreSQL orders table to Aurora DSQL. It has a primary key, a UNIQUE constraint on order_number, and 23 other indexes for reporting queries. Will it fit, and if not, what should I change?",
+      "expected_output": "Explains that the 24-index limit counts every index on the table, including the primary key and the index behind the UNIQUE constraint, so the table needs 25 slots and does not fit; suggests consolidating indexes",
+      "expectations": [
+        "States that the 24-index limit counts every index on the table, including the primary key and the index behind the UNIQUE constraint",
+        "Concludes that the table needs 25 indexes, so it does not fit and at least one index must be dropped or merged",
+        "Does NOT state that 24 secondary indexes are allowed in addition to the primary key",
+        "Suggests consolidating indexes, for example into composite indexes, rather than trying to raise the limit"
+      ],
+      "grader": "llm_judge"
+    }
+  ]
+}
