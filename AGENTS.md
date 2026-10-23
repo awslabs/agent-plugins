@@ -194,6 +194,26 @@ git worktree remove .tmp/<short-name>
 
 All worktrees live under `.tmp/` (already in `.gitignore`).
 
+## Pull Request Requirements
+
+Every PR body MUST include the contributor statement that the `Require Contributor Statement`
+CI job enforces (see `.github/workflows/pull-request-lint.yml`). Always include both lines
+verbatim:
+
+```
+By submitting this pull request, I confirm that you can use, modify, copy, and redistribute this contribution, under the terms of the [project license](https://github.com/<REPO>/blob/main/LICENSE).
+```
+
+Replace `<REPO>` with the actual `owner/repo` of the repository the PR is being opened against
+(e.g. `awslabs/agent-plugins`). **Do not copy the URL from `.claude/settings.json` blindly** —
+that file hardcodes `awslabs/agent-plugins`, but the CI check uses `${{ github.repository }}`
+which resolves to the current repository. In a fork, these differ and the check will fail even
+if the rest of the attribution text is present.
+
+> **Why it can still fail after adding the attribution:** The workflow uses a substring match on
+> the exact URL. If the repo in the link does not match `github.repository`, the check fails.
+> Always verify the `owner/repo` slug matches the repo the PR targets, not the upstream fork origin.
+
 ## Boundaries
 
 - ALWAYS use `git worktree add .tmp/<name>` for new work. NEVER switch branches in the main worktree.
