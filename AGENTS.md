@@ -201,10 +201,6 @@ CI job enforces (see `.github/workflows/pull-request-lint.yml`). Always include 
 verbatim:
 
 ```
-Generated with [Claude Code](https://claude.com/claude-code)
-
----
-
 By submitting this pull request, I confirm that you can use, modify, copy, and redistribute this contribution, under the terms of the [project license](https://github.com/<REPO>/blob/main/LICENSE).
 ```
 
