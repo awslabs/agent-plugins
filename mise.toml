@@ -121,6 +121,11 @@ run = "uv run --with pytest pytest tools plugins || [ $? -eq 5 ]"
 description = "Run Node (JS/TS) unit tests when a package.json defines them"
 run = "if [ -f package.json ] && grep -q '\"test\"' package.json; then npm test; else echo 'no package.json test script; skipping'; fi"
 
+[tasks."test:mcp-launches"]
+description = "Check real MCP startup and environment reuse (downloads packages; no AWS operations)"
+env = { MCP_LAUNCH_INTEGRATION = "1" }
+run = "uv run --with pytest pytest tools/test_mcp_environments.py -k real_mcp -v -s"
+
 [tasks.test]
 description = "Run unit tests across languages"
 run = [

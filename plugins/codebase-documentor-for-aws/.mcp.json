@@ -1,14 +1,16 @@
 {
   "mcpServers": {
+    "awsiac": {
+      "args": [
+        "--exclude-newer",
+        "2026-10-18T00:00:00Z",
+        "awslabs.aws-iac-mcp-server==1.0.26"
+      ],
+      "command": "uvx"
+    },
     "awsknowledge": {
       "type": "http",
       "url": "https://knowledge-mcp.global.api.aws"
-    },
-    "awsiac": {
-      "args": [
-        "awslabs.aws-iac-mcp-server@latest"
-      ],
-      "command": "uvx"
     }
   }
 }
