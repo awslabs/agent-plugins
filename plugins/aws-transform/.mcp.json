@@ -1,10 +1,12 @@
 {
   "mcpServers": {
     "aws-transform-mcp": {
-      "command": "uvx",
       "args": [
-        "awslabs.aws-transform-mcp-server@latest"
-      ]
+        "--exclude-newer",
+        "2026-10-18T00:00:00Z",
+        "awslabs.aws-transform-mcp-server==0.2.3"
+      ],
+      "command": "uvx"
     }
   }
 }

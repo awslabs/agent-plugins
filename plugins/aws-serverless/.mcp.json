@@ -1,11 +1,13 @@
 {
   "mcpServers": {
     "aws-serverless-mcp": {
-      "command": "uvx",
       "args": [
-        "awslabs.aws-serverless-mcp-server@latest",
+        "--exclude-newer",
+        "2026-10-18T00:00:00Z",
+        "awslabs.aws-serverless-mcp-server==0.2.0",
         "--allow-write"
       ],
+      "command": "uvx",
       "env": {
         "FASTMCP_LOG_LEVEL": "ERROR"
       },

@@ -2,7 +2,9 @@
   "mcpServers": {
     "awsiac": {
       "args": [
-        "awslabs.aws-iac-mcp-server@latest"
+        "--exclude-newer",
+        "2026-10-18T00:00:00Z",
+        "awslabs.aws-iac-mcp-server==1.0.26"
       ],
       "command": "uvx"
     },
@@ -12,7 +14,9 @@
     },
     "awspricing": {
       "args": [
-        "awslabs.aws-pricing-mcp-server@latest"
+        "--exclude-newer",
+        "2026-10-18T00:00:00Z",
+        "awslabs.aws-pricing-mcp-server==1.1.1"
       ],
       "command": "uvx",
       "disabled": false,
