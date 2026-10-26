@@ -311,9 +311,10 @@ async def mcp_catalog(command, env):
 )
 @pytest.mark.parametrize("plugin,server", LAUNCHES)
 def test_real_mcp_repeated_launches(plugin, server, real_cache):
+    home = Path.home()
     if (
         plugin == "aws-transform"
-        and (Path.home() / ".aws-transform-mcp" / "config.json").exists()
+        and (home / ".aws-transform-mcp" / "config.json").exists()
     ):
         pytest.skip(
             "Run in a clean account: Transform reads its persisted session at startup"
@@ -325,6 +326,9 @@ def test_real_mcp_repeated_launches(plugin, server, real_cache):
     env = clean_environment()
     env.update(config.get("env", {}))
     env.update(
+        # The guard and child must use the same home, including caller overrides.
+        HOME=str(home),
+        USERPROFILE=str(home),
         UV_CACHE_DIR=str(real_cache / "cache"),
         UV_TOOL_DIR=str(real_cache / "tools"),
         UV_PYTHON_DOWNLOADS="never",
@@ -386,3 +390,116 @@ def test_real_mcp_repeated_launches(plugin, server, real_cache):
         f"{plugin}/{server}: {len(first['versions'])} packages, "
         f"{len(catalog[1])} tools, stable identity/versions/catalog over 3 launches"
     )
+
+
+@pytest.mark.parametrize("home_override", [True, False], ids=["override", "fallback"])
+def test_real_launch_home_matches_guard(tmp_path, monkeypatch, home_override):
+    checked_home = tmp_path / "checked-home"
+    checked_home.mkdir()
+    unchecked_home = tmp_path / "unchecked-home"
+    session = unchecked_home / ".aws-transform-mcp" / "config.json"
+    session.parent.mkdir(parents=True)
+    session.write_text("{}")
+    if home_override:
+        monkeypatch.setenv("HOME", str(checked_home))
+        monkeypatch.setenv("USERPROFILE", str(checked_home))
+    else:
+        for key in ("HOME", "USERPROFILE", "HOMEDRIVE", "HOMEPATH"):
+            monkeypatch.delenv(key, raising=False)
+        # Model an account home without consulting the real account database.
+        monkeypatch.setattr(Path, "home", classmethod(lambda cls: checked_home))
+    credential_keys = (
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_SESSION_TOKEN",
+        "AWS_PROFILE",
+    )
+    for key in credential_keys:
+        monkeypatch.setenv(key, "synthetic-test-value")
+
+    marker = tmp_path / "cache" / "fixture" / "pyvenv.cfg"
+    marker.parent.mkdir(parents=True)
+    marker.write_text("fixture")
+    environments, homes = [], []
+    run = subprocess.run
+
+    def snapshot(command, *, env, **kwargs):
+        environments.append(env)
+        return subprocess.CompletedProcess(
+            command, 0, json.dumps({"prefix": str(marker.parent), "versions": []})
+        )
+
+    async def catalog(command, env):
+        environments.append(env)
+        # Only this inert Python probe is executed, never uv or an MCP server.
+        # Both account fallbacks point to fixtures, even before the fix.
+        result = run(  # nosec B603: inert Python argv with synthetic home paths
+            [
+                sys.executable,
+                "-I",
+                "-S",
+                "-c",
+                "import json, ntpath, os, sys\n"
+                "from pathlib import Path\n"
+                "from types import SimpleNamespace\n"
+                "if os.name == 'posix':\n"
+                "    import pwd\n"
+                "    pwd.getpwuid = lambda uid: SimpleNamespace(pw_dir=sys.argv[1])\n"
+                "os.environ.setdefault('HOMEDRIVE', os.path.splitdrive(sys.argv[1])[0])\n"
+                "os.environ.setdefault('HOMEPATH', os.path.splitdrive(sys.argv[1])[1])\n"
+                "home = Path.home()\n"
+                "print(json.dumps({'home': str(home), 'windows_home': ntpath.expanduser('~'),\n"
+                "    'has_session': (home / '.aws-transform-mcp' / 'config.json').exists()}))\n",
+                str(unchecked_home),
+            ],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        assert result.returncode == 0, result.stderr  # nosec B101: pytest assertion
+        homes.append(json.loads(result.stdout))
+        return {"name": "fixture"}, [{"name": "fixture-tool"}]
+
+    monkeypatch.setattr(shutil, "which", lambda name: "fixture-uv")
+    monkeypatch.setattr(subprocess, "run", snapshot)
+    monkeypatch.setattr(sys.modules[__name__], "mcp_catalog", catalog)
+    test_real_mcp_repeated_launches("aws-transform", "aws-transform-mcp", tmp_path)
+
+    assert (
+        homes
+        == [
+            {  # nosec B101: pytest assertion
+                "home": str(checked_home),
+                "windows_home": str(checked_home),
+                "has_session": False,
+            }
+        ]
+        * 3
+    )
+    assert len(environments) == 6  # nosec B101: pytest assertion
+    for env in environments:
+        assert env["HOME"] == env["USERPROFILE"] == str(checked_home)  # nosec B101: pytest assertion
+        assert all(key not in env for key in credential_keys)  # nosec B101: pytest assertion
+        assert (
+            env["AWS_CONFIG_FILE"] == env["AWS_SHARED_CREDENTIALS_FILE"] == os.devnull
+        )  # nosec B101: pytest assertion
+        assert env["AWS_EC2_METADATA_DISABLED"] == "true"  # nosec B101: pytest assertion
+
+
+def test_real_launch_skips_persisted_transform_session(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    session = tmp_path / ".aws-transform-mcp" / "config.json"
+    session.parent.mkdir()
+    session.write_text("{}")
+
+    def unexpected_launch(*args, **kwargs):
+        pytest.fail("Persisted Transform state must prevent any probe or server launch")
+
+    monkeypatch.setattr(subprocess, "run", unexpected_launch)
+    monkeypatch.setattr(sys.modules[__name__], "mcp_catalog", unexpected_launch)
+    with pytest.raises(
+        pytest.skip.Exception, match="Transform reads its persisted session"
+    ):
+        test_real_mcp_repeated_launches("aws-transform", "aws-transform-mcp", tmp_path)
