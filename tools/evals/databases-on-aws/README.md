@@ -29,6 +29,7 @@ tools/evals/databases-on-aws/
     └── scripts/
         ├── run_functional_evals.py          # Runner for functional eval corpora
         ├── run_query_explainability_evals.py # Runner/grader for Workflow 9
+        ├── test_loader_sh.py                # Unit tests for loader.sh release asset selection
         ├── test_run_functional_evals.py     # Unit tests for the functional runner
         └── test_safe_query.py               # Unit tests for safe_query.py module
 ```
@@ -261,7 +262,8 @@ mise exec -- python tools/evals/databases-on-aws/dsql/scripts/run_functional_eva
 
 ### Unit Tests
 
-Deterministic unit tests for `safe_query.py` and the functional-eval runner:
+Deterministic unit tests for `safe_query.py`, the functional-eval runner, and `loader.sh` release
+asset selection:
 
 ```bash
 # From repo root

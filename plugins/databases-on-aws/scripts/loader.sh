@@ -148,7 +148,8 @@ detect_platform() {
 
   case "$os" in
     Linux)
-      os="unknown-linux-gnu"
+      # Linux releases are published as static musl builds
+      os="unknown-linux-musl"
       ;;
     Darwin)
       os="apple-darwin"
@@ -259,7 +260,13 @@ install_loader() {
     exit 1
   }
 
-  download_url=$(echo "$release_json" | grep -o "https://[^\"]*aurora-dsql-loader-${platform}[^\"]*" | head -1)
+  # A release without a matching asset is reported below, so don't let set -e exit here
+  download_url=$(echo "$release_json" | grep -o "https://[^\"]*aurora-dsql-loader-${platform}[^\"]*" | head -1) || true
+
+  # Releases before v2.0.2 published glibc builds for Linux
+  if [[ -z "$download_url" && "$platform" == *-unknown-linux-musl ]]; then
+    download_url=$(echo "$release_json" | grep -o "https://[^\"]*aurora-dsql-loader-${platform%-musl}-gnu[^\"]*" | head -1) || true
+  fi
 
   if [[ -z "$download_url" ]]; then
     echo "Error: Could not find download URL for platform: $platform" >&2
