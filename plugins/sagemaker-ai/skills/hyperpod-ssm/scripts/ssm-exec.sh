@@ -37,7 +37,8 @@ if [[ -z "$TARGET" ]]; then
   TARGET="sagemaker-cluster:${CLUSTER_ID}_${GROUP}-${INSTANCE_ID}"
 fi
 
-TMPFILE=$(mktemp "${TMPDIR:-/tmp}/ssm-cmd-XXXXXXXXXX.json")
+# BSD/macOS mktemp only randomizes trailing X's, so the template has no suffix.
+TMPFILE=$(mktemp "${TMPDIR:-/tmp}/ssm-cmd.XXXXXXXXXX")
 chmod 600 "$TMPFILE"
 trap 'rm -f "$TMPFILE"' EXIT
 
@@ -92,8 +93,9 @@ esac
 # under `unbuffer` (expect) attaches a PTY, which forces line-buffered I/O
 # and eliminates the race. See https://github.com/aws/amazon-ssm-agent/issues/358.
 # If `unbuffer` isn't on PATH, fall back to the bare invocation.
+# aws runs as a child process, not via exec, so the EXIT trap removes $TMPFILE.
 if command -v unbuffer >/dev/null 2>&1; then
-  exec unbuffer aws ssm start-session \
+  unbuffer aws ssm start-session \
     --target "$TARGET" \
     --region "$REGION" \
     --document-name AWS-StartNonInteractiveCommand \
@@ -103,7 +105,7 @@ else
   echo "         Without it, 'aws ssm start-session' will intermittently return empty" >&2
   echo "         stdout with 'Cannot perform start session: EOF'." >&2
   echo "         Install with: sudo yum install expect | sudo apt install expect | brew install expect" >&2
-  exec aws ssm start-session \
+  aws ssm start-session \
     --target "$TARGET" \
     --region "$REGION" \
     --document-name AWS-StartNonInteractiveCommand \
