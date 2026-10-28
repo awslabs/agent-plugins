@@ -172,7 +172,7 @@ SHOULD be used when you only need event detection without storing positions, or 
 ```javascript
 import { BatchEvaluateGeofencesCommand } from "@aws-sdk/client-location";
 
-await client.send(
+const response = await client.send(
   new BatchEvaluateGeofencesCommand({
     CollectionName: "my-delivery-zones",
     DevicePositionUpdates: [
@@ -187,6 +187,11 @@ await client.send(
   }),
 );
 // Returns 200 with an Errors array for per-entry failures; events are emitted asynchronously to EventBridge
+if (response.Errors?.length > 0) {
+  response.Errors.forEach((error) => {
+    console.error(`Failed device ${error.DeviceId}: ${error.Error.Message}`);
+  });
+}
 ```
 
 Both approaches emit `ENTER` and `EXIT` events to Amazon EventBridge when positions cross zone boundaries.

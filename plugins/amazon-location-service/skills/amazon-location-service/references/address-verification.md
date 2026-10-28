@@ -244,18 +244,32 @@ Enable versioning with `aws s3api put-bucket-versioning --bucket YOUR_INPUT_BUCK
 
 ## Tracking a Job
 
-Poll `GetJob` with the `JobId` until `Status` is terminal (`Completed`, `Failed`, or `Cancelled`). For event-driven workflows, subscribe to job status changes via Amazon EventBridge instead of polling.
+Poll `GetJob` with the `JobId` until `Status` is terminal (`Completed`, `Failed`, or `Cancelled`), and give up after a deadline so a stalled job cannot hang the caller. For long-running jobs, or inside a Lambda function, subscribe to job status changes via Amazon EventBridge instead of polling.
 
 ```javascript
 import { GetJobCommand } from "@aws-sdk/client-location";
 
-async function waitForJob(client, jobId) {
+async function waitForJob(client, jobId, maxWaitMs = 6 * 60 * 60 * 1000) {
   const terminal = new Set(["Completed", "Failed", "Cancelled"]);
+  const transient = new Set(["ThrottlingException", "InternalServerException"]);
+  const deadline = Date.now() + maxWaitMs;
+  let delayMs = 30000;
   while (true) {
-    const job = await client.send(new GetJobCommand({ JobId: jobId }));
-    if (terminal.has(job.Status)) return job;
-    // Back off between polls; jobs are asynchronous and may run for a while.
-    await new Promise((r) => setTimeout(r, 30000));
+    try {
+      const job = await client.send(new GetJobCommand({ JobId: jobId }));
+      if (terminal.has(job.Status)) return job;
+    } catch (err) {
+      // Keep polling through throttling and server errors; rethrow anything else
+      // (e.g. ResourceNotFoundException for an unknown JobId).
+      if (!transient.has(err.name)) throw err;
+    }
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) {
+      throw new Error(`Job ${jobId} did not finish within ${maxWaitMs} ms`);
+    }
+    // Back off between polls: 30 s, doubling up to 5 minutes.
+    await new Promise((r) => setTimeout(r, Math.min(delayMs, remainingMs)));
+    delayMs = Math.min(delayMs * 2, 5 * 60 * 1000);
   }
 }
 
@@ -287,7 +301,7 @@ When a job completes, read the Parquet result files from the S3 output prefix. O
 
 **Standardized address** (`Output_Address_*` and `Output_AddressLines_*`): canonical, postal-formatted components — `Output_Address_Label`, `Output_Address_Street`, `Output_Address_AddressNumber`, `Output_Address_Locality`, `Output_Address_Region_Code`/`_Name`, `Output_Address_PostalCode`, country codes, secondary-address (unit/floor) components, and per-line output.
 
-**Delivery indicators**: `Output_AddressMetadata_DeliveryIndicators_Mailable` and `_Locatable` (`true`/`false`).
+**Delivery indicators**: `Output_AddressMetadata_DeliveryIndicators_Mailable` and `_Locatable` (`true`/`false`). If a record has no value in these columns, treat deliverability as unknown rather than `false`.
 
 **Per-component status**: each component's status lives in a fully-qualified column of the form `Output_ValidationResults_Components_Address_<Component>_Status` (and `..._StatusDetail`) — the `Components_Address_` infix is part of the real column name. For example, the address-number status is `Output_ValidationResults_Components_Address_AddressNumber_Status`, and the street status is `Output_ValidationResults_Components_Address_Street_Status`. For each component (`Country`, `Region`, `Locality`, `Street`, `AddressNumber`, `PostalCodeDetails_Base`, unit, floor, …):
 
@@ -329,6 +343,7 @@ Prefer the standardized `Output_*` components over the raw input when a record i
 
 ```javascript
 function triage(rec) {
+  if (rec.ErrorType) return "review"; // processing failed; see rec.ErrorMessage
   const conf = rec.Output_ValidationResults_MatchConfidence;
   const gran = rec.Output_ValidationResults_ValidationGranularity;
   const mailable = rec.Output_AddressMetadata_DeliveryIndicators_Mailable;
@@ -349,12 +364,12 @@ function triage(rec) {
   if (
     conf === "Low" ||
     gran === "Locality" ||
-    !mailable ||
+    mailable === false ||
     (numberStatus === "Unconfirmed" && numberDetail === "NotFound")
   ) {
     return "reject";
   }
-  return "review";
+  return "review"; // includes records with no Mailable value
 }
 ```
 
@@ -375,7 +390,7 @@ await client.send(new CancelJobCommand({ JobId: jobId }));
 ## Error Handling
 
 - **Job-submission errors** (`StartJob`): `ValidationException` (bad request / input constraints, including the 10 GB per-file and 1 GB per-row-group limits), `AccessDeniedException` (caller or execution role lacks permission), `ThrottlingException` (retry with backoff; `StartJob` is rate-limited), `InternalServerException`.
-- **Job-lookup errors** (`GetJob`): `ResourceNotFoundException` if the `JobId` does not exist.
+- **Job-lookup errors** (`GetJob`): `ResourceNotFoundException` if the `JobId` does not exist; `ThrottlingException` and `InternalServerException` are transient, so keep polling with backoff (as `waitForJob` above does).
 - **Failed jobs**: a job can reach `Status: Failed` after starting successfully. Call `GetJob` and read `Error.Code` and `Error.Messages` for the cause.
 - **Per-record errors**: individual records that could not be processed carry `ErrorType`/`ErrorMessage` in the output file while the rest of the job succeeds. Always scan output for these.
 - **Common setup mistakes** (each makes the job go `Pending` then `Failed`, not error at `StartJob`): the `ExecutionRoleArn` must (a) trust `geo.amazonaws.com` for `sts:AssumeRole` in its trust policy, (b) grant `s3:GetObject`/`GetObjectVersion`/`ListBucket`/`GetBucketVersioning` on the input bucket and `s3:PutObject`/`AbortMultipartUpload` on the output bucket, and (c) target buckets that have **versioning enabled**. See [Starting a Validation Job](#starting-a-validation-job) for the full trust and permission policies.

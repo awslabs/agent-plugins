@@ -294,7 +294,7 @@ For a typical 10km urban route with 400 coordinate points:
 - **Simple**: ~18-25 KB (raw JSON coordinate arrays)
 - **FlexiblePolyline**: ~2-4 KB (compressed encoded string)
 
-##### Bandwidth savings: 5-10x smaller with FlexiblePolyline
+**Bandwidth savings:** 5-10x smaller with FlexiblePolyline.
 
 The size difference becomes more significant with longer routes or multiple route calculations.
 
@@ -304,81 +304,81 @@ Use `Simple` format when convenience and development speed matter more than band
 
 1. **Web applications with good connectivity**
 
-```javascript
-// Desktop users on broadband/WiFi - bandwidth isn't a concern
-const params = {
-  Origin: [-97.7431, 30.2672],
-  Destination: [-97.7723, 30.2672],
-  TravelMode: "Car",
-  LegGeometryFormat: "Simple", // No decoder needed, works immediately
-};
-```
+   ```javascript
+   // Desktop users on broadband/WiFi - bandwidth isn't a concern
+   const params = {
+     Origin: [-97.7431, 30.2672],
+     Destination: [-97.7723, 30.2672],
+     TravelMode: "Car",
+     LegGeometryFormat: "Simple", // No decoder needed, works immediately
+   };
+   ```
 
-Desktop and laptop users typically have reliable high-speed connections where a few extra KB don't impact user experience.
+   Desktop and laptop users typically have reliable high-speed connections where a few extra KB don't impact user experience.
 
-1. **Prototyping and development**
+2. **Prototyping and development**
 
-- Faster iteration without setting up decoder libraries
-- Easier debugging (inspect coordinates directly in response)
-- Quick POCs and demos where optimization isn't critical
-- During development before production optimization
+   - Faster iteration without setting up decoder libraries
+   - Easier debugging (inspect coordinates directly in response)
+   - Quick POCs and demos where optimization isn't critical
+   - During development before production optimization
 
-1. **Single route calculations**
+3. **Single route calculations**
 
-```javascript
-// Calculating one route per session - minimal data transfer
-async function showDirections(origin, destination) {
-  const response = await calculateRoute(origin, destination, "Simple");
-  displayOnMap(response.Routes[0].Legs[0].Geometry.LineString);
-}
-```
+   ```javascript
+   // Calculating one route per session - minimal data transfer
+   async function showDirections(origin, destination) {
+     const response = await calculateRoute(origin, destination, "Simple");
+     displayOnMap(response.Routes[0].Legs[0].Geometry.LineString);
+   }
+   ```
 
-When users request only occasional routes (e.g., "Get directions" button), the one-time bandwidth cost is negligible.
+   When users request only occasional routes (e.g., "Get directions" button), the one-time bandwidth cost is negligible.
 
-1. **Server-side processing**
+4. **Server-side processing**
 
-```javascript
-// Backend service calculating routes for internal use
-app.post("/api/calculate-route", async (req, res) => {
-  const route = await calculateRoute(
-    req.body.origin,
-    req.body.destination,
-    "Simple", // Fast AWS network, immediate coordinate access
-  );
+   ```javascript
+   // Backend service calculating routes for internal use
+   app.post("/api/calculate-route", async (req, res) => {
+     const route = await calculateRoute(
+       req.body.origin,
+       req.body.destination,
+       "Simple", // Fast AWS network, immediate coordinate access
+     );
 
-  // Process coordinates directly without decoding
-  const simplified = simplifyRoute(route.Legs[0].Geometry.LineString);
-  res.json(simplified);
-});
-```
+     // Process coordinates directly without decoding
+     const simplified = simplifyRoute(route.Legs[0].Geometry.LineString);
+     res.json(simplified);
+   });
+   ```
 
-Server-to-server communication within AWS benefits from fast regional networks, and coordinate processing is easier with the Simple format.
+   Server-to-server communication within AWS benefits from fast regional networks, and coordinate processing is easier with the Simple format.
 
-1. **When manipulating route coordinates**
+5. **When manipulating route coordinates**
 
-```javascript
-// Need to modify coordinates programmatically
-const coordinates = leg.Geometry.LineString;
+   ```javascript
+   // Need to modify coordinates programmatically
+   const coordinates = leg.Geometry.LineString;
 
-// Add waypoint markers every 1km
-const markers = coordinates.filter((_, i) => i % 50 === 0);
+   // Add waypoint markers every 1km
+   const markers = coordinates.filter((_, i) => i % 50 === 0);
 
-// Simplify geometry for overview display
-const simplified = coordinates.filter((_, i) => i % 5 === 0);
+   // Simplify geometry for overview display
+   const simplified = coordinates.filter((_, i) => i % 5 === 0);
 
-// Extract bounding box
-const bounds = coordinates.reduce(
-  (bbox, [lng, lat]) => {
-    return {
-      minLng: Math.min(bbox.minLng, lng),
-      maxLng: Math.max(bbox.maxLng, lng),
-      minLat: Math.min(bbox.minLat, lat),
-      maxLat: Math.max(bbox.maxLat, lat),
-    };
-  },
-  { minLng: Infinity, maxLng: -Infinity, minLat: Infinity, maxLat: -Infinity },
-);
-```
+   // Extract bounding box
+   const bounds = coordinates.reduce(
+     (bbox, [lng, lat]) => {
+       return {
+         minLng: Math.min(bbox.minLng, lng),
+         maxLng: Math.max(bbox.maxLng, lng),
+         minLat: Math.min(bbox.minLat, lat),
+         maxLat: Math.max(bbox.maxLat, lat),
+       };
+     },
+     { minLng: Infinity, maxLng: -Infinity, minLat: Infinity, maxLat: -Infinity },
+   );
+   ```
 
 #### When to Use FlexiblePolyline Format
 
@@ -388,160 +388,160 @@ Use `FlexiblePolyline` format when bandwidth efficiency matters for user experie
 
 1. **Mobile applications**
 
-```javascript
-// Mobile users on cellular networks - minimize data usage
-const params = {
-  Origin: origin,
-  Destination: destination,
-  TravelMode: "Car",
-  LegGeometryFormat: "FlexiblePolyline", // 5-10x smaller responses
-};
-```
+   ```javascript
+   // Mobile users on cellular networks - minimize data usage
+   const params = {
+     Origin: origin,
+     Destination: destination,
+     TravelMode: "Car",
+     LegGeometryFormat: "FlexiblePolyline", // 5-10x smaller responses
+   };
+   ```
 
-**Why this matters for mobile:**
+   **Why this matters for mobile:**
 
-- Cellular data is often metered/expensive (especially international roaming)
-- Slower network speeds benefit from smaller payloads
-- Battery conservation (less data transfer = less radio usage)
-- Better experience in areas with poor connectivity
+   - Cellular data is often metered/expensive (especially international roaming)
+   - Slower network speeds benefit from smaller payloads
+   - Battery conservation (less data transfer = less radio usage)
+   - Better experience in areas with poor connectivity
 
-1. **Real-time navigation with frequent rerouting**
+2. **Real-time navigation with frequent rerouting**
 
-```javascript
-// Recalculating routes every 2 minutes based on traffic
-setInterval(async () => {
-  const updatedRoute = await client.send(
-    new CalculateRoutesCommand({
-      Origin: currentLocation,
-      Destination: destination,
-      TravelMode: "Car",
-      LegGeometryFormat: "FlexiblePolyline", // Fast updates with minimal data
-    }),
-  );
+   ```javascript
+   // Recalculating routes every 2 minutes based on traffic
+   setInterval(async () => {
+     const updatedRoute = await client.send(
+       new CalculateRoutesCommand({
+         Origin: currentLocation,
+         Destination: destination,
+         TravelMode: "Car",
+         LegGeometryFormat: "FlexiblePolyline", // Fast updates with minimal data
+       }),
+     );
 
-  updateMapRoute(
-    polyline.decodeToLineStringFeature(
-      updatedRoute.Routes[0].Legs[0].Geometry.LineString,
-    ),
-  );
-}, 120000);
-```
+     updateMapRoute(
+       polyline.decodeToLineStringFeature(
+         updatedRoute.Routes[0].Legs[0].Geometry.LineString,
+       ),
+     );
+   }, 120000);
+   ```
 
-Frequent route updates multiply bandwidth costs - FlexiblePolyline keeps data transfer manageable.
+   Frequent route updates multiply bandwidth costs - FlexiblePolyline keeps data transfer manageable.
 
-1. **Multiple route calculations**
+3. **Multiple route calculations**
 
-```javascript
-// Comparing 5 alternative routes - bandwidth adds up quickly
-// Simple format: 100-125 KB total
-// FlexiblePolyline: 10-20 KB total (10x savings)
+   ```javascript
+   // Comparing 5 alternative routes - bandwidth adds up quickly
+   // Simple format: 100-125 KB total
+   // FlexiblePolyline: 10-20 KB total (10x savings)
 
-const alternativeRoutes = await Promise.all([
-  calculateRoute(origin, destination, { avoid: "Tolls" }),
-  calculateRoute(origin, destination, { optimize: "ShortestRoute" }),
-  calculateRoute(origin, destination, { avoid: "Ferries" }),
-  calculateRoute(origin, destination, { travelMode: "Pedestrian" }),
-  calculateRoute(origin, destination, { travelMode: "Scooter" }),
-]);
+   const alternativeRoutes = await Promise.all([
+     calculateRoute(origin, destination, { avoid: "Tolls" }),
+     calculateRoute(origin, destination, { optimize: "ShortestRoute" }),
+     calculateRoute(origin, destination, { avoid: "Ferries" }),
+     calculateRoute(origin, destination, { travelMode: "Pedestrian" }),
+     calculateRoute(origin, destination, { travelMode: "Scooter" }),
+   ]);
 
-// Decode all routes for display
-const decodedRoutes = alternativeRoutes.map((route) =>
-  polyline.decodeToLineStringFeature(route.Legs[0].Geometry.LineString),
-);
-```
+   // Decode all routes for display
+   const decodedRoutes = alternativeRoutes.map((route) =>
+     polyline.decodeToLineStringFeature(route.Legs[0].Geometry.LineString),
+   );
+   ```
 
-1. **Caching routes for offline use**
+4. **Caching routes for offline use**
 
-```javascript
-// Store routes in IndexedDB or localStorage
-// FlexiblePolyline saves 80-90% storage space
+   ```javascript
+   // Store routes in IndexedDB or localStorage
+   // FlexiblePolyline saves 80-90% storage space
 
-async function cacheRoute(routeId, origin, destination) {
-  const response = await client.send(
-    new CalculateRoutesCommand({
-      Origin: origin,
-      Destination: destination,
-      TravelMode: "Car",
-      LegGeometryFormat: "FlexiblePolyline", // Efficient storage
-    }),
-  );
+   async function cacheRoute(routeId, origin, destination) {
+     const response = await client.send(
+       new CalculateRoutesCommand({
+         Origin: origin,
+         Destination: destination,
+         TravelMode: "Car",
+         LegGeometryFormat: "FlexiblePolyline", // Efficient storage
+       }),
+     );
 
-  // Store compressed format
-  const cachedData = {
-    routeId,
-    encodedGeometry: response.Routes[0].Legs[0].Geometry.LineString,
-    summary: response.Routes[0].Summary,
-    timestamp: Date.now(),
-  };
+     // Store compressed format
+     const cachedData = {
+       routeId,
+       encodedGeometry: response.Routes[0].Legs[0].Geometry.LineString,
+       summary: response.Routes[0].Summary,
+       timestamp: Date.now(),
+     };
 
-  await db.routes.put(cachedData);
-}
+     await db.routes.put(cachedData);
+   }
 
-// Retrieve and decode when needed
-async function loadCachedRoute(routeId) {
-  const cached = await db.routes.get(routeId);
-  return polyline.decodeToLineStringFeature(cached.encodedGeometry);
-}
-```
+   // Retrieve and decode when needed
+   async function loadCachedRoute(routeId) {
+     const cached = await db.routes.get(routeId);
+     return polyline.decodeToLineStringFeature(cached.encodedGeometry);
+   }
+   ```
 
-1. **Progressive Web Apps (PWAs)**
+5. **Progressive Web Apps (PWAs)**
 
-```javascript
-// Offline-capable apps that sync route data
-// Smaller payloads = faster sync, less storage
+   ```javascript
+   // Offline-capable apps that sync route data
+   // Smaller payloads = faster sync, less storage
 
-self.addEventListener("sync", async (event) => {
-  if (event.tag === "sync-routes") {
-    event.waitUntil(syncRoutes());
-  }
-});
+   self.addEventListener("sync", async (event) => {
+     if (event.tag === "sync-routes") {
+       event.waitUntil(syncRoutes());
+     }
+   });
 
-async function syncRoutes() {
-  const pendingRoutes = await getPendingRoutes();
+   async function syncRoutes() {
+     const pendingRoutes = await getPendingRoutes();
 
-  // Calculate all routes with compressed format
-  const results = await Promise.all(
-    pendingRoutes.map((r) =>
-      calculateRoute(r.origin, r.destination, {
-        LegGeometryFormat: "FlexiblePolyline", // Efficient sync
-      }),
-    ),
-  );
+     // Calculate all routes with compressed format
+     const results = await Promise.all(
+       pendingRoutes.map((r) =>
+         calculateRoute(r.origin, r.destination, {
+           LegGeometryFormat: "FlexiblePolyline", // Efficient sync
+         }),
+       ),
+     );
 
-  // Store compressed for offline use
-  await storeRoutesLocally(results);
-}
-```
+     // Store compressed for offline use
+     await storeRoutesLocally(results);
+   }
+   ```
 
-1. **Batch operations and analytics**
+6. **Batch operations and analytics**
 
-```javascript
-// Calculating hundreds of routes for analysis
-// FlexiblePolyline makes large-scale operations practical
+   ```javascript
+   // Calculating hundreds of routes for analysis
+   // FlexiblePolyline makes large-scale operations practical
 
-async function analyzeDeliveryRoutes(stops) {
-  const routes = [];
+   async function analyzeDeliveryRoutes(stops) {
+     const routes = [];
 
-  for (let i = 0; i < stops.length - 1; i++) {
-    const response = await client.send(
-      new CalculateRoutesCommand({
-        Origin: stops[i],
-        Destination: stops[i + 1],
-        LegGeometryFormat: "FlexiblePolyline", // Keep total data manageable
-      }),
-    );
+     for (let i = 0; i < stops.length - 1; i++) {
+       const response = await client.send(
+         new CalculateRoutesCommand({
+           Origin: stops[i],
+           Destination: stops[i + 1],
+           LegGeometryFormat: "FlexiblePolyline", // Keep total data manageable
+         }),
+       );
 
-    routes.push({
-      segment: `${i} -> ${i + 1}`,
-      distance: response.Routes[0].Summary.Distance,
-      duration: response.Routes[0].Summary.Duration,
-      geometry: response.Routes[0].Legs[0].Geometry.LineString,
-    });
-  }
+       routes.push({
+         segment: `${i} -> ${i + 1}`,
+         distance: response.Routes[0].Summary.Distance,
+         duration: response.Routes[0].Summary.Duration,
+         geometry: response.Routes[0].Legs[0].Geometry.LineString,
+       });
+     }
 
-  return routes;
-}
-```
+     return routes;
+   }
+   ```
 
 #### Using FlexiblePolyline with @aws/polyline
 
