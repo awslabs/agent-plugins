@@ -118,11 +118,12 @@ has custom AWS configurations or would like to allow/disallow the MCP server mut
 
 ## CloudWatch MCP Server (System Diagnostics — Workflow 12)
 
-Workflow 12 (System Diagnostics) reads Aurora DSQL Active Average Sessions (AAS) telemetry
+Workflow 12 (System Diagnostics) reads Aurora DSQL Average Active Sessions (AAS) telemetry
 through the CloudWatch MCP server's PromQL tools. This is a **separate server** from
 `aurora-dsql` — it reads CloudWatch metrics, not the database — so it has its own entry in
 `.mcp.json`. The plugin ships it disabled because it needs region and credential details the
-plugin can't know in advance.
+plugin can't know in advance. Without it, the workflow uses the AWS CLI for commit and OCC
+metrics and asks the user to run the PromQL in CloudWatch Query Studio.
 
 The plugin's `.mcp.json` pre-configures it as:
 
@@ -154,10 +155,8 @@ To enable it:
 **Region matters.** Each query must target the region where the cluster's metrics live (the
 cluster's own region). Set `AWS_REGION` to that region for the default, and/or pass `region`
 explicitly on each tool call — the PromQL tools accept a per-call `region`, so one running server
-can serve clusters in more than one region. Either way, CloudWatch PromQL is only available in a
-subset of regions — at the time of writing: `us-east-1`, `us-west-2`, `eu-west-1`,
-`ap-southeast-1`, `ap-southeast-2`. If a cluster is in a region not on this list, PromQL-based
-diagnostics are not available for it; verify the current list in the CloudWatch documentation.
+can serve clusters in more than one region. Either way, the cluster's region must support CloudWatch
+PromQL — check the [supported Regions](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch-PromQL.html#CloudWatch-PromQL-Regions).
 
 **Restart after enabling.** MCP tools are registered when the session starts. If you enable
 the server (or fix its config) mid-session, its tools (`execute_promql_range_query`,
