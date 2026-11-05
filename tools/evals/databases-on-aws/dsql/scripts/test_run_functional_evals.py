@@ -659,6 +659,78 @@ def test_unknown_user_read_path_fails_closed(monkeypatch, tmp_path) -> None:
     assert "file_path could not be resolved" in result["infrastructure_error"]  # nosec B101
 
 
+def test_cli_skill_text_and_split_messages_are_accepted(
+    monkeypatch, tmp_path
+) -> None:
+    # The CLI injects the loaded skill as user text and streams one
+    # assistant message as several events that share its id, even
+    # after one of that message's tool results.
+    events = [
+        {"type": "assistant", "message": {"id": "msg-1", "content": [{
+            "type": "tool_use",
+            "id": "skill-1",
+            "name": "Skill",
+            "input": {"skill": "databases-on-aws:dsql"},
+        }]}},
+        {"type": "user", "message": {"content": [{
+            "type": "tool_result",
+            "tool_use_id": "skill-1",
+            "is_error": False,
+            "content": "loaded",
+        }]}},
+        {"type": "user", "message": {"content": [
+            {"type": "text", "text": "Base directory for this skill: ..."},
+        ]}},
+        {"type": "assistant", "message": {"id": "msg-2", "content": [
+            {"type": "thinking", "thinking": "plan"},
+        ]}},
+        {"type": "assistant", "message": {"id": "msg-2", "content": [{
+            "type": "tool_use",
+            "id": "read-1",
+            "name": "Read",
+            "input": {"file_path": str(tmp_path / "plugin/skills/dsql/SKILL.md")},
+        }]}},
+        {"type": "user", "message": {"content": [{
+            "type": "tool_result",
+            "tool_use_id": "read-1",
+            "is_error": False,
+            "content": "reference",
+        }]}},
+        {"type": "assistant", "message": {"id": "msg-2", "content": [
+            {"type": "text", "text": "Reading the reference."},
+        ]}},
+        {"type": "assistant", "message": {"id": "msg-3", "content": [
+            {"type": "text", "text": "The transaction limit is 3,000 rows."},
+        ]}},
+        {"type": "result", "subtype": "success", "is_error": False,
+         "result": "The transaction limit is 3,000 rows.", "total_cost_usd": 0},
+    ]
+    monkeypatch.setattr(
+        RUNNER,
+        "_run_captured",
+        lambda *args, **kwargs: _completed(_event_stream(events)),
+    )
+
+    result = RUNNER.run_prompt("prompt", tmp_path / "plugin")
+
+    assert result["infrastructure_error"] == ""  # nosec B101
+    assert result["turn_count"] == 3  # nosec B101
+    assert [event["type"] for event in RUNNER._message_timeline(result)] == [  # nosec B101
+        "tool_call", "tool_result", "tool_call", "tool_result",
+        "assistant_text", "assistant_text",
+    ]
+
+    # A new message id after an unresolved tool_use is still a protocol error.
+    unresolved = [event for event in events if event is not events[5]]
+    monkeypatch.setattr(
+        RUNNER,
+        "_run_captured",
+        lambda *args, **kwargs: _completed(_event_stream(unresolved)),
+    )
+    error = RUNNER.run_prompt("prompt", tmp_path / "plugin")["infrastructure_error"]
+    assert "assistant event appeared before tool results resolved" in error  # nosec B101
+
+
 def test_output_setup_preserves_unowned_sibling_runs(tmp_path) -> None:
     output_dir = tmp_path / "results"
     unrelated_sibling = tmp_path / ".results.run-user-notes"
@@ -766,7 +838,9 @@ def test_subject_execution_is_isolated_and_fails_closed(
     assert command[command.index("--max-turns") + 1] == "31"  # nosec B101
     assert "mcp__*" not in read_tools  # nosec B101
     assert RUNNER.AWS_KNOWLEDGE_SEARCH_TOOL in read_tools  # nosec B101
-    assert "/skills/dsql/**)" in read_tools  # nosec B101
+    assert RUNNER.AWS_KNOWLEDGE_READ_TOOL in read_tools  # nosec B101
+    skill_dir = Path("plugin").resolve() / "skills" / "dsql"
+    assert f"Read(/{skill_dir}/**)" in read_tools.split(",")  # nosec B101
     assert "Read(" in read_tools and "/plugin/**)" not in read_tools  # nosec B101
     assert "mcp__aurora-dsql__readonly_query" not in read_tools  # nosec B101
     assert "mcp__aurora-dsql__get_schema" not in read_tools  # nosec B101
@@ -4365,6 +4439,31 @@ def test_llm_judge_rejects_success_result_with_top_level_errors(monkeypatch):
         pass_env=(),
     )
     assert verdict["infrastructure_error"] is True  # nosec B101
+
+
+def test_llm_judge_accepts_one_json_code_fence(monkeypatch):
+    def judge(reply):
+        monkeypatch.setattr(
+            RUNNER,
+            "_run_captured",
+            lambda *args, **kwargs: _completed(json.dumps({
+                "subtype": "success",
+                "is_error": False,
+                "result": reply,
+            })),
+        )
+        return RUNNER._llm_judge("prompt", "answer", "expectation")["passed"]
+
+    verdict = '{"passed": false, "evidence": "not stated"}'
+    assert judge(f"```json\n{verdict}\n```") is False  # nosec B101
+    assert judge(f"```\n{verdict}\n```") is False  # nosec B101
+    for reply in [
+        f"Verdict:\n```json\n{verdict}\n```",
+        f"```json\n{verdict}\n```\n```json\n{verdict}\n```",
+        f"```json\n{verdict}",
+        f"```python\n{verdict}\n```",
+    ]:
+        assert judge(reply) is None  # nosec B101
 
 
 def test_lint_call_must_use_sql_from_the_prompt():
