@@ -1,6 +1,6 @@
 ---
 name: dsql
-description: "Build with Aurora DSQL — manage schemas, execute queries, handle migrations, diagnose query plans, diagnose cluster performance, load data, and develop applications with a serverless, distributed SQL database. Covers IAM auth, multi-tenant patterns, MySQL-to-DSQL and PostgreSQL-to-DSQL schema conversion, foreign key constraints, OCC retry patterns, ORM migration (Django/EF Core/Hibernate/Rails/SQLAlchemy), DDL operations, query plan explainability, system diagnostics via CloudWatch AAS, SQL compatibility validation, and bulk data loading. Load before answering DSQL limit or error-code questions; it has limits docs omit. Triggers on phrases like: DSQL, Aurora DSQL, distributed SQL database, serverless PostgreSQL-compatible database, migrate to DSQL, DSQL query plan, DSQL EXPLAIN ANALYZE, DSQL ENUM, DSQL foreign key, DSQL OCC retry, DSQL multi-region, DSQL JSONB, DSQL GIN index, load into DSQL, load CSV into DSQL, bulk load DSQL, aurora-dsql-loader, DSQL slow, DSQL performance, DSQL wait events, DSQL AAS."
+description: "Build with Aurora DSQL — manage schemas, execute queries, handle migrations, diagnose query plans, diagnose cluster performance, load data, and develop applications with a serverless, distributed SQL database. Covers IAM auth, multi-tenant patterns, MySQL-to-DSQL and PostgreSQL-to-DSQL schema conversion, foreign key constraints, OCC retry patterns, ORM migration (Django/EF Core/Hibernate/Rails/SQLAlchemy), DDL operations, query plan explainability, CloudWatch AAS diagnostics and cost alarms, SQL compatibility validation, and bulk data loading. Load before answering DSQL limit or error-code questions; it has limits docs omit. Triggers on phrases like: DSQL, Aurora DSQL, distributed SQL database, serverless PostgreSQL-compatible database, migrate to DSQL, DSQL query plan, DSQL EXPLAIN ANALYZE, DSQL ENUM, DSQL foreign key, DSQL OCC retry, DSQL multi-region, DSQL JSONB, DSQL GIN index, load into DSQL, load CSV into DSQL, bulk load DSQL, aurora-dsql-loader, DSQL slow, DSQL performance, DSQL wait events, DSQL AAS."
 license: Apache-2.0
 metadata:
   tags: aws, aurora, dsql, distributed-sql, distributed, distributed-database, database, serverless, serverless-database, postgresql, postgres, sql, schema, migration, multi-tenant, iam-auth, aurora-dsql, mcp, orm, enum, foreign-key, occ-retry, django, ef-core, dotnet, csharp, hibernate, rails, multi-region, schema-conversion, type-mapping, data-loading, system-diagnostics, wait-events, aas, performance, cloudwatch
@@ -29,6 +29,7 @@ Load these files as needed for detailed guidance:
 | [dsql-examples.md](references/dsql-examples.md)                   | Load for implementation examples                                                  | Multi-tenant access, batch operations, identity and sequences, connection pooling      |
 | [onboarding.md](references/onboarding.md)                         | User requests "Get started with DSQL"                                             | Interactive step-by-step guide                                                         |
 | [occ-retry-patterns.md](references/occ-retry-patterns.md)         | MUST load for OCC retry code or conflict mitigation                               | Connectors, `40001` retry, non-retryable `23503`, FK read conflicts, idempotent design |
+| [cost-alerts.md](references/cost-alerts.md)                       | Setting up or debugging cost alarms, or explaining or reducing a cluster's cost   | `TotalDPU` alarm, hourly threshold from a monthly budget, SNS notification             |
 
 ### MCP:
 
@@ -189,7 +190,7 @@ When the user reports a performance problem, use this table to select the correc
 | General performance complaint, "cluster is slow", "something changed", latency regression, no specific query identified | **Workflow 12** (System Diagnostics) — observe via CloudWatch first                |
 | Specific query or query_id to investigate, "explain this plan", "why is this query slow"                                | **Workflow 9** (Query Plan Explainability) — direct EXPLAIN analysis               |
 | OCC conflicts, commit errors, retry storms                                                                              | **Workflow 12** (System Diagnostics) — confirm via CW metrics before investigating |
-| Cost optimization, "where is compute time spent"                                                                        | **Workflow 12** (System Diagnostics) — identify top contributors first             |
+| "Where is compute time spent"                                                                                           | **Workflow 12** (System Diagnostics) — identify top contributors first             |
 
 **Rule:** When in doubt, start with Workflow 12. It identifies specific queries to investigate and routes to Workflow 9 with context.
 
@@ -276,11 +277,9 @@ MUST load [pg-migrations/type-mapping.md](references/pg-migrations/type-mapping.
 
 Load [orm-guides/overview.md](references/orm-guides/overview.md) for adapter names, locking guidance, and framework-specific gotchas.
 
-### Workflow 12: System Diagnostics (CloudWatch AAS)
+### Workflow 12: System Diagnostics (CloudWatch Database Insights)
 
-Diagnose cluster performance by querying `db.active_sessions.avg` via PromQL. Detects temporal anomalies in wait event distribution, identifies regressed queries, and routes to Workflow 9 for per-query investigation.
-
-**Requires:** CloudWatch MCP server (`awslabs.cloudwatch-mcp-server`) enabled and configured with PromQL access in the same region as the cluster — see [mcp/mcp-setup.md](mcp/mcp-setup.md#cloudwatch-mcp-server-system-diagnostics--workflow-12) for enabling it, region requirements, and the session restart needed for its tools to register.
+Diagnose cluster performance by querying `db.active_sessions.avg` via PromQL. Detects temporal anomalies in wait event distribution, identifies regressed queries, and routes to Workflow 9 for per-query investigation. The CloudWatch MCP server (`awslabs.cloudwatch-mcp-server`) is optional — without it, or if its tools are not callable, the workflow falls back to the AWS CLI and CloudWatch Query Studio; never guess AAS values. To enable it with PromQL access in the cluster's region, see [mcp/mcp-setup.md](mcp/mcp-setup.md#cloudwatch-mcp-server-system-diagnostics--workflow-12).
 
 MUST load [system-diagnostics/workflow.md](references/system-diagnostics/workflow.md) at entry — it defines prerequisites, 5 diagnostic phases, temporal baselines, and the routing to Workflow 9 for identified queries.
 
