@@ -93,10 +93,12 @@ EVAL_SCHEMA_VERSION = 2
 RESULT_SCHEMA_VERSION = 2
 GRADING_PROTOCOL_VERSION = 2
 AWS_KNOWLEDGE_SEARCH_TOOL = "mcp__awsknowledge__aws___search_documentation"
+AWS_KNOWLEDGE_READ_TOOL = "mcp__awsknowledge__aws___read_documentation"
 DSQL_LINT_TOOL = "mcp__aurora-dsql__dsql_lint"
 
 READ_ONLY_MCP_TOOLS = (
     AWS_KNOWLEDGE_SEARCH_TOOL,
+    AWS_KNOWLEDGE_READ_TOOL,
     DSQL_LINT_TOOL,
     "mcp__aurora-dsql__dsql_read_documentation",
     "mcp__aurora-dsql__dsql_recommend",
@@ -1393,7 +1395,8 @@ def run_prompt(
         "--allowedTools",
         ",".join((
             "Skill(databases-on-aws:dsql)",
-            f"Read({resolved_skill_dir}/**)",
+            # Permission rules anchor "/path" at the settings source; "//path" is absolute.
+            f"Read(/{resolved_skill_dir}/**)",
             *READ_ONLY_MCP_TOOLS,
             *BLOCKED_MCP_TOOLS,
         )),
@@ -1456,6 +1459,7 @@ def run_prompt(
     result_event = None
     protocol_errors = []
     assistant_turns = 0
+    last_assistant_id = None
     tool_call_ids = set()
     tool_result_ids = set()
     result_errors = []
@@ -1549,17 +1553,23 @@ def run_prompt(
             continue
 
         elif event_type == "assistant":
-            unresolved = tool_call_ids - tool_result_ids
-            if unresolved:
-                protocol_errors.append(
-                    "assistant event appeared before tool results resolved: "
-                    + ", ".join(sorted(unresolved))
-                )
-            assistant_turns += 1
             msg = event.get("message", {})
             if not isinstance(msg, dict):
                 protocol_errors.append("assistant message must be an object")
                 continue
+            # The CLI streams one message's content blocks as separate events
+            # that share its id; they form a single turn.
+            msg_id = msg.get("id")
+            continues_message = bool(msg_id) and msg_id == last_assistant_id
+            last_assistant_id = msg_id
+            unresolved = tool_call_ids - tool_result_ids
+            if unresolved and not continues_message:
+                protocol_errors.append(
+                    "assistant event appeared before tool results resolved: "
+                    + ", ".join(sorted(unresolved))
+                )
+            if not continues_message:
+                assistant_turns += 1
             content = msg.get("content", [])
             if not isinstance(content, list):
                 protocol_errors.append("assistant message content must be an array")
@@ -1635,13 +1645,20 @@ def run_prompt(
             if not isinstance(content, list):
                 protocol_errors.append("user message content must be an array")
                 continue
-            messages.append(msg)
+            # Keep CLI-injected text out of the assistant event timeline.
+            messages.append({**msg, "content": [
+                block for block in content
+                if not (isinstance(block, dict) and block.get("type") == "text")
+            ]})
             for block in content:
                 if not isinstance(block, dict):
                     protocol_errors.append("user content blocks must be objects")
                     continue
                 if block.get("type") == "tool_result":
                     record_tool_result(block, "tool_result block")
+                elif block.get("type") == "text":
+                    # The CLI injects the loaded skill body as user text.
+                    continue
                 else:
                     protocol_errors.append(
                         "user content block has unsupported type"
@@ -2039,7 +2056,9 @@ def _llm_judge(
                 duration_seconds=duration,
                 cost_usd=judge_cost,
             )
-        verdict = _json_loads(reply.strip())
+        reply = reply.strip()
+        fenced = re.fullmatch(r"```(?:json)?\n(.*)\n```", reply, re.DOTALL)
+        verdict = _json_loads(fenced.group(1) if fenced else reply)
         if not isinstance(verdict, dict):
             return _judge_error(
                 "LLM judge reply must be exactly one JSON object",
