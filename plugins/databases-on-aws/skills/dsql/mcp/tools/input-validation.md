@@ -53,12 +53,12 @@ sql = build("... WHERE tenant_id = {tid}", tid=regex(tenant_id, TENANT_SLUG))
 ## Why the Helper Exists
 
 - `readonly_query` and `transact` accept only SQL strings — no parameter
-  binding ([`server.py:141-142, 267-272`](https://github.com/awslabs/mcp/blob/main/src/aurora-dsql-mcp-server/awslabs/aurora_dsql_mcp_server/server.py#L141)).
+  binding ([`server.py:141-142, 267-272`](https://github.com/awslabs/mcp/blob/dbf8c317815911259b43e13cc79c9e83e0105fc1/src/aurora-dsql-mcp-server/awslabs/aurora_dsql_mcp_server/server.py#L141)).
 - Server-side regex filters reject textbook injection in read-only mode
   (tautologies, `--` comments, stacked queries, `UNION SELECT`) but miss
   subquery exfiltration and non-equality boolean injection.
 - Write mode disables those filters entirely
-  ([`server.py:295-318`](https://github.com/awslabs/mcp/blob/main/src/aurora-dsql-mcp-server/awslabs/aurora_dsql_mcp_server/server.py#L295-L318)).
+  ([`server.py:295-318`](https://github.com/awslabs/mcp/blob/dbf8c317815911259b43e13cc79c9e83e0105fc1/src/aurora-dsql-mcp-server/awslabs/aurora_dsql_mcp_server/server.py#L295-L318)).
   Skill-level validation is the only defense.
 
 ## Rules
