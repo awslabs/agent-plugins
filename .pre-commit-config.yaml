@@ -61,7 +61,6 @@ repos:
     rev: 1.9.3
     hooks:
     -   id: bandit
-        args: [ --baseline, .bandit-baseline.json ]
 
 -   repo: https://github.com/semgrep/pre-commit
     rev: v1.151.0
