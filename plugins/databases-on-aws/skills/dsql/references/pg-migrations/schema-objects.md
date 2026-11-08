@@ -166,7 +166,10 @@ CREATE TABLE events (
   created_at timestamptz NOT NULL DEFAULT now(),
   data jsonb
 );
-CREATE INDEX ASYNC idx_events_tenant_created ON events (tenant_id, created_at DESC);
+-- No ASC/DESC on index keys — DSQL rejects sort direction with
+-- 0A000: specifying sort order not supported for index keys.
+-- A backward scan still serves a uniformly-descending ORDER BY on these keys.
+CREATE INDEX ASYNC idx_events_tenant_created ON events (tenant_id, created_at);
 ```
 
 **Note:** DSQL's PK-ordered storage and distributed architecture handle data distribution
