@@ -44,7 +44,7 @@ Two roles are needed:
 - **Admin** — for `provision`, `update`, `teardown`, `credentials`, `network create`
 - **Executor** — for `analysis`, `remediation`, `status`, `cancel`, `detect`, `network discover`
 
-Executor policy: [AWSTransformInfrastructureExecutorAccessBatch](https://code.amazon.com/packages/ATXControlTowerPolicies/blobs/mainline/--/managed-policies/draft/AWSTransformInfrastructureExecutorAccessBatch.json) + `AWSTransformCustomFullAccess` managed policy.
+Executor policy: [AWSTransformInfrastructureExecutorAccessBatch](https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AWSTransformInfrastructureExecutorAccessBatch.html) + `AWSTransformCustomFullAccess` managed policy.
 
 ### Source Registration
 
