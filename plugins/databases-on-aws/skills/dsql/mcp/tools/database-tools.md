@@ -122,7 +122,7 @@ transact([
 - For large batch operations, split into multiple transact calls
 - **MUST** build every statement with [`safe_query.build()`](safe_query.py).
   Write mode disables all server-side injection filters
-  ([`server.py:295-318`](https://github.com/awslabs/mcp/blob/main/src/aurora-dsql-mcp-server/awslabs/aurora_dsql_mcp_server/server.py#L295-L318)) —
+  ([`server.py:295-318`](https://github.com/awslabs/mcp/blob/dbf8c317815911259b43e13cc79c9e83e0105fc1/src/aurora-dsql-mcp-server/awslabs/aurora_dsql_mcp_server/server.py#L295-L318)) —
   skill-level validation is the only defense.
 
 ---
