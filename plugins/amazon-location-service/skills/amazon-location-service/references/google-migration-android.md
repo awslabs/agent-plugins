@@ -376,6 +376,7 @@ import org.maplibre.android.plugins.annotation.SymbolOptions
 
 class MapActivity : AppCompatActivity() {
     private lateinit var mapView: MapView
+    private val apiKey = "YOUR_AMAZON_LOCATION_API_KEY"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -383,10 +384,11 @@ class MapActivity : AppCompatActivity() {
         MapLibre.getInstance(this)
         mapView = MapView(this)
         setContentView(mapView)
+        mapView.onCreate(savedInstanceState)
 
         mapView.getMapAsync { map ->
             // Get Amazon Location map style
-            val styleUrl = "https://maps.geo.us-west-2.amazonaws.com/v2/styles/Standard/descriptor?key=$API_KEY"
+            val styleUrl = "https://maps.geo.us-west-2.amazonaws.com/v2/styles/Standard/descriptor?key=$apiKey"
 
             map.setStyle(Style.Builder().fromUri(styleUrl)) { style ->
                 // Add marker
@@ -405,6 +407,18 @@ class MapActivity : AppCompatActivity() {
             }
         }
     }
+
+    // MapLibre requires forwarding these Activity lifecycle calls to MapView
+    override fun onStart() { super.onStart(); mapView.onStart() }
+    override fun onResume() { super.onResume(); mapView.onResume() }
+    override fun onPause() { mapView.onPause(); super.onPause() }
+    override fun onStop() { mapView.onStop(); super.onStop() }
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        mapView.onSaveInstanceState(outState)
+    }
+    override fun onLowMemory() { super.onLowMemory(); mapView.onLowMemory() }
+    override fun onDestroy() { mapView.onDestroy(); super.onDestroy() }
 }
 ```
 
@@ -634,6 +648,8 @@ googleMap.addPolyline(polylineOptions)
 **Amazon Location:**
 
 ```kotlin
+import aws.sdk.kotlin.services.georoutes.model.CalculateRoutesRequest
+import aws.sdk.kotlin.services.georoutes.model.GeometryFormat
 import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.PropertyFactory.*
 import org.maplibre.android.style.sources.GeoJsonSource
@@ -641,8 +657,18 @@ import org.maplibre.geojson.Feature
 import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
 
-// Convert route to GeoJSON
-val coordinates = routePoints.map { Point.fromLngLat(it.second, it.first) }
+// Request Simple geometry so each leg has a lineString. The default, FlexiblePolyline,
+// returns geometry.polyline instead (decode it with Polyline.decodeToLineStringFeature).
+val response = routesClient.calculateRoutes(CalculateRoutesRequest {
+    origin = listOf(-97.7431, 30.2747) // Austin [lng, lat]
+    destination = listOf(-96.7970, 32.7767) // Dallas [lng, lat]
+    legGeometryFormat = GeometryFormat.Simple
+})
+
+// Convert route to GeoJSON; lineString positions are already [lng, lat]
+val coordinates = response.routes.firstOrNull()?.legs.orEmpty().flatMap { leg ->
+    leg.geometry?.lineString.orEmpty().map { Point.fromLngLat(it[0], it[1]) }
+}
 val lineString = LineString.fromLngLats(coordinates)
 val feature = Feature.fromGeometry(lineString)
 

@@ -165,15 +165,28 @@ const response = await client.send(
 Combine tracking data with MapLibre to show devices on an interactive map. See the **dynamic-map** reference for full MapLibre setup.
 
 ```javascript
+// ListDevicePositions returns at most 100 devices per call; follow NextToken for the rest
+async function listAllDevicePositions() {
+  const entries = [];
+  let NextToken;
+  do {
+    const page = await client.send(
+      new ListDevicePositionsCommand({
+        TrackerName: "my-fleet-tracker",
+        NextToken,
+      }),
+    );
+    entries.push(...page.Entries);
+    NextToken = page.NextToken;
+  } while (NextToken);
+  return entries;
+}
+
 // After map loads, add device markers
 map.on("load", async () => {
-  const response = await client.send(
-    new ListDevicePositionsCommand({
-      TrackerName: "my-fleet-tracker",
-    }),
-  );
+  const devices = await listAllDevicePositions();
 
-  response.Entries.forEach((device) => {
+  devices.forEach((device) => {
     const content = document.createElement("div");
     const title = document.createElement("h4");
     title.textContent = device.DeviceId;
@@ -191,18 +204,18 @@ map.on("load", async () => {
 
 ### Real-Time Updates
 
-For live tracking, poll for position updates on an interval:
+For live tracking, poll for position updates on an interval. Schedule each poll after the previous one finishes, so slow or throttled responses never overlap and apply out of order:
 
 ```javascript
-setInterval(async () => {
-  const response = await client.send(
-    new ListDevicePositionsCommand({
-      TrackerName: "my-fleet-tracker",
-    }),
-  );
-  // Update marker positions on the map
-  updateMarkers(response.Entries);
-}, 15000); // every 15 seconds
+(async function poll() {
+  try {
+    // Update marker positions on the map (listAllDevicePositions is defined above)
+    updateMarkers(await listAllDevicePositions());
+  } catch (err) {
+    console.error("Position poll failed:", err);
+  }
+  setTimeout(poll, 15000); // 15 seconds after this poll finished
+})();
 ```
 
 **Note**: If markers are **draggable** (e.g., for interactive dashboards), polling will fight with drag by calling `setLngLat()` mid-drag. Pause polling on `dragstart` and resume on `dragend`.
@@ -212,16 +225,22 @@ setInterval(async () => {
 Display a device's historical route as a line on the map. The [`amazon-location-utilities-datatypes-js`](https://github.com/aws-geospatial/amazon-location-utilities-datatypes-js) library provides `devicePositionsToFeatureCollection()` to convert tracking responses into GeoJSON FeatureCollections of Point features — useful for plotting individual position markers. For drawing a connected route line, extract coordinates directly as shown below.
 
 ```javascript
-const history = await client.send(
-  new GetDevicePositionHistoryCommand({
-    TrackerName: "my-fleet-tracker",
-    DeviceId: "truck-01",
-    StartTimeInclusive: new Date("2024-01-15T08:00:00Z"),
-    EndTimeExclusive: new Date("2024-01-15T17:00:00Z"),
-  }),
-);
-
-const coordinates = history.DevicePositions.map((p) => p.Position);
+// Each call returns at most 100 positions; follow NextToken for the rest
+const coordinates = [];
+let NextToken;
+do {
+  const history = await client.send(
+    new GetDevicePositionHistoryCommand({
+      TrackerName: "my-fleet-tracker",
+      DeviceId: "truck-01",
+      StartTimeInclusive: new Date("2024-01-15T08:00:00Z"),
+      EndTimeExclusive: new Date("2024-01-15T17:00:00Z"),
+      NextToken,
+    }),
+  );
+  coordinates.push(...history.DevicePositions.map((p) => p.Position));
+  NextToken = history.NextToken;
+} while (NextToken);
 
 map.addSource("route", {
   type: "geojson",
