@@ -353,6 +353,71 @@
         "Suggests consolidating indexes, for example into composite indexes, rather than trying to raise the limit"
       ],
       "grader": "llm_judge"
+    },
+    {
+      "id": 29,
+      "prompt": "I have two Aurora DSQL clusters in us-east-1: orders with a $100 monthly budget and analytics with a $50 monthly budget. How do I set up CloudWatch alarms that email my team when either cluster's usage is on track to exceed its budget, and what thresholds should I use?",
+      "expected_output": "Creates one alarm per cluster on TotalDPU (namespace AWS/AuroraDSQL, dimension ClusterId) with the Sum statistic over a 1-hour (3600-second) period, each named for its own cluster ID, noting that put-metric-alarm overwrites an alarm with the same name. Derives each hourly threshold as budget / the Region's per-DPU rate / 730 hours x 0.8 with the rate from the Aurora DSQL pricing page (about 13,699 and 6,849 DPUs at $8 per million DPUs). Sends both alarms to one SNS topic with an email subscription, encrypted with a customer managed KMS key whose policy allows cloudwatch.amazonaws.com, not alias/aws/sns, keeping the key's existing policy statements when adding that statement. Notes that the alarm evaluates single hours rather than month-to-date spend, suggests AWS Budgets for cumulative tracking, and asks or states whether each budget covers only DPU usage or also storage.",
+      "expectations": [
+        "Uses TotalDPU with the Sum statistic over 1-hour periods, with a separate alarm per cluster",
+        "Derives each threshold from its own budget: budget / the Region's per-DPU rate / 730 hours, with or without an early-warning margin such as 0.8, either computed or given as the formula with the rate from the Aurora DSQL pricing page; does not use one threshold for both clusters",
+        "Sends both alarms through one SNS topic with an email subscription rather than a topic per cluster",
+        "Encrypts the topic with a customer managed KMS key whose key policy allows cloudwatch.amazonaws.com, and states that the AWS managed key alias/aws/sns cannot be used for alarm notifications",
+        "Notes that the alarm evaluates single hours rather than month-to-date spend",
+        "Suggests AWS Budgets for cumulative monthly tracking",
+        "Asks or states whether the budgets cover only DPU usage or also storage",
+        "Keeps the key's existing policy statements when adding the CloudWatch statement: merges it into the current policy (put-key-policy replaces the whole policy), or for a new key, creates it with the default policy plus the statement"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 30,
+      "prompt": "We run a multi-Region Aurora DSQL cluster with peers in us-east-1 and us-east-2 that stores about 100 GiB, and one $100 monthly budget for both Regions. Help me keep spending under that and set up DPU alarms.",
+      "expected_output": "Treats the $100 as covering storage as well as DPU usage, or asks, and subtracts the storage cost of each peer Region first (ClusterStorageSize at each Region's per-GiB-month rate). Splits the remaining DPU budget between the two Regions and creates one TotalDPU alarm per Region on that Region's cluster ID, each sized from its own share. Notes that multi-Region write replication is billed as MultiRegionWriteDPU in the Region where the write originated, so the writing Region needs the larger share. Recommends AWS Budgets for the combined monthly total and states that alarms notify but do not cap spending. Does not size each Region's alarm from the full $100.",
+      "expectations": [
+        "Subtracts the storage cost for each Region (each peer is billed for its own copy) before sizing the DPU alarms, or asks whether the budget covers storage, and does not size any alarm from the full $100",
+        "Splits the remaining DPU budget between the two Regions and creates one TotalDPU alarm per Region on that Region's cluster ID, each sized from its own share",
+        "Notes that writes replicated to the peer are billed as MultiRegionWriteDPU in the Region where they originate, so the writing Region needs the larger share",
+        "Recommends AWS Budgets for the combined monthly total and states that the alarms notify but do not cap spending"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 31,
+      "prompt": "Our Aurora DSQL bill for a cluster in us-east-1 doubled last month, but query latency hasn't changed. What should I look at to find out why?",
+      "expected_output": "Starts from the billed components: compares ComputeDPU, ReadDPU, WriteDPU, MultiRegionWriteDPU, StreamDPU if CDC is enabled, and ClusterStorageSize across last month and the month before, using the Sum statistic for the DPU metrics, to find which component grew. Explains that unchanged latency does not rule out a cost increase, for example from more queries, larger scans, more writes, replication or storage growth. Uses AAS or query-plan analysis such as EXPLAIN ANALYZE VERBOSE only if query activity drove the increase. Does not start with a performance diagnosis and does not treat setting up an alarm as the answer.",
+      "expectations": [
+        "Compares the per-component DPU metrics (for example ComputeDPU, ReadDPU, WriteDPU, MultiRegionWriteDPU, and StreamDPU if CDC is enabled) and ClusterStorageSize across last month and the month before, using the Sum statistic for the DPU metrics",
+        "Explains that unchanged latency does not rule out a cost increase, for example from more queries, larger scans, more writes, replication or storage growth",
+        "Uses AAS (Workflow 12) or query-plan analysis only if query activity drove the increase",
+        "Does not start with a performance diagnosis and does not treat setting up an alarm as the answer"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 32,
+      "prompt": "Our CloudWatch alarm on an Aurora DSQL cluster's TotalDPU went into ALARM yesterday, but nobody on the team got an email. How do I figure out what went wrong?",
+      "expected_output": "Checks the alarm's action history (describe-alarm-history with the Action history type) for a failed SNS action, such as CloudWatch Alarms not being authorized to use the topic's encryption key, and checks the topic's subscriptions (list-subscriptions-by-topic) for an email subscription still in PendingConfirmation. Explains that a topic encrypted with the AWS managed key alias/aws/sns cannot deliver alarm notifications and needs a customer managed key whose policy allows cloudwatch.amazonaws.com kms:Decrypt and kms:GenerateDataKey*, and that the topic policy must allow the alarm to publish. Also checks that the alarm's actions point at the intended topic.",
+      "expectations": [
+        "Checks the alarm's action history (describe-alarm-history) for a failed SNS action",
+        "Checks the topic's subscriptions (list-subscriptions-by-topic) for an email subscription still in PendingConfirmation",
+        "Explains that a topic encrypted with the AWS managed key alias/aws/sns cannot deliver alarm notifications, and that it needs a customer managed key whose key policy lets CloudWatch (cloudwatch.amazonaws.com) use it",
+        "States that the topic policy must allow the alarm to publish",
+        "Checks that the alarm's actions point at the intended topic"
+      ],
+      "grader": "llm_judge"
+    },
+    {
+      "id": 33,
+      "prompt": "Using the CloudWatch MCP server's PromQL tools, what calls should I run to compare the top 5 SQL statements by average active sessions on Aurora DSQL cluster abc123def456ghi789jkl012mn in us-east-1 for 14:00-15:00 UTC on 2026-10-13 against the same hour a week earlier?",
+      "expected_output": "Builds one query per window that averages AAS over the whole hour: sum_over_time over [1h] divided by 60, or an equivalent that counts minutes with no samples as zero, such as a range query with sum_over_time over [1m] that it averages. A bare selector with no range function, which reads a single minute, or avg_over_time, which ignores idle minutes, does not meet this. Evaluates the current window at 2026-10-13T15:00:00Z and the baseline at 2026-10-06T15:00:00Z through the time parameter (or offset 1w), not at the default of now. Groups by db.query.normalized_text and db.query.id, filters on the @resource.aws.auroradsql.cluster_id label, and sorts the results by value before ranking them, since topk does not return them in order.",
+      "expectations": [
+        "Averages AAS over the whole hour: sum_over_time over [1h] divided by 60, or an equivalent that counts minutes with no samples as zero; not a bare selector, which reads a single minute, or avg_over_time, which ignores idle minutes",
+        "Evaluates the current window at 2026-10-13T15:00:00Z and the baseline at 2026-10-06T15:00:00Z through the time parameter (or offset 1w), not at the default of now",
+        "Includes db.query.id in the grouping, not only the query text (the stable identifier for a Workflow 9 handoff)",
+        "Sorts the results by value before ranking them, since topk does not return them in order"
+      ],
+      "grader": "llm_judge"
     }
   ]
 }
