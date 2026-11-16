@@ -40,6 +40,8 @@ jobs:
         uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
         with:
           cache: true
+          # Key on the runner image: tools built on one image break on another
+          cache_key: '{{default}}-{{env.ImageOS}}'
 
       - name: Install tools
         run: mise install
