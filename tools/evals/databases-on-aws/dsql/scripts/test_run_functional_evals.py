@@ -659,6 +659,147 @@ def test_unknown_user_read_path_fails_closed(monkeypatch, tmp_path) -> None:
     assert "file_path could not be resolved" in result["infrastructure_error"]  # nosec B101
 
 
+def test_cli_skill_text_and_split_messages_are_accepted(
+    monkeypatch, tmp_path
+) -> None:
+    # The CLI injects the loaded skill as user text and streams one
+    # assistant message as several events that share its id, even
+    # after one of that message's tool results.
+    events = [
+        {"type": "assistant", "message": {"id": "msg-1", "content": [{
+            "type": "tool_use",
+            "id": "skill-1",
+            "name": "Skill",
+            "input": {"skill": "databases-on-aws:dsql"},
+        }]}},
+        {"type": "user", "message": {"content": [{
+            "type": "tool_result",
+            "tool_use_id": "skill-1",
+            "is_error": False,
+            "content": "loaded",
+        }]}},
+        {"type": "user", "isSynthetic": True, "message": {"content": [
+            {"type": "text", "text": "Base directory for this skill: ..."},
+        ]}},
+        {"type": "assistant", "message": {"id": "msg-2", "content": [
+            {"type": "thinking", "thinking": "plan"},
+        ]}},
+        {"type": "assistant", "message": {"id": "msg-2", "content": [{
+            "type": "tool_use",
+            "id": "read-1",
+            "name": "Read",
+            "input": {"file_path": str(tmp_path / "plugin/skills/dsql/SKILL.md")},
+        }]}},
+        {"type": "user", "message": {"content": [{
+            "type": "tool_result",
+            "tool_use_id": "read-1",
+            "is_error": False,
+            "content": "reference",
+        }]}},
+        {"type": "assistant", "message": {"id": "msg-2", "content": [
+            {"type": "text", "text": "Reading the reference."},
+        ]}},
+        {"type": "assistant", "message": {"id": "msg-3", "content": [
+            {"type": "text", "text": "The transaction limit is 3,000 rows."},
+        ]}},
+        {"type": "result", "subtype": "success", "is_error": False,
+         "result": "The transaction limit is 3,000 rows.", "total_cost_usd": 0},
+    ]
+    monkeypatch.setattr(
+        RUNNER,
+        "_run_captured",
+        lambda *args, **kwargs: _completed(_event_stream(events)),
+    )
+
+    result = RUNNER.run_prompt("prompt", tmp_path / "plugin")
+
+    assert result["infrastructure_error"] == ""  # nosec B101
+    assert result["turn_count"] == 3  # nosec B101
+    # msg-2's text was written before read-1's result arrived.
+    assert [event["type"] for event in RUNNER._message_timeline(result)] == [  # nosec B101
+        "tool_call", "tool_result", "tool_call", "assistant_text",
+        "tool_result", "assistant_text",
+    ]
+
+    # A new message id after an unresolved tool_use is still a protocol error.
+    unresolved = [event for event in events if event is not events[5]]
+    monkeypatch.setattr(
+        RUNNER,
+        "_run_captured",
+        lambda *args, **kwargs: _completed(_event_stream(unresolved)),
+    )
+    error = RUNNER.run_prompt("prompt", tmp_path / "plugin")["infrastructure_error"]
+    assert "assistant event appeared before tool results resolved" in error  # nosec B101
+
+    # Any other user text is still a protocol error.
+    skill_text = events[2]
+    plain_text = {**skill_text, "isSynthetic": False}
+    not_a_string = {**skill_text, "message": {"content": [
+        {"type": "text", "text": {"x": 1}},
+    ]}}
+    with_result = {"type": "user", "isSynthetic": True, "message": {"content": [
+        *events[1]["message"]["content"], *skill_text["message"]["content"],
+    ]}}
+    for stream in (
+        [skill_text, *events[:2], *events[3:]],
+        [*events[:2], plain_text, *events[3:]],
+        [*events[:2], not_a_string, *events[3:]],
+        [events[0], with_result, *events[3:]],
+    ):
+        monkeypatch.setattr(
+            RUNNER,
+            "_run_captured",
+            lambda *args, stream=stream, **kwargs: _completed(_event_stream(stream)),
+        )
+        error = RUNNER.run_prompt("prompt", tmp_path / "plugin")["infrastructure_error"]
+        assert "user content block has unsupported type" in error  # nosec B101
+
+    def assistant(msg_id, *blocks):
+        return {"type": "assistant", "message": {"id": msg_id, "content": list(blocks)}}
+
+    def read(call_id):
+        return {**events[4]["message"]["content"][0], "id": call_id}
+
+    def read_result(call_id):
+        return {"type": "user", "message": {"content": [
+            {**events[5]["message"]["content"][0], "tool_use_id": call_id},
+        ]}}
+
+    text = events[7]["message"]["content"][0]
+    loaded, result = events[:3], events[-1]
+    # (stream, expected error, expected fallback turn count)
+    for stream, expected_error, expected_turns in (
+        # Parallel calls: the second part of msg-2 arrives before any result.
+        ([*loaded, assistant("msg-2", read("r1")), assistant("msg-2", read("r2")),
+          read_result("r1"), read_result("r2"), assistant("msg-3", text), result],
+         "", 3),
+        # Only a nonempty string id continues a message.
+        ([*loaded, assistant(True, read("r1")), assistant(True, text),
+          read_result("r1"), result],
+         "assistant event appeared before tool results resolved", None),
+        ([*loaded, assistant("", text), assistant("", text), result], "", 3),
+        # Only the previous id continues a message, not any earlier one.
+        ([*loaded, assistant("a", text), assistant("b", read("r1")),
+          assistant("a", text), read_result("r1"), result],
+         "assistant event appeared before tool results resolved", None),
+        ([*loaded, {"type": "user", "message": {"content": [
+            {"type": "image", "source": {}},
+        ]}}, assistant("msg-3", text), result],
+         "user content block has unsupported type", None),
+    ):
+        monkeypatch.setattr(
+            RUNNER,
+            "_run_captured",
+            lambda *args, stream=stream, **kwargs: _completed(_event_stream(stream)),
+        )
+        run = RUNNER.run_prompt("prompt", tmp_path / "plugin")
+        if expected_error:
+            assert expected_error in run["infrastructure_error"]  # nosec B101
+        else:
+            assert run["infrastructure_error"] == ""  # nosec B101
+            assert run["turn_count"] == expected_turns  # nosec B101
+
+
 def test_output_setup_preserves_unowned_sibling_runs(tmp_path) -> None:
     output_dir = tmp_path / "results"
     unrelated_sibling = tmp_path / ".results.run-user-notes"
@@ -766,7 +907,9 @@ def test_subject_execution_is_isolated_and_fails_closed(
     assert command[command.index("--max-turns") + 1] == "31"  # nosec B101
     assert "mcp__*" not in read_tools  # nosec B101
     assert RUNNER.AWS_KNOWLEDGE_SEARCH_TOOL in read_tools  # nosec B101
-    assert "/skills/dsql/**)" in read_tools  # nosec B101
+    assert RUNNER.AWS_KNOWLEDGE_READ_TOOL in read_tools  # nosec B101
+    skill_dir = Path("plugin").resolve() / "skills" / "dsql"
+    assert f"Read(/{skill_dir}/**)" in read_tools.split(",")  # nosec B101
     assert "Read(" in read_tools and "/plugin/**)" not in read_tools  # nosec B101
     assert "mcp__aurora-dsql__readonly_query" not in read_tools  # nosec B101
     assert "mcp__aurora-dsql__get_schema" not in read_tools  # nosec B101
@@ -4365,6 +4508,34 @@ def test_llm_judge_rejects_success_result_with_top_level_errors(monkeypatch):
         pass_env=(),
     )
     assert verdict["infrastructure_error"] is True  # nosec B101
+
+
+def test_llm_judge_accepts_one_json_code_fence(monkeypatch):
+    def judge(reply):
+        monkeypatch.setattr(
+            RUNNER,
+            "_run_captured",
+            lambda *args, **kwargs: _completed(json.dumps({
+                "subtype": "success",
+                "is_error": False,
+                "result": reply,
+            })),
+        )
+        return RUNNER._llm_judge("prompt", "answer", "expectation")["passed"]
+
+    verdict = '{"passed": false, "evidence": "not stated"}'
+    assert judge(f"```json\n{verdict}\n```") is False  # nosec B101
+    assert judge(f"```\n{verdict}\n```") is False  # nosec B101
+    for reply in [f"```json\r\n{verdict}\r\n```", f"```JSON\n{verdict}\n```",
+                  f"```json \n{verdict}\n```"]:
+        assert judge(reply) is False  # nosec B101
+    for reply in [
+        f"Verdict:\n```json\n{verdict}\n```",
+        f"```json\n{verdict}\n```\n```json\n{verdict}\n```",
+        f"```json\n{verdict}",
+        f"```python\n{verdict}\n```",
+    ]:
+        assert judge(reply) is None  # nosec B101
 
 
 def test_lint_call_must_use_sql_from_the_prompt():

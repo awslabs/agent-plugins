@@ -93,10 +93,12 @@ EVAL_SCHEMA_VERSION = 2
 RESULT_SCHEMA_VERSION = 2
 GRADING_PROTOCOL_VERSION = 2
 AWS_KNOWLEDGE_SEARCH_TOOL = "mcp__awsknowledge__aws___search_documentation"
+AWS_KNOWLEDGE_READ_TOOL = "mcp__awsknowledge__aws___read_documentation"
 DSQL_LINT_TOOL = "mcp__aurora-dsql__dsql_lint"
 
 READ_ONLY_MCP_TOOLS = (
     AWS_KNOWLEDGE_SEARCH_TOOL,
+    AWS_KNOWLEDGE_READ_TOOL,
     DSQL_LINT_TOOL,
     "mcp__aurora-dsql__dsql_read_documentation",
     "mcp__aurora-dsql__dsql_recommend",
@@ -1393,7 +1395,8 @@ def run_prompt(
         "--allowedTools",
         ",".join((
             "Skill(databases-on-aws:dsql)",
-            f"Read({resolved_skill_dir}/**)",
+            # Permission rules anchor "/path" at the settings source; "//path" is absolute.
+            f"Read(/{resolved_skill_dir}/**)",
             *READ_ONLY_MCP_TOOLS,
             *BLOCKED_MCP_TOOLS,
         )),
@@ -1456,6 +1459,9 @@ def run_prompt(
     result_event = None
     protocol_errors = []
     assistant_turns = 0
+    last_assistant_id = None
+    last_assistant_index = None
+    skill_result_seen = False
     tool_call_ids = set()
     tool_result_ids = set()
     result_errors = []
@@ -1542,6 +1548,9 @@ def run_prompt(
                 )
             continue
 
+        if event_type != "system" and event_type not in INFORMATIONAL_EVENT_TYPES:
+            skill_text_allowed, skill_result_seen = skill_result_seen, False
+
         if event_type == "system":
             continue
 
@@ -1549,22 +1558,35 @@ def run_prompt(
             continue
 
         elif event_type == "assistant":
-            unresolved = tool_call_ids - tool_result_ids
-            if unresolved:
-                protocol_errors.append(
-                    "assistant event appeared before tool results resolved: "
-                    + ", ".join(sorted(unresolved))
-                )
-            assistant_turns += 1
             msg = event.get("message", {})
             if not isinstance(msg, dict):
                 protocol_errors.append("assistant message must be an object")
                 continue
+            # The CLI streams one message's content blocks as separate events
+            # that share its id; they form a single turn.
+            msg_id = msg.get("id")
+            continues_message = (
+                isinstance(msg_id, str) and bool(msg_id) and msg_id == last_assistant_id
+            )
+            last_assistant_id = msg_id
+            unresolved = tool_call_ids - tool_result_ids
+            if unresolved and not continues_message:
+                protocol_errors.append(
+                    "assistant event appeared before tool results resolved: "
+                    + ", ".join(sorted(unresolved))
+                )
+            if not continues_message:
+                assistant_turns += 1
             content = msg.get("content", [])
             if not isinstance(content, list):
                 protocol_errors.append("assistant message content must be an array")
                 continue
-            messages.append(msg)
+            # Keep one message's blocks together, ahead of their tool results.
+            if continues_message and last_assistant_index is not None:
+                messages[last_assistant_index]["content"].extend(content)
+            else:
+                last_assistant_index = len(messages)
+                messages.append({**msg, "content": list(content)})
             for block in content:
                 if not isinstance(block, dict):
                     protocol_errors.append(
@@ -1635,6 +1657,17 @@ def run_prompt(
             if not isinstance(content, list):
                 protocol_errors.append("user message content must be an array")
                 continue
+            # The CLI sends the loaded skill body as one synthetic user text
+            # right after the Skill result; keep it out of the timeline.
+            if (
+                skill_text_allowed
+                and event.get("isSynthetic") is True
+                and len(content) == 1
+                and isinstance(content[0], dict)
+                and content[0].get("type") == "text"
+                and isinstance(content[0].get("text"), str)
+            ):
+                continue
             messages.append(msg)
             for block in content:
                 if not isinstance(block, dict):
@@ -1642,6 +1675,7 @@ def run_prompt(
                     continue
                 if block.get("type") == "tool_result":
                     record_tool_result(block, "tool_result block")
+                    skill_result_seen |= _dsql_skill_loaded(tool_calls, [block])
                 else:
                     protocol_errors.append(
                         "user content block has unsupported type"
@@ -2039,7 +2073,11 @@ def _llm_judge(
                 duration_seconds=duration,
                 cost_usd=judge_cost,
             )
-        verdict = _json_loads(reply.strip())
+        reply = reply.strip()
+        fenced = re.fullmatch(
+            r"```(?:json)?[ \t]*\r?\n(.*)\r?\n[ \t]*```", reply, re.DOTALL | re.IGNORECASE
+        )
+        verdict = _json_loads(fenced.group(1) if fenced else reply)
         if not isinstance(verdict, dict):
             return _judge_error(
                 "LLM judge reply must be exactly one JSON object",
