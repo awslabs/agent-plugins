@@ -146,5 +146,17 @@
   {
     "query": "Load my parquet files from S3 into Redshift using COPY command",
     "should_trigger": false
+  },
+  {
+    "query": "set up a CloudWatch alarm that emails my team when my Aurora DSQL cluster's DPU usage is on track to go over a $200 monthly budget",
+    "should_trigger": true
+  },
+  {
+    "query": "alert my team by email when my DSQL cluster's DPU usage is on track to go over a $200 monthly budget",
+    "should_trigger": true
+  },
+  {
+    "query": "set up a CloudWatch billing alarm that emails me when my total AWS bill goes over $200 this month",
+    "should_trigger": false
   }
 ]

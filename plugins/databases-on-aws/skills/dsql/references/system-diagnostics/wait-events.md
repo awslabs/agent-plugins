@@ -1,28 +1,28 @@
 # DSQL Wait Events Reference
 
-Aurora DSQL exposes wait events via the `db.wait.event` label on `db.active_sessions.avg`. Each indicates where sessions spend time.
+Aurora DSQL exposes wait events via the `db.wait.event` label on `db.active_sessions.avg`. Each indicates where sessions spend time. Descriptions follow the AWS docs ([DASH wait events](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/dsql-db-insights.html#dash-wait-events)); the wait class is the value of the `db.wait.class` label.
 
 > **Observe-only guardrail.** A wait event tells you _where_ time was spent, not _why_. The "Possible causes" lists below are **candidates to confirm in Workflow 9 (`EXPLAIN ANALYZE`)** — they are **not** findings you may report from CloudWatch data alone. In particular, a read/IO wait event (`SequentialScanRead`, `ScatteredBatchRead`, `SingleRead`) does **not** establish a full/sequential scan, a missing index, or a plan regression: the same label appears for a fast, fully-indexed query executed by many concurrent sessions. Never restate a wait-event label as a scan type or an index state — that is Workflow 9's output. See the observe-only principles in [workflow.md](workflow.md).
 >
-> **Query snippet convention.** The PromQL snippets in each section below are illustrative and abbreviated: the `...` inside a selector stands for the mandatory `"@resource.aws.auroradsql.cluster_id"="CLUSTER_ID"` filter (and any time window), which you **MUST** supply. Do not paste a snippet with a literal `...` — substitute the cluster filter first. Full, runnable templates are in [promql-patterns.md](promql-patterns.md).
+> **Query snippet convention.** The PromQL snippets in each section below are illustrative and abbreviated: the `...` inside a selector stands for the mandatory `"@resource.aws.auroradsql.cluster_id"="CLUSTER_ID"` filter, which you **MUST** supply. As written, a snippet returns the latest one-minute sample; to compare a window with a baseline, wrap the selector in `sum_over_time(...[1h])`, divide by 60, and pass `time` as the window's end, as in [promql-patterns.md](promql-patterns.md#instant-queries). Do not paste a snippet with a literal `...` — substitute the cluster filter first. Full, runnable templates are in [promql-patterns.md](promql-patterns.md).
 
 ---
 
 ## Summary
 
-| Wait Event            | Category    | Description                                                                                                |
-| --------------------- | ----------- | ---------------------------------------------------------------------------------------------------------- |
-| OnCpu                 | Compute     | Actively processing in QP, not waiting for any other resource                                              |
-| ClientRead            | Network     | QP is waiting for the next request (only reported when QP has an active transaction — idle in transaction) |
-| ClientWrite           | Network     | QP is sending data to the application                                                                      |
-| SequentialScanRead    | IO          | QP has issued a scan of a contiguous range of tuples                                                       |
-| ScatteredBatchRead    | IO          | QP has issued one or more non-contiguous tuple reads                                                       |
-| SingleRead            | IO          | QP is reading a tuple returned by a streamed storage operation                                             |
-| FkExistenceCheck      | Validation  | Storage reads to validate foreign key existence                                                            |
-| UniqueConstraintCheck | Validation  | Storage reads to validate unique key constraints for non-primary columns                                   |
-| Commit                | Transaction | Commit process has begun, and QP is waiting for a response                                                 |
-| StartTransaction      | Transaction | Waiting for distributed transaction start                                                                  |
-| PgSleep               | Application | Session issued `pg_sleep()` and is waiting for the sleep period to complete                                |
+| Wait Event            | Wait class      | Description                                                                                                                  |
+| --------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| OnCpu                 | `class:oncpu`   | Actively processing in QP, not waiting for any other resource                                                                |
+| ClientRead            | `class:client`  | QP is waiting for the next request (only reported when QP has an active transaction — idle in transaction)                   |
+| ClientWrite           | `class:client`  | QP is sending data to the application                                                                                        |
+| SequentialScanRead    | `class:io`      | QP has issued a scan of a contiguous range of tuples                                                                         |
+| ScatteredBatchRead    | `class:io`      | QP has issued one or more non-contiguous tuple reads                                                                         |
+| SingleRead            | `class:io`      | QP is reading a single tuple (point lookup) from storage; uncommon in current DSQL versions                                  |
+| FkExistenceCheck      | `class:io`      | Storage reads to validate foreign key existence                                                                              |
+| UniqueConstraintCheck | `class:io`      | Storage reads to validate unique key constraints — unique constraints on non-primary-key columns, and primary keys on insert |
+| Commit                | `class:io`      | Commit process has begun, and QP is waiting for a response                                                                   |
+| StartTransaction      | `class:io`      | The session is preparing for the distributed transaction to begin                                                            |
+| PgSleep               | `class:timeout` | Session issued `pg_sleep()` and is waiting for the sleep period to complete                                                  |
 
 ---
 
@@ -122,7 +122,7 @@ QP has issued one or more non-contiguous tuple reads.
 
 ## SingleRead
 
-QP is reading a tuple returned by a streamed storage operation.
+QP is reading a single tuple (point lookup) from storage. `ScatteredBatchRead` with a batch size of 1 largely replaces this event, which is uncommon in current Aurora DSQL versions.
 
 **Possible causes** (candidates to confirm in Workflow 9 — see the observe-only guardrail above):
 
@@ -134,7 +134,7 @@ QP is reading a tuple returned by a streamed storage operation.
 **Observe-only steps:**
 
 1. Identify query: `topk(5, sum by ("db.query.normalized_text", "db.query.id")({__name__="db.active_sessions.avg", "db.wait.event"="SingleRead", ...}))`
-2. Check if SingleRead AAS has grown vs baseline — indicates increased call frequency
+2. Report whether SingleRead AAS has grown vs baseline. Growth can come from more calls, longer reads, or both, and AAS alone cannot tell which. Before naming a cause, compare the query's call count and latency from the application; the `TotalTransactions` CW metric (queried as in [Phase 4](workflow.md#phase-4-commit-and-occ-analysis)) shows cluster-wide volume only
 3. Hand the identified query off to Workflow 9 for query-level diagnostics
 
 ---
@@ -151,18 +151,18 @@ Storage reads to validate foreign key existence.
 **Observe-only steps:**
 
 1. Identify query: `sum by ("db.query.normalized_text", "db.query.id")({__name__="db.active_sessions.avg", "db.wait.event"="FkExistenceCheck", ...})`
-2. Check if insert volume has increased using the `TotalTransactions` CW metric (namespace `AWS/AuroraDSQL`, `statistic="Sum"` — it is a cumulative counter)
+2. Compare total transaction volume with the `TotalTransactions` CW metric (queried as in [Phase 4](workflow.md#phase-4-commit-and-occ-analysis)). It includes read-only transactions; subtract `ReadOnlyTransactions` (a missing datapoint means zero) for the write volume. Neither metric is INSERT-specific, and foreign key checks also run on UPDATEs that change the referencing column, so attribute FkExistenceCheck to INSERTs only from the query text in step 1 or application evidence
 3. Hand the identified query off to Workflow 9 for query-level diagnostics
 
 ---
 
 ## UniqueConstraintCheck
 
-Storage reads to validate unique key constraints for non-primary columns.
+Storage reads to validate unique key constraints. This applies to both unique constraints on non-primary-key columns and primary key constraints during the insertion of new rows.
 
 **Possible causes** (candidates to confirm in Workflow 9 — see the observe-only guardrail above):
 
-- High-throughput INSERT on a table with unique constraints
+- High-throughput INSERT (every new row's primary key is checked, plus any unique constraints)
 - Large batch INSERTs forcing many uniqueness checks
 - Conflict-heavy upsert patterns (`INSERT ... ON CONFLICT`)
 
@@ -187,7 +187,7 @@ Commit process has begun, and QP is waiting for a response.
 
 **Observe-only steps — distinguish volume from conflicts:**
 
-1. Query standard CloudWatch metrics: `AWS/AuroraDSQL` namespace, `ClusterId` dimension, `statistic="Sum"`, with `start_time`/`end_time` covering the window under investigation
+1. Query standard CloudWatch metrics: `AWS/AuroraDSQL` namespace, `ClusterId` dimension, statistic `Sum`, with a start and end time covering the window under investigation (see Phase 4 in [workflow.md](workflow.md))
 2. Compare `TotalTransactions` (commit rate) and `OccConflicts` (conflict rate) over the same period:
    - If OccConflicts grows faster than TotalTransactions → conflict-dominated (report this observation)
    - If TotalTransactions grows proportionally to Commit AAS → legitimate load growth (report this observation)
@@ -197,7 +197,7 @@ Commit process has begun, and QP is waiting for a response.
 
 ## StartTransaction
 
-Waiting for distributed transaction start — the time a session spends while DSQL coordinates the operations needed to begin a new transaction.
+The session is preparing for the distributed transaction to begin — the time a session spends while DSQL coordinates the operations needed to begin a new transaction.
 
 **Possible causes** (candidates to confirm — see the observe-only guardrail above):
 
@@ -209,7 +209,7 @@ This is internal DSQL infrastructure overhead; there are no user-tunable paramet
 **Observe-only steps:**
 
 1. Note whether StartTransaction's proportion of total AAS has changed by >30% vs the temporal baseline: `sum by ("db.wait.event")({__name__="db.active_sessions.avg", "db.wait.event"="StartTransaction", ...})`
-2. If the proportion grew significantly, it likely reflects an increase in transaction frequency — correlate with the `TotalTransactions` CW metric (namespace `AWS/AuroraDSQL`, `statistic="Sum"` — it is a cumulative counter) to confirm
+2. A larger proportion can come from more transactions or from other wait events shrinking, so check StartTransaction's AAS as well as its share, and compare the `TotalTransactions` CW metric (queried as in [Phase 4](workflow.md#phase-4-commit-and-occ-analysis)) over the same windows before reporting a change in transaction frequency
 3. Report the observation — do not recommend transaction batching, connection pooling changes, or other remediations from CloudWatch data alone. This is fixed internal overhead with no user-facing tuning knob.
 
 ---
