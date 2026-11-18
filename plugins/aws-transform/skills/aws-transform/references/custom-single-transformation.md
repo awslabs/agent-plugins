@@ -69,11 +69,14 @@ If not a git repo: `cd <repo-path> && git init && git add . && git commit -m "In
 ### Telemetry
 
 When running `atx custom def exec`, always include the `--telemetry` flag (see the Telemetry section in [custom](custom.md)). Format:
-`--telemetry "client=<client>,agent=<agent>,executionMode=<local|remote>"`
+`--telemetry "client=<client>,agent=<agent>,executionMode=local"`
 
 - `client` is the MCP host for this session (lowercase, no spaces) — e.g., `kiro`, `vscode`, `cursor`, `windsurf`, `claudecode`, `amazonqcli`. Use the real host name; do not default to any example.
 - `agent` is the AI assistant for this session (lowercase, no spaces) — e.g., `kiro`, `amazonq`, `claude`, `copilot`, `cline`, `codex`. Use the real assistant name; do not default to any example.
-- `executionMode` is `local` for direct CLI invocation, `remote` when submitting via Lambda
+- `executionMode` is `local` for direct CLI invocation
+
+For `atx ct remote remediation`, use `--telemetry "agent=<agent>,executionMode=<fargate|ec2>"`
+instead (`fargate` for Batch, `ec2` for EC2). The CLI adds its own `client`.
 
 ### Execute and Monitor
 
@@ -99,10 +102,11 @@ echo $! > ~/.aws/atx/custom/atx-agent-session/transform.pid
 cat ~/.aws/atx/custom/atx-agent-session/transform.pid
 ```
 
-Omit `--configuration` if no config is needed. The `--telemetry` flag is always included — see [custom](custom.md) for details.
+Omit `--configuration` if no config is needed. If the user wants to cap usage, add
+`--limit <minutes>` (Agent Minutes budget; the run exits with code 2 when it is reached). The `--telemetry` flag is always included — see [custom](custom.md) for details.
 
 This backgrounds the runner script (not the CLI directly), so the exit code is
-captured to `~/.aws/atx/custom/atx-agent-session/transform.exit` when ATX finishes. The PID file tracks
+captured to `~/.aws/atx/custom/atx-agent-session/transform.exit` when AWS Transform finishes. The PID file tracks
 the runner process.
 
 **As soon as you have the PID, immediately run the next command** — do NOT stop
@@ -173,9 +177,17 @@ CRITICAL rules:
    terminal.
 
 6. **Exit code determines success.** Once `kill -0` confirms the process has
-   exited, read the exit code: `cat ~/.aws/atx/custom/atx-agent-session/transform.exit`. Exit code 0 =
-   success. Non-zero = failure. Only after reading the exit code should you
-   report the transformation as complete or failed.
+   exited, read the exit code: `cat ~/.aws/atx/custom/atx-agent-session/transform.exit`.
+   Check it in this order:
+   - `0` = success, unless `transform.log` contains `Execution was not successful`
+     (AWS Transform reported the transformation failed but still exits 0).
+   - `2` = the Agent Minutes budget set with `--limit <minutes>` was reached. Not a failure:
+     offer to resume with `atx --conversation-id <id> --limit <higher-minutes>`.
+   - `130`, `129` or `143` = the run was interrupted (Ctrl+C, closed terminal, SIGTERM).
+     Not a failure: it did not finish, so offer to resume or re-run it.
+   - Any other non-zero code = failure.
+
+   Only after reading the exit code should you report the transformation as complete or failed.
 
 7. **Open artifacts in the IDE (local mode only).** Using the conversation ID
    from rule #1, the artifacts directory is
@@ -212,111 +224,37 @@ commit history with diffs for each file AWS Transform modified."
 
 ## Remote Mode
 
-### Check Infrastructure
+Remote runs go through the AWS Transform CLI's built-in remote execution — no
+Lambda calls or separate infrastructure repo. Make sure the infrastructure is
+deployed (`atx ct remote detect --mode <batch|ec2>`; deploy with
+`atx ct remote provision` after user consent) and the repo is in a registered
+source (`atx ct source add`; a local path or S3 zip becomes a `--provider local`
+source). Then submit:
 
 ```bash
-aws cloudformation describe-stacks --stack-name AtxInfrastructureStack \
-  --query 'Stacks[0].StackStatus' --output text || echo "NOT_DEPLOYED"
+AWS_REGION=<region> atx ct remote remediation --mode <batch|ec2> --stack-name <stack> \
+  --transformation-name <td-name> \
+  --repos <source>::<repo> \
+  --configuration 'additionalPlanContext=<user-config>' \
+  --telemetry "agent=<agent>,executionMode=<fargate|ec2>"
 ```
 
-If NOT_DEPLOYED: get user consent, then deploy. See [custom-remote-execution](custom-remote-execution.md).
-
-### Prepare Source
-
-| Source Type                     | Action                                                                                                                                                      |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| HTTPS git URL (public)          | Use directly — container clones it                                                                                                                          |
-| HTTPS git URL (private)         | Verify `atx/github-token` exists in Secrets Manager (see Collect Repositories in [custom](custom.md)), then use directly — container fetches PAT and clones |
-| SSH git URL (public or private) | Verify `atx/ssh-key` exists in Secrets Manager (see Collect Repositories in [custom](custom.md)), then use directly — container fetches SSH key and clones  |
-| S3 bucket with zips             | Copy zips from user's bucket to managed source bucket (`atx-source-code-{account}`), then use managed S3 paths                                              |
-| Local repo                      | Zip -> upload to S3 -> use S3 path                                                                                                                          |
-
-For local sources:
-
-```bash
-ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-mkdir -p ~/.aws/atx/custom/atx-agent-session
-cd <repo-path> && zip -qr ~/.aws/atx/custom/atx-agent-session/<project>-$SESSION_TS.zip .
-aws s3 cp ~/.aws/atx/custom/atx-agent-session/<project>-$SESSION_TS.zip s3://atx-source-code-${ACCOUNT_ID}/repos/<project>.zip
-```
-
-**Important:** Only the CDK-managed source bucket (`atx-source-code-{account}`) is
-accessible to the remote container. Do NOT pass arbitrary S3 bucket paths as source —
-the container's IAM role cannot read from them.
-
-### Submit Job
-
-```bash
-aws lambda invoke --function-name atx-trigger-job \
-  --payload '{"source":"<url-or-s3>","command":"atx custom def exec -n <td> -p /source/<project> -x -t --telemetry \"client=<client>,agent=<agent>,executionMode=remote\"","jobName":"<name>","environment":{"JAVA_VERSION":"<target>"}}' \
-  --cli-binary-format raw-in-base64-out /dev/stdout
-```
-
-Add `--configuration \"additionalPlanContext=<config>\"` to the command string if config is needed.
-The `--telemetry` flag is always included — see [custom](custom.md) for details.
-
-Set the appropriate version environment variable to match the transformation's target version:
-
-- `JAVA_VERSION` for Java transformations (e.g., `"21"` for a Java 8 -> 21 upgrade)
-- `PYTHON_VERSION` for Python transformations (e.g., `"3.12"` for a Python 3.8 -> 3.12 upgrade)
-- `NODE_VERSION` for Node.js transformations (e.g., `"22"` for a Node.js 18 -> 22 upgrade)
-
-Only include the variable relevant to the transformation language. The Lambda accepts these keys and passes them as Batch container overrides; the entrypoint switches the active runtime at startup.
-
-### Monitor
-
-```bash
-aws lambda invoke --function-name atx-get-job-status \
-  --payload '{"jobId":"<job-id>"}' \
-  --cli-binary-format raw-in-base64-out /dev/stdout
-```
-
-Poll every 60 seconds for the first 10 polls, then every 5 minutes after.
-Report only on status change.
-
-### Present Results (Remote)
-
-Do NOT download results locally. Results stay in S3. Present the S3 path to the user:
-
-```bash
-ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-echo "Results: s3://atx-custom-output-${ACCOUNT_ID}/transformations/<job-name>/"
-```
-
-If the user wants to download results, first list the S3 path to discover the
-conversation ID (generated at runtime inside the container). Use the actual
-job name and account ID — do NOT leave placeholders in commands given to the user:
-
-```bash
-aws s3 ls s3://atx-custom-output-{account-id}/transformations/<job-name>/ --region <region>
-```
-
-Then provide the download command with the actual conversation ID:
-
-```
-aws s3 cp s3://atx-custom-output-{account-id}/transformations/<job-name>/<conversation-id>/code.zip ./code.zip
-```
-
-Include the CloudWatch dashboard link in the completion output:
-
-```bash
-REGION=${AWS_REGION:-${AWS_DEFAULT_REGION:-$(aws configure get region 2>/dev/null)}}
-REGION=${REGION:-us-east-1}
-echo "https://${REGION}.console.aws.amazon.com/cloudwatch/home#dashboards/dashboard/ATX-Transform-CLI-Dashboard"
-```
-
-Show transformation definition, repo, status, downloaded path, and the dashboard link for monitoring history and logs.
-
-After presenting results, prompt the user about infrastructure teardown. See the
-Cleanup section in [custom-remote-execution](custom-remote-execution.md) for the exact prompt.
+`<stack>` is the `stackName` from `atx ct remote detect --mode <batch|ec2> --json`.
+Omit `--configuration` if no config is needed. Your own transformation definitions
+must be in the `remediation` category (AWS-managed ones work unless tagged `analysis`); if one has no
+category, publish it again with `--category remediation`. Monitor with
+`atx ct remote status` and present the result the status shows (pull/merge request
+URL or S3 output path). See
+[custom-remote-execution](custom-remote-execution.md) for
+provisioning, sources, monitoring, results, and teardown.
 
 ## Error Handling
 
-| Issue                      | Resolution                                                                          |
-| -------------------------- | ----------------------------------------------------------------------------------- |
-| Dependency incompatibility | Check package compatibility, may need manual update                                 |
-| Build failure (remote)     | Check build command works locally, verify registry credentials in `atx/credentials` |
-| ATX timeout                | Set `ATX_SHELL_TIMEOUT=1800` or break into smaller transforms                       |
+| Issue                      | Resolution                                                                                                                                                                                    |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dependency incompatibility | Check package compatibility, may need manual update                                                                                                                                           |
+| Build failure (remote)     | Check build command works locally; if the build needs a runtime or private registry the pre-built image lacks, use a custom image (see [custom-remote-execution](custom-remote-execution.md)) |
+| Shell command timeout      | Set `ATX_SHELL_TIMEOUT=1800` (seconds; default 900) or break into smaller transforms                                                                                                          |
 
 ## MANDATORY: Cleanup
 

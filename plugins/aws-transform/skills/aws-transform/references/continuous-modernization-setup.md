@@ -92,9 +92,11 @@ To have the CLI automatically apply tags to every resource it creates (sources, 
 
 - If `atx ct` is not installed, install it using the curl command above before proceeding.
 - If `atx ct` is installed but a newer version is available, reinstall it using the same curl command.
-- If already configured, returns the existing config immediately.
-- If not configured, kicks off async provisioning and returns immediately. Use `--status` to check progress.
-- `--status` checks current state: `configured`, `setup_in_progress`, `failed`, or `not_configured`.
-- `--delete` tears down AWS resources (CloudFormation stack, S3 bucket, config).
+- If already configured, prints `security-agent: configured` and the existing config immediately.
+- If not configured, deploys the CloudFormation stack and waits for it to finish (a few minutes), then prints `security-agent: configured` and the config. If another setup is already deploying, it fails with `security-agent setup is already in progress`.
+- `--status` prints `security-agent: configured` (with the config) or `security-agent: not_configured`.
+- `--delete` empties the security agent S3 bucket and deletes the CloudFormation stack (agent space, role, bucket, policy), then prints `security-agent: deleted`.
+- Setup is per region: it uses `AWS_REGION` (default `us-east-1`), so run it in the region the analyses will run in.
+- Setup and `--delete` run the AWS CLI (`aws`), so it must be installed and on `PATH`.
 - Requires valid AWS credentials (`aws sts get-caller-identity` must succeed).
 - If credentials are expired, ask the user to refresh them first.

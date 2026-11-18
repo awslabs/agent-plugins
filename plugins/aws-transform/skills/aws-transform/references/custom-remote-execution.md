@@ -1,29 +1,43 @@
 # Remote Execution
 
-Deploy and manage AWS Batch/Fargate infrastructure for running AWS Transform custom transformations at scale.
-All Lambda calls are executed by you — users never interact with Lambdas directly.
+Run AWS Transform custom transformations at scale in containers in the user's own AWS
+account, on AWS Batch (Fargate) or Amazon EC2. Remote execution is built into the AWS
+Transform CLI: `atx ct remote` provisions the infrastructure, and
+`atx ct remote remediation --transformation-name <name>` runs a transformation definition
+directly against each repository, with no analysis or findings needed. There is no
+separate infrastructure repository, setup script, or CDK app. Do not call the stack's
+Lambda functions or AWS Batch directly; use the CLI commands below.
 
-Remote mode deploys to the user's own AWS account. Key resources:
+This file covers what is specific to custom transformations. For provisioning and
+command detail, follow the continuous modernization references it links to:
+[remote Batch execution](continuous-modernization-batch-execution.md),
+[remote EC2 execution](continuous-modernization-ec2-execution.md),
+[sources](continuous-modernization-source.md) and
+[setup](continuous-modernization-setup.md).
 
-- Results stored in S3 (`atx-custom-output-{accountId}`) with KMS encryption, 30-day lifecycle
-- Source code uploaded to S3 (`atx-source-code-{accountId}`) with 7-day lifecycle
-- CloudWatch dashboard: `ATX-Transform-CLI-Dashboard` for monitoring jobs
-- 8 Lambda functions for job management (trigger, status, terminate, list)
-- AWS Batch/Fargate for container execution — costs nothing when idle
+Key resources in the user's account:
+
+- Transformed code in Amazon S3 (`atx-custom-output-{accountId}`)
+- Local-source repositories uploaded to Amazon S3 (`atx-source-code-{accountId}`)
+- A CloudWatch log group and dashboard per stack
+- Source tokens in AWS Secrets Manager (`atx/<source>/<provider>-token`)
 - To find the account: `aws sts get-caller-identity --query Account --output text`
+
+Every `atx ct` command needs the region: prefix `AWS_REGION=<region>` on each command
+line (see [Choose your region](continuous-modernization-setup.md#step-2-choose-your-region)).
+Tell the user which region is being used. Remote execution is available only in the
+regions where continuous modernization is; an unsupported region returns a region error.
 
 ## Table of Contents
 
 - [Infrastructure Check](#infrastructure-check)
 - [User Consent Prompt](#user-consent-prompt)
 - [Deployment](#deployment)
-- [Lambda Function Names](#lambda-function-names)
-- [MCP Configuration (Optional)](#mcp-configuration-optional)
+- [Repository Sources](#repository-sources)
+- [Private Repository Access](#private-repository-access)
 - [Job Submission](#job-submission)
-- [SSH URL Handling](#ssh-url-handling)
 - [Polling](#polling)
 - [Results Location](#results-location)
-- [Private Repository Access](#private-repository-access)
 - [Monitoring](#monitoring)
 - [Container Customization](#container-customization)
 - [Pricing](#pricing)
@@ -31,51 +45,64 @@ Remote mode deploys to the user's own AWS account. Key resources:
 
 ## Infrastructure Check
 
-Before checking, determine the active AWS region (from `AWS_REGION`, `AWS_DEFAULT_REGION`,
-or `aws configure get region`) and tell the user which region is being used.
-
-Then check deployment status:
+Ask whether any repositories are private first ([Repository Access (Remote Mode)](custom.md#repository-access-remote-mode)); run these checks only after the user answers.
 
 ```bash
-aws cloudformation describe-stacks --stack-name AtxInfrastructureStack \
-  --query 'Stacks[0].StackStatus' --output text || echo "NOT_DEPLOYED"
+AWS_REGION=<region> atx ct remote detect --mode batch --json
+AWS_REGION=<region> atx ct remote detect --mode ec2 --json
 ```
 
-If deployed (`CREATE_COMPLETE` or `UPDATE_COMPLETE`): proceed to job submission.
-If `NOT_DEPLOYED` or any other status: get explicit user consent before deploying.
+Without `--stack-name` or `--tags`, each lists every stack of that mode
+(`AtxInfrastructureStack*` for Batch, `atx-runner*` for EC2). A stack with status
+`deployed` is ready: note its `stackName` and go to [Repository Sources](#repository-sources).
+For any other status, or no stack, get explicit user consent before deploying.
+
+A Batch stack named `AtxInfrastructureStack` may be left from the earlier setup script.
+Offer to bring it up to date with `atx ct remote update` (see
+[Deployment Failures](#deployment-failures)) instead of deploying a second stack.
 
 ## User Consent Prompt
 
-Explain what gets created: AWS Batch (Fargate), 8 Lambda functions, S3 buckets (KMS encrypted),
-CloudWatch dashboard, IAM roles. If using the pre-built image, no Docker is needed and no ECR
-repository is created in their account. If using a custom image, an ECR repository is created
-and the container is built locally. One-time setup.
-Do NOT deploy until user confirms.
+Explain what gets created: a Batch (Fargate) compute environment or an EC2 instance,
+S3 buckets, IAM roles, a CloudWatch log group and dashboard, and the job-queueing
+resources the CLI deploys alongside the stack. With the pre-built image, no Docker is
+needed and no container registry is created. A custom image needs Docker and an
+Amazon ECR repository the user owns. One-time setup.
+Do NOT deploy until the user confirms.
 
 ## Deployment
 
-### Pre-built vs Custom Image
+### Batch or EC2
 
-The infrastructure supports two container modes:
+Default to Batch: one Fargate container per repository, nothing running between runs.
+Use EC2 when the user wants a persistent instance (1-5 parallel workers) or already has
+one. See "When to Use" in the
+[Batch](continuous-modernization-batch-execution.md#when-to-use)
+and [EC2](continuous-modernization-ec2-execution.md#when-to-use)
+files.
 
-**Pre-built image (default):** A public ECR image with Java (8, 11, 17, 21, 25),
-Python (3.8-3.14), Node.js (16-24), Maven, Gradle, and common build tools.
-No Docker required on the user's machine. Use this when the pre-built image
-has everything the transformation needs (source runtime, target runtime, build
-tools, and any other dependencies).
+### Network
 
-**Custom image (fallback):** If the transformation requires a language, tool, or
-version not in the pre-built image, you clone the infrastructure repo,
-customize the Dockerfile, and build locally. This requires Docker on the user's
-machine.
+Remote compute runs in private subnets with outbound internet access (NAT). AWS
+Transform does not pick the network for the user. List candidates (public subnets are
+excluded):
 
-You determine which mode to use during the Verify Runtime Compatibility step
-in [custom](custom.md). Do NOT ask the user to choose — you decide automatically based
-on whether the pre-built image has everything needed for the transformation.
+```bash
+AWS_REGION=<region> atx ct remote network discover --json
+```
 
-### Pre-built Image Runtimes
+Let the user choose the VPC, subnets, and (for Batch, required) security group. If
+there is no suitable VPC, `atx ct remote network create` creates one with private
+subnets, a NAT gateway, and a security group. It needs admin credentials and the NAT
+gateway is billed while it exists, so confirm first and give the user the command to
+run (see [Provision](continuous-modernization-batch-execution.md#2-provision)).
 
-The pre-built image includes:
+### Pre-built Image Path (No Docker Required)
+
+You decide the image during the Verify Runtime Compatibility step in
+[custom](custom.md). Do NOT ask the user to choose.
+
+The default image `public.ecr.aws/d9h8z6l7/aws-transform:latest` includes:
 
 - **Java**: 8, 11, 17, 21, 25 (Amazon Corretto) with Maven and Gradle 9.4
 - **Python**: 3.8, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14 (dnf + pyenv)
@@ -84,278 +111,169 @@ The pre-built image includes:
 - **CLI tools**: AWS CLI v2, AWS Transform CLI, git, jq, curl, unzip, tar
 - **OS**: Amazon Linux 2023 (x86_64)
 
-If the transformation target is in this list, use the pre-built image path.
-
-### Pre-built Image Path (No Docker Required)
-
-Clone the repo, collect and validate network config, then HAND the deploy to the user.
-
-**Network contract:** AWS Transform creates Batch, Lambdas, S3, KMS, IAM, and
-security groups via CloudFormation. It does NOT create VPCs, subnets, NAT gateways,
-or internet gateways — you provide those. If you don't specify a VPC, deployment
-will fail rather than auto-provision.
-
-**Constraints:**
-
-- You MUST clone/update the repo as before (unchanged commands).
-- You MUST collect `existingVpcId` / `existingSubnetIds` / `existingSecurityGroupId`
-  from the user and write them into `cdk.json` `context` BEFORE deploy. This is
-  MANDATORY for ALL sources (not just internal/self-hosted). There is no default VPC
-  fallback — `setup.sh` will fail if these are empty.
-- You MUST first discover available VPCs by running:
-
-  ```bash
-  aws ec2 describe-vpcs --query 'Vpcs[*].[VpcId,IsDefault,Tags[?Key==`Name`].Value|[0]]' --output table
-  ```
-
-  Show the results, let the user pick, then show **private** subnets for the chosen VPC:
-
-  ```bash
-  aws ec2 describe-subnets --filters "Name=vpc-id,Values=<vpcId>" "Name=map-public-ip-on-launch,Values=false" \
-    --query 'Subnets[*].[SubnetId,AvailabilityZone,Tags[?Key==`Name`].Value|[0]]' --output table
-  ```
-
-  Only private subnets are shown. The CDK stack sets `assignPublicIp: DISABLED` on
-  Fargate tasks, so public subnets cannot provide outbound connectivity. If none remain
-  after filtering, tell the user: "No private subnets found in this VPC. This stack
-  does not support public subnets — Fargate tasks require private subnets with NAT
-  gateway for outbound connectivity." Then direct them to `create-vpc.sh`. If public
-  subnets were filtered out, note: "Some subnets in this VPC were not shown because
-  they are public (auto-assign public IP enabled). This stack does not support public
-  subnets — Fargate tasks require private subnets with NAT gateway for outbound
-  connectivity."
-
-  After the user selects subnets, verify their route tables do not have a default route
-  to an internet gateway (`0.0.0.0/0 → igw-*`). Check both explicit subnet associations
-  and the VPC's main route table. If an IGW route is found, reject: "Subnet `<id>` has a
-  default route to an internet gateway (igw-...). This stack does not support public
-  subnets — Fargate tasks deployed here would have no outbound network path."
-
-  Refuse to proceed without an explicit selection. You MUST NOT recommend or guide
-  the user toward any VPC (including the default). Present all VPCs neutrally. You
-  MUST NOT choose on the user's behalf even if one option appears obvious — always
-  ask and wait for explicit confirmation before writing to cdk.json.
-- You MUST NOT run `./setup.sh` yourself, because it creates IAM roles and requires
-  admin / role-creation permissions. Instead You MUST present it for the user to run:
-
-  ```
-  ! cd "$HOME/.aws/atx/custom/remote-infra" && AWS_PROFILE=<your-admin-profile> ./setup.sh
-  ```
-
-- You MUST tell the user that deploy requires an admin identity and that ReadOnly /
-  runtime credentials suffice afterward.
-- You MUST NEVER run `aws ec2 create-default-vpc` or create any VPC, subnet, NAT
-  gateway, internet gateway, or route on the user's behalf. If the account has no
-  suitable VPC or a precondition is missing, surface it to the user and refuse to
-  proceed.
+Preview first. Without `--execute`, `provision` only writes the CloudFormation
+template to a local file, so you can run it:
 
 ```bash
-ATX_INFRA_DIR="$HOME/.aws/atx/custom/remote-infra"
-if [ -d "$ATX_INFRA_DIR" ]; then
-  git -C "$ATX_INFRA_DIR" add -A
-  git -C "$ATX_INFRA_DIR" commit -m "Local customizations" -q 2>/dev/null || true
-  git -C "$ATX_INFRA_DIR" pull -q
-else
-  git clone -b atx-remote-infra --single-branch https://github.com/aws-samples/aws-transform-custom-samples.git "$ATX_INFRA_DIR"
-fi
+AWS_REGION=<region> atx ct remote provision --mode batch \
+  --vpc <vpc-id> --subnets <subnet-1>,<subnet-2> --securityGroup <sg-id>
 ```
 
-If `git pull` reports a merge conflict, resolve it by keeping both the upstream
-changes and the user's customizations in the `CUSTOM LANGUAGES AND TOOLS` section
-of the Dockerfile, then commit the merge.
-
-Ensure `prebuiltImageUri` is set in `cdk.json` (it should be set to "public.ecr.aws/d9h8z6l7/aws-transform:latest" by default). Then present the deploy command for the user to run:
+Deploying needs admin credentials. You MUST NOT run it yourself: give the user the
+command to run in their own terminal with an admin profile:
 
 ```
-! cd "$HOME/.aws/atx/custom/remote-infra" && AWS_PROFILE=<your-admin-profile> ./setup.sh
+AWS_PROFILE=<your-admin-profile> AWS_REGION=<region> atx ct remote provision --mode batch \
+  --vpc <vpc-id> --subnets <subnet-1>,<subnet-2> --securityGroup <sg-id> --execute --ack
 ```
 
-The setup script skips the Docker prerequisite check and container build when
-`prebuiltImageUri` is configured. First deploy takes ~3-5 minutes (no image build).
+For EC2, use `--mode ec2` (`--securityGroup` optional, `--workers 1-5`). Optional flags
+such as `--job-timeout` (Batch, default 12 hours) and `--tags` are in
+[Provision](continuous-modernization-batch-execution.md#2-provision)
+(Batch) and [Provision](continuous-modernization-ec2-execution.md#2-provision)
+(EC2). After the user confirms, re-run `atx ct remote detect --mode <batch|ec2>` to get the stack name.
 
 ### Custom Image Path (Docker Required)
 
-If the transformation requires a runtime (source or target) or any other software not in the pre-built image,
-clone/update the repo, clear the pre-built URI, customize the Dockerfile, and deploy:
+If the transformation needs a runtime (source or target) or other software that is
+not in the pre-built image, build an image on top of it (see
+[Container Customization](#container-customization)), push it to an Amazon ECR
+repository in the user's account, and add `--image-uri <uri>` to the provision
+command above. This needs Docker installed and running.
 
-```bash
-ATX_INFRA_DIR="$HOME/.aws/atx/custom/remote-infra"
-if [ -d "$ATX_INFRA_DIR" ]; then
-  git -C "$ATX_INFRA_DIR" add -A
-  git -C "$ATX_INFRA_DIR" commit -m "Local customizations" -q 2>/dev/null || true
-  git -C "$ATX_INFRA_DIR" pull -q
-else
-  git clone -b atx-remote-infra --single-branch https://github.com/aws-samples/aws-transform-custom-samples.git "$ATX_INFRA_DIR"
-fi
-
-cd "$ATX_INFRA_DIR" && sed -i.bak 's|"prebuiltImageUri": ".*"|"prebuiltImageUri": ""|' cdk.json
-```
-
-Customize the Dockerfile (see Container Customization below), then deploy:
-
-```bash
-cd "$ATX_INFRA_DIR" && ./setup.sh
-```
-
-This path requires Docker installed and running. First deploy takes ~5-10 minutes
-(container build). CDK auto-detects Dockerfile changes and rebuilds the image.
+A later `atx ct remote update` resets the image to the default. To keep the custom
+image, re-run `provision` with `--image-uri` instead.
 
 ### Deployment Failures
 
-If `setup.sh` fails, it prints the specific prerequisite that's missing. Fix that
-one thing and re-run — the script is idempotent.
+The CLI prints the cause. Fix it and re-run the same command; the error tables in
+[Batch error handling](continuous-modernization-batch-execution.md#error-handling)
+and [EC2 error handling](continuous-modernization-ec2-execution.md#error-handling)
+list the common ones. Do not try to fix individual CloudFormation resources by hand.
 
-If deployment fails partway through (e.g., CloudFormation stack stuck in
-`ROLLBACK_COMPLETE` or `UPDATE_ROLLBACK_FAILED`), run teardown first, then retry:
+A stack deployed by an older CLI or by the earlier setup script keeps its old
+infrastructure. Preview the update, then have the user apply it with admin credentials:
 
 ```bash
-cd "$ATX_INFRA_DIR" && rm -f cdk.context.json && ./teardown.sh && ./setup.sh
+AWS_REGION=<region> atx ct remote update --mode batch --stack-name <stack>
+AWS_PROFILE=<your-admin-profile> AWS_REGION=<region> atx ct remote update --mode batch --stack-name <stack> --execute --ack
 ```
 
-This cleans up the half-deployed state, clears cached CDK context, and starts fresh.
-The teardown script handles stacks in any state, including failed rollbacks.
+If the stack is stuck in a failed state that `update` can't apply to, have the user
+tear it down (see [Cleanup](#cleanup)) and provision again.
 
 ### Attach IAM Policies
 
-After deployment, generate and attach the runtime policy so the caller has
-permissions to invoke Lambdas, upload/download from S3, use KMS, etc.:
+Day-to-day submission and polling need only the Executor role, not admin. Direct the
+user to attach the Executor policy described in
+[Permission Model](continuous-modernization-batch-execution.md#permission-model)
+(Batch) or [Permission Model](continuous-modernization-ec2-execution.md#permission-model)
+(EC2) to the identity they use for running jobs. You MUST NOT attach it yourself.
+
+## Repository Sources
+
+Remote runs read repositories from a registered source, not from individual URLs or
+paths. Repositories are named `<source>::<repo>`.
+
+| User provides                                                                         | Register as                                                                                                                                         |
+| ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| HTTPS repos on GitHub, GitLab, or Bitbucket (GitLab and Bitbucket can be self-hosted) | The org, group/user, or workspace/project: `--provider github\|gitlab\|bitbucket --org <org>` (self-hosted GitLab or Bitbucket: `--url <base-url>`) |
+| Local folders                                                                         | Their parent folder: `--provider local --path <parent-dir>` (each subdirectory is one repository)                                                   |
+| SSH URLs, GitHub Enterprise Server, or other git hosts                                | Clone locally into one parent folder, then register it as a local source                                                                            |
+| S3 zips                                                                               | Download and extract locally into one parent folder, then register it as a local source                                                             |
+
+Commands, token scopes, and provider details are in
+[Source](continuous-modernization-source.md).
+Before adding, run `atx ct source list --json`; an existing source is updated with
+`atx ct source update`, not added again. After adding, discover its repositories and
+get their slugs:
 
 ```bash
-cd "$ATX_INFRA_DIR" && npx ts-node generate-caller-policy.ts
+AWS_REGION=<region> atx ct discovery scan --source <source>
+AWS_REGION=<region> atx ct repository list --source <source> --json
 ```
 
-This produces two JSON files in `$ATX_INFRA_DIR`:
+For a local source, `atx ct discovery scan --source <source> --repo <name>` registers
+only that subdirectory. When a run starts, the CLI uploads local-source repositories to
+`atx-source-code-{accountId}`. One submission can't mix local and git-hosted
+repositories; submit them separately.
 
-- `atx-runtime-policy.json` — Day-to-day operations (Lambda invoke, S3, KMS, Secrets Manager, logs)
-- `atx-deployment-policy.json` — One-time CDK deploy/destroy (CloudFormation, ECR, IAM, Batch, VPC)
+**Repo analysis:** Do NOT scan or inspect repository contents locally in remote mode.
+The repos may not be on the local machine. Let the user specify which transformation
+definitions to apply, or use the one already selected.
 
-Attach the runtime policy to the caller:
+## Private Repository Access
+
+Git-hosted sources always use a token. **Never ask the user to paste or type a token
+into this chat**, or to confirm or repeat its value. Give the user the one-liner from
+[Token handling](continuous-modernization-source.md#token-handling)
+to run in their own terminal, for example:
 
 ```bash
-ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-CALLER_ARN=$(aws sts get-caller-identity --query Arn --output text)
-
-# Create the managed policy (ignore EntityAlreadyExists, fail on other errors)
-if ! create_output=$(aws iam create-policy --policy-name ATXRuntimePolicy \
-  --policy-document "file://$ATX_INFRA_DIR/atx-runtime-policy.json" 2>&1); then
-  echo "$create_output" | grep -q "EntityAlreadyExists" \
-    || { echo "Failed to create policy: $create_output" >&2; exit 1; }
-fi
-
-# Attach to the caller (handles IAM users, IAM roles, and SSO/assumed roles)
-if echo "$CALLER_ARN" | grep -q ":user/"; then
-  IDENTITY_NAME=$(echo "$CALLER_ARN" | awk -F'/' '{print $NF}')
-  aws iam attach-user-policy --user-name "$IDENTITY_NAME" \
-    --policy-arn "arn:aws:iam::${ACCOUNT_ID}:policy/ATXRuntimePolicy"
-elif echo "$CALLER_ARN" | grep -Eq ":assumed-role/|:role/"; then
-  ROLE_NAME=$(echo "$CALLER_ARN" | sed 's/.*:\(assumed-\)\{0,1\}role\///' | cut -d'/' -f1)
-  aws iam attach-role-policy --role-name "$ROLE_NAME" \
-    --policy-arn "arn:aws:iam::${ACCOUNT_ID}:policy/ATXRuntimePolicy"
-fi
+read -s TOKEN && AWS_REGION=<region> atx ct source add --name <source> --provider github --org <org> --token "$TOKEN"; unset TOKEN
 ```
 
-If the attachment fails (insufficient IAM permissions, or an SSO-managed role with
-name starting with `AWSReservedSSO_`), inform the user:
-
-- The policy JSON is at `$ATX_INFRA_DIR/atx-runtime-policy.json`
-- They need their AWS administrator to create and attach it to their identity
-- For SSO users, it must be added to their IAM Identity Center permission set
-
-Verify the policy is working by invoking a Lambda:
+`source add` and `source update --token` also store the token in AWS Secrets Manager
+(`atx/<source>/<provider>-token`) for remote containers. If the user's role can't write
+secrets, the CLI warns, and someone with admin credentials stores it later:
 
 ```bash
-aws lambda invoke --function-name atx-list-jobs --payload '{}' \
-  --cli-binary-format raw-in-base64-out /dev/stdout
+read -s TOKEN && AWS_REGION=<region> atx ct remote credentials --source <source> --token "$TOKEN" --ack; unset TOKEN
 ```
 
-If this succeeds, the runtime policy is active. If not, the attachment hasn't
-taken effect yet — wait a few seconds and retry.
+`atx ct remote credentials --source <source> --remove` deletes the stored secret. AWS
+credentials for the AWS Transform CLI inside the container come from the stack's IAM
+role; the user provides none.
 
-If the caller also needs to deploy/destroy infrastructure (not just run jobs),
-repeat the above with `atx-deployment-policy.json` and policy name `ATXDeploymentPolicy`.
-
-## Lambda Function Names
-
-After deployment, the Lambda functions are available with these names:
-
-- `atx-trigger-job` — Submit a single transformation job
-- `atx-get-job-status` — Get status of a single job
-- `atx-terminate-job` — Terminate a running job
-- `atx-list-jobs` — List all jobs
-- `atx-trigger-batch-jobs` — Submit a batch of jobs
-- `atx-get-batch-status` — Get batch status
-- `atx-terminate-batch-jobs` — Terminate all jobs in a batch
-- `atx-list-batches` — List all batches
-
-## MCP Configuration (Optional)
-
-If the user has a local AWS Transform MCP configuration, include it inline with job
-submissions so the containers can use it. Check for a local config:
-
-```bash
-cat ~/.aws/atx/mcp.json 2>/dev/null
-```
-
-If it exists, include the contents as the `mcpConfig` field in the `atx-trigger-job`
-or `atx-trigger-batch-jobs` payload. For example:
-
-```bash
-aws lambda invoke --function-name atx-trigger-job \
-  --payload '{"source":"...","command":"...","jobName":"...","mcpConfig":<contents of mcp.json>}' \
-  --cli-binary-format raw-in-base64-out /dev/stdout
-```
-
-The MCP config travels with the job request — do NOT upload it separately via
-`atx-configure-mcp`. Skip this step if no local MCP config exists.
+The default image reads only the per-source clone tokens stored as
+`atx/<source>/<provider>-token`. It has no setting for private package registry
+credentials, and the CLI has no option to pass any. If a build needs one, run it in
+local mode.
 
 ## Job Submission
 
-**Limits:** Maximum 512 repositories per session. Submit in batches of up to 128
-jobs each via `atx-trigger-batch-jobs`. If you have more than 128 jobs, split them
-into multiple Lambda calls (e.g., 500 repos = 4 calls of 128 + 128 + 128 + 116).
-Each call returns its own `batchId` — track all of them for monitoring. AWS Batch
-runs all jobs in a batch concurrently. If the total repo count exceeds 512, stop
-and ask the user to reduce the list.
+**Transformation definition category:** a transformation definition from the user's own
+account runs remotely only if it was published with `--category remediation`; check its
+`category` in `atx custom def list --json`. An uncategorized or `analysis` one is
+rejected: republish it with `atx custom def publish -n <name> --sd <dir> --description "<desc>" --category remediation`.
+AWS-managed (`AWS/...`) transformation definitions run unless they are tagged `analysis`.
 
-**Repo analysis:** Do NOT scan or inspect repository contents locally in remote
-mode. The repos may not be available on the local machine. Let the user specify
-which transformation definitions to apply, or use the one already selected in the plugin.
-
-**Deployment failures:** If `setup.sh` or `cdk deploy` fails for any reason, run
-`./teardown.sh` first to clean up the partial state, then retry `./setup.sh`.
-Do not try to manually fix individual CloudFormation errors.
-
-**Source restrictions:** The `source` field accepts HTTPS git URLs, SSH git URLs
-(with `atx/ssh-key` configured), or S3 paths within the CDK-managed source bucket
-(`atx-source-code-{account}`). The container's IAM role cannot read from arbitrary
-S3 buckets. If the user provides zips in their own S3 bucket, copy them to the
-managed source bucket first (see the Collect Repositories step in [custom](custom.md)).
-
-Single job:
+Present the plan (transformation definition, repositories, configuration, stack) and
+get confirmation, then submit one transformation definition per submission:
 
 ```bash
-aws lambda invoke --function-name atx-trigger-job \
-  --payload '{"source":"<url-or-s3>","command":"atx custom def exec -n <td> -p /source/<project> -x -t","jobName":"<name>"}' \
-  --cli-binary-format raw-in-base64-out /dev/stdout
+AWS_REGION=<region> atx ct remote remediation \
+  --transformation-name <td> \
+  --repos <source>::<repo-1>,<source>::<repo-2> \
+  -g 'additionalPlanContext=<context from Collect Configuration>' \
+  --mode batch --stack-name <stack> \
+  --batch-name <name> \
+  --telemetry "agent=<agent>,executionMode=fargate" \
+  --json
 ```
 
-Batch:
+- `--repos` takes comma-separated, source-qualified slugs (`<source>::<repo>`, never a
+  bare name). `--sources <source>` runs every repository in a source; add `--labels` to filter it.
+- `-g` accepts a config file path or `key=value` pairs (`additionalPlanContext`,
+  `buildCommand`). Do not use commas inside a value. Omit `-g` if there is no extra
+  context.
+- Do NOT pass `--ids`, `--severity`, or `--min-severity`: they select findings, and
+  this path runs without findings.
+- For EC2, use `--mode ec2` with `--stack-name` (or `--existing-instance <id>`) and
+  `executionMode=ec2` in `--telemetry`. See
+  [Telemetry](continuous-modernization-batch-execution.md#telemetry)
+  for the `--telemetry` values; omit the flag for the rest of the session if the user
+  opts out.
+- To apply several transformation definitions, submit once per transformation
+  definition.
 
-```bash
-aws lambda invoke --function-name atx-trigger-batch-jobs \
-  --payload '{"batchName":"<name>","jobs":[{"source":"<url>","command":"atx custom def exec -n <td> -p /source/<project> -x -t","jobName":"<name>"}]}' \
-  --cli-binary-format raw-in-base64-out /dev/stdout
-```
+**Limits:** up to 1,000 repositories per submission; split larger lists. Jobs beyond
+the account's concurrent-job limit wait in a queue and start as slots free (see
+[Limits](continuous-modernization-batch-execution.md#limits)).
+`--batch-name` must be unique; omit it for a generated ID.
 
-## SSH URL Handling
-
-SSH git URLs (`git@github.com:org/repo.git` or `ssh://git@github.com/org/repo.git`)
-are passed directly to the Lambda — the container clones them remotely. This requires
-an SSH private key stored in Secrets Manager as `atx/ssh-key`. See the Collect Repositories step in [custom](custom.md)
-for setup instructions.
-
-If the SSH key is not configured, the clone will fail inside the container. Do NOT
-fall back to cloning locally — guide the user through SSH key setup instead.
+The command validates source tokens and the transformation definition, then returns a
+batch ID (Batch) or group ID (EC2) to poll. Track every ID you get.
 
 ## Polling
 
@@ -363,206 +281,126 @@ Poll every 60 seconds for the first 10 polls, then every 5 minutes after.
 Report only on status change.
 
 ```bash
-aws lambda invoke --function-name atx-get-job-status \
-  --payload '{"jobId":"<id>"}' \
-  --cli-binary-format raw-in-base64-out /dev/stdout
+AWS_REGION=<region> atx ct remote status --batch <batch-id> --stack-name <stack> --json   # Batch
+AWS_REGION=<region> atx ct remote status --group <group-id> --json                       # EC2
+```
 
-aws lambda invoke --function-name atx-get-batch-status \
-  --payload '{"batchId":"<id>"}' \
-  --cli-binary-format raw-in-base64-out /dev/stdout
+`atx ct remote status --stack-name <stack>` without `--batch` lists recent Batch runs.
+A waiting job shows why (for example `pending (waiting for capacity)`); `--verbose`
+adds the raw wait data.
+
+To stop work, after user confirmation:
+
+```bash
+AWS_REGION=<region> atx ct remote cancel --batch <batch-id> --stack-name <stack> [--job <job-name>]   # Batch
+AWS_REGION=<region> atx ct remote cancel --group <group-id> [--job <job-key>]                        # EC2
 ```
 
 ## Results Location
 
-Do NOT download results locally. Results stay in S3. Present the S3 path to the user:
+Do NOT download results locally. For each repository, the status output shows its
+`resultId` (the remediation ID) and:
+
+- **GitHub, GitLab, Bitbucket sources:** the pull request or merge request opened from a
+  new branch with the changes.
+- **Every source:** the transformed code, zipped, in Amazon S3:
 
 ```
-Results: s3://atx-custom-output-{account-id}/transformations/<job-name>/<conversation-id>/
-  code.zip  — zipped transformed source code
-  logs.zip  — AWS Transform conversation logs
+s3://atx-custom-output-{account-id}/<remediation-id>/<source>::<repo>/code.zip
 ```
+
+The bucket name is `outputBucketName` in `atx ct remote detect --mode <batch|ec2> --stack-name <stack> --json`. Per-repository
+detail: `atx ct remediation status --id <remediation-id> --json`.
 
 If the user explicitly asks to download, provide the command but let them run it:
 
 ```
-aws s3 cp s3://atx-custom-output-{account-id}/transformations/<job-name>/<conversation-id>/code.zip ./code.zip
+aws s3 cp "s3://atx-custom-output-{account-id}/<remediation-id>/<source>::<repo>/code.zip" ./code.zip
 ```
-
-## Private Repository Access
-
-**Note:** If the user has private repos, credentials should already be configured
-during the Collect Repositories step in [custom](custom.md). This section documents the
-mechanism for reference.
-
-The container fetches credentials from AWS Secrets Manager at startup. Three secret types:
-
-**`atx/github-token`** — plain string GitHub PAT for private HTTPS repo cloning:
-
-```bash
-aws secretsmanager create-secret --name "atx/github-token" --secret-string "<token>"
-```
-
-**`atx/ssh-key`** — plain string SSH private key for private SSH repo cloning:
-
-```bash
-aws secretsmanager create-secret --name "atx/ssh-key" --secret-string "$(cat <path-to-your-private-key>)"
-```
-
-**`atx/credentials`** — JSON array of credential files for any tool/registry (see Container Customization below).
-
-Setup (requires user consent):
-
-1. Explain which secrets will be created in their AWS account
-2. Get explicit confirmation from the user, then give them the `create-secret` command to run in their own terminal — do not ask them to paste the credential value into this chat
-3. Wait for the user to confirm they ran the command, then verify the secret exists with `aws secretsmanager describe-secret`
-4. Container entrypoint auto-fetches at startup — no image rebuild needed
-5. User can delete anytime: `aws secretsmanager delete-secret --secret-id "atx/github-token" --region "$REGION" --force-delete-without-recovery`
-
-AWS credentials for AWS Transform CLI are handled automatically by the IAM task role (refreshed every 45 min).
 
 ## Monitoring
 
-CloudWatch dashboard: `ATX-Transform-CLI-Dashboard`
+`atx ct remote detect --mode <batch|ec2> --stack-name <stack> --json` returns the
+stack's `dashboardName`, and for Batch its `logGroupName`. An EC2 stack's container
+logs are in the log group `/atx/ct/ec2/<stackName>`. Build the dashboard URL with the
+region you are using:
 
-- Job Tracking: completion rates, success/failure trends
-- Lambda Metrics: invocation counts, duration, errors
-- Real-time Logs: stream transformation progress
-
-Dashboard URL (construct dynamically using the caller's region):
-
-```bash
-REGION=${AWS_REGION:-${AWS_DEFAULT_REGION:-$(aws configure get region 2>/dev/null)}}
-REGION=${REGION:-us-east-1}
-echo "https://${REGION}.console.aws.amazon.com/cloudwatch/home#dashboards/dashboard/ATX-Transform-CLI-Dashboard"
+```
+https://<region>.console.aws.amazon.com/cloudwatch/home?region=<region>#dashboards/dashboard/<dashboardName>
 ```
 
 Include this link in the final output when remote execution completes.
 
 ## Container Customization
 
-The default container includes Java (8, 11, 17, 21, 25), Python (3.8-3.14), Node.js
-(16-24), Maven, Gradle, gcc/g++, make, and common build tools.
-
-If a transformation requires a language or tool not included, you handle this
-automatically during the Verify Container Compatibility step — see [custom](custom.md). The
-Dockerfile has a clearly marked `CUSTOM LANGUAGES AND TOOLS` section where new
-`RUN` commands should be inserted. After editing, redeploy with `cd "$ATX_INFRA_DIR" && ./setup.sh` — CDK
-auto-detects Dockerfile changes and rebuilds the image.
-
-### Adding Languages or Tools
+If a transformation requires a language or tool that is not in the pre-built image, you
+handle this during the Verify Runtime Compatibility step in [custom](custom.md). Build
+on the pre-built image so the AWS Transform CLI and the container's entrypoint stay in
+place:
 
 ```dockerfile
-# Example: Add Rust (install as atxuser so binaries land in /home/atxuser/.cargo)
+FROM public.ecr.aws/d9h8z6l7/aws-transform:latest
+# Example: add Rust (install as atxuser so binaries land in /home/atxuser/.cargo)
 USER atxuser
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 USER root
 ENV PATH="/home/atxuser/.cargo/bin:$PATH"
 ```
 
-### Private Package Registries
+When adding to the image:
 
-Credentials are fetched from AWS Secrets Manager at container startup — never baked into the image.
+- Do not use `dnf` in your layers: pyenv overrides the system `python3` that `dnf`
+  needs, which fails with `No module named 'dnf'`.
+- Install another Amazon Corretto version as root from its tarball
+  (`https://corretto.aws/downloads/latest/amazon-corretto-<N>-x64-linux-jdk.tar.gz`,
+  extracted under `/usr/lib/jvm`).
+- Install Node.js versions with nvm (`. /home/atxuser/.nvm/nvm.sh && nvm install <N>`)
+  and Python versions with pyenv (`/home/atxuser/.pyenv/bin/pyenv install <version>`)
+  as `atxuser`.
 
-**`atx/github-token`** (plain string) — GitHub PAT for private repo cloning.
+Build for `linux/amd64`, push it to an Amazon ECR repository in the user's account, and
+deploy it as in [Custom Image Path](#custom-image-path-docker-required). Never bake
+credentials into the image.
 
-**`atx/credentials`** (JSON array) — Generic credential files for any tool or registry. Each entry writes a file into the container at startup:
-
-```json
-[
-  { "path": "/home/atxuser/.npmrc", "content": "//npm.company.com/:_authToken=TOKEN" },
-  { "path": "/home/atxuser/.m2/settings.xml", "content": "<settings>...</settings>" },
-  {
-    "path": "/home/atxuser/.config/pip/pip.conf",
-    "content": "[global]\nindex-url = https://pypi.company.com/simple"
-  },
-  {
-    "path": "/home/atxuser/.gem/credentials",
-    "content": "---\n:rubygems_api_key: KEY",
-    "mode": "0600"
-  },
-  { "path": "/home/atxuser/.cargo/credentials.toml", "content": "[registry]\ntoken = \"TOKEN\"" },
-  { "path": "/home/atxuser/.nuget/NuGet.Config", "content": "<?xml version=\"1.0\"?>..." }
-]
-```
-
-Create the secret:
-
-```bash
-aws secretsmanager create-secret --name "atx/credentials" \
-  --secret-string '[{"path":"/home/atxuser/.npmrc","content":"//npm.company.com/:_authToken=TOKEN"}]'
-```
-
-This works for any language or tool added to the Dockerfile — npm, Maven, pip, RubyGems, Cargo, NuGet, etc. The `mode` field is optional (defaults to `0644`).
-
-### Version Switching at Runtime
-
-The container supports runtime version switching via environment variables passed as container overrides.
-The `environment` field on the job MUST match the exact target version of the
-transformation — not the closest available version. For example, if upgrading to
-Java 23, set `"JAVA_VERSION":"23"` (not `"21"`). If the target version was added
-to the Dockerfile and entrypoint per the Verify Runtime Compatibility step, the switcher will activate it.
-
-Via Lambda (recommended):
-
-```bash
-aws lambda invoke --function-name atx-trigger-job \
-  --payload '{"source":"...","jobName":"...","command":"atx ...","environment":{"JAVA_VERSION":"23","NODE_VERSION":"22","PYTHON_VERSION":"3.13"}}' \
-  --cli-binary-format raw-in-base64-out /dev/stdout
-```
-
-Via direct Batch submission:
-
-```bash
-aws batch submit-job \
-  --container-overrides '{
-    "environment": [
-      {"name": "JAVA_VERSION", "value": "23"},
-      {"name": "PYTHON_VERSION", "value": "3.13"},
-      {"name": "NODE_VERSION", "value": "22"}
-    ]
-  }' ...
-```
-
-Available: Java 8/11/17/21/25, Python 3.8-3.14, Node.js 16/18/20/22/24.
-Python accepts both short (`13`) and full (`3.13`) formats.
-
-See `$ATX_INFRA_DIR/container/README.md` for full customization reference including Docker BuildKit secrets for secure credential handling.
+The CLI sends no per-job runtime version setting (such as `JAVA_VERSION`), so a target
+version the image lacks needs a custom image. Make the added version the image's default (for example
+`ENV JAVA_HOME`, `nvm alias default <N>`, or `pyenv global <version>`) so builds use it.
 
 ## Pricing
 
 Do NOT quote specific prices or cost estimates to the user. If the user asks about
 pricing, direct them to: https://aws.amazon.com/transform/pricing/
 
-The remote infrastructure (Batch, Lambda, S3) has no fixed costs — all services are
-pay-per-use and cost nothing when idle.
+A Batch stack has no fixed compute cost: Fargate is billed per task. An EC2 stack's
+instance is billed while it runs, and a NAT gateway created with
+`atx ct remote network create` is billed while it exists.
 
 ## Cleanup
-
-The remote infrastructure costs nothing when idle — Fargate is pay-per-task,
-Lambdas are pay-per-invoke, and S3 storage is minimal.
 
 After every remote execution completes (all jobs finished or failed), prompt the
 user with the following:
 
-> Your remote infrastructure is still deployed in your AWS account. All services
-> are pay-per-use only — there are no fixed costs when idle. You can leave it in
-> place for future transformations, or tear it down now.
+> Your remote infrastructure is still deployed in your AWS account. You can leave it
+> in place for future transformations, or tear it down now. [Batch: it has no fixed
+> compute cost when idle. EC2: the instance is billed while it runs.]
 >
 > For pricing details: https://aws.amazon.com/transform/pricing/
 >
 > If you tear down:
 >
-> - All AWS Transform resources are completely removed from your account
-> - KMS key deletion is scheduled (7-day AWS minimum wait)
-> - S3 buckets, secrets, IAM policies, log groups — all deleted
-> - You'll need to re-run setup (~5-10 min) next time you use remote mode
+> - The stack (its compute and IAM roles) is removed
+> - The S3 buckets (with your results) and the source tokens in Secrets Manager are kept
+> - Your VPC and subnets are not deleted
+> - You'll need to provision again next time you use remote mode
 >
 > Would you like to keep the infrastructure or tear it down?
 
-If the user chooses to tear down:
+If the user chooses to tear down, preview it, then give the user the command to run
+with admin credentials:
 
 ```bash
-cd "$ATX_INFRA_DIR" && ./teardown.sh
+AWS_REGION=<region> atx ct remote teardown --mode <batch|ec2> --stack-name <stack>
+AWS_PROFILE=<your-admin-profile> AWS_REGION=<region> atx ct remote teardown --mode <batch|ec2> --stack-name <stack> --execute --ack
 ```
 
 If the user chooses to keep it, confirm: "Infrastructure will stay deployed. Next

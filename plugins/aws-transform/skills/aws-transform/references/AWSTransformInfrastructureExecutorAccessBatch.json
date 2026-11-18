@@ -1,0 +1,161 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "CFNRead",
+      "Effect": "Allow",
+      "Action": "cloudformation:DescribeStacks",
+      "Resource": [
+        "arn:aws:cloudformation:*:*:stack/AtxInfrastructureStack/*",
+        "arn:aws:cloudformation:*:*:stack/AtxInfrastructureStack-*/*",
+        "arn:aws:cloudformation:*:*:stack/atx-scheduler/*",
+        "arn:aws:cloudformation:*:*:stack/AtxDispatcherStack/*"
+      ],
+      "Condition": { "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" } }
+    },
+    {
+      "Sid": "CFNListStacksForDetect",
+      "Effect": "Allow",
+      "Action": "cloudformation:ListStacks",
+      "Resource": "*",
+      "Condition": { "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" } }
+    },
+    {
+      "Sid": "TagGetATXStacks",
+      "Effect": "Allow",
+      "Action": "tag:GetResources",
+      "Resource": "*",
+      "Condition": { "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" } }
+    },
+    {
+      "Sid": "EC2NetworkDiscovery",
+      "Effect": "Allow",
+      "Action": ["ec2:DescribeVpcs", "ec2:DescribeSubnets", "ec2:DescribeSecurityGroups", "ec2:DescribeRouteTables"],
+      "Resource": "*",
+      "Condition": { "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" } }
+    },
+    {
+      "Sid": "LambdaTriggerBatchJobs",
+      "Effect": "Allow",
+      "Action": ["lambda:InvokeFunction", "lambda:GetFunctionConfiguration"],
+      "Resource": [
+        "arn:aws:lambda:*:*:function:atx-trigger-batch-jobs",
+        "arn:aws:lambda:*:*:function:atx-trigger-batch-jobs-*"
+      ],
+      "Condition": { "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" } }
+    },
+    {
+      "Sid": "BatchDescribeJobs",
+      "Effect": "Allow",
+      "Action": "batch:DescribeJobs",
+      "Resource": "*",
+      "Condition": { "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" } }
+    },
+    {
+      "Sid": "BatchTerminateATXJobs",
+      "Effect": "Allow",
+      "Action": "batch:TerminateJob",
+      "Resource": "arn:aws:batch:*:*:job/*",
+      "Condition": {
+        "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" },
+        "Null": { "aws:ResourceTag/batchId": "false" }
+      }
+    },
+    {
+      "Sid": "S3CustomOutput",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:PutObject", "s3:ListBucket"],
+      "Resource": ["arn:aws:s3:::atx-custom-output-*", "arn:aws:s3:::atx-custom-output-*/*"],
+      "Condition": { "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" } }
+    },
+    {
+      "Sid": "S3CtOutputRead",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:ListBucket"],
+      "Resource": ["arn:aws:s3:::atx-ct-output-*", "arn:aws:s3:::atx-ct-output-*/*"],
+      "Condition": { "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" } }
+    },
+    {
+      "Sid": "S3UploadSourceCode",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:AbortMultipartUpload"],
+      "Resource": "arn:aws:s3:::atx-source-code-*/*",
+      "Condition": { "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" } }
+    },
+    {
+      "Sid": "KMSEncryptDecrypt",
+      "Effect": "Allow",
+      "Action": ["kms:Decrypt", "kms:GenerateDataKey"],
+      "Resource": "arn:aws:kms:*:*:key/*",
+      "Condition": {
+        "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" },
+        "ForAnyValue:StringLike": { "kms:ResourceAliases": ["alias/atx-encryption-key", "alias/atx-encryption-key-*"] }
+      }
+    },
+    {
+      "Sid": "CmodCustomerLogGroupManagement",
+      "Effect": "Allow",
+      "Action": ["logs:CreateLogGroup", "logs:PutRetentionPolicy"],
+      "Resource": "arn:aws:logs:*:*:log-group:/aws/TransformContinuousModernization",
+      "Condition": { "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" } }
+    },
+    {
+      "Sid": "CmodCustomerLogStreamWrite",
+      "Effect": "Allow",
+      "Action": ["logs:CreateLogStream", "logs:PutLogEvents"],
+      "Resource": [
+        "arn:aws:logs:*:*:log-group:/aws/TransformContinuousModernization:log-stream:local/*",
+        "arn:aws:logs:*:*:log-group:/aws/TransformContinuousModernization:log-stream:batch/*"
+      ],
+      "Condition": { "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" } }
+    },
+    {
+      "Sid": "SM",
+      "Effect": "Allow",
+      "Action": ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"],
+      "Resource": "arn:aws:secretsmanager:*:*:secret:atx/*",
+      "Condition": { "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" } }
+    },
+    {
+      "Sid": "SchedLifecycle",
+      "Effect": "Allow",
+      "Action": [
+        "scheduler:CreateSchedule",
+        "scheduler:DeleteSchedule",
+        "scheduler:GetSchedule",
+        "scheduler:UpdateSchedule"
+      ],
+      "Resource": "arn:aws:scheduler:*:*:schedule/atx-ct/*",
+      "Condition": { "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" } }
+    },
+    {
+      "Sid": "SchedList",
+      "Effect": "Allow",
+      "Action": "scheduler:ListSchedules",
+      "Resource": "*",
+      "Condition": { "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" } }
+    },
+    {
+      "Sid": "IAMPassSchedulerRole",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": [
+        "arn:aws:iam::*:role/AtxSchedulerInvocationRole",
+        "arn:aws:iam::*:role/AtxSchedulerInvocationRole-*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "scheduler.amazonaws.com",
+          "aws:ResourceAccount": "${aws:PrincipalAccount}"
+        }
+      }
+    },
+    {
+      "Sid": "SQSEnqueueToDispatcher",
+      "Effect": "Allow",
+      "Action": "sqs:SendMessage",
+      "Resource": "arn:aws:sqs:*:*:atx-dispatcher-queue",
+      "Condition": { "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" } }
+    }
+  ]
+}

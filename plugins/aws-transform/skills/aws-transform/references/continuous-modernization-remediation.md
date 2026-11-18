@@ -1,6 +1,6 @@
 ---
 name: remediation
-description: Create/retry/list/delete remediation campaigns — auto-fix findings by applying ATX transforms or run custom TDs directly on repos, create PRs/CRs with fixes.
+description: Create/retry/list/cancel/delete remediation campaigns — auto-fix findings by applying AWS Transform transformation definitions, or run a transformation definition directly on repos, and open pull/merge requests with the fixes.
 ---
 
 name: remediation
@@ -33,42 +33,76 @@ If the user explicitly asks to disable telemetry, omit `--telemetry` for the res
 # Pass --wait so the command blocks until the remediation finishes (version-gated — see "Running long remediations" below).
 atx ct remediation create --ids <id1,id2> --name "Fix name" --wait --telemetry "agent=<AGENT>,executionMode=local"
 
-# Create from finding IDs with a custom TD override (ignores finding's fix field)
-atx ct remediation create --ids <id1,id2> --transformation-name <TD-name> --telemetry "agent=<AGENT>,executionMode=local"
+# Create from finding IDs with a transformation definition override (ignores finding's fix field)
+atx ct remediation create --ids <id1,id2> --transformation-name <transformation-name> --telemetry "agent=<AGENT>,executionMode=local"
 
-# Create directly on a repo with a custom TD (no findings required)
-atx ct remediation create --transformation-name <TD-name> --repo <source>::<slug> --telemetry "agent=<AGENT>,executionMode=local"
+# Create directly on a repo with a transformation definition (no findings required)
+atx ct remediation create --transformation-name <transformation-name> --repo <source>::<slug> --telemetry "agent=<AGENT>,executionMode=local"
 
-# Create with configuration passed to the TD
-atx ct remediation create --transformation-name <TD-name> --repo <source>::<slug> -g "additionalPlanContext=Upgrade to Node.js 22" --telemetry "agent=<AGENT>,executionMode=local"
+# Several repos: --repo (alias --repos) is repeatable and/or comma-separated; a bare <repo> needs --source
+atx ct remediation create --transformation-name <transformation-name> --repo svc-a,svc-b --source <name> --telemetry "agent=<AGENT>,executionMode=local"
 
-# Create with local execution (runs the ATX transform on the server host instead of on managed remote compute)
+# Create with configuration passed to the transformation definition
+atx ct remediation create --transformation-name <transformation-name> --repo <source>::<slug> -g "additionalPlanContext=Upgrade to Node.js 22" --telemetry "agent=<AGENT>,executionMode=local"
+
+# Record the run as local and cap its concurrency by this host's memory (see "--local flag")
 atx ct remediation create --ids <id1,id2> --name "Fix name" --local --telemetry "agent=<AGENT>,executionMode=local"
 
-# List all
-atx ct remediation list
+# Limit how many repos are remediated at once (see "--slots flag")
+atx ct remediation create --transformation-name <transformation-name> --repo <source>::<slug> --slots 10 --telemetry "agent=<AGENT>,executionMode=local"
 
-# Check status
+# `remediation run` is an alias of `remediation create`
+
+# List all, or one status (pending|running|completed|partial|failed|cancelled)
+atx ct remediation list --json
+atx ct remediation list --status failed --json
+
+# Check status (add --json for display_status and per-repo results)
 atx ct remediation status --id <id>
 
-# Retry failed
+# Retry the repos that are still pending or failed (re-runs them with the original settings)
 atx ct remediation retry --id <id>
+
+# Cancel a running remediation
+atx ct remediation cancel --id <id>
 
 # Delete
 atx ct remediation delete --id <id>
 ```
 
-## Repository limit per request (max 100)
+A remediation created from finding IDs gives the transformation every finding it covers, and fixes each one. When it ends, it lists any finding it did not fully address and why — relay that list to the user rather than reporting every finding as fixed.
 
-A single `atx ct remediation create` can be associated with at most **100 repositories**. Before creating a remediation that spans many repos, check how many distinct repositories the target findings cover.
+If validation finds items blocked outside the change (for example a dependency version the project's build environment doesn't provide yet), the pull or merge request description starts with a **Not complete: blocked outside this change** section that lists them and the actions their owners need to take. Tell the user the change isn't done, and pass on those actions.
 
-If the remediation would span more than 100 repositories, split it into multiple `remediation create` requests, each covering findings from at most 100 repos, and tell the user you are breaking it up because of the 100-repo-per-request limit. Never create a single remediation associated with more than 100 repositories — it will be rejected. Example: findings across 300 repos → three remediations (100 repos each).
+## Size limits per request
+
+`atx ct remediation create` has no fixed repository cap of its own. Two limits apply before anything is created:
+
+- **At most 250 findings** per remediation: `Too many findings: <N> exceeds the 250-finding limit for one remediation. Split the submission.`
+- **A metadata budget** that scales with the findings and repositories together, because the CLI stores each repository's finding details with the remediation and the stored record has a fixed size. When it is exceeded the CLI prints `Remediation metadata too large: <R> repos / <F> findings serialize to ... At this metadata size about <K> findings (or repos) fit — split the submission.` Details such as long finding titles and descriptions make each repository's share larger, so the number of repositories that fit varies from request to request.
+
+Do not split in advance or guess a group size: submit the full list in one `remediation create` first, and let the CLI tell you how many fit.
+
+If either message appears, split the work into several `remediation create` requests: divide the `--ids` list (or the `--repo` list when you pass `--transformation-name` alone) into groups no larger than the number the message gives, create one remediation per group, and tell the user you are splitting it. A message that says even one repo's or finding's metadata does not fit can't be fixed by splitting; report it to the user.
+
+## Reading a remediation's result
+
+A finished remediation's `Status:` is one of:
+
+- `completed` — every repository ran (or was cancelled) and at least one succeeded. Some may still have failed: check the `Outcome:` line and the per-repo results.
+- `partial` — some repositories did not start, and at least one succeeded.
+- `failed` — no repository succeeded.
+- `cancelled` — the remediation was cancelled, or every repository was cancelled.
+
+Each repository's own status is one of: succeeded — `pr_open`, `diff_ready`, `no_changes` (nothing to change), `already_applied`, `pr_exists`, `skipped`; failed — `failed`, `blocked`; or `cancelled`, `pending`, `running`.
+
+`atx ct remediation status` adds an `Outcome:` line when there is more to tell, for example `Complete with failures (N of M failed)` or `Partially complete (N of M did not start)`, with cancel counts when some repositories were cancelled. `atx ct remediation create --wait` prints the same line after the final status. With `--json`, read `display_status` (`complete`, `complete_with_failures`, `partially_complete`, `failed`, `cancelled`, `running`, `pending`) and `repos_not_run`. Report a `completed` remediation with failures as complete with failures, and list the failed repositories, rather than as fully done.
 
 ## Running long remediations (--wait, background, logs)
 
 `atx ct remediation create` returns immediately by default with a remediation ID. With `--wait` it blocks until the remediation completes — and applying transforms across repos can take a long time. Prefer `--wait` so you can act on the result in the same step.
 
-**`--wait` is version-gated** — it exists only in newer CLI versions. Confirm support via `atx ct remediation create --help` (or `atx ct --version`) before relying on it; if it isn't listed, run without `--wait` and do not invent the flag. Only re-run without `--wait` if the command fails with an error that explicitly names `--wait` as an unrecognized option AND returned no remediation ID — do not treat auth, `INVALID_INPUT`, or repo-cap failures as a missing-flag error, and never blindly re-run a `create` that may have already submitted.
+**`--wait` is version-gated** — `atx ct remediation create` accepts it from CLI 3.5.0 on. `--help` doesn't list it (the option is hidden), so check the version instead: run `atx ct --version`, and pass `--wait` only on 3.5.0 or later; on an older CLI, run without `--wait`, leave it out of every command you show the user too, including ones for after an upgrade, and do not invent the flag. Only re-run without `--wait` if the command fails with an error that explicitly names `--wait` as an unrecognized option AND returned no remediation ID — do not treat auth, `INVALID_INPUT`, or repo-cap failures as a missing-flag error, and never blindly re-run a `create` that may have already submitted.
 
 **Run long jobs in the background and monitor a log.** Start long-running remediations with `&`, redirect output to a log file, and monitor it:
 
@@ -79,6 +113,8 @@ tail -f /tmp/atx-remediation.log
 
 The redirect captures the command's diagnostics — the in-process CLI writes logs to STDERR, which `2>&1` folds into the log file. Only warnings and errors are logged by default; when troubleshooting, prefix the command with `ATXCT_LOG_LEVEL=debug` for verbose output.
 
+`atx ct remediation retry --id <id>` accepts the same hidden `--wait` from CLI 3.6.0 on, with the same version check (`atx ct --version`) and the same rule against inventing the flag on an older CLI. Without it, `retry` re-dispatches the pending repositories and returns; with it, `retry` blocks until the retried remediation finishes. Use `--wait` the same way as for `create`, and treat the process as still running until it exits.
+
 Tell the user where the log is and how to check progress.
 
 ## Listing remediations (pagination)
@@ -87,7 +123,7 @@ Depending on the CLI version, `atx ct remediation list` may return only a bounde
 
 ## Security Remediation
 
-Security findings (from `atx ct analysis run --type security`) are auto-remediable with the **same** `remediation create` command as any other finding — no `--transformation-name` is needed. Security findings carry a `security-agent` fix, which routes to the AWS Security Agent code-remediation API instead of an ATX transform; the fix is generated server-side.
+Security findings (from `atx ct analysis run --type security`) are auto-remediable with the **same** `remediation create` command as any other finding — no `--transformation-name` is needed. Security findings carry a `security-agent` fix, which routes to the AWS Security Agent code-remediation API instead of a transformation definition; the fix is generated server-side.
 
 ```bash
 # 1. Find the security findings to remediate
@@ -97,7 +133,7 @@ atx ct findings list --type security --json
 #    (same command as any other remediation)
 atx ct remediation create --ids <security-finding-id> --name "Fix SQL injection"
 
-# 3. Check status -- the result is a code diff or, for GitHub sources, a pull request
+# 3. Check status -- the result is a pull/merge request or, for local sources, a code diff
 atx ct remediation status --id <remediation-id>
 ```
 
@@ -105,14 +141,14 @@ atx ct remediation status --id <remediation-id>
 
 The result link surfaces in `remediation status` and in the remediation record's `execution_artifacts`. What you get depends on the repo's source provider:
 
-| Source provider                        | Per-repo status | Artifact            | Meaning                                                                                                                                                |
-| -------------------------------------- | --------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **github**                             | `pr_open`       | `pull_request_link` | AWS Transform - continuous modernization (continuous modernization) applies the diff on the scanned commit and **opens a pull request** automatically. |
-| **gitlab** / **bitbucket** / **local** | `diff_ready`    | `code_diff_link`    | A presigned URL to a unified diff. No PR is opened — apply the diff yourself.                                                                          |
+| Source provider                         | Per-repo status | Artifact            | Meaning                                                                                                                                                                            |
+| --------------------------------------- | --------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **github** / **gitlab** / **bitbucket** | `pr_open`       | `pull_request_link` | AWS Transform - continuous modernization (continuous modernization) applies the diff on the scanned commit and **opens a pull request** (a merge request on GitLab) automatically. |
+| **local**                               | `diff_ready`    | `code_diff_link`    | A presigned URL to a unified diff. No PR is opened — apply the diff yourself.                                                                                                      |
 
-- For **GitHub** sources, the diff is applied on a fresh clone pinned to the scanned commit and pushed as a pull request (idempotent per finding — re-running updates the same PR).
-- For **gitlab**, **bitbucket**, and **local** sources, security remediation stays **diff-only**. GitHub is the only provider that gets an auto-opened PR from a security diff. (This differs from tech-debt/transform remediation, where GitLab opens a Merge Request and Bitbucket opens a Pull Request — security diffs are not pushed to those providers.)
-- The PR step is **fail-soft**: if opening the PR fails, the usable diff is preserved (status stays `diff_ready`, `code_diff_link` set) and the reason is recorded in `execution_artifacts.pr_bridge_error`. A bridge failure never discards a good diff.
+- For **GitHub**, **GitLab** and **Bitbucket** sources, the diff is applied on a fresh clone pinned to the scanned commit (or the default branch if that commit is gone) and pushed with the source's token as a pull or merge request (idempotent per finding — re-running updates the same branch).
+- For **local** sources there is no remote to push to, so security remediation stays **diff-only**.
+- The PR step is **fail-soft**: if opening the PR fails, the usable diff is preserved (status stays `diff_ready`, `code_diff_link` set) and the reason is recorded in `execution_artifacts.pr_bridge_error`. A diff that no longer applies to the repository ends the repo `failed`, with the diff link kept; a diff with nothing left to change ends it `no_changes`.
 
 ### Requirements
 
@@ -141,11 +177,21 @@ The `-g`/`--configuration` flag passes configuration directly to the transformat
 
 Only valid with `--transformation-name`.
 
+### Which transformation definitions remediation accepts
+
+Before it starts, the CLI checks the `--transformation-name` against the registry (`atx custom def list` shows each one's category):
+
+- An AWS-managed transformation definition is accepted unless it is in the `analysis` category (`"<name>" is tagged analysis, so it can't be used for remediation.`).
+- One of the account's own transformation definitions must be in the `remediation` category; otherwise: `... so it can't be used for remediation. Publish it with --category remediation to use it here.`
+- An unknown name is rejected with `Transformation definition "<name>" was not found in this account.`
+
+Relay the message; don't retry with the same name.
+
 ### Constraints
 
 - At least one of `--ids` or `--transformation-name` is required
 - `--repo` cannot be used together with `--ids` (repos are derived from findings)
-- `--repo` is required when `--transformation-name` is used without `--ids`
+- `--repo` is required when `--transformation-name` is used without `--ids`; a bare `<repo>` also needs `--source <name>`
 - `-g` is only valid with `--transformation-name`
 - Repos must be discovered (`atx ct discovery scan`) before remediation can target them
 
@@ -156,7 +202,7 @@ When the user asks to remediate with a custom transformation definition, or a fi
 ### Workflow
 
 1. **List available transformation definitions:** Run `atx custom def list` to fetch all available transformation definitions.
-2. **Match intent:** Based on the user's description of what they want to fix, match against transformation definition names and descriptions.
+2. **Match intent:** Based on the user's description of what they want to fix, match against transformation definition names and descriptions. Only AWS-managed definitions not in the `analysis` category, and the account's own definitions in the `remediation` category, can run (see "Which transformation definitions remediation accepts").
 3. **Recommend and confirm:** Present the matched transformation definition(s) to the user. Wait for confirmation.
 4. **Ask for additional instructions:** Ask the user if they have additional instructions (e.g. a target version or specific guidance) before running. If they do, pass them via `-g "additionalPlanContext=<instructions>"`.
 5. **Execute:** Run `atx ct remediation create --transformation-name <matched-name> --repo <source>::<slug>` (with `-g` if the user provided additional instructions).
@@ -165,13 +211,11 @@ When the user asks to remediate with a custom transformation definition, or a fi
 
 ### `--local` flag (remediation create)
 
-When `--local` is passed, the ATX transform runs directly on the server host against a cloned copy of the repository instead of being dispatched to managed remote compute. This is useful for:
+`atx ct remediation create` already runs the transformation on this machine (it clones each repository here and opens the pull or merge request from here) for GitHub, GitLab, Bitbucket and local sources, with or without `--local`. `--local` does not change where the transformation runs. It records the remediation as a local run (`compute_mode = 'local'`) and lowers its concurrency to the smaller of `--slots`, 8, and what this host's memory allows. `retry` reuses the recorded mode, so it doesn't need the flag again.
 
-- Faster feedback without waiting for a remote job to be scheduled
-- Environments without access to managed remote compute
-- Testing transforms locally before running them on remote compute
+### `--slots` flag (remediation create)
 
-The execution mode is persisted on the remediation record (`compute_mode = 'local'`), so subsequent `retry` and `resume` operations automatically honour the original intent without needing to re-specify the flag.
+`--slots <n>` sets how many repositories are remediated at once (default 20). Transformation-definition remediation allows at most 30 (`--slots cannot exceed 30 for transform remediation (--transformation-name) — Bedrock concurrency limit.`); security-agent remediation allows up to 128 (`--slots must be an integer between 1 and 128.`). With `--local` the host's memory caps it further.
 
 ### `--tags` flag (remediation create)
 
@@ -201,7 +245,12 @@ the full actionable-error reference. Common cases:
   ensure it's on PATH (the error prints the searched PATH and an install hint).
 - **Connection error** — the CLI can't reach the AWS Transform backend: refresh AWS credentials and confirm `AWS_REGION` is a supported region, then retry.
 - **`AccessDenied` / 403 (AWS)** — refresh AWS credentials, confirm `AWS_REGION`, then retry.
-- **`401` from the provider** — the PAT is invalid/expired; re-add the source with a
-  valid token (`repo` scope; SSO-authorized for the org if required).
+- **`401` from the provider** — the PAT is invalid/expired; have the user update the source
+  with a valid token in their own terminal (`read -s TOKEN && atx ct source update --name <name> --token "$TOKEN"; unset TOKEN`;
+  `repo` scope, SSO-authorized for the org if required — see the [source](continuous-modernization-source.md)
+  skill's Token handling). Never ask the user to paste the token into chat.
+- **Push rejected by a commit-message or branch-name rule** — record the shape the remote
+  requires with `atx ct source update --name <name> --commit-message-template "<template>"`
+  or `--branch-name-template "<template>"` (see the [source](continuous-modernization-source.md) skill), then `retry`.
 - **A repo shows `blocked` / `failed`** — surface the per-repo error rather than
   reporting the remediation as done; retry that repo after fixing the cause.
