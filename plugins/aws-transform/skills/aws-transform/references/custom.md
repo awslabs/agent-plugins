@@ -561,7 +561,7 @@ See [custom-remote-execution](custom-remote-execution.md) for infrastructure set
 3. **Lightweight inspection only** — Check config files and key signals. No deep analysis.
 4. **Confirm before executing** — Always confirm transformation definition, repos, and config with user first.
 5. **No time estimates** — Never include duration predictions.
-6. **Parallel execution** — Local: max 3 concurrent repos. Remote: one `atx ct remote remediation` call fans out one container per repo; up to the account's concurrent-job limit (50, or 30 on stacks last provisioned or updated by an older CLI) run at once and the rest queue.
+6. **Parallel execution** — Local: max 3 concurrent repos. Remote: one `atx ct remote remediation` call accepts up to 1,000 repositories and fans out one container per repo. For a larger scope, make disjoint groups of at most 1,000 fully qualified slugs and submit each with `--repos`; never repeat `--sources`, which would select the whole source again. Up to the account's concurrent-job limit (50, or 30 on stacks last provisioned or updated by an older CLI) run at once and the rest queue.
 7. **Preserve outputs** — Do not delete generated output folders.
 8. **Recommend remote for 10+ repos** — Default to local for 1-9 repos. Recommend remote for 10+. Always respect user preference.
 9. **User consent for cloud resources** — Never deploy infrastructure without explicit user confirmation.

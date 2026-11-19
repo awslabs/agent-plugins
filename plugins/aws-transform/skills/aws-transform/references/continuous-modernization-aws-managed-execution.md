@@ -73,7 +73,7 @@ atx ct remote analysis \
   --type rapid-techdebt-analysis \
   --sources <src> \
   --mode aws-managed \
-  --telemetry "agent=kiro,executionMode=aws-managed"
+  --telemetry "agent=<agent>,executionMode=aws-managed"
 ```
 
 The create call is the submission — the AWS Transform service runs it on its managed fleet and returns an analysis ID immediately (there is no separate dispatch or preflight).
@@ -83,10 +83,10 @@ A custom analysis runs the same way, with the transformation definition to run:
 ```bash
 atx ct remote analysis \
   --type custom \
-  --transformation-name <TD-name> \
+  --transformation-name <transformation-name> \
   --sources <src> \
   --mode aws-managed \
-  --telemetry "agent=kiro,executionMode=aws-managed"
+  --telemetry "agent=<agent>,executionMode=aws-managed"
 ```
 
 **Supported flags:**

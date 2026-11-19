@@ -141,7 +141,7 @@ The summary step is NOT the mapping step. Do not conflate them.
 
 ### Polling and Waiting
 
-Network-specific polling cadence: every 30 seconds for machine-gated steps (mapping, job processing, agent responses). For general polling principles, see [vmware](vmware.md) → Agent Interaction Rules.
+Network-specific polling cadence: every 30 seconds for machine-gated steps (mapping, job processing, agent responses). Poll silently without asking the user for permission each time, and surface only completion, errors, or useful progress. Never auto-poll a human-gated step such as connector or deployment approval: present the required action, ask the user to confirm when it is done, then check once. For polling priority (messages, tasks, worklogs), see [vmware](vmware.md) → Agent Interaction Rules.
 
 ### Phase 3: Deployment
 
@@ -176,10 +176,10 @@ get_resource(resource="artifact", artifactId="<id>", savePath="/Users/<username>
 **IaC download (user choice):**
 
 ```bash
-aws s3 cp s3://transform-vmware-target-<...>/ ~/Downloads/network-iac/ --recursive --region <connector-region>
+aws s3 cp s3://transform-vmware-target-<...>/<prefix>code_generation/ ~/Downloads/network-iac/ --recursive --region <connector-region>
 ```
 
-Extract the exact bucket name and Region from the S3 link in the agent's response. Requires AWS CLI configured with access to the target account.
+Extract the exact bucket name, job-specific prefix, and Region from the S3 link in the agent's response. Preserve the prefix before `code_generation/`; copying from the bucket root can mix outputs from different jobs. Requires AWS CLI configured with access to the target account.
 
 **Deploy order (important):** Deploy `network_segments/` before `security/`. Security definitions reference network exports and parameters that must exist first. For CDK, CDK L2, and Terraform, run `validate-references.py` before deploying a segment to confirm the referenced network identifiers exist (needs AWS CLI with target-account credentials).
 

@@ -40,7 +40,7 @@ For persistent compute with warm containers, use [remote EC2 execution](continuo
 
 **Record the customer's response** -- if they later file a bug about permission errors, we refer to their choice here.
 
-**Admin commands are for the user to run.** The agent MUST NOT execute `remote provision`, `remote update` or `remote teardown` with `--execute`, `remote network create`, or `remote credentials`. Run the dry run (the same command without `--execute`) to show what will change, then give the user the full command to run (or pass to their admin) in their own terminal once they agree. Never add `--ack` to skip a prompt on the user's behalf.
+**Admin commands are for the user to run.** The agent MUST NOT execute `remote provision`, `remote update` or `remote teardown` with `--execute`, `remote network create`, or `remote credentials`. The agent may run only genuinely read-only previews: `remote provision` without `--execute` writes templates locally, and `remote teardown` without `--execute` only describes resources. `remote update` is different: even without `--execute` it creates, describes, and deletes a CloudFormation changeset, so give both update forms to the user or their admin to run. Never add `--ack` to skip a prompt on the user's behalf.
 
 ## Prerequisites
 
@@ -189,7 +189,7 @@ atx ct remote analysis \
   --mode batch \
   --stack-name <stack> \
   --batch-name <custom-name> \
-  --telemetry "agent=kiro,executionMode=fargate"
+  --telemetry "agent=<agent>,executionMode=fargate"
 ```
 
 Fan-out options:
@@ -211,7 +211,7 @@ Stack targeting (choose one):
 
 The CLI runs pre-flight checks (token validation, source existence), then queues the jobs for the account's dispatcher (a stack without one gets them through its trigger Lambda). Returns immediately with a batch ID and a `remote status` poll command.
 
-Max 5,000 analysis jobs per submission (1,000 for remediation).
+Max 5,000 analysis jobs per submission (1,000 for remediation). To split a larger scope, resolve its fully qualified repository slugs and submit disjoint `--repos` lists within the cap. Never repeat `--sources` across the chunks, because each call would select the whole source again.
 
 ### 4. Check Status
 
@@ -249,6 +249,8 @@ atx ct remote cancel --batch <batch-name> --job <job-id> --stack-name <stack>
 
 Remediates findings from a completed analysis. With `--transformation-name` and no `--ids`, it runs that transformation directly against each repo instead, with no findings needed.
 
+**CRITICAL — scopes over 1,000 repositories:** Resolve the fully qualified repository slugs before presenting the submission plan. Every planned submission MUST select its disjoint group with `--repos <src>::<repo>,...` and contain at most 1,000 repositories. Omit both `--sources` and `--labels` from these chunk commands; neither is a substitute for the required explicit, disjoint `--repos` groups.
+
 ```bash
 atx ct remote remediation \
   --sources <src> \
@@ -256,7 +258,7 @@ atx ct remote remediation \
   --mode batch \
   --stack-name <stack> \
   --batch-name rem-1 \
-  --telemetry "agent=kiro,executionMode=fargate"
+  --telemetry "agent=<agent>,executionMode=fargate"
 ```
 
 Filter options:
@@ -270,6 +272,8 @@ Filter options:
 - `-g, --configuration <config>` — config path or key=value pairs (only valid with `--transformation-name`)
 
 Stack targeting is the same as analysis: pass `--stack-name <stack>` or discover the stack by its resource tags with `--tags env=prod,...` (alternative to `--stack-name`).
+
+For remediation scopes over 1,000 repositories, every chunk command MUST use only a disjoint, fully qualified `--repos` list of at most 1,000 repositories for repository selection. Do not include `--sources` on any chunk command, even alongside `--repos`, because `--sources` selects the entire source again.
 
 ### 8. Get Results
 
@@ -295,13 +299,19 @@ Artifacts appear per repository as each one completes, so a listing during the r
 
 ### 9. Update Stack
 
-Update to the latest CFN template:
+Update to the latest CFN template. The user or their admin first runs the preview:
+
+```bash
+atx ct remote update --mode batch --stack-name <stack>
+```
+
+After reviewing the changeset, they apply it:
 
 ```bash
 atx ct remote update --mode batch --stack-name <stack> --execute --ack
 ```
 
-Without `--execute`, shows changeset preview (the agent can run this); the user or their admin runs the `--execute` command. With `--execute` it also updates the shared dispatcher and scheduler stacks (`--skip-dispatcher` / `--skip-scheduler` skip them). Update resets a custom `--image-uri` to the default image.
+Both preview and execution require Admin credentials: without `--execute`, the command still creates, describes, and deletes a CloudFormation changeset. The agent must not run either form with Executor credentials. With `--execute` it also updates the shared dispatcher and scheduler stacks (`--skip-dispatcher` / `--skip-scheduler` skip them). Update resets a custom `--image-uri` to the default image.
 
 ### 10. Teardown
 
@@ -309,7 +319,7 @@ Without `--execute`, shows changeset preview (the agent can run this); the user 
 atx ct remote teardown --mode batch --stack-name <stack> --execute --ack
 ```
 
-The user or their admin runs the `--execute` command; the agent can run the preview without it. Deletes the stack (compute environments, queues, job definition, Lambda functions, IAM roles, dashboard), its CloudWatch log groups, and the infrastructure assets S3 bucket. S3 data buckets (source code, outputs), the KMS key, and Secrets Manager tokens are preserved. VPC/subnets/security groups are customer-managed and not deleted. Without `--execute` it previews what will be deleted.
+Without `--execute`, teardown is a read-only preview: it describes the stack and prints what would be deleted, creates no CloudFormation changeset, and may be run by the agent with Executor credentials. The user or their admin runs the `--execute` command. Execution deletes the stack (compute environments, queues, job definition, Lambda functions, IAM roles, dashboard), its CloudWatch log groups, and the infrastructure assets S3 bucket. S3 data buckets (source code, outputs), the KMS key, and Secrets Manager tokens are preserved. VPC/subnets/security groups are customer-managed and not deleted.
 
 ## Error Handling
 
@@ -340,7 +350,7 @@ The dispatcher's waiting-room table is now named `atx-waiting-room-<id>` (it was
 ## Limits
 
 - Account-wide: every analysis and remediation type except security shares one pool of 50 concurrent jobs across all your Batch stacks and EC2 runners (30 while the stacks were last provisioned or updated by an older CLI; `atx ct remote update` raises it). On-demand jobs start before scheduled ones, and scheduled jobs that have waited 4 hours get about half of the free slots.
-- Max 5,000 analysis jobs (1,000 remediation jobs) per submission (fan-out ceiling)
+- Max 5,000 analysis jobs (1,000 remediation jobs) per submission. Split a larger remediation scope into disjoint `--repos` lists within the cap; do not repeat `--sources`, which selects the whole source each time.
 - Job timeout: 60s to 604800s (default 12h)
 - Batch stack names must start with `AtxInfrastructureStack`
 - `--execute` flag gates all destructive operations (provision/update/teardown)

@@ -23,7 +23,7 @@ If the user explicitly opts out of telemetry, omit `--telemetry` for the rest of
 ## When to Use
 
 - Re-running multiple analyses on the same compute (warm container, no cold-start)
-- Customer prefers a persistent instance they can SSM into for debugging (an interactive session needs `ssm:StartSession`, a separate grant the executor policy does not include)
+- Customer prefers a persistent instance they can SSM into for debugging (the bundled executor policy grants `ssm:StartSession` on instances tagged `atx-remote-infra=true`)
 - Workloads that run sequentially or with limited parallelism (1-5 workers)
 - Customer wants to use their own existing EC2 instance (BYO path)
 
@@ -40,7 +40,7 @@ For one-shot fan-out at scale (>5 parallel jobs), use [remote Batch execution](c
 
 **Record the customer's response** -- if they later file a bug about permission errors, we refer to their choice here.
 
-**Admin commands are for the user to run.** The agent MUST NOT execute `remote provision`, `remote update` or `remote teardown` with `--execute`, `remote network create`, or `remote credentials`. Run the dry run (the same command without `--execute`) to show what will change, then give the user the full command to run (or pass to their admin) in their own terminal once they agree. Never add `--ack` to skip a prompt on the user's behalf.
+**Admin commands are for the user to run.** The agent MUST NOT execute `remote provision`, `remote update` or `remote teardown` with `--execute`, `remote network create`, or `remote credentials`. The agent may run only genuinely read-only previews: `remote provision` without `--execute` writes templates locally, and `remote teardown` without `--execute` only describes resources. `remote update` is different: even without `--execute` it creates, describes, and deletes a CloudFormation changeset, so give both update forms to the user or their admin to run. Never add `--ack` to skip a prompt on the user's behalf.
 
 ## Prerequisites
 
@@ -166,8 +166,11 @@ Creates a VPC (default CIDR `10.1.0.0/16`, override with `--cidr`) with private 
 atx ct remote provision --mode ec2 \
   --vpc <vpc-id> \
   --subnets <subnet-1>,<subnet-2> \
+  --workers <1-5> \
   --execute --ack
 ```
+
+Choose the worker count explicitly before presenting the command. Always state that the valid range is 1-5 workers, even when the user already requested one worker. Use `--workers 1` when the user wants one analysis at a time. If omitted, the CLI defaults to five workers, auto-sizes a persistent `m5.8xlarge` instance, and creates a 250 GB EBS volume; WorkerCount cannot be changed without teardown and reprovisioning.
 
 Required flags:
 
@@ -204,7 +207,7 @@ atx ct remote analysis \
   --sources <src> \
   --mode ec2 \
   --stack-name <stack-name> \
-  --telemetry "agent=kiro,executionMode=ec2"
+  --telemetry "agent=<agent>,executionMode=ec2"
 ```
 
 Fan-out options:
@@ -259,7 +262,7 @@ atx ct remote remediation \
   --ids <finding-id1>,<finding-id2> \
   --mode ec2 \
   --stack-name <stack-name> \
-  --telemetry "agent=kiro,executionMode=ec2"
+  --telemetry "agent=<agent>,executionMode=ec2"
 ```
 
 Filter options:
@@ -298,11 +301,19 @@ Artifacts appear per repository as each one completes, so a listing during the r
 
 ### 8. Update Stack
 
+The user or their admin first runs the preview:
+
+```bash
+atx ct remote update --mode ec2 --stack-name <stack>
+```
+
+After reviewing the changeset, they apply it:
+
 ```bash
 atx ct remote update --mode ec2 --stack-name <stack> --execute --ack
 ```
 
-Without `--execute`, shows changeset preview (the agent can run this); the user or their admin runs the `--execute` command. With `--execute` it also updates the shared dispatcher and scheduler stacks (`--skip-dispatcher` / `--skip-scheduler` skip them). Update resets a custom `--image-uri` to the default image.
+Both preview and execution require Admin credentials: without `--execute`, the command still creates, describes, and deletes a CloudFormation changeset. The agent must not run either form with Executor credentials. With `--execute` it also updates the shared dispatcher and scheduler stacks (`--skip-dispatcher` / `--skip-scheduler` skip them). Update resets a custom `--image-uri` to the default image.
 
 ### 9. Teardown
 
@@ -310,7 +321,7 @@ Without `--execute`, shows changeset preview (the agent can run this); the user 
 atx ct remote teardown --mode ec2 --stack-name <stack> --execute --ack
 ```
 
-The user or their admin runs the `--execute` command; the agent can run the preview without it. Deletes the instance and its EBS volume (in-flight work on it is lost), the IAM role and instance profile, the dashboard and log group, and the security group if the stack created it. S3 buckets, the KMS key, Secrets Manager tokens, the VPC/subnets, and the shared dispatcher and scheduler stacks persist. Without `--execute` it previews what will be deleted.
+Without `--execute`, teardown is a read-only preview: it describes the stack and prints what would be deleted, creates no CloudFormation changeset, and may be run by the agent with Executor credentials. The user or their admin runs the `--execute` command. Execution deletes the instance and its EBS volume (in-flight work on it is lost), the IAM role and instance profile, the dashboard and log group, and the security group if the stack created it. S3 buckets, the KMS key, Secrets Manager tokens, the VPC/subnets, and the shared dispatcher and scheduler stacks persist.
 
 ## BYO Instance (Existing EC2)
 
@@ -323,7 +334,7 @@ atx ct remote analysis \
   --mode ec2 \
   --existing-instance <instance-id> \
   --workers 2 \
-  --telemetry "agent=kiro,executionMode=ec2"
+  --telemetry "agent=<agent>,executionMode=ec2"
 ```
 
 BYO-specific flags:
@@ -341,8 +352,8 @@ Prerequisites for BYO:
 - Instance is running and SSM-managed (SSM agent Online)
 - Docker installed with the AWS Transform — continuous modernization container(s) running the image's default command, named `atx-ct` for one worker or `atx-ct-1`..`atx-ct-N` for N workers
 - Instance tagged with `atx-remote-infra=true` (required by executor policy)
-- Instance role equivalent to the provisioned one: `transform-custom:*`, S3 on the `atx-source-code-*` / `atx-ct-output-*` buckets, `secretsmanager:GetSecretValue` on `atx/*`, KMS, and the Security Agent actions
-- The account's `atx-ct-output-*` and `atx-source-code-*` buckets exist
+- Instance role equivalent to the provisioned one: `transform-custom:*`, S3 on the `atx-source-code-*` / `atx-ct-output-*` / `atx-custom-output-*` buckets, `secretsmanager:GetSecretValue` on `atx/*`, KMS, and the Security Agent actions
+- The account's `atx-ct-output-*`, `atx-custom-output-*`, and `atx-source-code-*` buckets exist
 
 ## Error Handling
 
@@ -374,7 +385,7 @@ The dispatcher's waiting-room table is now named `atx-waiting-room-<id>` (it was
 ## Limits
 
 - Account-wide: every analysis and remediation type except security shares one pool of 50 concurrent jobs across all your Batch stacks and EC2 runners (30 while the stacks were last provisioned or updated by an older CLI; `atx ct remote update` raises it). On-demand jobs start before scheduled ones, and scheduled jobs that have waited 4 hours get about half of the free slots.
-- Max 5,000 analysis jobs (1,000 remediation jobs) per submission
+- Max 5,000 analysis jobs (1,000 remediation jobs) per submission. Split a larger remediation scope into disjoint `--repos` lists within the cap; do not repeat `--sources`, which selects the whole source each time.
 - Max 5 workers per instance (default 5)
 - Not resumable — `--resume-incomplete` is Batch-only
 - EC2 stack names must start with `atx-runner`

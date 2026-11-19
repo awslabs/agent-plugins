@@ -72,7 +72,7 @@ The five commands do NOT return the same envelope, and the exact container can v
 
 ```jsonc
 [ { "id": "01K...", "status": "complete|running|failed|cancelled|pending|null",
-    "analysis_type": "tech-debt-quick|tech-debt-comprehensive|security|agentic-readiness|modernization-readiness|graviton-readiness|custom",
+    "analysis_type": "tech-debt-quick|tech-debt-comprehensive|security|agentic-readiness|modernization-readiness|graviton-readiness|aws-health-readiness|custom",
     "category": "Security", "display_name": "...",
     "repos": ["<source>::<slug>", ...], "repos_total": 4, "repos_failed": 1,
     "display_status": "complete|complete_with_failures|partially_complete|failed|cancelled|running|pending",
@@ -269,7 +269,7 @@ Fields (raw → normalized): `id`, `analysis_type` → `analysisType`, `status`,
 Two charts side-by-side:
 
 1. Bar — severity counts. Use `status === 'open'` only. **Only include severity buckets that have at least one finding** — don't render zero-count columns. Iterate `['high','medium','low']` in that order, filter to non-zero, then plot.
-2. Doughnut — analysis-type split (`rapid-techdebt-analysis` (raw `tech-debt-quick`), `tech-debt-comprehensive`, `security`, `agentic-readiness`, `modernization-readiness`, `graviton-readiness`, `custom`, `manual`). Same rule: only include types with at least one finding.
+2. Doughnut — analysis-type split (`rapid-techdebt-analysis` (raw `tech-debt-quick`), `tech-debt-comprehensive`, `security`, `agentic-readiness`, `modernization-readiness`, `graviton-readiness`, `aws-health-readiness`, `custom`, `manual`). Same rule: only include types with at least one finding.
 
 **Severity enum is `high | medium | low`. There is no `critical`.**
 

@@ -135,8 +135,8 @@ Remote runs go through the AWS Transform CLI's built-in remote execution — no
 Lambda calls or separate infrastructure repo. Register the repos as sources first
 (`atx ct source add`; local paths and S3 zips become a `--provider local` source),
 then submit one call per transformation definition. The CLI fans out one container
-per repo; up to the account's concurrent-job limit run at once and the rest queue,
-so there is no need to chunk:
+per repo; up to the account's concurrent-job limit run at once and the rest queue.
+Each submission accepts at most 1,000 repositories. For a larger scope, use `atx ct repository list --source <name>` to form disjoint groups of at most 1,000 fully qualified slugs, then submit each group with `--repos`; do not repeat `--sources`, because that selects the whole source again:
 
 ```bash
 AWS_REGION=<region> atx ct remote remediation --mode <batch|ec2> --stack-name <stack> \
@@ -212,5 +212,5 @@ for the exact prompt and flow.
 1. Single prerequisite check — never repeat for parallel tasks
 2. Trust the match report — do not re-discover transformation definitions
 3. Local parallel execution — maximum 3 concurrent repos (user-overridable); recommend remote for more than 9
-4. Remote parallel execution — one `atx ct remote remediation` call per transformation definition; the CLI fans out one container per repo (up to the account's concurrent-job limit running at once, the rest queue)
+4. Remote parallel execution — one `atx ct remote remediation` call per transformation definition for up to 1,000 repositories; split larger lists into separate calls. The CLI fans out one container per repo (up to the account's concurrent-job limit running at once, the rest queue)
 5. Skip prerequisite checks in parallel task prompts

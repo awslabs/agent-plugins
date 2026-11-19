@@ -115,14 +115,14 @@
         "scheduler:GetSchedule",
         "scheduler:UpdateSchedule"
       ],
-      "Resource": ["arn:aws:scheduler:*:*:schedule/atx-control-tower/*", "arn:aws:scheduler:*:*:schedule/atx-ct/*"],
+      "Resource": ["arn:aws:scheduler:*:*:schedule/atx-ct/*", "arn:aws:scheduler:*:*:schedule/atx-ct-*/*"],
       "Condition": { "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" } }
     },
     {
       "Sid": "SchedGroupRead",
       "Effect": "Allow",
       "Action": "scheduler:GetScheduleGroup",
-      "Resource": "arn:aws:scheduler:*:*:schedule-group/atx-control-tower",
+      "Resource": ["arn:aws:scheduler:*:*:schedule-group/atx-ct", "arn:aws:scheduler:*:*:schedule-group/atx-ct-*"],
       "Condition": { "StringEquals": { "aws:ResourceAccount": "${aws:PrincipalAccount}" } }
     },
     {

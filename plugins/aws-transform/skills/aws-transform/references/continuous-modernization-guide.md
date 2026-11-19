@@ -153,7 +153,7 @@ Setup complete.
 
 ### Select and Start an Analysis
 
-**Render this menu as plain numbered markdown text in your response and wait for the user to type a choice. Do NOT route it through any structured choice/picker tool (e.g., `AskUserQuestion` in Claude Code, or any equivalent multi-select/option UI in other harnesses) — those tools impose option caps that silently drop Agentic Readiness, Modernization Readiness and Graviton Readiness. All seven options below MUST appear verbatim.**
+**Render this menu as plain numbered markdown text in your response and wait for the user to type a choice. Do NOT route it through any structured choice/picker tool (e.g., `AskUserQuestion` in Claude Code, or any equivalent multi-select/option UI in other harnesses) — those tools impose option caps that silently drop Agentic Readiness, Modernization Readiness, Graviton Readiness, or AWS Health Readiness. All eight options below MUST appear verbatim.**
 
 ```
 What do you want to do next?
@@ -170,7 +170,9 @@ What do you want to do next?
      Analyze modernization opportunities (infrastructure, application, data, security, operations).
   6. Graviton Readiness
      Check Java repos for AWS Graviton (ARM64) compatibility.
-  7. Run remediation
+  7. AWS Health Readiness
+     Find Lambda runtimes, Amazon EKS versions, and Elastic Beanstalk PHP platforms approaching end of support.
+  8. Run remediation
      Skip analysis and go straight to an upgrade (e.g., Java 8→21, AWS SDK migrations).
 ```
 

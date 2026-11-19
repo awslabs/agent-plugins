@@ -152,10 +152,12 @@ and [EC2 error handling](continuous-modernization-ec2-execution.md#error-handlin
 list the common ones. Do not try to fix individual CloudFormation resources by hand.
 
 A stack deployed by an older CLI or by the earlier setup script keeps its old
-infrastructure. Preview the update, then have the user apply it with admin credentials:
+infrastructure. Both update forms create a CloudFormation changeset, so have the
+user or their admin run the preview and, after reviewing it, apply it with admin
+credentials:
 
 ```bash
-AWS_REGION=<region> atx ct remote update --mode batch --stack-name <stack>
+AWS_PROFILE=<your-admin-profile> AWS_REGION=<region> atx ct remote update --mode batch --stack-name <stack>
 AWS_PROFILE=<your-admin-profile> AWS_REGION=<region> atx ct remote update --mode batch --stack-name <stack> --execute --ack
 ```
 

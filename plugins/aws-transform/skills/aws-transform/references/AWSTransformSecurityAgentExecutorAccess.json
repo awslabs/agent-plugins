@@ -120,10 +120,10 @@
       }
     },
     {
-      "Sid": "S3SecurityAgentBucketList",
+      "Sid": "S3AtxSecurityAgentBucketRead",
       "Effect": "Allow",
-      "Action": "s3:ListBucket",
-      "Resource": "arn:aws:s3:::atx-security-agent-*",
+      "Action": ["s3:GetObject", "s3:ListBucket"],
+      "Resource": ["arn:aws:s3:::atx-security-agent-*", "arn:aws:s3:::atx-security-agent-*/*"],
       "Condition": {
         "StringEquals": {
           "s3:ResourceAccount": "${aws:PrincipalAccount}"
