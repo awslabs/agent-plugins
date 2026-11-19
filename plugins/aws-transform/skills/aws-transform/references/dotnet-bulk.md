@@ -68,7 +68,7 @@ question **wording** from [dotnet](dotnet.md), but reuse its **value mapping onl
 Do NOT reuse dotnet.md's Mode value mapping (see the Mode bullet below), and source is connector-based
 here (see "Connect the source" below), not the upload-only block from that file:
 
-- **Target version** → `target_framework` (`net10.0` recommended / `net9.0` / `net8.0`).
+- **Target version** → `target_framework` (`net10.0` recommended / `net11.0` / `net9.0` / `net8.0`).
 - **Mode** → this is a **job/orchestrator-level** choice, NOT a per-repo-agent setting. `auto` runs the
   whole portfolio end-to-end without stopping; `interactive` makes the **orchestrator** pause for your
   review at each repo checkpoint. Either way the per-repo transform runs straight through — see the box
