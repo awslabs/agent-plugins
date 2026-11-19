@@ -37,23 +37,23 @@
 
 ## Capabilities
 
-Modernize .NET applications to .NET 8, .NET 9, or .NET 10. Supports projects targeting .NET Framework (v2.0–v4.8), .NET Core (1.x–3.x), or .NET 5–7.
+Modernize .NET applications to .NET 8, .NET 9, .NET 10, or .NET 11. Supports projects targeting .NET Framework (v2.0–v4.8), .NET Core (1.x–3.x), or .NET 5–7.
 
-| Source                 | Target                               |
-| ---------------------- | ------------------------------------ |
-| .NET Framework 2.0–4.8 | .NET 8 or .NET 10                    |
-| .NET Core 1.x–3.x      | .NET 8 or .NET 10                    |
-| .NET 5–7               | .NET 8 or .NET 10                    |
-| VB.NET (.vbproj)       | VB.NET on .NET 8 or .NET 10          |
-| WPF (.NET Framework)   | WPF on .NET 8 or .NET 10             |
-| Xamarin                | .NET MAUI                            |
-| ASP.NET MVC 5          | ASP.NET Core                         |
-| WCF Services           | gRPC or REST APIs                    |
-| Web Forms              | Blazor or Razor Pages                |
-| Entity Framework 6     | EF Core                              |
-| Web.config             | appsettings.json                     |
-| IIS deployment         | ECS Fargate / App Runner             |
-| packages.config        | PackageReference (SDK-style .csproj) |
+| Source                 | Target                                |
+| ---------------------- | ------------------------------------- |
+| .NET Framework 2.0–4.8 | .NET 8, .NET 10, or .NET 11           |
+| .NET Core 1.x–3.x      | .NET 8, .NET 10, or .NET 11           |
+| .NET 5–7               | .NET 8, .NET 10, or .NET 11           |
+| VB.NET (.vbproj)       | VB.NET on .NET 8, .NET 10, or .NET 11 |
+| WPF (.NET Framework)   | WPF on .NET 8, .NET 10, or .NET 11    |
+| Xamarin                | .NET MAUI                             |
+| ASP.NET MVC 5          | ASP.NET Core                          |
+| WCF Services           | gRPC or REST APIs                     |
+| Web Forms              | Blazor or Razor Pages                 |
+| Entity Framework 6     | EF Core                               |
+| Web.config             | appsettings.json                      |
+| IIS deployment         | ECS Fargate / App Runner              |
+| packages.config        | PackageReference (SDK-style .csproj)  |
 
 ---
 
@@ -78,6 +78,7 @@ All user-facing questions. Ask in this order: version → mode → source code �
 | Target  | TFM       | Support                   | Notes                                   |
 | ------- | --------- | ------------------------- | --------------------------------------- |
 | .NET 10 | `net10.0` | LTS (Nov 2025 – Nov 2028) | Latest LTS, newest APIs and performance |
+| .NET 11 | `net11.0` | STS (Nov 2026 – Nov 2028) | Newest release, shorter support window  |
 | .NET 9  | `net9.0`  | STS (Nov 2024 – May 2026) | Latest features, shorter support window |
 | .NET 8  | `net8.0`  | LTS (Nov 2023 – Nov 2026) | Stable, widely adopted                  |
 
@@ -88,6 +89,7 @@ Present options to the user and wait for their selection:
 | Option                | Description                                                   | Value Mapping                  |
 | --------------------- | ------------------------------------------------------------- | ------------------------------ |
 | .NET 10 (Recommended) | LTS until Nov 2028. Latest APIs and performance improvements. | `target_framework = "net10.0"` |
+| .NET 11               | STS until Nov 2028. Newest release, shorter support window.   | `target_framework = "net11.0"` |
 | .NET 9                | STS until May 2026. Latest features, shorter support window.  | `target_framework = "net9.0"`  |
 | .NET 8                | LTS until Nov 2026. Stable, widely adopted.                   | `target_framework = "net8.0"`  |
 
@@ -204,7 +206,7 @@ Save `workspaceId`. If user has a workspace from a previous session (check `.atx
 
 MUST ask version FIRST, mode SECOND. MUST store exact values before calling `create_job`.
 
-1. Ask target version → store `target_framework` ("net10.0", "net9.0", or "net8.0")
+1. Ask target version → store `target_framework` ("net10.0", "net11.0", "net9.0", or "net8.0")
 2. Ask transformation mode → store `interactive_mode` ("auto" or "interactive")
 
 See [Decision Points](#decision-points) for the exact formats and value mappings.
