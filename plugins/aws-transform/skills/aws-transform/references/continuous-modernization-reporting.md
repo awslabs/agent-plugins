@@ -6,7 +6,7 @@ argument-hint: "[--repo <source>::<slug>]"
 
 # Reporting
 
-Generate a single self-contained HTML report that walks through everything AWS Transform - continuous modernization has done in this account: sources connected, repos discovered, analyses run, findings produced, remediations launched (with PR URLs). Claude assembles the HTML inline from the data it gathered and opens it in the browser.
+Generate a single self-contained HTML report that walks through everything AWS Transform - continuous modernization has done in this account: sources connected, repos discovered, analyses run, findings produced, remediations launched (with PR URLs). The agent assembles the HTML from the data it gathered and opens it in the browser.
 
 The report is a **static snapshot**: the HTML has all data baked in as JS consts, so it's portable (emailable, openable offline) and reflects the moment the report was generated.
 
@@ -18,7 +18,7 @@ Populate the report from live `atx ct` reads.
 atx ct source list --json
 atx ct repository list --json
 atx ct analysis list --json
-atx ct findings list --json
+atx ct findings list --max-items 10000 --json   # exits 2 with a nextToken when there are more; see below
 atx ct remediation list --json
 ```
 
@@ -26,9 +26,11 @@ atx ct remediation list --json
 
 Response shape can vary by CLI version, so don't hard-code it: a list command may return every result at once, a bare array, or an object that wraps the array alongside a top-level `nextToken`. The report is a **static snapshot baked from this data**, so a dropped page silently loses sources, repos, analyses, findings, or remediations. The version-agnostic rule: after each list call, check whether the response carries a non-empty `nextToken`; if it does, call the command again with `--next-token <token>` and repeat until no `nextToken` remains, then concatenate all pages before normalizing. If there is no `nextToken`, the single response is already complete. A truncated `findings` or `remediation` fetch skews every KPI and chart downstream.
 
+`findings list` is the one that pages in practice: it reads about `--max-items` findings per call (1000 by default, at most 10,000). A partial read exits with status 2 — expected, not a failure — and prints `{"findings": [...], "truncated": true, "total_count": N, "nextToken": "..."}` instead of a bare array; take the records from `findings`. If the account has very many findings, use `atx ct findings count --by severity --json` (and `--by analysis-type`, `--by status`) for the KPI and chart numbers instead of paging every finding.
+
 ### Raw response shapes
 
-The five commands do NOT return the same envelope, and the exact container can vary by CLI version — `repository list` wraps results in `{"items": [...]}`, while the others may come back as a bare array or (on newer CLIs) an object wrapping the array alongside a `nextToken` (see the pagination note above). Read the records wherever they live and follow `nextToken` when it's present. The shapes below describe the objects **inside** each list. All field names are snake_case.
+The five commands do NOT return the same envelope, and the exact container can vary by CLI version — `repository list` wraps results in `{"items": [...], "nextToken": null, "total": N}`, `findings list` returns an object only when truncated (above), and the others come back as a bare array. Read the records wherever they live and follow `nextToken` when it's present. The shapes below describe the objects **inside** each list. All field names are snake_case except the source fields shown.
 
 **`source list --json`** → flat array:
 
@@ -37,9 +39,10 @@ The five commands do NOT return the same envelope, and the exact container can v
   "source": "...",
   "provider": "github",
   "identifier": "...",
-  "oidcConfigured": false,
-  "githubAppConfigured": false
-}]
+  "provider_config": {}, // optional
+  "authMode": "PAT|OAUTH", // optional
+  "connectedStatus": "CONNECTED|DISCONNECTED"
+}] // optional, OAuth sources only
 ```
 
 **`repository list --json`** → object with `items` array:
@@ -55,12 +58,13 @@ The five commands do NOT return the same envelope, and the exact container can v
       "language": null,
       "private": false,
       "archived": false,
-      "has_workflow": false,
       "assessed": false,
       "source": "...",
       "labels": []
     }
-  ]
+  ],
+  "nextToken": null,
+  "total": 1
 }
 ```
 
@@ -68,53 +72,60 @@ The five commands do NOT return the same envelope, and the exact container can v
 
 ```jsonc
 [ { "id": "01K...", "status": "complete|running|failed|cancelled|pending|null",
-    "analysis_type": "security|tech-debt|...", "category": "Security",
-    "repos": ["<source>::<slug>", ...],
-    "started_at": "2026-...", "completed_at": "2026-...", "failure_reason": null } ]
+    "analysis_type": "tech-debt-quick|tech-debt-comprehensive|security|agentic-readiness|modernization-readiness|graviton-readiness|aws-health-readiness|custom",
+    "category": "Security", "display_name": "...",
+    "repos": ["<source>::<slug>", ...], "repos_total": 4, "repos_failed": 1,
+    "display_status": "complete|complete_with_failures|partially_complete|failed|cancelled|running|pending",
+    "started_at": "2026-...", "completed_at": "2026-...",
+    "error": null, "repo_errors": { "<source>::<slug>": "..." } } ]
 ```
 
-**`findings list --json`** → flat array:
+`tech-debt-quick` is the stored name of `rapid-techdebt-analysis`; label it "rapid-techdebt-analysis" in the report.
+
+**`findings list --json`** → flat array (or the truncated object above):
 
 ```jsonc
 [ { "id": "01K...", "analysis_id": "01K..." | "manual:01K...",
     "repo": "<source>::<slug>", "analysis_type": "...", "severity": "high|medium|low",
     "category": "...", "title": "...", "description": "...",
-    "status": "open|dismissed|obsolete",                  // tech-debt
-    "metadata": { "status": "ACTIVE|RESOLVED" },         // security
+    "status": "open|dismissed|obsolete|change_ready",
+    "metadata": { "status": "ACTIVE|RESOLVED|..." },     // security: the Security Agent's own state
     "file_refs": ["path/to/file.java#L1-L10"],
-    "fix": { "kind": "atx-transform", "transform_name": "AWS/...", "effort": "Low" } | null } ]
+    "fix": { "kind": "atx-transform", "transform_name": "AWS/...", "effort": "Low" }
+         | { "kind": "security-agent", ... } | null } ]
 ```
 
-**`remediation list --json`** → flat array. `repos` is an OBJECT keyed by slug, NOT an array. Statuses are lowercase. PR URL is `repos[<slug>].execution_artifacts.pr_url`.
+**`remediation list --json`** → flat array. `repos` is an OBJECT keyed by slug, NOT an array. Statuses are lowercase. The PR URL is `repos[<slug>].execution_artifacts.transform_pr_url` (transformation runs) or `.pull_request_link` (security runs); a diff-only security result has `.code_diff_link`.
 
 ```jsonc
 [ { "id": "01K...", "name": "...", "transform_name": "...",
-    "status": "succeeded|failed|in_progress|pending|cancelled|...",   // lowercase
+    "status": "pending|running|completed|partial|failed|cancelled",   // lowercase
+    "display_status": "complete|complete_with_failures|partially_complete|failed|cancelled|running|pending",
     "started_at": "...", "completed_at": "...", "finding_ids": [...],
     "repos": {
       "<source>::<slug>": {
-        "status": "succeeded|failed|...",                              // lowercase
+        "status": "pr_open|diff_ready|no_changes|already_applied|pr_exists|skipped|failed|blocked|cancelled|pending|running",
         "transform_name": "...", "finding_id": "...",
-        "execution_artifacts": { "pr_url": "https://..." },
+        "execution_artifacts": { "transform_pr_url": "https://...", "pull_request_link": "https://...", "code_diff_link": "https://..." },
         "error": "..." }
     } } ]
 ```
 
 ### Normalization
 
-**Findings.** `findingId=id`, `repositoryId=repo`, `severity`, `analysisType=analysis_type`, `category`, `title`, `fileRefs=file_refs`, `fix={transformName: fix.transform_name}` (only if set). Status: for `security` analyses use `metadata.status === 'ACTIVE'` → `open`; for everything else use the top-level `status` (default `open` if missing).
+**Findings.** `findingId=id`, `repositoryId=repo`, `severity`, `analysisType=analysis_type`, `category`, `title`, `fileRefs=file_refs`, `fix={kind: fix.kind, transformName: fix.transform_name}` (only if `fix` is non-null; a `security-agent` fix has `transform_name: null`). Status: use the top-level `status` for every analysis type, security included (default `open` if missing) — it is what `findings list --status` filters on and what dismissing changes; `metadata.status` is the Security Agent's own state, not the finding's.
 
-**Analyses.** `id`, `analysisType=analysis_type`, `status`, `repos`, `startedAt=started_at`, `completedAt=completed_at`, `failureReason=failure_reason`. To compute `findingsCount`, build a map first: `findingsByAnalysisId = groupBy(findings, f => f.analysis_id)`. Manual findings carry `analysis_id` of the form `"manual:<id>"` — also key by the unprefixed `<id>` so manual analyses match. Then `findingsCount = (findingsByAnalysisId[analysis.id] || []).length`. **Drop analyses with status `null`** (the literal string) — these are integ-test artifacts that don't belong in the report.
+**Analyses.** `id`, `analysisType=analysis_type`, `status`, `repos`, `startedAt=started_at`, `completedAt=completed_at`, `failureReason=error` (fall back to the first `repo_errors` value). To compute `findingsCount`, build a map first: `findingsByAnalysisId = groupBy(findings, f => f.analysis_id)`. Manual findings carry `analysis_id` of the form `"manual:<id>"` — also key by the unprefixed `<id>` so manual analyses match. Then `findingsCount = (findingsByAnalysisId[analysis.id] || []).length`. **Drop analyses with status `null`** (the literal string) — these are integ-test artifacts that don't belong in the report.
 
 **Remediations.** Convert `repos` (object) to `repoStatuses` (array):
 
 ```js
-// raw:        r.repos = { "<slug>": { status, execution_artifacts: { pr_url }, error } }
+// raw:        r.repos = { "<slug>": { status, execution_artifacts: { transform_pr_url | pull_request_link }, error } }
 // normalized: r.repoStatuses = [{ slug, status, executionRefs: { prUrl }, error }, ...]
 const repoStatuses = Object.entries(r.repos || {}).map(([slug, rs]) => ({
   slug,
   status: rs.status,
-  executionRefs: { prUrl: rs.execution_artifacts?.pr_url },
+  executionRefs: { prUrl: rs.execution_artifacts?.transform_pr_url ?? rs.execution_artifacts?.pull_request_link },
   error: rs.error,
 }));
 ```
@@ -125,7 +136,7 @@ Top-level fields: `id`, `name`, `transformName=transform_name`, `status` (lowerc
 
 If `--repo <source>::<slug>` was passed, scope the report to that repo:
 
-- Replace `findings list --json` with `findings list --repo <source>::<slug> --json`.
+- Replace the `findings list` call with `findings list --repo <source>::<slug> --max-items 10000 --json`.
 - Filter analyses client-side to those whose `repos[]` includes the slug.
 - Filter remediations client-side to those whose `repos` include the slug.
 
@@ -135,7 +146,7 @@ If a list is empty (no remediations yet, no analyses yet), **skip that section e
 
 ### Step 1: Gather data
 
-Verify server health, then run the CLI calls above to load the five entity arrays (`sources`, `repositories`, `analyses`, `findings`, `remediations`). Normalize per the shape rules above so the renderer can stay simple.
+Run the CLI calls above to load the five entity arrays (`sources`, `repositories`, `analyses`, `findings`, `remediations`); there is no server to start or health-check. If a read fails (auth, connection), stop and surface the error rather than rendering a report with an empty section. Normalize per the shape rules above so the renderer can stay simple.
 
 ### Step 2: Assemble the HTML
 
@@ -214,7 +225,7 @@ Chart: doughnut — language distribution (group by `language`, count repos). **
 
 No table by default — repo lists get too long. Mention that `atx ct repository list` shows the full table.
 
-Fields (raw → normalized): `slug`, `language`, `default_branch` → `defaultBranch`, `has_workflow`, `source`.
+Fields (raw → normalized): `slug`, `language`, `default_branch` → `defaultBranch`, `source`.
 
 ### Analyses
 
@@ -258,7 +269,7 @@ Fields (raw → normalized): `id`, `analysis_type` → `analysisType`, `status`,
 Two charts side-by-side:
 
 1. Bar — severity counts. Use `status === 'open'` only. **Only include severity buckets that have at least one finding** — don't render zero-count columns. Iterate `['high','medium','low']` in that order, filter to non-zero, then plot.
-2. Doughnut — analysis-type split (`rapid-techdebt-analysis`, `tech-debt-comprehensive`, `security`, `agentic-readiness`, `modernization-readiness`, `custom`, `manual`). Same rule: only include types with at least one finding.
+2. Doughnut — analysis-type split (`rapid-techdebt-analysis` (raw `tech-debt-quick`), `tech-debt-comprehensive`, `security`, `agentic-readiness`, `modernization-readiness`, `graviton-readiness`, `aws-health-readiness`, `custom`, `manual`). Same rule: only include types with at least one finding.
 
 **Severity enum is `high | medium | low`. There is no `critical`.**
 
@@ -269,7 +280,7 @@ Two drilldown tables:
 | Title | Severity | Repos affected | Auto-fix? |
 | ----- | -------- | -------------- | --------- |
 
-Auto-fix? = whether `fix.transformName` is set on any finding in the group.
+Auto-fix? = whether any finding in the group has a non-null `fix` (a `security-agent` fix counts, though it has no `transformName`).
 
 **Top auto-fix transforms** — group findings whose `fix.transformName` is set, by transform name:
 
@@ -282,20 +293,20 @@ Fields: `findingId`, `repositoryId`, `severity`, `status`, `analysisType`, `cate
 
 ### Remediations
 
-**Statuses are lowercase** (`succeeded`, `completed`, `complete`, `failed`, `in_progress`, `pending`, `cancelled`, `running`) — never pattern-match against uppercase.
+**Statuses are lowercase** — top level `pending`, `running`, `completed` (older records may say `complete`), `partial`, `failed`, `cancelled`; per repo see the shape above — never pattern-match against uppercase.
 
 #### Trends chart (cumulative line)
 
 Replace any "by aggregate status" bar with a **cumulative line chart over time**. Three series:
 
 1. **Total created** — every remediation, keyed by `startedAt` date.
-2. **Succeeded with PR** — remediations whose top-level `status` is in `{succeeded, complete, completed}` AND at least one repo has a non-null `executionRefs.prUrl`. Keyed by `completedAt` date (fall back to `startedAt` if missing). This is the strict definition of success — a transform can be marked `completed` without producing a PR (e.g., target version already met, or PR-publish step failed after a clean run). Only "with PR" represents real code in flight, so it's the only success line worth charting.
+2. **Succeeded with PR** — remediations whose top-level `status` is in `{complete, completed, partial}` AND at least one repo has a non-null `executionRefs.prUrl`. Keyed by `completedAt` date (fall back to `startedAt` if missing). This is the strict definition of success — a transform can be marked `completed` without producing a PR (e.g., target version already met, or PR-publish step failed after a clean run). `partial` counts because it means some repositories finished and others never started, so its finished repositories can carry pull requests. Only "with PR" represents real code in flight, so it's the only success line worth charting.
 3. **Failed** — remediations with top-level `status === "failed"`. Keyed by `completedAt` date (fall back to `startedAt`).
 
 Bucket by ISO date (`startedAt.slice(0, 10)`), accumulate day by day, sort labels ascending.
 
 ```js
-const SUCCESS = new Set(['succeeded', 'complete', 'completed']);
+const SUCCESS = new Set(['complete', 'completed', 'partial']);
 const hasPR = r => (r.repoStatuses || []).some(rs => rs.executionRefs?.prUrl);
 // per-day buckets: { created, succeededWithPR, failed }
 // then cumulative running totals across sorted days
@@ -329,7 +340,9 @@ Failures:
   • <repo-slug>: <error>
 ```
 
-PR URLs come from `repoStatuses[<repoSlug>].executionRefs.prUrl` (also accept `transform_pr_url` for older entries). Render as `<a href="...">` so they're clickable.
+Per-repo buckets: succeeded = `pr_open`, `diff_ready`, `no_changes`, `already_applied`, `pr_exists`, `skipped`; failed = `failed`, `blocked`; in progress = `pending`, `running`; `cancelled` is its own count.
+
+PR URLs come from `repoStatuses[<repoSlug>].executionRefs.prUrl` (raw `execution_artifacts.transform_pr_url`, or `pull_request_link` for security runs). Render as `<a href="...">` so they're clickable.
 
 Fields: `id`, `name`, `transformName`, `status` (aggregate), `repos`, `repoStatuses` (per-repo: `status`, `executionRefs.prUrl`, `error`, `startedAt`, `completedAt`), `findingIds`.
 

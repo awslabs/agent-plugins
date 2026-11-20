@@ -66,11 +66,14 @@ before proceeding.
 ### Telemetry
 
 When running `atx custom def exec`, always include the `--telemetry` flag (see the Telemetry section in [custom](custom.md)). Format:
-`--telemetry "client=<client>,agent=<agent>,executionMode=<local|remote>"`
+`--telemetry "client=<client>,agent=<agent>,executionMode=local"`
 
 - `client` is the MCP host for this session (lowercase, no spaces) — e.g., `kiro`, `vscode`, `cursor`, `windsurf`, `claudecode`, `amazonqcli`. Use the real host name; do not default to any example.
 - `agent` is the AI assistant for this session (lowercase, no spaces) — e.g., `kiro`, `amazonq`, `claude`, `copilot`, `cline`, `codex`. Use the real assistant name; do not default to any example.
-- `executionMode` is `local` for direct CLI invocation, `remote` when submitting via Lambda
+- `executionMode` is `local` for direct CLI invocation
+
+For `atx ct remote remediation`, use `--telemetry "agent=<agent>,executionMode=<fargate|ec2>"`
+instead (`fargate` for Batch, `ec2` for EC2). The CLI adds its own `client`.
 
 Run transformations in parallel — maximum 3 concurrent repos at a time (the user
 can override this, but 3 is recommended to avoid overloading the machine). If there
@@ -128,43 +131,29 @@ steps after that (validation summary generation).
 
 ## Remote Execution
 
-Prepare each repo's source before submitting the batch. Follow the source prep
-rules from [custom-single-transformation](custom-single-transformation.md): HTTPS and SSH git URLs (with credentials
-configured) are passed directly; S3 zips from the user's bucket must be copied
-to the managed source bucket (`atx-source-code-{account}`) first; local repos
-must be zipped and uploaded to the same managed bucket.
-
-Submit jobs via the batch Lambda in chunks of up to 128. If there are more than
-128 jobs, split them into multiple `atx-trigger-batch-jobs` calls (e.g., 500 repos
-= 4 calls of 128 + 128 + 128 + 116). Each call returns its own `batchId`. Track
-all batch IDs for monitoring.
-
-Include the `environment` field on each job to set the language version matching the transformation's target (e.g., `"JAVA_VERSION":"21"` for a Java upgrade targeting 21). The `--telemetry` flag is always included in each job's `command` string (see [custom](custom.md)):
+Remote runs go through the AWS Transform CLI's built-in remote execution — no
+Lambda calls or separate infrastructure repo. Register the repos as sources first
+(`atx ct source add`; local paths and S3 zips become a `--provider local` source),
+then submit one call per transformation definition. The CLI fans out one container
+per repo; up to the account's concurrent-job limit run at once and the rest queue.
+Each submission accepts at most 1,000 repositories. For a larger scope, use `atx ct repository list --source <name>` to form disjoint groups of at most 1,000 fully qualified slugs, then submit each group with `--repos`; do not repeat `--sources`, because that selects the whole source again:
 
 ```bash
-aws lambda invoke --function-name atx-trigger-batch-jobs \
-  --payload '{"batchName":"<name>-chunk-1","jobs":[{"source":"<url>","command":"atx custom def exec -n <td> -p /source/<project> -x -t --telemetry \"client=<client>,agent=<agent>,executionMode=remote\"","jobName":"<name>","environment":{"JAVA_VERSION":"<target>"}}]}' \
-  --cli-binary-format raw-in-base64-out /dev/stdout
+AWS_REGION=<region> atx ct remote remediation --mode <batch|ec2> --stack-name <stack> \
+  --transformation-name <td-name> \
+  --repos <source>::<repo1>,<source>::<repo2> \
+  --configuration 'additionalPlanContext=<config>' \
+  --telemetry "agent=<agent>,executionMode=<fargate|ec2>"
 ```
 
-If the total exceeds 128, repeat with the next chunk:
+`<stack>` is the `stackName` from `atx ct remote detect --mode <batch|ec2> --json`.
 
-```bash
-aws lambda invoke --function-name atx-trigger-batch-jobs \
-  --payload '{"batchName":"<name>-chunk-2","jobs":[...next 128 jobs...]}' \
-  --cli-binary-format raw-in-base64-out /dev/stdout
-```
-
-Monitor each batch by its `batchId`:
-
-```bash
-aws lambda invoke --function-name atx-get-batch-status \
-  --payload '{"batchId":"<batch-id>"}' \
-  --cli-binary-format raw-in-base64-out /dev/stdout
-```
-
-Polling: every 60 seconds for the first 10 polls, then every 5 minutes after.
-Report only on status change.
+Use `--sources <name>` (optionally with `--labels`) to run every repo in a source,
+or `--repos <source>::<repo>,...` for specific repos. Your own transformation definitions must be in
+the `remediation` category. Monitor with `atx ct remote status` (Batch:
+`--batch <id> --stack-name <name>`; EC2: `--group <id> --json`). See
+[custom-remote-execution](custom-remote-execution.md) for
+provisioning, sources, monitoring, and results.
 
 ## Progress Reporting
 
@@ -176,6 +165,10 @@ Report only on status change.
 ## Result Collection
 
 Collect per repo: success/failure, transformed code path, error details.
+In local mode a repo failed if its `<repo-name>.log` contains `Execution was not successful`
+(AWS Transform still exits 0 when it reports a failed transformation), or its `<repo-name>.exit`
+is non-zero other than `2` (Agent Minutes budget reached) or `130`/`129`/`143` (interrupted).
+Report those as resumable, not failed.
 
 ```
 Succeeded:
@@ -184,13 +177,9 @@ Failed:
 - repo-name: transformation-name (error)
 ```
 
-For remote executions, include the CloudWatch dashboard link in the final output:
-
-```bash
-REGION=${AWS_REGION:-${AWS_DEFAULT_REGION:-$(aws configure get region 2>/dev/null)}}
-REGION=${REGION:-us-east-1}
-echo "https://${REGION}.console.aws.amazon.com/cloudwatch/home#dashboards/dashboard/ATX-Transform-CLI-Dashboard"
-```
+For remote executions, include each repo's result from `atx ct remote status`
+(pull/merge request URL or S3 output path) and the CloudWatch dashboard link (see
+[Monitoring](custom-remote-execution.md#monitoring)).
 
 Hand off to [custom-results-synthesis](custom-results-synthesis.md) for consolidated reporting.
 
@@ -223,5 +212,5 @@ for the exact prompt and flow.
 1. Single prerequisite check — never repeat for parallel tasks
 2. Trust the match report — do not re-discover transformation definitions
 3. Local parallel execution — maximum 3 concurrent repos (user-overridable); recommend remote for more than 9
-4. Remote parallel execution — submit in chunks of up to 128 jobs per `atx-trigger-batch-jobs` call; split larger sets into multiple calls (max 512 repos per session)
+4. Remote parallel execution — one `atx ct remote remediation` call per transformation definition for up to 1,000 repositories; split larger lists into separate calls. The CLI fans out one container per repo (up to the account's concurrent-job limit running at once, the rest queue)
 5. Skip prerequisite checks in parallel task prompts

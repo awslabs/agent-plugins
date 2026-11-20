@@ -31,7 +31,7 @@ blocks can hang in shell environments. Use a command (ex. `printf '%s'`) to writ
 
 ### <project-name>
 
-- **TD**: <td-name>
+- **Transformation definition**: <td-name>
 - **Error**: <one-line error summary>
 - **Suggested Fix**: <recommendation>
 
@@ -50,10 +50,6 @@ Results: <succeeded>/<total> succeeded, <failed> failed
 Summary: ~/.aws/atx/custom/atx-agent-session/transformation-summaries/transformation-summary-$SESSION_TS.md
 ```
 
-For remote mode executions, also include the CloudWatch dashboard link:
-
-```bash
-REGION=${AWS_REGION:-${AWS_DEFAULT_REGION:-$(aws configure get region 2>/dev/null)}}
-REGION=${REGION:-us-east-1}
-echo "CloudWatch Dashboard: https://${REGION}.console.aws.amazon.com/cloudwatch/home#dashboards/dashboard/ATX-Transform-CLI-Dashboard"
-```
+For remote mode executions, also include each repo's result from
+`atx ct remote status` (pull/merge request URL or S3 output path) and the
+CloudWatch dashboard link built from `dashboardName` in `atx ct remote detect --mode <batch|ec2> --stack-name <stack> --json`.

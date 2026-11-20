@@ -44,7 +44,7 @@ If the user explicitly opts out of telemetry, omit `--telemetry` for the rest of
 
 **Scheduled analyses always run remotely — never via local cron.** A customer-managed schedule is dispatched by EventBridge Scheduler to a provisioned EC2 or Batch stack; an AWS-managed schedule runs server-side on the AWS-managed fleet. Either way, do NOT set up, suggest, or write a local cron entry (`crontab`, `cron.d`, `launchd`, Task Scheduler, a systemd timer, or a shell loop on the customer's machine) to drive `atx ct` on a cadence. A local cron job depends on the customer's laptop being awake and authenticated, produces no schedule record the CLI can list/enable/disable, and creates no anchor analysis — so the run is invisible to `atx ct schedule list` and to the linkage model below.
 
-If the customer asks for local scheduling, route them to a real schedule instead — pick the flavor by whether they want to own infrastructure. **No infrastructure:** `atx ct schedule create --mode aws-managed --execution-role <arn> ...` (server-side; nothing to provision). **Customer-owned compute:** ensure an EC2/Batch stack first (`atx ct remote provision --mode ec2|batch --execute --ack`), then `atx ct schedule create --mode ec2|batch ...`. Never offer local cron as a fallback or workaround.
+If the customer asks for local scheduling, route them to a real schedule instead — pick the flavor by whether they want to own infrastructure. **No infrastructure:** `atx ct schedule create --mode aws-managed --execution-role <arn> ...` (server-side; nothing to provision). **Customer-owned compute:** ensure an EC2/Batch stack first (the user or their admin runs `atx ct remote provision --mode ec2|batch --execute --ack` in their own terminal), then `atx ct schedule create --mode ec2|batch ...`. Never offer local cron as a fallback or workaround.
 
 ## Prerequisites
 
@@ -60,9 +60,9 @@ export AWS_REGION=<supported-region>     # required for EC2/Batch schedules — 
 
 1. **EC2 or Batch stack deployed** — `atx ct remote detect --mode ec2|batch` shows a deployed stack
 2. **Scheduler infrastructure** — provisioned automatically by `atx ct remote provision` (see below)
-3. **Source registered** — `atx ct source add`, plus `atx ct remote credentials` for SCM providers
+3. **Source registered** — `atx ct source add` (for SCM providers it also stores the token in Secrets Manager; use `atx ct remote credentials` if it warned `Token saved locally only`)
 
-There is **no separate `schedule setup` command**. `atx ct remote provision --mode <mode> --execute --ack` deploys the compute stack and ensures the singleton `atx-scheduler` stack (the `AtxSchedulerInvocationRole` and the `atx-ct` schedule group) in the same run. Relevant provision flags:
+There is **no separate `schedule setup` command**. `atx ct remote provision --mode <mode> --execute --ack` deploys the compute stack and ensures the singleton `atx-scheduler` stack (the `AtxSchedulerInvocationRole-<region>` role and the `atx-ct` schedule group) in the same run; on an already-deployed stack, `atx ct remote update --mode <mode> --execute --ack` ensures it too. These are Admin commands: the agent shows the dry run (no `--execute`), and the user or their admin runs the `--execute` command in their own terminal after agreeing. Relevant provision flags:
 
 - `--skip-scheduler` — skip the scheduler-infrastructure ensure
 - `--existing-scheduler-role-arn <arn>` — reference a pre-created `AtxSchedulerInvocationRole` instead of creating one (admin owns its mode policies)
@@ -107,7 +107,7 @@ atx ct schedule create \
   --telemetry "agent=kiro,executionMode=ec2"
 ```
 
-The CLI auto-detects the deployed stack for the given mode — there is no `--stack-name` on `create`.
+By default the CLI uses the first deployed stack for the given mode; pass `--stack-name <name>` (`AtxInfrastructureStack-*` for `--mode batch`, `atx-runner-*` for `--mode ec2`) to pick another.
 
 **Required flags:**
 
@@ -127,15 +127,15 @@ The fire **time** is not a flag: it resolves to about 2 minutes from now, in the
 
 **Job flags** (mirror `remote analysis`, so the two surfaces cannot drift):
 
-- `--type <type>` — a single analysis type: `rapid-techdebt-analysis`, `tech-debt-comprehensive`, `security`, `agentic-readiness`, `modernization-readiness`, `custom`. A schedule runs ONE type; `--types` (plural) is removed and is an error.
+- `--type <type>` — a single analysis type: `rapid-techdebt-analysis`, `tech-debt-comprehensive`, `security`, `agentic-readiness`, `modernization-readiness`, `graviton-readiness`, `aws-health-readiness`, `custom`. A schedule runs ONE type; `--types` (plural) is removed and is an error.
 - `--sources <src1,src2>` — source name(s)
-- `--repos <src>::<repo>,...` — explicit repo slugs (omit to cover all repos in `--sources`)
+- `--repos <src>::<repo>,...` — explicit repo slugs (bare names work with exactly one `--sources`; omit to cover all repos in `--sources`). The repo list is fixed when the schedule is created: repos added to a source later are not picked up, so re-create the schedule to include them
 - `--transformation-name <name>` — required with `--type custom`
 - `-g, --configuration <config>` — only valid with `--transformation-name`
 
 **Other flags:**
 
-- `--provider github|gitlab|bitbucket|local` — default `github`. SCM providers stage clone-token secrets. `local` zips and uploads the source directory **at create time**, so every fire analyzes that uploaded snapshot (re-create the schedule to refresh it).
+- No `--provider`: the provider comes from each source's registration (`atx ct source add`), and passing `--provider` is an error. All sources in one schedule must use the same provider; create one schedule per provider otherwise. SCM sources stage clone-token secrets. For a `local` source the CLI zips and uploads the source directory **at create time**, so every fire analyzes that uploaded snapshot (re-create the schedule to refresh it).
 - `--description <text>` — human-readable note stored on the schedule
 - `--region <region>` — defaults to `AWS_REGION`
 - `--json` — machine-readable output
@@ -144,6 +144,7 @@ The fire **time** is not a flag: it resolves to about 2 minutes from now, in the
 
 - `--labels` — hidden from `--help` and registered only so the CLI can reject it with tailored guidance: label filtering is resolved against the backend at submit time and cannot be re-resolved at fire time. List repos explicitly via `--repos` instead.
 - `--job-type remediation` — rejected; schedules run analyses only.
+- `--display-name` — rejected; a schedule is named by `--name`.
 
 ### 1b. Create an AWS-managed Schedule (`--mode aws-managed`)
 
@@ -188,16 +189,17 @@ atx ct schedule create \
 
 **Region:** pass `--region <region>` to run the fired workloads in a specific AWS Transform supported region (defaults to the ambient `AWS_REGION`).
 
+**Custom analyses:** an AWS-managed schedule can run `--type custom --transformation-name <name>`; every fire uses the schedule's transformation definition. `-g`/`--configuration` isn't supported in this mode — use `--mode ec2` for a scheduled custom analysis that needs it.
+
 **Rejected in this mode (each with tailored guidance):**
 
-| Flag                           | Why                                                           |
-| ------------------------------ | ------------------------------------------------------------- |
-| `--stack-name`                 | No customer stack — the managed fleet runs the analysis       |
-| `--provider`                   | The provider is resolved from the source registration         |
-| `--job-type`                   | Schedules run analyses only                                   |
-| `--type custom`                | Managed fleet does not install custom transformation packages |
-| `--transformation-name` / `-g` | Only valid with `--type custom`, unsupported here             |
-| local-provider source          | Managed fleet cannot fetch local bundles                      |
+| Flag                     | Why                                                     |
+| ------------------------ | ------------------------------------------------------- |
+| `--stack-name`           | No customer stack — the managed fleet runs the analysis |
+| `--provider`             | The provider is resolved from the source registration   |
+| `--job-type`             | Schedules run analyses only                             |
+| `-g` / `--configuration` | Not supported in this mode — use `--mode ec2`           |
+| local-provider source    | Managed fleet cannot fetch local bundles                |
 
 ### 2. List Schedules
 
@@ -228,7 +230,7 @@ atx ct schedule enable  <sched-id>   # resume (idempotent)
 atx ct schedule delete <sched-id>
 ```
 
-Removes the schedule from the `atx-ct` group **and deletes the schedule's anchor analysis** (the parent record described below), reporting `Schedule anchor analysis <id> deleted.` If the anchor cannot be deleted, the CLI says so rather than claiming success. Already-running fires are unaffected.
+Removes the schedule from the `atx-ct` group **and deletes the schedule's anchor analysis** (the parent record described below), reporting `✓ Deleted scheduled analysis "<sched-id>".` If the anchor cannot be deleted, it adds `Note: schedule anchor <id> could NOT be deleted and may linger` (with `--json`, `parentAnalysisDeleted: false`) rather than claiming success. Already-running fires are unaffected.
 
 ### 6. Teardown Scheduler Infrastructure (Admin)
 
@@ -268,38 +270,44 @@ The batch/group id is generated per fire — look for the submission created at 
 
 ## Routing Customer Intent
 
-| Customer says                                     | Route to                                                                      |
-| ------------------------------------------------- | ----------------------------------------------------------------------------- |
-| "weekly tech-debt scan", "monthly security audit" | `schedule create --recurrence weekly:MONDAY` / `monthly:1`                    |
-| "run it nightly"                                  | `schedule create --recurrence daily`                                          |
-| "remediate these findings on Friday"              | NOT schedulable — run `atx ct remote remediation` when they're ready          |
-| "scan AND auto-fix on a cadence"                  | Schedule the analysis; remediation stays a manual `remote remediation` step   |
-| Customer supplies their own cron                  | Map it to the nearest `--recurrence` (daily / weekly:`<DAY>` / monthly:`<N>`) |
+| Customer says                                     | Route to                                                                        |
+| ------------------------------------------------- | ------------------------------------------------------------------------------- |
+| "weekly tech-debt scan", "monthly security audit" | `schedule create --recurrence weekly:MONDAY` / `monthly:1`                      |
+| "run it nightly"                                  | `schedule create --recurrence daily`                                            |
+| "remediate these findings on Friday"              | NOT schedulable — run `atx ct remote remediation` when they're ready            |
+| "scan AND auto-fix on a cadence"                  | Schedule the analysis; remediation stays a manual `remote remediation` step     |
+| Customer supplies their own cron                  | Map it to the nearest `--recurrence` (`daily` / `weekly:<DAY>` / `monthly:<N>`) |
 
 ## Error Handling
 
-| Error                                                                           | Cause                                                 | Fix                                                                                                  |
-| ------------------------------------------------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| Guidance to `atx ct remote provision`                                           | Compute or scheduler infra missing                    | `atx ct remote provision --mode ec2\|batch --execute --ack`                                          |
-| `--recurrence is required`                                                      | Neither cadence flag given                            | Add `--recurrence daily\|weekly:<DAY>\|monthly:<N>`                                                  |
-| `--types has been removed`                                                      | Plural flag used                                      | Use `--type <type>` — a schedule runs a single type                                                  |
-| `--job-type remediation is not supported`                                       | Tried to schedule a remediation                       | Schedule the analysis; run remediation with `atx ct remote remediation`                              |
-| `--labels is not schedulable yet`                                               | Label filter given (flag is hidden)                   | List repos explicitly with `--repos`                                                                 |
-| Schedule name already exists                                                    | Duplicate name in the `atx-ct` group                  | Pick a unique `--name`, or delete the existing one                                                   |
-| Schedule not found                                                              | Wrong name or already deleted                         | `atx ct schedule list`                                                                               |
-| Local sources require an S3 source bucket                                       | Stack exposes no `atx-source-code-*`                  | Re-provision the stack, or use an SCM provider                                                       |
-| Token not available                                                             | Clone credential not staged                           | `atx ct remote credentials --source <src> --token <token> --ack`                                     |
-| `--execution-role is required for --mode aws-managed`                           | Missing role on an AWS-managed schedule               | Add `--execution-role <arn>` (the Scheduled Analysis Runner role)                                    |
-| Not authorized to perform `iam:PassRole`                                        | Caller lacks PassRole for the execution role          | Grant the caller `iam:PassRole` for the `--execution-role` ARN                                       |
-| Execution role cannot be assumed / invalid trust policy                         | Role trust policy omits the service principal         | Add `transform-custom.amazonaws.com` as a trusted principal (`sts:AssumeRole`) on the execution role |
-| `--stack-name`/`--provider`/`--job-type` not supported for `--mode aws-managed` | Customer-managed flag used on an AWS-managed schedule | Drop the flag; use `--recurrence` for cadence                                                        |
+| Error                                                                                                          | Cause                                                                                                      | Fix                                                                                                                                                                                                        |
+| -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Scheduler infrastructure is not ready. Run: atx ct remote provision --mode <mode> --execute`                  | Scheduler stack missing, or not set up for this mode                                                       | Show the dry run (no `--execute`); after the user agrees, the user or their admin runs the command in their own terminal (on an existing stack, `atx ct remote update --mode <mode> --execute` also works) |
+| `Target infrastructure is not deployed. Run: atx ct remote provision --mode <mode>`                            | No deployed EC2/Batch stack (or not the `--stack-name` given)                                              | Provision the stack, or pass the right `--stack-name`                                                                                                                                                      |
+| `The deployed atx-trigger-batch-jobs Lambda predates scheduled child-analysis creation`                        | Batch stack deployed by an older CLI                                                                       | Run the `remote update` command the message gives, then retry                                                                                                                                              |
+| `--recurrence is required`                                                                                     | Neither cadence flag given                                                                                 | Add `--recurrence daily\|weekly:<DAY>\|monthly:<N>`                                                                                                                                                        |
+| `--types has been removed`                                                                                     | Plural flag used                                                                                           | Use `--type <type>` — a schedule runs a single type                                                                                                                                                        |
+| `--job-type remediation is not supported`                                                                      | Tried to schedule a remediation                                                                            | Schedule the analysis; run remediation with `atx ct remote remediation`                                                                                                                                    |
+| `--labels is not schedulable yet`                                                                              | Label filter given (flag is hidden)                                                                        | List repos explicitly with `--repos`                                                                                                                                                                       |
+| `A schedule named "<name>" already exists` (aws-managed: `A scheduled analysis named "<name>" already exists`) | Duplicate name                                                                                             | Pick a unique `--name`, or delete the existing one                                                                                                                                                         |
+| `Schedule "<sched-id>" was not found`                                                                          | Wrong schedule id or already deleted                                                                       | `atx ct schedule list` for the `sched-` id                                                                                                                                                                 |
+| `a schedule stages clone tokens for a single provider`                                                         | Sources with different providers in one schedule                                                           | Create one schedule per provider                                                                                                                                                                           |
+| `No repositories found for source(s) <src>`                                                                    | Source has no discovered repos                                                                             | Run `atx ct discovery scan --source <src>`, or pass `--repos`                                                                                                                                              |
+| Local sources require an S3 source bucket                                                                      | Stack exposes no `atx-source-code-*`                                                                       | Re-provision the stack, or use an SCM provider                                                                                                                                                             |
+| Token not available                                                                                            | Clone credential not staged                                                                                | Have the user run `read -s TOKEN && atx ct remote credentials --source <src> --token "$TOKEN" --ack; unset TOKEN` in their own terminal                                                                    |
+| `Couldn't list this account's sources to resolve the schedule's auth mode`                                     | The CLI couldn't read the account's sources (throttling, a server error, or no permission to list sources) | No schedule was created. The underlying error is in the `Caused by:` lines; fix it if it's actionable (for example refresh expired credentials), then retry `atx ct schedule create`                       |
+| `--execution-role is required for --mode aws-managed`                                                          | Missing role on an AWS-managed schedule                                                                    | Add `--execution-role <arn>` (the Scheduled Analysis Runner role)                                                                                                                                          |
+| Not authorized to perform `iam:PassRole`                                                                       | Caller lacks PassRole for the execution role                                                               | Grant the caller `iam:PassRole` for the `--execution-role` ARN                                                                                                                                             |
+| Execution role cannot be assumed / invalid trust policy                                                        | Role trust policy omits the service principal                                                              | Add `transform-custom.amazonaws.com` as a trusted principal (`sts:AssumeRole`) on the execution role                                                                                                       |
+| `--stack-name`/`--provider`/`--job-type` not supported for `--mode aws-managed`                                | Customer-managed flag used on an AWS-managed schedule                                                      | Drop the flag; use `--recurrence` for cadence                                                                                                                                                              |
 
 ## Limits
 
 - Analyses only — no scheduled remediations
 - One analysis type per schedule (`--type`, singular)
+- Repos are resolved when the schedule is created (both flavors); re-create it to pick up repos added to a source later
 - Cadence is `--recurrence` (`daily`/`weekly:<DAY>`/`monthly:<1..28>`); `at()` one-shots are never supported
 - `--labels` is not supported on schedules
-- **Customer-managed (EC2/Batch):** one schedule group (`atx-ct`) per account/region; one singleton `atx-scheduler` stack serving both modes; fire time is ~2 minutes from creation in the operator's local zone; EC2 mode needs a running EC2 stack and Batch mode a deployed Batch stack; max 250 jobs per fire (same fan-out ceiling as a manual submission)
-- **AWS-managed:** no customer infrastructure (no scheduler/compute stack); requires `--execution-role`; fires on UTC presets only; `--region` selects the workload region (any AWS Transform supported region); no `--stack-name`/`--provider`/`--job-type`/`--type custom`; no local-provider sources
+- **Customer-managed (EC2/Batch):** one schedule group (`atx-ct`) per account/region; one singleton `atx-scheduler` stack serving both modes; fire time is ~2 minutes from creation in the operator's local zone; EC2 mode needs a running EC2 stack and Batch mode a deployed Batch stack; max 5,000 jobs per fire on a current stack (same fan-out ceiling as a manual submission); a stack deployed before the cap was raised still caps each fire at 250 or 1,000, and `schedule create` checks the stack before creating
+- **AWS-managed:** no customer infrastructure (no scheduler/compute stack); requires `--execution-role`; fires on UTC presets only; `--region` selects the workload region (any AWS Transform supported region); no `--stack-name`/`--provider`/`--job-type`/`--configuration` (`--type custom` is supported); no local-provider sources
 - Remote only — local cron / systemd timers / Task Scheduler are never a substitute (for either flavor)

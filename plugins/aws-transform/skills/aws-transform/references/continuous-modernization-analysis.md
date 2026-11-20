@@ -1,6 +1,6 @@
 ---
 name: analysis
-description: Run/start/restart/cancel/delete analyses (rapid-techdebt-analysis, tech-debt-comprehensive, security, agentic-readiness, modernization-readiness, custom). Detects vulnerabilities, outdated dependencies, migration opportunities, modernization candidates. Custom type runs any TD.
+description: Run/start/restart/cancel/delete analyses (rapid-techdebt-analysis, tech-debt-comprehensive, security, agentic-readiness, modernization-readiness, graviton-readiness, aws-health-readiness, custom). Detects vulnerabilities, outdated dependencies, migration opportunities, modernization candidates, Lambda runtime deprecations, EKS end-of-support, and Elastic Beanstalk platform retirement. Custom type runs one of your own analysis transformation definitions.
 ---
 
 name: analysis
@@ -36,26 +36,37 @@ If the user explicitly asks to disable telemetry, omit `--telemetry` for the res
 - **EC2** -- follow [continuous-modernization-ec2-execution](continuous-modernization-ec2-execution.md)
 - **Batch** -- follow [continuous-modernization-batch-execution](continuous-modernization-batch-execution.md)
 
-## Repository limit per request (max 100)
+## Repositories per run
 
-A single `atx ct analysis run` can be associated with at most **100 repositories**. Before starting an analysis that targets many repos (for example a whole source), check how many repositories are in scope — `atx ct source list` or `atx ct repository list --source <name>` report the per-source count. (Bare `atx ct status` shows workspace-wide totals across all sources, so prefer a scoped form when the analysis targets a single source.)
+`atx ct analysis run` has no fixed repository cap of its own. The AWS Transform service refuses a run whose repository list is longer than the limit for the account (the service allows up to 5,000), and a request body over about 950 KB is refused before it is sent. In both cases nothing is created. The messages are `AWS Transform refused this analysis: <N> repositories is more than this account may put in ONE analysis (...). Split the submission (for example with --repo), ...` and `This analysis would send a <N>-byte ... request, over the 950000-byte budget ... Split the submission (for example with --repo), or use shorter source/repository names.`
 
-If the scope exceeds 100 repositories, split it into multiple runs, each targeting at most 100 repos (pass the repos in batches via `--repo <source>::<slug>`), and tell the user you are breaking the work up because of the 100-repo-per-request limit. Never issue a single run associated with more than 100 repositories — it will be rejected. Example: 300 repos → three runs (100 + 100 + 100); 600 repos → six runs (100 each).
+Before starting an analysis that targets many repos (for example a whole source), check how many repositories are in scope with `atx ct repository list --source <name>`. `atx ct source list` shows only each source's name, provider, and identifier, while `atx ct status` reports account-wide totals and has no `--source` filter. If a run is refused for its size, split the repositories into batches and start one run per batch with `--repo <source>::<slug>[,<source>::<slug>...]`, sized under the limit the message names, and tell the user you are splitting the work. Don't guess a batch size and retry in a loop.
 
 ## Commands
 
 ```bash
 # Run analysis. Pass --wait so the command blocks until the run finishes (preferred — see "Running long analyses" below).
-atx ct analysis run --type <rapid-techdebt-analysis|tech-debt-comprehensive|security|agentic-readiness|modernization-readiness|custom> --source <name> [--repo <source>::<slug>] --wait --telemetry "agent=<AGENT>,executionMode=local"
+atx ct analysis run --type <rapid-techdebt-analysis|tech-debt-comprehensive|security|agentic-readiness|modernization-readiness|graviton-readiness|aws-health-readiness|custom> --source <name> [--repo <source>::<slug>] --wait --telemetry "agent=<agent>,executionMode=local"
 
-# --wait is only in newer CLI versions. If it isn't supported, run the same command without --wait.
-atx ct analysis run --type <rapid-techdebt-analysis|tech-debt-comprehensive|security|agentic-readiness|modernization-readiness|custom> --source <name> [--repo <source>::<slug>] --telemetry "agent=<AGENT>,executionMode=local"
+# --wait needs CLI 3.2.0 or later (check `atx ct --version`). On an older CLI, run the same command without --wait.
+atx ct analysis run --type <rapid-techdebt-analysis|tech-debt-comprehensive|security|agentic-readiness|modernization-readiness|graviton-readiness|aws-health-readiness|custom> --source <name> [--repo <source>::<slug>] --telemetry "agent=<agent>,executionMode=local"
 
 # Run custom analysis with a specific transformation definition
-atx ct analysis run --type custom --transformation-name <TD-name> --source <name> --repo <source>::<slug> --wait --telemetry "agent=<AGENT>,executionMode=local"
+atx ct analysis run --type custom --transformation-name <transformation-name> --source <name> --repo <source>::<slug> --wait --telemetry "agent=<agent>,executionMode=local"
 
 # Run custom analysis with configuration (file://, JSON, or key=value)
-atx ct analysis run --type custom --transformation-name <TD-name> -g "additionalPlanContext=Focus on auth module" --source <name> --repo <source>::<slug> --wait --telemetry "agent=<AGENT>,executionMode=local"
+atx ct analysis run --type custom --transformation-name <transformation-name> -g "additionalPlanContext=Focus on auth module" --source <name> --repo <source>::<slug> --wait --telemetry "agent=<agent>,executionMode=local"
+
+# Several repos in one run: --repo (or its alias --repos) is repeatable and/or comma-separated; bare names need --source
+atx ct analysis run --type security --repo svc-a,svc-b --source <name> --wait --telemetry "agent=<agent>,executionMode=local"
+
+# Steer the readiness assessments (see "Readiness steering flags")
+atx ct analysis run --type agentic-readiness --source <name> --agent-scope <read-only|write-enabled> --context "<goals>" --wait --telemetry "agent=<agent>,executionMode=local"
+atx ct analysis run --type modernization-readiness --source <name> --prefer eks,aurora --avoid self-managed-kafka --context "<goals>" --wait --telemetry "agent=<agent>,executionMode=local"
+
+# Optional on any run: --display-name labels the run in `analysis get`/`analysis list`;
+# --json prints only { analysisId, status, total, findingCount } on stdout (for scripting)
+atx ct analysis run --type rapid-techdebt-analysis --repo <source>::<slug> --display-name "<label>" --json --wait --telemetry "agent=<agent>,executionMode=local"
 
 # Get details (JSON for parsing)
 atx ct analysis get --id <id> --json
@@ -65,7 +76,7 @@ atx ct analysis list --json
 
 # Filter on the server-side index (fast). Combine as needed.
 atx ct analysis list --status <pending|running|complete|cancelled|failed> --json
-atx ct analysis list --type <rapid-techdebt-analysis|tech-debt-comprehensive|security|agentic-readiness|modernization-readiness|custom> --json
+atx ct analysis list --type <rapid-techdebt-analysis|tech-debt-comprehensive|security|agentic-readiness|modernization-readiness|graviton-readiness|aws-health-readiness|custom> --json
 atx ct analysis list --status complete --type security --json
 
 # Category is filtered client-side (does not reduce the fetch); only narrows what's printed.
@@ -73,22 +84,28 @@ atx ct analysis list --category "Tech Debt" --json
 
 # Cancel or delete
 atx ct analysis cancel --id <id>
-atx ct analysis delete --id <id> [--cascade-findings]
+atx ct analysis delete --id <id> [--cascade-findings]   # findings are kept unless --cascade-findings
+
+# Stored reports of a remote run (one per-repo bundle, e.g. <repo>/artifacts.zip; partial while the run is going)
+atx ct analysis list-artifacts --id <id> [--repo <source>::<slug>] [--max-results <1-100>] [--next-token <token>] --json
+atx ct analysis get-artifact --id <id> --artifact-id <artifact-id> [--output <file>] [--force]   # --force overwrites an existing file
 ```
+
+`atx ct analysis get` and `atx ct analysis delete --cascade-findings` exit with status 2 on a partial result: `get` when it could not count the findings (`Findings: unavailable`), `delete` when some findings could not be deleted (it names the `findings list --analysis-id` command to find them). Relay the warning; don't report a clean result.
 
 ## Local vs remote execution (command differences)
 
 The commands above (`atx ct analysis run`) execute **locally** on this machine. To run on AWS instead, use the **`atx ct remote analysis`** verb with a `--mode`. There are three remote modes; the command surface differs from local in a few important ways:
 
-|                         | Local                            | AWS-managed (`--mode aws-managed`)          | EC2 / Batch (`--mode ec2\|batch`)                    |
-| ----------------------- | -------------------------------- | ------------------------------------------- | ---------------------------------------------------- |
-| Verb                    | `atx ct analysis run`            | `atx ct remote analysis`                    | `atx ct remote analysis`                             |
-| Infrastructure          | none (this machine)              | **none** — the AWS-managed fleet runs it    | customer-owned stack (must `remote provision` first) |
-| Source/repo flags       | `--source` / `--repo` (singular) | `--sources` / `--repos` (plural)            | `--sources` / `--repos` (plural)                     |
-| Region                  | n/a                              | `--region` (optional; any supported region) | `--region` + `--stack-name`                          |
-| Create semantics        | runs in-process                  | create **is** the submission (no dispatch)  | submits jobs to the stack                            |
-| Poll with               | `atx ct analysis get --id <id>`  | `atx ct analysis get --id <id>`             | `atx ct remote status --group\|--batch ...`          |
-| executionMode telemetry | `local`                          | `aws-managed`                               | `ec2` / `fargate`                                    |
+|                         | Local                                   | AWS-managed (`--mode aws-managed`)          | EC2 / Batch (`--mode ec2\|batch`)                    |
+| ----------------------- | --------------------------------------- | ------------------------------------------- | ---------------------------------------------------- |
+| Verb                    | `atx ct analysis run`                   | `atx ct remote analysis`                    | `atx ct remote analysis`                             |
+| Infrastructure          | none (this machine)                     | **none** — the AWS-managed fleet runs it    | customer-owned stack (must `remote provision` first) |
+| Source/repo flags       | `--source` / `--repo` (alias `--repos`) | `--sources` / `--repos` (plural)            | `--sources` / `--repos` (plural)                     |
+| Region                  | n/a                                     | `--region` (optional; any supported region) | `--region` + `--stack-name`                          |
+| Create semantics        | runs in-process                         | create **is** the submission (no dispatch)  | submits jobs to the stack                            |
+| Poll with               | `atx ct analysis get --id <id>`         | `atx ct analysis get --id <id>`             | `atx ct remote status --group\|--batch ...`          |
+| executionMode telemetry | `local`                                 | `aws-managed`                               | `ec2` / `fargate`                                    |
 
 AWS-managed is the closest remote analog to a local run — same `analysis get` polling, no infrastructure — just running on AWS compute in the region you choose:
 
@@ -99,7 +116,7 @@ atx ct remote analysis \
   --sources <name> \
   --mode aws-managed \
   --region <region> \
-  --telemetry "agent=<AGENT>,executionMode=aws-managed"
+  --telemetry "agent=<agent>,executionMode=aws-managed"
 # → prints an analysis id; poll with: atx ct analysis get --id <id> --json
 ```
 
@@ -108,7 +125,7 @@ EC2/Batch, by contrast, run on a stack the customer deploys and are polled with 
 ```bash
 # EC2/Batch remote analysis (customer-owned stack; provision first)
 atx ct remote analysis --type tech-debt-comprehensive --sources <name> \
-  --mode batch --stack-name <stack> --telemetry "agent=<AGENT>,executionMode=fargate"
+  --mode batch --stack-name <stack> --telemetry "agent=<agent>,executionMode=fargate"
 ```
 
 Full details, flag-rejection rules, and output shapes per mode:
@@ -118,12 +135,12 @@ Full details, flag-rejection rules, and output shapes per mode:
 
 `atx ct analysis run` returns immediately by default with an analysis ID. With `--wait` it blocks until the run completes — and a comprehensive or multi-repo run can take a long time. Prefer `--wait` so the run blocks to completion and you can act on the result in the same step.
 
-**`--wait` is version-gated.** It exists only in newer CLI versions. Before relying on it, confirm the installed CLI supports it — check `atx ct analysis run --help` (or `atx ct --version`). If `--wait` isn't listed, run the command without it; do not invent the flag. If a run fails with an unknown-option error for `--wait`, re-run without it.
+**`--wait` is version-gated.** `atx ct analysis run` accepts it from CLI 3.2.0 on. `--help` doesn't list it (the option is hidden), so check the version instead: run `atx ct --version`, and pass `--wait` only on 3.2.0 or later. On an older CLI, run the command without it, and leave `--wait` out of every command you show the user too, including ones for after an upgrade; do not invent the flag. If a run fails with an unknown-option error for `--wait`, re-run without it.
 
 **Run long jobs in the background and monitor a log.** A blocking run ties up the session, so start long-running analyses in the background with `&`, redirect output to a log file, and monitor the log:
 
 ```bash
-atx ct analysis run --type tech-debt-comprehensive --source <name> --wait --telemetry "agent=<AGENT>,executionMode=local" > /tmp/atx-analysis.log 2>&1 &
+atx ct analysis run --type tech-debt-comprehensive --source <name> --wait --telemetry "agent=<agent>,executionMode=local" > /tmp/atx-analysis.log 2>&1 &
 tail -f /tmp/atx-analysis.log
 ```
 
@@ -133,49 +150,88 @@ This applies to comprehensive scans, large multi-repo runs, and any analysis the
 
 ## Custom Analysis
 
-The `custom` type runs any transformation definition (TD) against a repository. Unlike other analysis types, custom analysis does not generate findings -- it executes the TD directly.
+The `custom` type runs a transformation definition against a repository **in analysis mode**, which is set to only report findings (what the transformation definition would change) and to write only the report or documentation files the transformation definition asks for. The CLI prints a note saying so (`Note: custom analysis runs your transformation definition in analysis mode, which is set to only report findings.`) — that note is expected, not an error. To actually apply a transformation definition's changes, use [remediation](continuous-modernization-remediation.md) instead.
+
+**Where the reports are:** a local custom analysis keeps the report files the transformation definition writes under `~/.atxct/shared/analyses/<analysis-id>/artifacts/<repository>/`, and `atx ct analysis get --id <id> --json` lists them under `report_paths`. Remote EC2 and Batch runs upload them as the repository's `artifacts.zip`; list and download them with `atx ct analysis list-artifacts` and `atx ct analysis get-artifact` (see Get Results in [Batch](continuous-modernization-batch-execution.md) or [EC2](continuous-modernization-ec2-execution.md)).
 
 **Required flags for `--type custom`:**
 
-- `--transformation-name <name>` -- Name of the TD in the registry
+- `--transformation-name <name>` -- Name of the transformation definition in the registry. It must be one of the account's **own** transformation definitions in the `analysis` category (`atx custom def list` shows the category). The CLI checks this before starting and rejects an AWS-managed transformation definition (`"<name>" is an AWS-managed transformation definition. A custom analysis runs one of your own transformation definitions tagged analysis.`), one with another or no category (`... so it can't be used for a custom analysis. Publish it with --category analysis to use it here.`), and an unknown name (`... was not found in this account.`).
 
 **Optional flags:**
 
-- `-g, --configuration <config>` -- Configuration passed directly to the TD. Accepts:
+- `-g, --configuration <config>` -- Configuration passed directly to the transformation definition. Accepts:
   - Key-value: `"additionalPlanContext=Upgrade to Java 17,buildCommand=mvn clean test"`
   - JSON: `'{"additionalPlanContext":"Upgrade to Java 17"}'`
   - File path: `"file:///path/to/config.json"`
 
+  The analysis adds its own instructions to `additionalPlanContext`, so a context that leaves no room for them is rejected before anything starts: `--configuration is too large: its additionalPlanContext is N characters. Shorten it by M characters.` Shorten it by that much and re-run.
+
 **Constraints:**
 
-- `--transformation-name` is only valid with `--type custom`
+- `--transformation-name` is only valid with `--type custom` (and required with it)
 - `-g` is only valid with `--type custom`
-- Custom analysis will not generate findings
+- Custom analysis reports findings; it never applies the changes itself
 
-## TD Discovery and Recommendation
+## Graviton readiness
 
-When the user asks to run a custom analysis or mentions a capability not covered by built-in types (e.g., "generate sequence diagrams", "check code quality", "run compliance scan"), use TD discovery to find the right transformation:
+`--type graviton-readiness` checks **Java** repositories for AWS Graviton (ARM64) compatibility — native libraries, dependencies, architecture-specific code, Dockerfiles, build configuration, and JVM flags — using the AWS-managed `AWS/graviton-readiness-assessment` transformation. Reports are saved under `graviton-analysis/`. Each ARM64 finding recommends `AWS/java-x86-to-graviton` as its fix, so `atx ct remediation create --ids <finding-ids>` can resolve it.
+
+```bash
+# Add --wait only if the installed CLI supports it (see "Running long analyses")
+atx ct analysis run --type graviton-readiness --source <name> [--repo <source>::<slug>] --telemetry "agent=<agent>,executionMode=local"
+```
+
+Use it when the user asks about moving Java workloads to Graviton or ARM64. It also runs remotely (`atx ct remote analysis --type graviton-readiness` on EC2, Batch or AWS-managed) and on a schedule (`atx ct schedule create --type graviton-readiness`).
+
+## AWS Health lifecycle
+
+`--type aws-health-readiness` finds the AWS Lambda runtimes, Amazon EKS Kubernetes versions and Elastic Beanstalk PHP platforms a repository sets that are deprecated or reach an AWS Health lifecycle date within 180 days, using the AWS-managed `AWS/aws-health-lifecycle-analysis` transformation. Its report is saved under `aws-health-lifecycle-analysis/REPORT.md`. Each finding recommends a version and names the AWS-managed transformation that upgrades it (for example `AWS/python-version-upgrade`, `AWS/lambda-nodejs-runtime-upgrade`, `AWS/eks-kubernetes-version-upgrade`), so `atx ct remediation create --ids <finding-ids>` can resolve it.
+
+```bash
+# Add --wait only if the installed CLI supports it (see "Running long analyses")
+atx ct analysis run --type aws-health-readiness --source <name> [--repo <source>::<slug>] --telemetry "agent=<agent>,executionMode=local"
+```
+
+Use it when the user asks about AWS Health planned lifecycle events, Lambda runtime deprecation, EKS end of support, or Elastic Beanstalk PHP platform retirement. It also runs remotely (`atx ct remote analysis --type aws-health-readiness` on EC2, Batch or AWS-managed) and on a schedule (`atx ct schedule create --type aws-health-readiness`).
+
+When the account can read AWS Health, each finding also names the affected resources. A local run requires AWS CLI v2 on PATH, a Business or Enterprise Support plan, and `health:DescribeEvents`, `health:DescribeEventDetails`, and `health:DescribeAffectedEntities` for the user's credentials; remote runs require the corresponding permissions on the stack role. If a required prerequisite is missing, the repository fails with `AWS Health could not be read. Missing: <items>.`; report that failure and the supplied missing items, never a clean result or code-derived findings. Throttled reads also fail the repository with `AWS Health could not be read`; when the failure supplies no missing-item details, direct the user to `aws-health-lifecycle-analysis/REPORT.md` instead of inventing an item. A `PARTIAL` result is different: report the code-derived findings and warn that some AWS data could not be read.
+
+## Readiness steering flags
+
+`agentic-readiness` and `modernization-readiness` take optional steering on `atx ct analysis run`; pass them when the user states goals or technology preferences:
+
+- `--context <text>` -- free-form goals for the assessment (both types).
+- `--agent-scope <read-only|write-enabled>` -- `agentic-readiness` only. If omitted, the assessment infers the scope from each repository; don't default it to `read-only`.
+- `--prefer <list>` / `--avoid <list>` -- comma-separated technologies to recommend or steer away from (e.g. `--prefer eks,aurora,bedrock --avoid self-managed-kafka`); `modernization-readiness` only.
+
+Using one with another type is rejected (e.g. `--agent-scope is only valid with --type agentic-readiness.`, `--prefer and --avoid are only valid with --type modernization-readiness.`).
+
+## Transformation definition discovery and recommendation
+
+When the user asks to run a custom analysis or mentions a capability not covered by built-in types (e.g., "generate sequence diagrams", "check code quality", "run compliance scan"), use transformation definition discovery to find the right transformation:
 
 ### Workflow
 
-1. **List available TDs:** Run `atx custom def list` to fetch all available transformation definitions (both AWS-managed and customer-owned custom TDs).
-2. **Match intent to TD:** Based on the user's description, match their intent against TD names and descriptions.
-3. **Recommend and confirm:** Present the matched TD(s) to the user with a brief description. Wait for confirmation before executing.
-4. **Execute:** Run `atx ct analysis run --type custom --transformation-name <matched-TD> --source <s> --repo <r> --wait`
+1. **List available transformation definitions:** Run `atx custom def list` to fetch the available transformation definitions and their categories.
+2. **Match intent:** Based on the user's description, match their intent against the account's own transformation definitions in the `analysis` category (names and descriptions). AWS-managed transformation definitions can't run as a custom analysis; if only an AWS-managed one fits, use the matching built-in type or offer [remediation](continuous-modernization-remediation.md) instead.
+3. **Recommend and confirm:** Present the matched transformation definition(s) to the user with a brief description. Wait for confirmation before executing.
+4. **Execute:** Run `atx ct analysis run --type custom --transformation-name <matched-name> --source <s> --repo <r> --wait`
 
-### When to use TD discovery vs built-in types
+### When to use discovery vs built-in types
 
-- If the user's request clearly maps to a built-in type (`rapid-techdebt-analysis`, `tech-debt-comprehensive`, `security`, `agentic-readiness`, `modernization-readiness`), use that type directly -- do NOT use custom.
-- If the request mentions a specific capability not covered by built-in types, or asks about custom/customer-owned TDs, use TD discovery.
-- If the user explicitly names a TD, skip discovery and run it directly with `--type custom --transformation-name <TD>`.
+- If the user's request clearly maps to a built-in type (`rapid-techdebt-analysis`, `tech-debt-comprehensive`, `security`, `agentic-readiness`, `modernization-readiness`, `graviton-readiness`, `aws-health-readiness`), use that type directly -- do NOT use custom.
+- If the request mentions a specific capability not covered by built-in types, or asks about the account's own transformation definitions, use discovery.
+- If the user explicitly names a transformation definition, skip discovery and run it directly with `--type custom --transformation-name <name>`. If the CLI rejects its category, relay the message: the owner can publish it again with `atx custom def publish --category analysis`.
 
 ## Repo slug rules
 
-When passing `--repo` to `analysis run`:
+When passing `--repo` (or its alias `--repos`; both are repeatable and comma-separated, and their values are unioned) to `analysis run`:
 
 - **Qualified slug** (`<source>::<repo>`): always works, doesn't need `--source`.
 - **Bare repo name** (`<repo>`): only works if `--source <name>` is also supplied.
-- **Bare `--repo` without `--source`**: hard error (`Unqualified repo slug(s)`). Don't generate this combination.
+- **Bare `--repo` without `--source`**: hard error (`--repo "<repo>" is unqualified — supply --source <name> or pass a fully-qualified slug like <source>::<repo>.`). Don't generate this combination.
+- **Neither `--repo` nor `--source`**: rejected (`At least one of --repo or --source is required.`). `--source` alone analyzes every repo under that source.
 - **Multiple repos**: must all share the same source. A run that mixes repos from different sources is rejected with `repos span multiple sources`.
 
 Prefer qualified slugs so the source is unambiguous.
@@ -184,12 +240,17 @@ Prefer qualified slugs so the source is unambiguous.
 
 When polling with `atx ct analysis get --id <id> --json`, the `status` field is **lowercase**:
 
+- `pending` -- submitted, not started yet
 - `running` -- in progress
 - `complete` -- finished (check findings)
 - `cancelled` -- user cancelled
 - `failed` -- error occurred
 
 **Note:** It's `complete`, NOT `COMPLETED` or `completed`.
+
+An analysis whose repositories were all cancelled one by one ends `cancelled`, not `failed`.
+
+`status` alone doesn't say whether every repository succeeded. `atx ct analysis get` adds an `Outcome:` line when there is more to tell, for example `Complete with failures (N of M failed)`, `Partially complete (N of M did not start)`, `Complete (30 of 100 cancelled)` or `Cancelled (70 of 100 completed)`. `atx ct analysis run --wait` prints the same line after the final status. With `--json`, read `display_status` (`complete`, `complete_with_failures`, `partially_complete`, `failed`, `cancelled`, `running`, `pending`) and, when present, `repos_not_run`, `repos_complete` and `repos_cancelled`. Report a `complete_with_failures` or `partially_complete` run as such, not as fully complete. A cancelled analysis read from `analysis list` shows as plain `cancelled`, without counts.
 
 ## After Analysis Completes
 
@@ -220,12 +281,12 @@ If an analysis returns 0 findings on a repo that's obviously stale (Java 8, Node
 
 `atx ct analysis list` exposes these filters. Pick the narrowest combination the question allows.
 
-| Filter          | Where it runs                           | Allowed values                                                                                                             |
-| --------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `--status`      | server-side (GSI-backed, fast)          | `pending`, `running`, `complete`, `cancelled`, `failed`                                                                    |
-| `--type`        | server-side (GSI-backed, fast)          | `rapid-techdebt-analysis`, `tech-debt-comprehensive`, `security`, `agentic-readiness`, `modernization-readiness`, `custom` |
-| `--category`    | client-side (does not reduce the fetch) | `"Tech Debt"`, `"Security"`, `"Agentic Readiness"`                                                                         |
-| `--schedule-id` | server-side                             | a schedule's `sched-` analysisId (from `atx ct schedule list`) — lists that schedule's fired child runs, newest first      |
+| Filter          | Where it runs                           | Allowed values                                                                                                                                                           |
+| --------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--status`      | server-side (GSI-backed, fast)          | `pending`, `running`, `complete`, `cancelled`, `failed`                                                                                                                  |
+| `--type`        | server-side (GSI-backed, fast)          | `rapid-techdebt-analysis`, `tech-debt-comprehensive`, `security`, `agentic-readiness`, `modernization-readiness`, `custom`, `graviton-readiness`, `aws-health-readiness` |
+| `--category`    | client-side (does not reduce the fetch) | `"Tech Debt"`, `"Security"`, `"Agentic Readiness"`, `"Modernization Readiness"`, `"Graviton Readiness"`, `"AWS Health Readiness"`, `"Custom"`                            |
+| `--schedule-id` | server-side                             | a schedule's `sched-` analysisId (from `atx ct schedule list`) — lists that schedule's fired child runs, newest first                                                    |
 
 **Recommended shapes:**
 
@@ -236,6 +297,8 @@ If an analysis returns 0 findings on a repo that's obviously stale (Java 8, Node
 - One specific run → `atx ct analysis get --id <id> --json` (point lookup; cheaper than list).
 
 `--category` is a client-side grouping; e.g. `"Tech Debt"` matches both `rapid-techdebt-analysis` and `tech-debt-comprehensive`. Use it when the user wants both subtypes together.
+
+In `--json` output a `rapid-techdebt-analysis` run's `analysis_type` is `tech-debt-quick` (the stored name); report it to the user as rapid tech-debt analysis.
 
 `--schedule-id` is how you inspect a schedule's history: each fire creates one child analysis, and this lists them newest-first. It **cannot** be combined with `--status` or `--type` (the CLI returns `INVALID_INPUT`). To read one fire's findings, take a child's id and run `atx ct findings list --analysis-id <id> --json`.
 
@@ -251,7 +314,7 @@ The `--tags` flag attaches IAM resource tags to an analysis at creation time, an
 
 ```bash
 # Run analysis with tags (comma-separated key=value pairs)
-atx ct analysis run --type tech-debt-comprehensive --source <name> --tags team=alpha,env=prod --wait --telemetry "agent=<AGENT>,executionMode=local"
+atx ct analysis run --type tech-debt-comprehensive --source <name> --tags team=alpha,env=prod --wait --telemetry "agent=<agent>,executionMode=local"
 ```
 
 **Behavior:**
@@ -276,8 +339,10 @@ skill for the full actionable-error reference. Common cases:
   confirm the role's permissions and `AWS_REGION`, then retry.
 - **`required option '--type <type>' not specified`** — `--type` takes a value; run
   `atx ct analysis run --help` for valid values (e.g. `--type tech-debt-comprehensive`).
-- **Security analysis reports COMPLETED with 0 findings after an error line** — this
-  is _not_ a clean result; the findings fetch failed. Retry; if it persists, verify
-  credentials/region and Security Agent access (`atx ct setup security-agent`).
-- **Analysis stuck / no progress** — do not report success; check `atx ct analysis list`
-  and surface the actual status.
+- **Security scan finished but its findings could not be retrieved** — the run prints
+  `... its findings could not be retrieved: <reason>. This is NOT a clean result` (or
+  `Code review job for <repo> did not complete`) and marks that repository failed. It is
+  _not_ a clean result: retry; if it persists, verify credentials/region and Security Agent
+  access (`atx ct setup security-agent`).
+- **Analysis stuck / no progress** — do not report success; check `atx ct analysis get --id <id>`
+  (per-repo status and wait reasons) and surface the actual status.

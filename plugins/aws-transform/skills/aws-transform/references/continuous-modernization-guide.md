@@ -7,15 +7,16 @@ description: Interactive onboarding guide — walks new users through the full A
 
 You are now in guided onboarding mode. Your job is to walk the user through the full AWS Transform - continuous modernization (continuous modernization) workflow one step at a time. Be proactive — you drive the conversation, not the user.
 
-For the exact commands at each step, use the corresponding skill (`/source`, `/discovery`, `/analysis`, `/findings`, `/remediation`, `/reporting`). This guide focuses on workflow orchestration — detecting state, explaining concepts, and moving the user forward.
+For the exact commands at each step, use the corresponding skill (`/source` for `atx ct source` and `atx ct repository`, `/discovery`, `/analysis`, `/findings`, `/remediation`, `/status`, `/schedule`, `/reporting`). This guide focuses on workflow orchestration — detecting state, explaining concepts, and moving the user forward.
 
 ## Execution Modes
 
 ### Local Mode
 
-- Storage: local (`~/.atxct/`)
+- Records: the AWS Transform service (your account and region), so anyone with access to the same account and region sees the same sources, analyses, findings and remediations
+- Local to this machine: working files, source tokens and reports under `~/.atxct/`, so each person adds their own source token
 - Execution: local (this machine)
-- No scheduling, no team sharing
+- No scheduling
 - Good for: trying it out, small repos, individual use
 
 ### AWS-Managed Mode (no customer infrastructure)
@@ -28,8 +29,8 @@ For the exact commands at each step, use the corresponding skill (`/source`, `/d
 
 ### Customer-Managed Infrastructure Mode
 
-- Storage: S3 (customer account)
-- Execution: **customer-owned** Fargate or EC2 stack (deployed via `atx ct remote provision`)
+- Storage: records in the AWS Transform service; source bundles, transformed code and reports in S3 buckets in your account
+- Execution: **customer-owned** AWS Batch (Fargate) or EC2 stack (deployed via `atx ct remote provision`)
 - Supports scheduling, team sharing, CI/CD
 - Good for: teams wanting compute in their own account, warm/persistent instances, large fan-out
 - NOTE: Fargate/Batch is **not** the "no infrastructure" option — it still deploys a stack in the customer's account. For zero infrastructure, use AWS-Managed Mode above.
@@ -85,11 +86,11 @@ Use the `/source` skill for the exact commands to add a source.
 
 For local folders: the `/discovery` skill scans the path you provide; never guess or use the current working directory.
 
-If the user doesn't have a GitHub PAT, explain: "You'll need a Personal Access Token with `repo` scope. Create one at GitHub → Settings → Developer settings → Personal access tokens. For analysis only, read-only is fine. For auto-fix PRs (remediation), you'll need write access."
+If the user doesn't have a GitHub PAT, explain: "You'll need a Personal Access Token. Create one at GitHub → Settings → Developer settings → Personal access tokens. A classic token needs the `repo` scope (checked when you add the source). A fine-grained token needs read access to Contents for analysis, and read and write access to Contents and Pull requests for auto-fix PRs (remediation)."
 
 If the user doesn't have a GitLab PAT, explain: "You'll need a Personal Access Token with `api` scope. Create one at GitLab → Settings → Access Tokens → Personal Access Tokens. The `api` scope covers reading projects, pushing branches, and creating Merge Requests for remediation."
 
-If the user doesn't have a Bitbucket token, explain: "For Bitbucket Cloud, go to https://id.atlassian.com/manage-profile/security/api-tokens and click 'Create API token with scopes'. Select these scopes: `read:repository:bitbucket`, `write:repository:bitbucket`, `read:pullrequest:bitbucket`, `write:pullrequest:bitbucket`. You'll also need your Bitbucket account email (for API auth, pass via `--email`) and your Bitbucket username (for git clone/push, pass via `--username` — visible in your clone URLs at bitbucket.org). For Bitbucket Data Center (self-hosted), create an HTTP Access Token in your project/repo settings and pass `--url` with your instance URL."
+If the user doesn't have a Bitbucket token, explain: "For Bitbucket Cloud, go to https://id.atlassian.com/manage-profile/security/api-tokens and click 'Create API token with scopes'. Select these scopes: `read:repository:bitbucket`, `write:repository:bitbucket`, `read:pullrequest:bitbucket`, `write:pullrequest:bitbucket`. Your Bitbucket account email (`--email`) and username (`--username`) are optional — pass them if you have them, but a token created in the console needs neither: the API authenticates as Bearer without an email, and git clone/push uses `x-token-auth` either way. For Bitbucket Data Center (self-hosted), create an HTTP Access Token in your project/repo settings and pass `--url` with your instance URL."
 
 If Customer-managed infrastructure mode, explain: "As next steps, you need to set up your infrastructure and environment.", proceed to Step 3.
 If AWS-managed mode, explain: "No infrastructure to set up — the AWS-managed fleet runs it.", move to Step 4.
@@ -101,7 +102,7 @@ After success, move to Step 3 (Customer-managed infrastructure mode) or Step 4 (
 
 This step only runs in Customer-managed infrastructure mode. Local and AWS-managed modes skip this step (they need no execution environment).
 
-Explain: "Execution environment is used for analysis (detecting tech debt, security issues, upgrade opportunities) and remediation (running transforms that generate fixes; PR creation uses the GitHub API)."
+Explain: "Execution environment is used for analysis (detecting tech debt, security issues, upgrade opportunities) and remediation (running transforms that generate fixes; pull/merge requests are opened through your Git provider's API)."
 
 Explain: "Where should analysis and remediations run?
 
@@ -152,7 +153,7 @@ Setup complete.
 
 ### Select and Start an Analysis
 
-**Render this menu as plain numbered markdown text in your response and wait for the user to type a choice. Do NOT route it through any structured choice/picker tool (e.g., `AskUserQuestion` in Claude Code, or any equivalent multi-select/option UI in other harnesses) — those tools impose option caps that silently drop Agentic Readiness and Modernization Readiness. All six options below MUST appear verbatim.**
+**Render this menu as plain numbered markdown text in your response and wait for the user to type a choice. Do NOT route it through any structured choice/picker tool (e.g., `AskUserQuestion` in Claude Code, or any equivalent multi-select/option UI in other harnesses) — those tools impose option caps that silently drop Agentic Readiness, Modernization Readiness, Graviton Readiness, or AWS Health Readiness. All eight options below MUST appear verbatim.**
 
 ```
 What do you want to do next?
@@ -167,7 +168,11 @@ What do you want to do next?
      Analyze how ready your repos are for AI agents (frameworks, APIs, docs).
   5. Modernization Readiness
      Analyze modernization opportunities (infrastructure, application, data, security, operations).
-  6. Run remediation
+  6. Graviton Readiness
+     Check Java repos for AWS Graviton (ARM64) compatibility.
+  7. AWS Health Readiness
+     Find Lambda runtimes, Amazon EKS versions, and Elastic Beanstalk PHP platforms approaching end of support.
+  8. Run remediation
      Skip analysis and go straight to an upgrade (e.g., Java 8→21, AWS SDK migrations).
 ```
 
@@ -184,7 +189,7 @@ Found **N findings** across M repos:
 What would you like to do next?
 
   • List all findings (uses /findings)
-  • Schedule continuous analysis (Infrastructure mode)
+  • Schedule continuous analysis (AWS-managed or your own infrastructure)
   • Auto-remediate high-severity issues
   • Auto-remediate everything
   • Later -- Save for next time
@@ -195,11 +200,11 @@ What would you like to do next?
 Remediation requires:
 
 1. **Execution environment** — already configured in Step 3 (Infrastructure) or local.
-2. **GitHub write access** — to create branches and PRs. If the token from Step 2 was read-only, prompt the user to update it with `repo` scope.
+2. **GitHub write access** — to create branches and PRs. If the token from Step 2 was read-only, have the user store a write-capable token with `atx ct source update --name <name> --token` (the `read -s` one-liner in the `/source` skill).
 3. **GitLab write access** — to push branches and create Merge Requests. The token needs `api` scope.
 4. **Bitbucket write access** — to push branches and create Pull Requests. Cloud needs API token with `write:repository:bitbucket` + `write:pullrequest:bitbucket` scopes. Data Center needs HTTP Access Token with write permissions.
 
-After token is sufficient, list available remediations grouped by language (e.g., Java: `java8-to-java21`, `aws-sdk-v1-to-v2`; Python: `python39-to-python312`, `boto2-to-boto3`; Node.js: `node18-to-node22`, `aws-sdk-v2-to-v3`).
+After token is sufficient, list available remediations grouped by language (e.g., Java: `AWS/java-version-upgrade`, `AWS/java-aws-sdk-v1-to-v2`; Python: `AWS/python-version-upgrade`, `AWS/python-boto2-to-boto3`; Node.js: `AWS/nodejs-version-upgrade`, `AWS/nodejs-aws-sdk-v2-to-v3`). Confirm the current names with `atx custom def list --json`.
 
 Use the `/remediation` skill for the exact commands. After execution, show summary (repos upgraded, repos needing manual review) and offer to open PRs.
 
@@ -243,9 +248,10 @@ When all steps are done, show a recap of what was accomplished in this session. 
    - `command not found: atx` → "The `atx` CLI isn't installed or isn't on your PATH. Let's install it." (see the `setup` skill), then verify with `atx --version`.
    - Startup / can't reach backend → "I couldn't reach the AWS Transform backend. Let's check your AWS credentials (refresh them if they've expired) and that you picked a supported region."
    - Connection error / `ECONNREFUSED` → "I couldn't reach the AWS Transform backend. Refresh your AWS credentials and confirm `AWS_REGION` is a supported region, then retry."
-   - Invalid/expired token → "That token didn't work. Make sure it has `repo` scope (and is SSO-authorized for the org)."
+   - Invalid/expired token → "That token didn't work." Relay the CLI's reason (it names a missing scope or an inaccessible org/workspace), then have the user store a corrected token with the `read -s` one-liner for `atx ct source update`. Scopes: GitHub `repo` (SSO-authorized for the org), GitLab `api`, Bitbucket Cloud the repository and pull-request scopes.
    - `AccessDenied` / 403 → "Your AWS credentials look expired. Refresh them and confirm `AWS_REGION`, then retry."
    - No repos / no findings → don't assume it's clean: check credentials, region, and whether an analysis has run before reporting "nothing found." Then, if genuinely empty → "No repos found in that source. Double-check the org name or path (for `--provider local`, `--path` must be the parent directory containing the repos)."
+   - Local scan lists `src`, `docs`, … as repos → the path points at one repo, not its parent; re-scan with the parent `--path` and remove the wrong entries (see the `/discovery` skill).
 6. **Let them skip.** "skip", "later", "not now" — move on.
 7. **Let them go back.** If they want to redo a step, accommodate.
 8. **Show progress.** For long operations, show status.
