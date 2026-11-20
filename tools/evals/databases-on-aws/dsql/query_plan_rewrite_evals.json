@@ -138,6 +138,47 @@
         "Does NOT recommend rewriting to IN",
         "MAY suggest alternative optimizations (composite index, UNION, etc.)"
       ]
+    },
+    {
+      "id": 211,
+      "prompt": "My DSQL query is slow for customers with many orders:\n\nSELECT o.order_id\nFROM orders o\nWHERE o.customer_id = 'C1000'\n  AND o.region_id = 7\n  AND o.order_date >= '2024-01-01'\n  AND EXISTS (SELECT 1 FROM accounts a WHERE a.customer_id = o.customer_id);\n\nEXPLAIN ANALYZE shows:\n\nNested Loop Semi Join (rows=1) (actual rows=1000 loops=1)\n  -> Index Only Scan on orders o (rows=1) (actual rows=1000 loops=1)\n  -> Index Only Scan on accounts_pkey (rows=1) (actual rows=1 loops=1000)\n\nThe accounts scan is 90% of the time. What's going on and how do I fix it?",
+      "expected_output": "Identifies that o.customer_id is pinned to a constant in the outer WHERE so the EXISTS is the same for every row, recommends substituting the constant (or lifting into a CTE) so it runs once as an InitPlan, from query-rewrites/subquery-unnesting-redundant-correlation.md",
+      "files": [],
+      "expectations": [
+        "Identifies that the accounts scan runs once per outer row (loops=1000) rather than once",
+        "Identifies that a.customer_id = o.customer_id is equivalent to a.customer_id = 'C1000' because the outer WHERE pins o.customer_id",
+        "Recommends replacing o.customer_id with the constant inside the EXISTS (or lifting the EXISTS into a CTE)",
+        "States the rewritten subquery runs once as an InitPlan",
+        "Provides the rewritten SQL",
+        "Does NOT recommend converting the EXISTS to a JOIN with DISTINCT as the primary fix",
+        "MAY note that the outer row estimate (1 vs 1000) is a multi-column underestimate and that the rewrite works regardless"
+      ]
+    },
+    {
+      "id": 212,
+      "prompt": "I read that correlated EXISTS subqueries can be rewritten to run once. Does this apply to my DSQL query?\n\nSELECT o.order_id\nFROM orders o\nWHERE o.customer_id = 'C1000'\n  AND EXISTS (SELECT 1 FROM accounts a\n              WHERE a.customer_id = o.customer_id\n                AND a.account_id = o.account_id);",
+      "expected_output": "Declines the redundant-correlation rewrite because o.account_id is not pinned by the outer WHERE; the subquery still depends on each outer row",
+      "files": [],
+      "expectations": [
+        "Identifies that the subquery references o.account_id, which the outer WHERE does not pin to a constant",
+        "Explains that substituting only o.customer_id leaves the subquery correlated and it still runs per row",
+        "Does NOT recommend the constant-substitution or CTE rewrite as a fix",
+        "MAY suggest the generic EXISTS-to-JOIN rewrite or an index on accounts(customer_id, account_id)"
+      ]
+    },
+    {
+      "id": 213,
+      "prompt": "My DSQL query is slow:\n\nSELECT c.customer_id, c.name\nFROM customers c\nWHERE c.signup_date >= '2024-01-01'\n  AND EXISTS (SELECT 1 FROM accounts a WHERE a.customer_id = c.customer_id AND a.status = 'active');\n\nEXPLAIN ANALYZE shows:\n\nNested Loop Semi Join (rows=40) (actual rows=3100 loops=1)\n  -> Full Scan on customers c (rows=50) (actual rows=5000 loops=1)\n  -> Index Scan using accounts_pkey on accounts a (rows=1) (actual rows=1 loops=5000)\n\naccounts.customer_id is the primary key of accounts. I want to rewrite the EXISTS as a JOIN. Is that safe, and does the rewrite that makes a correlated EXISTS run once apply here?",
+      "expected_output": "Declines the redundant-correlation rewrite because c.customer_id is not pinned to a constant; confirms the EXISTS-to-JOIN rewrite from query-rewrites/subquery-unnesting-correlated.md is safe without DISTINCT because accounts is unique on the join key",
+      "files": [],
+      "expectations": [
+        "Identifies that the subquery is correlated on c.customer_id, which the outer WHERE does not pin to a constant",
+        "States that the run-once (constant-substitution or CTE) rewrite does not apply",
+        "Does NOT recommend substituting a constant into the subquery or lifting the EXISTS into a CTE",
+        "Confirms the EXISTS-to-JOIN rewrite is safe because accounts.customer_id is unique, so no DISTINCT is needed",
+        "Provides the rewritten JOIN SQL",
+        "MAY note that a JOIN on a non-unique inner side would need DISTINCT, which can collapse pre-existing duplicates in the outer table"
+      ]
     }
   ]
 }

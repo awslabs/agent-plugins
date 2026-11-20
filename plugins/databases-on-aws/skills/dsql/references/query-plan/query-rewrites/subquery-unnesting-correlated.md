@@ -56,3 +56,5 @@ WHERE EXISTS (
   WHERE S.x + S.y = R.z
 );
 ```
+
+See [subquery-unnesting-redundant-correlation.md](subquery-unnesting-redundant-correlation.md) when every outer column the subquery references is already pinned to a constant by the outer `WHERE`. There, removing the correlation (not converting to a JOIN) is the right rewrite, and no `DISTINCT` is needed.

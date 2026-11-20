@@ -21,7 +21,7 @@ tools/evals/databases-on-aws/
     ├── trigger_evals.json           # Tier 1: triggering evals (40 test cases)
     ├── safe_query_evals.json        # Tier 3: safe_query enforcement (5 prompts, 24 assertions)
     ├── query_explainability_evals.json  # Workflow 9: query plan diagnostics (9 prompts, 70 assertions)
-    ├── query_plan_rewrite_evals.json   # Query rewrites: type coercion, subquery unnesting, etc. (11 prompts, manual)
+    ├── query_plan_rewrite_evals.json   # Query rewrites: type coercion, subquery unnesting, etc. (14 prompts, manual)
     ├── data_loading_eval_results.md    # Historical data-loading results
     ├── dsql_lint_eval_results.md       # Historical dsql_lint eval results
     ├── pg_migration_hallucination_results.md # Historical migration-hallucination results
@@ -291,8 +291,8 @@ PYTHONPATH="<skill-creator-path>:$PYTHONPATH" python -m scripts.run_loop \
 
 Tests whether the agent recommends correct SQL rewrites for common performance anti-patterns,
 including type coercion index bypass, subquery unnesting, OR-to-IN, GROUP BY pushdown, and
-DSQL-specific patterns (reltuples estimate, join splitting). Includes one negative case
-(OR across different columns — agent should decline).
+DSQL-specific patterns (reltuples estimate, join splitting). Includes two negative cases
+(OR across different columns; partially pinned correlation — agent should decline).
 
 **Evaluation method:** Manual qualitative comparison (n=1). Run `claude -p` with skill loaded vs
 `claude -p --bare` from a clean directory. Results in `query_plan_rewrite_eval_results.md`.
@@ -303,21 +303,24 @@ iteration SHOULD implement them as a Python SQL converter script that parses and
 directly, with the reference files serving as documentation for the converter's rules. This
 would move correctness-critical rewrites out of the LLM and into deterministic code.
 
-**What it checks** (11 eval prompts):
+**What it checks** (14 eval prompts):
 
-| Eval           | Focus                       | Key assertions                                               |
-| -------------- | --------------------------- | ------------------------------------------------------------ |
-| 200            | IN-subquery Full Scan       | Recommends EXISTS rewrite, checks type coercion              |
-| 201            | Type coercion index bypass  | Identifies string-vs-integer mismatch, references pg_amop    |
-| 202            | 12-table join ordering      | Identifies DP threshold, recommends CTE splitting            |
-| 203            | COUNT(*) timeout            | Recommends reltuples, warns about staleness                  |
-| 204            | Multiple OR to IN           | Recommends IN rewrite, checks type coercion                  |
-| 205            | GROUP BY after JOIN         | Recommends subquery aggregation                              |
-| 206            | LEFT JOIN null rejection    | Converts to INNER JOIN                                       |
-| 207            | Computation on indexed col  | Pushes arithmetic to constant side                           |
-| 208            | NOT IN with NULLs           | Recommends NOT EXISTS, warns about NULL semantics difference |
-| 209            | Nested UNION ALL            | Flattens to single-level UNION ALL                           |
-| 210 (negative) | OR across different columns | Does NOT recommend OR-to-IN                                  |
+| Eval           | Focus                        | Key assertions                                                 |
+| -------------- | ---------------------------- | -------------------------------------------------------------- |
+| 200            | IN-subquery Full Scan        | Recommends EXISTS rewrite, checks type coercion                |
+| 201            | Type coercion index bypass   | Identifies string-vs-integer mismatch, references pg_amop      |
+| 202            | 12-table join ordering       | Identifies DP threshold, recommends CTE splitting              |
+| 203            | COUNT(*) timeout             | Recommends reltuples, warns about staleness                    |
+| 204            | Multiple OR to IN            | Recommends IN rewrite, checks type coercion                    |
+| 205            | GROUP BY after JOIN          | Recommends subquery aggregation                                |
+| 206            | LEFT JOIN null rejection     | Converts to INNER JOIN                                         |
+| 207            | Computation on indexed col   | Pushes arithmetic to constant side                             |
+| 208            | NOT IN with NULLs            | Recommends NOT EXISTS, warns about NULL semantics difference   |
+| 209            | Nested UNION ALL             | Flattens to single-level UNION ALL                             |
+| 210 (negative) | OR across different columns  | Does NOT recommend OR-to-IN                                    |
+| 211            | Redundant EXISTS correlation | Substitutes pinned constant (or CTE), InitPlan runs once       |
+| 212 (negative) | Partially pinned correlation | Does NOT substitute; subquery still depends on outer row       |
+| 213            | Generic correlated EXISTS    | Routes to EXISTS→JOIN (unique inner); no constant substitution |
 
 ---
 
