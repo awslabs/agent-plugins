@@ -3,7 +3,11 @@
     "aws-mcp": {
       "command": "uvx",
       "args": [
-        "mcp-proxy-for-aws@latest",
+        "--with",
+        "botocore[crt]==1.43.93",
+        "--with",
+        "boto3==1.43.93",
+        "mcp-proxy-for-aws==1.6.6",
         "https://aws-mcp.us-east-1.api.aws/mcp"
       ],
       "disabled": false
