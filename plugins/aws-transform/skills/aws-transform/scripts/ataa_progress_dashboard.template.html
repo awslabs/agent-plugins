@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+{{refresh}}
+<title>Build Run Progress · AWS Transform</title>
+<style>
+  :root {
+    --bg:            #0B0A0F;
+    --surface:       #15131B;
+    --surface-2:     #1D1A25;
+    --border:        #2A2633;
+    --text:          #F4F2F8;
+    --text-muted:    #A39DB0;
+    --text-subtle:   #6E6879;
+
+    --kiro-purple:   #9046FF;
+    --kiro-purple-2: #B285FF;
+    --kiro-purple-3: #6A1FE0;
+    --kiro-glow:     rgba(144, 70, 255, 0.35);
+
+    --success:       #3DD68C;
+    --warning:       #FFB224;
+    --danger:        #FF5C7A;
+    --pending:       #4A4456;
+
+    --radius-lg: 16px;
+    --radius-md: 10px;
+    --radius-sm: 6px;
+    --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  [data-theme="light"] {
+    --bg:          #F7F5FB;
+    --surface:     #FFFFFF;
+    --surface-2:   #F1EDF8;
+    --border:      #E3DDEE;
+    --text:        #1A1523;
+    --text-muted:  #5E566C;
+    --text-subtle: #8D869A;
+    --pending:     #D6D0E0;
+    --kiro-glow:   rgba(144, 70, 255, 0.18);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    background:
+      radial-gradient(1200px 600px at 10% -10%, rgba(144,70,255,.12), transparent 60%),
+      radial-gradient(900px 500px at 110% 10%, rgba(178,133,255,.08), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 48px 20px;
+    -webkit-font-smoothing: antialiased;
+    transition: background .3s, color .3s;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 880px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.35);
+  }
+
+  .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  h1 { font-size: 22px; font-weight: 650; letter-spacing: -.01em; }
+  .breadcrumb { color: var(--text-muted); font-size: 14px; margin-top: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+  .job-id {
+    font-family: var(--mono); font-size: 12.5px;
+    background: var(--surface-2); border: 1px solid var(--border);
+    padding: 3px 8px; border-radius: var(--radius-sm); color: var(--text-muted);
+    display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+    transition: border-color .2s, color .2s;
+  }
+  .job-id:hover { border-color: var(--kiro-purple); color: var(--text); }
+  .job-id svg { opacity: .7; }
+
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+  .icon-btn {
+    background: var(--surface-2); border: 1px solid var(--border); color: var(--text-muted);
+    width: 34px; height: 34px; border-radius: var(--radius-sm); cursor: pointer;
+    display: grid; place-items: center; transition: all .2s;
+  }
+  .icon-btn:hover { color: var(--text); border-color: var(--kiro-purple); }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 12.5px; font-weight: 600;
+    padding: 5px 12px; border-radius: 999px; white-space: nowrap;
+  }
+  .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .pill.in-progress { color: var(--kiro-purple-2); background: rgba(144,70,255,.14); border: 1px solid rgba(144,70,255,.35); }
+  .pill.in-progress .dot { animation: pulse 1.6s ease-in-out infinite; }
+  .pill.done    { color: var(--success); background: rgba(61,214,140,.12); border: 1px solid rgba(61,214,140,.35); }
+  .pill.pending { color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); }
+  .pill.rework, .pill.waiting { color: var(--warning); background: rgba(255,178,36,.12); border: 1px solid rgba(255,178,36,.35); }
+  .pill.rework .dot, .pill.waiting .dot { animation: pulse 1.6s ease-in-out infinite; }
+  .pill.failed  { color: var(--danger); background: rgba(255,92,122,.12); border: 1px solid rgba(255,92,122,.35); }
+  .pill.stopped { color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--text-subtle); }
+  .phase.failed .phase-marker { background: rgba(255,92,122,.15); color: var(--danger); border-color: var(--danger); }
+  .phase.stopped .phase-marker { color: var(--text-muted); border-color: var(--text-subtle); }
+  .phase.failed .phase-body { border-color: rgba(255,92,122,.4); }
+  .phase.failed .fill { background: linear-gradient(90deg, #E0405F, var(--danger)); box-shadow: none; }
+  .phase.stopped .fill { background: var(--text-subtle); box-shadow: none; }
+  .circle.failed { background: var(--danger); }
+  .circle.stopped { background: var(--text-subtle); }
+  .status-line.failed { color: var(--danger); border-color: rgba(255,92,122,.35); }
+
+  @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(.75); } }
+
+  .summary {
+    margin-bottom: 22px;
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+  }
+  .stat {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: var(--radius-md); padding: 14px 16px;
+  }
+  .stat .label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+  .stat .value { font-size: 22px; font-weight: 650; margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .stat .value small { font-size: 13px; color: var(--text-subtle); font-weight: 500; }
+
+  .section-title {
+    margin: 32px 0 14px; font-size: 13px; font-weight: 600;
+    color: var(--text-muted); text-transform: uppercase; letter-spacing: .08em;
+  }
+
+  .phases { display: flex; flex-direction: column; }
+  .phase { display: grid; grid-template-columns: 40px 1fr; gap: 16px; position: relative; padding-bottom: 22px; }
+  .phase:last-child { padding-bottom: 0; }
+  .phase:not(:last-child)::before {
+    content: ""; position: absolute; left: 19px; top: 42px; bottom: 2px; width: 2px;
+    background: var(--border); border-radius: 2px;
+  }
+  .phase.done:not(:last-child)::before { background: linear-gradient(var(--success), var(--border)); }
+  .phase.in-progress:not(:last-child)::before { background: linear-gradient(var(--kiro-purple), var(--border)); }
+
+  .phase-marker {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: grid; place-items: center; font-weight: 700; font-size: 15px;
+    background: var(--surface-2); color: var(--text-muted); border: 2px solid var(--border);
+    z-index: 1;
+  }
+  .phase.in-progress .phase-marker {
+    background: linear-gradient(135deg, var(--kiro-purple-2), var(--kiro-purple-3));
+    color: #fff; border-color: transparent;
+    box-shadow: 0 0 0 5px rgba(144,70,255,.15), 0 6px 18px var(--kiro-glow);
+  }
+  .phase.rework .phase-marker { background: rgba(255,178,36,.15); color: var(--warning); border-color: var(--warning); }
+  .phase.done .phase-marker { background: rgba(61,214,140,.15); color: var(--success); border-color: var(--success); }
+
+  .phase-body {
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: var(--radius-md); padding: 16px 18px;
+  }
+  .phase.in-progress .phase-body { border-color: rgba(144,70,255,.4); }
+  .phase.rework .phase-body { border-color: rgba(255,178,36,.4); }
+  .phase.pending .phase-body { opacity: .65; }
+
+  .phase-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .phase-title { font-size: 16px; font-weight: 600; }
+  .phase-title .num { color: var(--text-muted); font-weight: 500; }
+  .phase-desc { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+  .phase-side { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .phase-time {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12.5px; color: var(--text-muted); font-variant-numeric: tabular-nums;
+  }
+  .phase-time svg { opacity: .7; }
+
+  .status-line {
+    margin-top: 14px; padding: 10px 12px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-muted);
+  }
+  .circle { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; display: grid; place-items: center; }
+  .circle.pending { border: 2px solid var(--pending); }
+  .circle.in-progress {
+    border: 2px solid rgba(144,70,255,.25); border-top-color: var(--kiro-purple-2);
+    animation: spin .8s linear infinite;
+  }
+  .circle.rework {
+    border: 2px solid rgba(255,178,36,.25); border-top-color: var(--warning);
+    animation: spin .8s linear infinite;
+  }
+  .circle.done { background: var(--success); color: #0B0A0F; }
+  .status-line.rework { color: var(--warning); border-color: rgba(255,178,36,.35); }
+  .status-line.done { color: var(--text); }
+
+  .progress-wrap { margin-top: 14px; }
+  .progress-meta { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+  .progress-meta strong { color: var(--text); font-variant-numeric: tabular-nums; }
+  .progress-meta .pct { font-weight: 700; color: var(--kiro-purple-2); font-variant-numeric: tabular-nums; }
+  .phase.done .progress-meta .pct { color: var(--success); }
+
+  .track {
+    height: 10px; border-radius: 999px; background: var(--bg);
+    border: 1px solid var(--border); overflow: hidden; position: relative;
+  }
+  .fill {
+    height: 100%; border-radius: 999px; min-width: 10px;
+    background: linear-gradient(90deg, var(--kiro-purple-3), var(--kiro-purple), var(--kiro-purple-2));
+    box-shadow: 0 0 12px var(--kiro-glow);
+    position: relative; overflow: hidden;
+    transition: width .8s cubic-bezier(.22,1,.36,1);
+  }
+  .phase.in-progress .fill::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent);
+    transform: translateX(-100%);
+    animation: shimmer 1.8s infinite;
+  }
+  .phase.done .fill { background: linear-gradient(90deg, #22B573, var(--success)); box-shadow: none; }
+  .phase.pending .fill { width: 0 !important; min-width: 0; }
+  @keyframes shimmer { to { transform: translateX(100%); } }
+
+  .progress-foot {
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+    margin-top: 10px; font-size: 12.5px; color: var(--text-subtle);
+  }
+  .progress-foot b { color: var(--text-muted); font-weight: 600; }
+
+  .current-task {
+    margin-top: 14px; padding: 10px 12px;
+    background: var(--bg); border: 1px dashed var(--border); border-radius: var(--radius-sm);
+    display: flex; align-items: center; gap: 10px; font-size: 13px; flex-wrap: wrap;
+  }
+  .spinner {
+    width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0;
+    border: 2px solid rgba(144,70,255,.25); border-top-color: var(--kiro-purple-2);
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .current-task .label { color: var(--text-subtle); }
+  .current-task .running { color: var(--text); font-variant-numeric: tabular-nums; }
+  .current-task .rework-note { color: var(--warning); font-size: 12.5px; font-weight: 600; }
+
+  .footer {
+    margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+    font-size: 12.5px; color: var(--text-subtle);
+  }
+  .live { display: inline-flex; align-items: center; gap: 6px; }
+  .live .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); animation: pulse 2s infinite; }
+
+  .btn {
+    font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+    padding: 8px 14px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+    transition: all .2s;
+  }
+  .btn:hover { border-color: var(--kiro-purple); }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--surface-2); border: 1px solid var(--kiro-purple); color: var(--text);
+    padding: 10px 16px; border-radius: var(--radius-sm); font-size: 13px;
+    opacity: 0; pointer-events: none; transition: all .25s;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 640px) {
+    .card { padding: 22px; }
+    .stat .value { font-size: 18px; }
+    .phase-head { flex-wrap: wrap; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+  .build-time { margin-top: 6px; }
+  .build-time .value { font-family: var(--mono); font-size: 12.5px; color: var(--text); font-variant-numeric: tabular-nums; }
+
+  .section-box {
+    margin-top: 24px; padding: 20px 22px 22px;
+    border: 1px solid var(--border); border-radius: var(--radius-lg);
+    background: linear-gradient(180deg, rgba(144,70,255,.04), transparent 120px), var(--surface);
+  }
+  .section-box > .section-title { margin: 0 0 18px; }
+
+  .phase.waiting .phase-marker { background: rgba(255,178,36,.15); color: var(--warning); border-color: var(--warning); }
+  .phase.waiting .phase-body { border-color: rgba(255,178,36,.4); }
+  .phase.waiting:not(:last-child)::before { background: linear-gradient(var(--warning), var(--border)); }
+  .circle.waiting {
+    border: 2px solid rgba(255,178,36,.25); border-top-color: var(--warning);
+    animation: spin .8s linear infinite;
+  }
+  .status-line.waiting { color: var(--warning); border-color: rgba(255,178,36,.35); }
+  [hidden] { display: none !important; }
+  .rework-added { margin-top: 10px; font-size: 12.5px; font-weight: 600; color: var(--warning); }
+  .parallel-badge { display: inline-flex; align-items: center; gap: 6px; margin: -8px 0 14px 56px;
+                    font-size: 12px; font-weight: 600; color: var(--kiro-purple-2); }
+  .parallel-badge::before { content: "⇅"; font-size: 13px; }
+  .planner-note { margin-top: 10px; font-size: 12.5px; color: var(--text-muted); }
+  .phase:not(.done) .marker-check, .phase.done .marker-num { display: none; }
+  .status-line:not(.done) .line-check { display: none; }
+</style>
+</head>
+<body>
+
+<main class="card" aria-labelledby="title">
+  <header class="header">
+    <div class="brand">
+      <div>
+        <h1 id="title">Build Run Progress</h1>
+        <div class="breadcrumb">
+          <span>AWS Transform JobID:</span>
+          <span class="job-id" id="jobId" title="Click to copy job ID" role="button" tabindex="0">
+            <span id="jobIdText">{{job_id}}</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </span>
+        </div>
+        <div class="breadcrumb build-time">
+          <span>Total Time:</span>
+          <span class="value">{{total_time}}</span>
+        </div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span class="pill {{overall_status}}" id="overallPill"><span class="dot"></span><span id="overallText">{{overall_text}}</span></span>
+      <button class="icon-btn" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <section class="section-box" aria-label="Preparing the build" {{prep_hidden}}>
+    <h2 class="section-title">Preparing the build</h2>
+    <div class="phases">
+    <article class="phase {{requirements_status}}">
+      <div class="phase-marker"><span class="marker-num">1</span><svg class="marker-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <div class="phase-body">
+        <div class="phase-head">
+          <div>
+            <div class="phase-title"><span class="num">Step 1 ·</span> Define Architecture</div>
+            <div class="phase-desc">Define an architecture strategy from the approved requirements</div>
+          </div>
+          <div class="phase-side">
+            <span class="phase-time" title="Time spent in this step"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> {{requirements_timer}}</span>
+            <span class="pill {{requirements_status}}"><span class="dot"></span>{{requirements_label}}</span>
+          </div>
+        </div>
+        <div class="status-line {{requirements_status}}"><span class="circle {{requirements_status}}" aria-hidden="true"><svg class="line-check" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span>{{requirements_text}}</span></div>
+      </div>
+    </article>
+    <article class="phase {{strategy_status}}">
+      <div class="phase-marker"><span class="marker-num">2</span><svg class="marker-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <div class="phase-body">
+        <div class="phase-head">
+          <div>
+            <div class="phase-title"><span class="num">Step 2 ·</span> Define Technical Specification</div>
+            <div class="phase-desc">Create the technical specification based on the chosen architecture</div>
+          </div>
+          <div class="phase-side">
+            <span class="phase-time" title="Time spent in this step"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> {{strategy_timer}}</span>
+            <span class="pill {{strategy_status}}"><span class="dot"></span>{{strategy_label}}</span>
+          </div>
+        </div>
+        <div class="status-line {{strategy_status}}"><span class="circle {{strategy_status}}" aria-hidden="true"><svg class="line-check" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span>{{strategy_text}}</span></div>
+      </div>
+    </article>
+    </div>
+  </section>
+
+  <section class="section-box" aria-label="Build">
+    <h2 class="section-title">Build</h2>
+    <section class="summary" aria-label="Run summary">
+      <div class="stat"><div class="label">Tasks done</div><div class="value">{{tasks_completed}} <small>/ {{tasks_total}}</small></div></div>
+      <div class="stat"><div class="label">Active Workers</div><div class="value">{{active_workers}}</div></div>
+    </section>
+    <div class="phases">
+    <article class="phase {{planner_status}}">
+      <div class="phase-marker"><span class="marker-num">1</span><svg class="marker-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <div class="phase-body">
+        <div class="phase-head">
+          <div>
+            <div class="phase-title"><span class="num">Phase 1 ·</span> Planner</div>
+            <div class="phase-desc">Decomposes the spec into the initial transformation tasks</div>
+          </div>
+          <div class="phase-side">
+            <span class="phase-time" title="Time spent in this phase"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> {{planner_timer}}</span>
+            <span class="pill {{planner_status}}"><span class="dot"></span>{{planner_label}}</span>
+          </div>
+        </div>
+        <div class="status-line {{planner_status}}" {{planner_line_hidden}}><span class="circle {{planner_status}}" aria-hidden="true"><svg class="line-check" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span>{{planner_text}}</span></div>
+        <div class="progress-wrap" {{planner_progress_hidden}}>
+          <div class="progress-meta">
+            <span><strong>{{planner_planned}}</strong> of <strong>{{planner_components}}</strong> components planned</span>
+            <span class="pct">{{planner_pct}}%</span>
+          </div>
+          <div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="{{planner_components}}" aria-valuenow="{{planner_planned}}" aria-label="Phase 1 progress">
+            <div class="fill" style="width:{{planner_pct}}%"></div>
+          </div>
+          <div class="planner-note" {{planner_added_hidden}}>{{planner_added_label}}</div>
+          <div class="planner-note" {{planner_dropped_hidden}}>{{planner_dropped_label}}</div>
+        </div>
+      </div>
+    </article>
+    <div class="parallel-badge" {{parallel_hidden}}>Planning and code generation run at the same time</div>
+    <article class="phase {{code_status}}">
+      <div class="phase-marker"><span class="marker-num">2</span><svg class="marker-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <div class="phase-body">
+        <div class="phase-head">
+          <div>
+            <div class="phase-title"><span class="num">Phase 2 ·</span> Code Generation</div>
+            <div class="phase-desc">Generating and applying code changes from the plan</div>
+          </div>
+          <div class="phase-side">
+            <span class="phase-time" title="Time spent in this phase"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> {{code_timer}}</span>
+            <span class="pill {{code_status}}"><span class="dot"></span>{{code_label}}</span>
+          </div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-meta">
+            <span><strong>{{code_completed}}</strong> of <strong>{{code_total}}</strong> tasks</span>
+            <span class="pct">{{code_pct}}%</span>
+          </div>
+          <div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="{{code_total}}" aria-valuenow="{{code_completed}}" aria-label="Phase 2 progress">
+            <div class="fill" style="width:{{code_width}}%"></div>
+          </div>
+          <div class="progress-foot">
+            <span>Completed: <b>{{code_completed}}</b></span>
+            <span>Remaining: <b>{{code_remaining}}</b></span>
+            <span>Total: <b>{{code_total}}</b></span>
+          </div>
+        </div>
+        <div class="current-task" {{now_hidden}}>
+          <span class="spinner" aria-hidden="true"></span>
+          <span class="label">Now:</span>
+          <span class="running">{{running_label}}</span>
+          <span class="rework-note" {{rework_hidden}}>{{reworking_label}}</span>
+        </div>
+      </div>
+    </article>
+    <article class="phase {{validation_status}}">
+      <div class="phase-marker"><span class="marker-num">3</span><svg class="marker-check" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <div class="phase-body">
+        <div class="phase-head">
+          <div>
+            <div class="phase-title"><span class="num">Phase 3 ·</span> Validation</div>
+            <div class="phase-desc">Building and verifying the generated code against the acceptance criteria</div>
+          </div>
+          <div class="phase-side">
+            <span class="phase-time" title="Time spent in this phase"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> {{validation_timer}}</span>
+            <span class="pill {{validation_status}}"><span class="dot"></span>{{validation_label}}</span>
+          </div>
+        </div>
+        <div class="status-line {{validation_status}}"><span class="circle {{validation_status}}" aria-hidden="true"><svg class="line-check" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span>{{validation_text}}</span></div>
+        <div class="rework-added" {{rework_added_hidden}}>{{rework_added_label}}</div>
+      </div>
+    </article>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <span class="live"><span class="dot"></span>Start time: <span id="startedAt">{{started_at}}</span> · {{freshness}} · updated <span id="updatedAt">{{updated_at}}</span></span>
+  </footer>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const root = document.documentElement;
+  const savedTheme = window.localStorage && localStorage.getItem("ataa-dashboard-theme");
+  if (savedTheme) root.dataset.theme = savedTheme;
+  function toast(message) {
+    const t = $("toast");
+    t.textContent = message;
+    t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 2200);
+  }
+  function copyJobId() {
+    navigator.clipboard?.writeText($("jobIdText").textContent).then(() => toast("Job ID copied to clipboard"));
+  }
+  $("jobId").addEventListener("click", copyJobId);
+  $("jobId").addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); copyJobId(); } });
+  $("themeToggle").addEventListener("click", () => {
+    root.dataset.theme = root.dataset.theme === "light" ? "dark" : "light";
+    if (window.localStorage) localStorage.setItem("ataa-dashboard-theme", root.dataset.theme);
+  });
+</script>
+</body>
+</html>

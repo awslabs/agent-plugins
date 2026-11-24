@@ -240,8 +240,6 @@ list_resources resource="messages" # Raw messages from agent
 - When job completes → download artifacts
 - When job fails → show error, offer retry
 
-**Waiting between re-checks.** When a resource is in a transitional state and you need to re-check after a delay, use `adaptive_poll` rather than responding with stale data or silently stalling. Follow the tool's own description for terminal states and approval requirements. During an active, user-approved polling loop, present-tense status framing is fine (see Freshness below); outside that loop, do not promise proactive surfacing.
-
 ### Parallel Execution
 
 - CLI and Managed Agents on **different** components → run in parallel

@@ -1,6 +1,6 @@
 # Mainframe Reimagine
 
-> **Last Updated:** 2026-06-10
+> **Last Updated:** 2026-11-06
 
 ## Table of Contents
 
@@ -12,13 +12,13 @@
 - [Resume Detection](#resume-detection)
 - [Execution: Run All Phases](#execution-run-all-phases)
 
-After a mainframe modernization job completes analysis and generates requirements, use this workflow to download the outputs and reimagine the application — decomposing the legacy system into modern microservices through progressive analysis phases.
+When the user explicitly asks for it, use this workflow to download a mainframe job's outputs and reimagine the application locally — decomposing the legacy system into modern microservices through progressive analysis phases.
 
 ## When to Use
 
-- User asks to "download specs", "download source code", "forward engineer", "reimagine", or "set up workspace"
-- A mainframe job has completed the "Generate requirements" step
-- User wants to start building modernized code from the generated specifications
+- The user explicitly asks to "forward engineer", "reimagine locally", or "set up a reimagine workspace"
+
+Never start this workflow from a job's Generate requirements or Build steps, and never offer it. Downloading the requirements after Generate requirements and the Build decision follow [mainframe](mainframe.md) → After Generate requirements.
 
 ## Prerequisites
 
@@ -42,7 +42,7 @@ After a mainframe modernization job completes analysis and generates requirement
 
 ## Download & Create Workspace
 
-**When the user asks to download specs, source code, or set up a workspace for forward engineering/reimagine:**
+**When the user asks to set up a workspace for local forward engineering/reimagine:**
 
 Tell the user: "I'll gather the generated specs and original source code from your job, then set up a workspace for reimagining."
 
