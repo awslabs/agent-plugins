@@ -20,7 +20,7 @@ It is language-agnostic and architecture-agnostic — it auto-detects the custom
 ## When to Use
 
 - After Phase 4 has completed with a `traceability-dashboard.html`
-- User asks to "implement from specs", "forward engineer", "build from requirements", or "generate code"
+- In a local reimagine workspace that already has `outputs/microservices/`, the user asks to "implement from specs", "forward engineer", "build from requirements", or "generate code". A job's Build step is not this workflow; it follows [mainframe](mainframe.md) → After Generate requirements.
 - User asks to start implementing a specific microservice specification from `outputs/microservices/`
 
 **Key principle:** Traceability annotations are inserted AT WRITE TIME — as code is being generated. This ensures 100% coverage by default.
