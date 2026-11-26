@@ -11,8 +11,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Read stdin (hook input JSON)
 INPUT=$(cat)
 
-# Extract file path from the hook input
-FILE_PATH=$(echo "$INPUT" | python3 -c "
+# Extract file path from the hook input.
+# -I: `python3 -c` puts the CWD (the user's project) first on sys.path, so a
+# planted json.py would run on every Edit/Write (CWE-426). Scripts run by path
+# below get their own directory there instead and are not affected.
+FILE_PATH=$(echo "$INPUT" | python3 -I -c "
 import sys, json
 try:
     data = json.load(sys.stdin)
@@ -37,7 +40,9 @@ fi
 
 # Ensure defusedxml is available (required for safe XML parsing)
 # See scripts/requirements.txt or plugin README for installation instructions
-python3 -c "import defusedxml" 2>/dev/null || {
+# Probe from the plugin dir, not the project (CWE-426, see above). Not -I: it
+# would also hide user-site/PYTHONPATH installs the validators below can import.
+(cd "$SCRIPT_DIR" && python3 -c "import defusedxml") 2>/dev/null || {
   echo '{"systemMessage": "Missing required dependency: defusedxml. Install it with: pip3 install defusedxml>=0.7.1"}'
   exit 0
 }
@@ -73,7 +78,7 @@ PREVIEW URL: ${URL_RESULT}"
 fi
 
 if [[ -n "$FULL_RESULT" ]]; then
-    ESCAPED=$(echo "$FULL_RESULT" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read().strip()))" 2>/dev/null)
+    ESCAPED=$(echo "$FULL_RESULT" | python3 -I -c "import sys,json; print(json.dumps(sys.stdin.read().strip()))" 2>/dev/null)
     if [[ -z "$ESCAPED" ]]; then
         ESCAPED='"draw.io validation completed but output encoding failed. Run validator manually for details."'
     fi
